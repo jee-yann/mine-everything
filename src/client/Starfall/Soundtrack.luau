@@ -3,7 +3,7 @@ local sheet = require(script.Parent.ExposureSheet)
 local fps, frame = sheet.fps, sheet.frames
 local contact, ignition, eruption, breaker = frame.contact / fps, frame.ignition / fps, frame.eruption / fps, frame.breaker / fps
 local chooseScoreAt = 458 / fps
-local scoreIn, scoreOut = frame.settlement / fps, (frame.duration - 1) / fps
+local scoreIn, scoreOut = (frame.landing - 20) / fps, (frame.duration - 1) / fps
 local backswing = 8
 local automaticContact = frame.autoStrike + backswing
 local aftermath = frame.aftermath / fps
@@ -46,7 +46,7 @@ local bank = {
 	steam = timbre("Steam escaping the broken shore", "action_swim.mp3", 2.05, 3.26, 3.1, 0.75, 0.68),
 	collapse = timbre("Collapsing crater wall", "impact_explosion_03.mp3", 0.18, 0.95, 0.83, 0.22, 0.58),
 	blast = timbre("Shockwave bow", "impact_water.mp3", 0.047, 0.72, 1.48, 0.005, 0.19),
-	front = timbre("Shockwave arrival", "impact_explosion_03.mp3", 0.049, 1.78, 0.97, 0.003, 0.37),
+	front = timbre("Shockwave arrival", "action_falling.ogg", 2.35, 4.80, 5.3, 0.10, 0.48),
 	ground = timbre("Basin rumble", "impact_explosion_03.mp3", 0.34, 2.45, 0.68, 0.28, 0.95),
 	sea = timbre("Whitewater", "impact_water.mp3", 0.06, 1.86, 0.92, 0.13, 0.37),
 	fault = timbre("Rock under strain", "action_jump_land.mp3", 0.026, 0.24, 2.05, 0.004, 0.10),
@@ -161,11 +161,11 @@ local function arrange()
 	play("flame", eruption + 1.12, 2.27, 0.52, 0.91, 1.42, "right")
 	play("pressure", breaker - 1.55, 1.62, 0.29, 0.62, 0.94)
 	play("sea", breaker - 1.10, 1.16, 0.49, 0.63, 1.12, "left")
-	play("front", breaker, 1.67, 0.87, 1.03, 0.52)
-	play("blast", breaker, 0.42, 1.34, 0.92, 0.64, "inbound")
+	play("front", breaker - 0.14, 1.36, 1.46, 1.12, 0.60, "inbound")
+	play("blast", breaker, 0.28, 0.70, 0.49, 0.45, "inbound")
 	play("fault", breaker + 0.09, 0.22, 1.46, 0.81, 0.96, "left")
 	play("shard", breaker + 0.17, 0.66, 1.89, 0.86, 0.63, "inbound")
-	play("ground", breaker + 0.13, 3.90, 0.63, 0.80, 0.39)
+	play("ground", breaker + 0.24, 3.30, 0.50, 0.67, 0.35)
 	play("sea", breaker + 0.34, 1.43, 0.85, 0.63, 0.54)
 	play("fault", breaker + 0.61, 0.27, 0.79, 0.66, 0.54, "right")
 	play("ear", breaker + 0.65, 1.96, 2.22, 0.69, 1.70)
@@ -260,10 +260,12 @@ local function arrange()
 	-- call. The local arrangement has a pickup, a developing phrase and a coda,
 	-- so an unavailable performance still gives the story a scored ending.
 	local function alternate(key, exposure, pitch, count, gain)
-		note(key, exposure / fps, pitch, count / fps, gain)
+		local fade = math.clamp((exposure - 438) / 94, 0, 1)
+		note(key, exposure / fps, pitch, count / fps, gain * fade * fade)
 		cues[#cues].alternate = true
 	end
 	local roots = { 43, 43, 40, 36, 43, 38, 40, 36, 43, 38, 36, 40, 38, 43, 38, 36, 40, 38, 43, 36, 40, 38, 43 }
+	table.insert(roots, 12, 43) -- room for the family gathering at the TV
 	for bar, root in roots do
 		local beat = 458 + (bar - 1) * 48
 		alternate("pulse", beat, root, 11, 1.34)
@@ -285,10 +287,10 @@ local function arrange()
 		{ 1346, 79, 25 }, { 1382, 81, 16 }, { 1410, 83, 21 }, { 1450, 78, 21 },
 		{ 1496, 79, 35 }, { 1535, 74, 10 }, { 1548, 79, 12 },
 	} do
-		alternate("horn", phrase[1], phrase[2], phrase[3], if phrase[1] < 640 then 0.88 else 1.23)
+		alternate("horn", phrase[1] + (if phrase[1] >= 989 then frame.measure - 989 else 0), phrase[2], phrase[3], if phrase[1] < 640 then 0.88 else 1.23)
 	end
 	for _, answer in { { 624, 74 }, { 852, 76 }, { 915, 86 }, { 1028, 83 }, { 1133, 86 }, { 1172, 91 } } do
-		alternate("glass", answer[1], answer[2], 17, 0.45)
+		alternate("glass", answer[1] + (if answer[1] >= 989 then frame.measure - 989 else 0), answer[2], 17, 0.45)
 	end
 	table.sort(cues, function(a, b)
 		return a.at < b.at
@@ -449,7 +451,8 @@ return function(parent, musicGroup, effectsGroup)
 			-- Ease the same orchestra underneath the measured blow and let it
 			-- rise naturally with the emerald, the guild portrait and the mine.
 			local trial = math.clamp(math.min((t * fps - frame.present + 18) / 24, (frame.revealGem + 20 - t * fps) / 23), 0, 1)
-			local envelope = math.clamp(math.min(age / 1.15, (scoreOut - t) / 0.70), 0, 1)
+			local entrance = math.clamp(age / 4.4, 0, 1)
+			local envelope = entrance * entrance * (3 - 2 * entrance) * math.clamp((scoreOut - t) / 0.70, 0, 1)
 			score.Volume = (1.22 - 0.46 * trial - 0.32 * emphasis) * envelope
 		elseif scoreStarted and score.IsPlaying then
 			score:Stop()

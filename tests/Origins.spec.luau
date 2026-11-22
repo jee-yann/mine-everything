@@ -496,7 +496,7 @@ local function check(motion, live, remote)
 	assert(not station.invitation:IsDescendantOf(stage), "the commission must follow the trial")
 	film:expose(cuts.present + 4, live)
 	local tv = film.broadcast
-	assert(tv.view.Visible and tv.bug.Visible and #tv.fans == 2 and proof.model.Parent == stage,
+	assert(tv.view.Visible and tv.bug.Visible and #tv.fans == 4 and cuts.measure - cuts.present >= 96 and proof.model.Parent == stage,
 		"the viewers must see the player's live trial inside the TV")
 	local wide, firstFist = tv.camera.CFrame, tv.fans[2].arm:GetPivot()
 	film:expose(cuts.present + 25, live)

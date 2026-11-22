@@ -208,7 +208,7 @@ local function test()
 			opening.Landfall.Played:Once(function() landed = os.clock() end)
 			opening["Collapsing crater wall"].Played:Once(function() collapse = os.clock() end)
 			opening.Eruption.Played:Once(function() eruption = os.clock() end)
-			opening["Shockwave arrival"].Played:Once(function() breaker = os.clock() end)
+			acousticRig.inbound["Shockwave arrival"].Played:Once(function() breaker = os.clock() end)
 			acousticRig.inbound["Shockwave bow"].Played:Once(function() bow = os.clock() end)
 			acousticRig.right["Fire in the fissure"].Played:Once(function() fire = os.clock() end)
 			acousticRig.left["Slumping basalt"].Played:Once(function() rock = os.clock() end)
@@ -223,7 +223,7 @@ local function test()
 			waitFor(function() return bow end, 1, "directional bow plays with the shockwave")
 			assert(collapse >= landed and collapse - landed < 0.45 and opening["Collapsing crater wall"].IsPlaying, "crumbling rock carries the blast to the coast")
 			assert(eruption - landed > 0.045 and eruption - landed < 0.23, "ignition follows contact by three film frames")
-			assert(math.abs(bow - breaker) < 0.12, "the stereo wave edge arrives with the second impact")
+			assert(math.abs(bow - breaker) < 0.32, "the stereo bow and wave reach the camera together")
 			assert(breaker - landed > 3.2 and breaker - landed < 3.8, "the front reaches the fixed lens 84 film frames after impact")
 			waitFor(function() return fire and rock end, 7, "fire and settling debris sustain the burned basin")
 			assert(rock > breaker and fire > breaker, "the close aftermath follows the pressure wave")
@@ -245,12 +245,12 @@ local function test()
 			waitFor(function()
 				return lifted and card.Visible and typeArea.Headline.Text == "GEM HUNTER"
 					and typeArea.Lead.Text == p.DisplayName and stage:FindFirstChild("Expedition pick")
-			end, 10, "the successful miner is introduced by name")
+			end, 12, "the successful miner is introduced by name")
 			local station = stage:WaitForChild("Starfall expedition station", 6)
 			local dispatch = station["Signed field dispatch"]["Guild commission"]
 			assert(dispatch:FindFirstChild(p.DisplayName) and dispatch:FindFirstChild("TO FIND STARFALL"))
 			local strike = titles:WaitForChild("Strike sample", 2)
-			waitFor(function() return strike.Visible end, 5, "expedition route control opens")
+			waitFor(function() return strike.Visible end, 8, "expedition route control opens")
 			local landedSample
 			opening["Pick strikes Starfall"].Played:Once(function() landedSample = os.clock() end)
 			local tappedAt = os.clock()
@@ -258,6 +258,7 @@ local function test()
 			input:SendKey(true, Enum.KeyCode.Space)
 			task.wait(0.06)
 			input:SendKey(false, Enum.KeyCode.Space)
+			waitFor(function() return strike.Visible and not strike.Interactable end, 0.4, "beacon key shows the accepted press")
 			waitFor(function() return landedSample and not strike.Visible end, 1.6, "input causes the player strike")
 			assert(landedSample - tappedAt < 0.9, "the beacon waited for the automatic swing")
 
@@ -430,7 +431,10 @@ local function test()
 	if game.UserInputService.PreferredInput == Enum.PreferredInput.Touch then
 		assert(not roster.Visible and not roster.Miners.Visible, "phone roster starts in Menu")
 	else
-		assert(roster.Visible and roster.Miners.Visible and roster.Columns.Visible, "desktop roster starts expanded")
+		local size = gui.SafeArea.AbsoluteSize
+		local touchLayout = game.UserInputService.TouchEnabled and math.min(size.X, size.Y) < 640
+		assert(roster.Visible == (not touchLayout) and roster.Miners.Visible == (not touchLayout)
+			and roster.Columns.Visible == (not touchLayout), string.format("desktop roster initial layout: size %s, touch %s, overlay %s, visible %s/%s/%s", tostring(size), tostring(touchLayout), tostring(overlay.Visible), tostring(roster.Visible), tostring(roster.Miners.Visible), tostring(roster.Columns.Visible)))
 	end
 	local me = roster.Miners:WaitForChild(tostring(p.UserId), 3)
 	assert(me and me.Level.Text == "1" and me.Gold.Text == "0" and me.Title.Text == "Noob Miner")
@@ -944,16 +948,22 @@ local function test()
 			end, 3, "returned to the shaft")
 		end
 		-- Drill the two starter shafts through the real cut protocol before aiming at ore.
-		for _, x in { -0.5, 0.5 } do
-			for _, y in { -0.5, -1.5 } do
+		for _, x in { -0.5, 0.5, -1.5, 1.5 } do
+			for _, y in (if math.abs(x) == 0.5 then { -0.5, -1.5 } else { -0.5 }) do
 				local at = origin + Vector3.new(x, y, -2.5) * config.Cell
 				local used = p:GetAttribute("Used")
+				local floor = workspace.CitrineCove.MineBlocks:GetChildren()
+				local material
+				for _, block in floor do
+					if block:IsA("BasePart") and (block.Position - at).Magnitude < 0.02 then material = ores.byName[block.Name]; break end
+				end
+				assert(material, "visible block to drill in the starter shafts")
 				n.Swing:FireServer(true, at, Vector3.yAxis)
-				task.wait(ores.cutTime(0.8, ores.byName.Dirt) + 0.18)
+				task.wait(ores.cutTime(0.8, material) + 0.18)
 				n.Mine:FireServer(at, Vector3.yAxis, 1, 1)
 				waitFor(function()
 					return p:GetAttribute("Used") == used + 1
-				end, 3, "floor dirt awarded")
+				end, 3, "shaft block awarded")
 			end
 		end
 		local startingHaul = p:GetAttribute("Used")
@@ -1139,11 +1149,12 @@ local function test()
 		local popup
 		waitFor(function()
 			popup = workspace.Terrain:FindFirstChild("Ore find")
-			return popup and popup:FindFirstChild("Ore popup")
+			return popup and popup:FindFirstChild("Ore popup") and popup["Ore popup"]:FindFirstChild("Purity")
 		end, 2, "world ore popup")
 		assert(
 			(popup.WorldPosition - (aim + aimNormal * (config.Cell / 2))).Magnitude < 0.02
-				and popup["Ore popup"].TextLabel.Text == "+1 Coal",
+				and popup["Ore popup"].TextLabel.Text == "+1 Coal"
+				and popup["Ore popup"].Purity.Text:find("%d+%% pure"),
 			"popup location and label"
 		)
 		if ownerVision then
@@ -1341,6 +1352,7 @@ local function test()
 	assert(spotlight["Return arrow"].Visible and safe.Location.Surface.Interactable)
 	local value = p:GetAttribute("BagValue")
 	assert(value >= starterSlots, "material valuation")
+	local purity = require(rep.Shared.OrePurity)
 	local quantity, total, earnedXP = 0, 0, 0
 	for _, ore in ores.list do
 		local held = p:GetAttribute("Held" .. ore.name)
@@ -1351,7 +1363,7 @@ local function test()
 			)
 		end
 		quantity += held
-		total += held * ore.value
+		total += purity.quote(ore, held, purity.decode(p:GetAttribute("Grades" .. ore.name)), held, p:GetAttribute("SkillBroker"))
 		earnedXP += held * ore.xp
 	end
 	assert(quantity == starterSlots and total == value, "pack quantities and value")

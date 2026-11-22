@@ -187,20 +187,12 @@ function forms.Starfall(m)
 	end
 end
 function forms.Calcite(m)
-	for i = 1, 3 do
-		crystal(
-			m,
-			i * 0.58 - 1.1,
-			i * 0.28 - 0.6,
-			0.22,
-			0.71,
-			20 - i * 12,
-			4,
-			{ "8DB5B4", "6EA0A2", "AED2CA" },
-			glass,
-			0.16
-		)
-	end
+	-- A small chalky pocket with a broken edge, set into the host rock.
+	pebble(m, -0.16, 0.06, 1.55, 0.84, -14, "71777C", rock)
+	local chalk = { "AAA99F", "D0CDBB", "918E83", "BAB8AE" }
+	crystal(m, -0.34, 0.08, 0.51, 0.38, -16, 5, chalk, rock, 0.22, 0.23)
+	crystal(m, 0.36, -0.11, 0.29, 0.39, 37, 4, chalk, rock, 0.17, 0.22)
+	pebble(m, 0.72, -0.39, 0.28, 0.16, -36, "B3B0A3", rock)
 end
 
 local templates = {}

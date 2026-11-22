@@ -1,6 +1,7 @@
 local W = require(script.Parent.Widgets)
 local Icons = require(script.Parent.Icons)
 local Audio = require(script.Parent.HarborAudio)
+local Ores = require(game.ReplicatedStorage.Shared.Ores)
 local Celebration = {}
 Celebration.__index = Celebration
 
@@ -26,8 +27,10 @@ end
 function Celebration:present(kind, name)
 	local root = self.hud.root
 	local isTitle = kind == "titleUnlocked"
-	local tint = if isTitle then W.violet else W.gold
-	local motion = self.hud.player:GetAttribute("MenuMotion") ~= false
+	local isAura = kind == "aura"
+	local ore = if kind == "discovery" then Ores.byName[name] else nil
+	local tint = if ore then ore.color:Lerp(W.white, 0.35) elseif isTitle then W.violet elseif isAura then W.aqua else W.gold
+	local motion = self.hud.player:GetAttribute("MenuMotion") ~= false and not game:GetService("GuiService").ReducedMotionEnabled
 	local group = W.fadeGroup(root, "Unlock celebration", 368, 124)
 	group.ZIndex = 35
 	local center = UDim2.fromScale(0.5, 0.41)
@@ -37,18 +40,18 @@ function Celebration:present(kind, name)
 	scale.Scale = fit
 	local body = W.frame(group, "Plaque", 8, 12, 352, 98, W.panel, 16)
 	W.stroke(body, tint, 2.5)
-	W.enamel(body, if isTitle then W.grape else Color3.fromRGB(110, 69, 32), W.ink)
+	W.enamel(body, if ore then ore.color:Lerp(W.panel, 0.48) elseif isTitle then W.grape else Color3.fromRGB(110, 69, 32), W.ink)
 	local badge = W.frame(body, "Medal", 16, 24, 50, 50, tint, 14)
 	W.stroke(badge, tint:Lerp(W.white, 0.65), 2)
-	Icons.draw(badge, if isTitle then "Titles" else "Achievements", 5, 5, 40, tint)
-	W.text(body, if isTitle then "TITLE UNLOCKED" else "ACHIEVEMENT UNLOCKED", 83, 8, 260, 18, 14, tint, true)
+	Icons.draw(badge, if ore then "Crystal" elseif isTitle then "Titles" else "Achievements", 5, 5, 40, tint)
+	W.text(body, if ore then "NEW ORE DISCOVERED" elseif isAura then "LEGENDARY PICK AURA" elseif isTitle then "TITLE UNLOCKED" else "ACHIEVEMENT UNLOCKED", 83, 8, 260, 18, 14, tint, true)
 	local headline = W.title(body, name, 82, 27, 262, 42, 27, W.white, true)
 	headline.TextScaled = true
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MinTextSize, limit.MaxTextSize, limit.Parent = 13, 27, headline
 	W.text(
 		body,
-		if isTitle then "Equip in Inventory → Titles" else "Saved to Achievements",
+		if ore then "Added to your Ore Index" elseif isAura then "On your pick! Change it in Supplies." elseif isTitle then "Equip in Inventory → Titles" else "Saved to Achievements",
 		83,
 		70,
 		260,

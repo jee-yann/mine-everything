@@ -35,7 +35,10 @@ return function(safe)
 	})
 	local lastDevice
 	return button, function(frame, motion, contact, top, bottom)
-		button.Visible = frame >= frames.prompt and frame < frames.autoStrike and not contact
+		local pressedAge = if contact then frame - (contact - 8) else -1
+		local pressed = pressedAge >= 0 and pressedAge < 11
+		button.Visible = frame >= frames.prompt and (pressed or (not contact and frame < frames.autoStrike))
+		button.Interactable = not contact
 		if not button.Visible then return end
 		local device = Input.PreferredInput
 		if device ~= lastDevice then
@@ -52,7 +55,12 @@ return function(safe)
 		local width = math.min(height * 4.55, safe.AbsoluteSize.X * 0.82)
 		button.Size = UDim2.fromOffset(width, height)
 		button.Position = UDim2.new(0.5, 0, 0, bottom - math.max(8, pictureHeight * 0.052) + 8 * rise)
-		rim.Color = if rise > 0 then Color3.fromHex("FFF1CD") else Color3.fromHex("F6C979")
+		local travel = if pressed and motion then math.clamp((pressedAge + 1) / 2, 0, 1) * (1 - math.clamp((pressedAge - 7) / 3, 0, 1)) else 0
+		key.Position = UDim2.fromScale(0.045, 0.48 + 0.078 * travel)
+		key.Size = UDim2.fromScale(0.27, 0.62 - 0.13 * travel)
+		key.BackgroundColor3 = if pressed then Color3.fromHex("B6F0CC") else Color3.fromHex("FFE3A1")
+		action.Text = if not pressed then "Light the path" elseif frame < contact then "Here we go!" else "Path lit!"
+		rim.Color = if pressed then Color3.fromHex("AAF2CC") elseif rise > 0 then Color3.fromHex("FFF1CD") else Color3.fromHex("F6C979")
 		glint.Offset = Vector2.new(if motion then math.clamp((age % 36) / 21, 0, 1) * 2 - 1 else 0, 0)
 	end
 end

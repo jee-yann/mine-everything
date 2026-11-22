@@ -4,7 +4,7 @@ local W = require(client:WaitForChild("Widgets"))
 local Display = {}
 Display.__index = Display
 
-function Display.new(location, onToggle, onFilter)
+function Display.new(location, onToggle, onFilter, onClear)
 	local self = setmetatable({ options = {} }, Display)
 	local safe = location.Parent
 	local surface, depth = location:WaitForChild("Surface"), location:WaitForChild("Depth")
@@ -28,7 +28,7 @@ function Display.new(location, onToggle, onFilter)
 	end
 	surface:GetPropertyChangedSignal("Visible"):Connect(place)
 	place()
-	local panel = W.frame(safe, "X-ray ore filters", 0, 0, 252, 262, W.panel, 12)
+	local panel = W.frame(safe, "X-ray ore filters", 0, 0, 252, 294, W.panel, 12)
 	panel.AnchorPoint, panel.Position, panel.ZIndex = Vector2.one * 0.5, UDim2.fromScale(0.5, 0.5), 20
 	panel.Visible, panel.Active = false, true
 	W.stroke(panel, W.line, 2)
@@ -68,6 +68,7 @@ function Display.new(location, onToggle, onFilter)
 		self.options[ore] = button
 		index += 1
 	end
+	W.button(panel, "Clear stone", 10, 254, 232, 32, W.orange, "Clear nearby stone  [Shift+C]", "Select").Activated:Connect(onClear)
 	toggle.Activated:Connect(onToggle)
 	filters.Activated:Connect(function()
 		panel.Visible = not panel.Visible

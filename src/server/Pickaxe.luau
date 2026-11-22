@@ -102,6 +102,13 @@ function Pickaxe.equip(player, char)
 	trail.Name, trail.Attachment0, trail.Attachment1 = "Pick arc", tipA, tipB
 	trail.Lifetime, trail.LightEmission, trail.Transparency = 0.12, 0.65, NumberSequence.new(0.48, 1)
 	trail.Parent = handle
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Name, sparks.Texture = "First Light", "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Color = ColorSequence.new(Color3.fromRGB(255, 225, 140), Color3.fromRGB(147, 222, 255))
+	sparks.LightEmission, sparks.Rate, sparks.Enabled = 0.75, 8, false
+	sparks.Lifetime, sparks.Speed = NumberRange.new(0.16, 0.35), NumberRange.new(0.5, 1.8)
+	sparks.Size = NumberSequence.new(0.16, 0)
+	sparks.SpreadAngle, sparks.Parent = Vector2.new(65, 65), tipA
 	local crystals = {}
 	for _, side in { -1, 1 } do
 		for i = 1, 2 do
@@ -133,15 +140,24 @@ function Pickaxe.equip(player, char)
 		end
 		trail.Color = ColorSequence.new(tint, tint:Lerp(Color3.new(1, 1, 1), 0.75))
 		trail.Lifetime = 0.09 + level * 0.017
-		trail.Enabled = level >= 3 and char:GetAttribute("MiningSwing") ~= nil
+		local radiant = player:GetAttribute("FirstLight") == true
+		local swinging = char:GetAttribute("MiningSwing") ~= nil
+		if radiant then
+			trail.Color = sparks.Color
+			trail.Lifetime = 0.17
+		end
+		sparks.Enabled = radiant and swinging
+		trail.Enabled = (radiant or level >= 3) and swinging
 	end
 	update()
 	model.Parent = char
 	local changed = player:GetAttributeChangedSignal("Power"):Connect(update)
 	local swing = char:GetAttributeChangedSignal("MiningSwing"):Connect(update)
+	local aura = player:GetAttributeChangedSignal("FirstLight"):Connect(update)
 	model.Destroying:Once(function()
 		changed:Disconnect()
 		swing:Disconnect()
+		aura:Disconnect()
 		scaleChanged:Disconnect()
 		added:Disconnect()
 		removed:Disconnect()

@@ -2,14 +2,14 @@ local Run = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Config = require(game.ReplicatedStorage.Shared.GameConfig)
 local View = {}
-local galleryBounce = Color3.fromRGB(131, 117, 104)
+local galleryBounce = Color3.fromRGB(100, 88, 73)
 local palettes = {
-	["Sunstone Hollow"] = {Color3.fromHex("635646"), Color3.fromHex("FFF3DF")},
-	["Iron Shelf"] = {Color3.fromHex("4E5967"), Color3.fromHex("E6F0FF")},
-	["Prism Grotto"] = {Color3.fromHex("545977"), Color3.fromHex("EAEBFF")},
-	["Emerald Deep"] = {Color3.fromHex("425D59"), Color3.fromHex("DBF9ED")},
-	["Midnight Fault"] = {Color3.fromHex("514760"), Color3.fromHex("F2E4FF")},
-	["Frostglass Reach"] = {Color3.fromHex("435971"), Color3.fromHex("DEFAFF")},
+	["Sunstone Hollow"] = {Color3.fromHex("261F1C"), Color3.fromHex("FFF3DF")},
+	["Iron Shelf"] = {Color3.fromHex("1C222A"), Color3.fromHex("E6F0FF")},
+	["Prism Grotto"] = {Color3.fromHex("222035"), Color3.fromHex("EAEBFF")},
+	["Emerald Deep"] = {Color3.fromHex("152921"), Color3.fromHex("DBF9ED")},
+	["Midnight Fault"] = {Color3.fromHex("20192B"), Color3.fromHex("F2E4FF")},
+	["Frostglass Reach"] = {Color3.fromHex("152631"), Color3.fromHex("DEFAFF")},
 }
 function View.start(player, origin, hud)
 	local daylight = Lighting.Ambient
@@ -88,7 +88,7 @@ function View.start(player, origin, hud)
 			elseif root and pos.Z >= Config.HallFront and math.abs(pos.X)<10 and pos.Y < 12
 			then .55*math.clamp((10-pos.Z)/16,0,1) else 0
 		local region = Config.layer(Config.FloorY-pos.Y).name
-		-- Reflected light from the work lamps fades over the first two dirt layers.
+		-- Reflected light from the work lamps fades over the entry floor.
 		local bounce = if inside and Config.inHall(pos)
 			then math.clamp(1 + (pos.Y - Config.FloorY) / (Config.Cell * Config.DirtLayers), 0, 1) else 0
 		if target ~= lastTarget or region ~= lastRegion or bounce ~= lastBounce then
@@ -101,9 +101,10 @@ function View.start(player, origin, hud)
 			local palette = palettes[region] or palettes["Sunstone Hollow"]
 			local ambient = daylight:Lerp(palette[1], target):Lerp(galleryBounce, bounce * 0.64)
 			Lighting.Ambient = Lighting.Ambient:Lerp(ambient, alpha)
-			Lighting.OutdoorAmbient = outdoor:Lerp(Color3.fromHex("666879"),shade)
-			grade.Brightness = .012 * shade
-			grade.Contrast += ((.065 - .055 * bounce) * shade - grade.Contrast) * alpha
+			-- The lamp and flare supply the foreground light. Keep distant unlit faces in shadow.
+			Lighting.OutdoorAmbient = outdoor:Lerp(Color3.fromHex("242A33"), shade)
+			grade.Brightness = -0.012 * shade * (1 - bounce)
+			grade.Contrast += ((0.095 - 0.065 * bounce) * shade - grade.Contrast) * alpha
 			grade.TintColor = grade.TintColor:Lerp(Color3.new(1,1,1):Lerp(palette[2],target*.66),alpha)
 		end
 		if char ~= previousChar then

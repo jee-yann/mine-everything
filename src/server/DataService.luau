@@ -20,11 +20,16 @@ local function depthStore()
 end
 
 function Data.snapshot(p)
+	local grades = {}
+	for name, stock in p.grades do grades[name] = table.clone(stock) end
 	return {
 		version = p.version,
 		introSeen = p.introSeen,
 		firstTrip = table.clone(p.firstTrip),
 		gold = p.gold,
+		gems = p.gems, stampCount = p.stampCount, stampDay = p.stampDay,
+		hasteCuts = p.hasteCuts, stoneChips = p.stoneChips, pulses = p.pulses,
+		oreCompass = p.oreCompass, auraOff = p.auraOff,
 		mined = p.mined,
 		xp = p.xp,
 		title = p.title,
@@ -40,6 +45,8 @@ function Data.snapshot(p)
 		levels = table.clone(p.levels),
 		preferences = table.clone(p.preferences),
 		bag = table.clone(p.bag),
+		grades = grades,
+		bestPurity = table.clone(p.bestPurity),
 		flares = p.flares,
 		temper = p.temper,
 		dailyClaim = p.dailyClaim,

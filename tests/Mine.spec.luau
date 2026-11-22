@@ -7,6 +7,71 @@ local Pattern = require(Shared.BlockPattern)
 local Profile = require(Server.Profile)
 assert(Profile.valid(Profile.new()))
 local Data = require(Server.DataService)
+do
+	local Purity = require(Shared.OrePurity)
+	local function sample(roll, extra)
+		return { NextInteger = function(_, _, limit) return if limit == 10 then extra or 10 else roll end }
+	end
+	for roll, percent in { [1] = 50, [30] = 50, [31] = 65, [63] = 80, [86] = 90, [96] = 98, [100] = 100 } do
+		assert(Purity.roll(sample(roll)) == percent)
+	end
+
+	local old = Profile.new()
+	old.grades, old.bestPurity, old.bag = nil, nil, { Gold = 1 }
+	local miner = Data.claim({profile = old}, "assay", 1000).profile
+	local awards, grade, units, record = Profile.recordCut(miner, "Gold", 30, sample(99))
+	assert(table.find(awards, "First Gold") and grade == 98 and units == 1 and record)
+	awards, grade, units, record = Profile.recordCut(miner, "Gold", 30, sample(100))
+	assert(not table.find(awards, "First Gold") and record and miner.bestPurity.Gold == 100)
+	local stock = Purity.decode(Purity.encode(miner.grades.Gold))
+	local low, high = Purity.range(stock)
+	assert(low == 98 and high == 100 and stock["98"] == 1 and stock["100"] == 1)
+	local saved = Data.snapshot(miner)
+	local gold = Ores.byName.Gold
+	local quote = Purity.quote(gold, 3, stock, 2, false)
+	assert(quote == 200 and Profile.value(miner.bag, miner.grades) == quote + 160)
+	assert(Profile.sell(miner, 2, "Gold", 2) == quote * 2 and miner.bag.Gold == 1)
+	assert(not miner.grades.Gold["98"] and saved.grades.Gold["98"] == 1)
+	local restored = Data.claim({profile = saved}, "rejoin-assay", 1050).profile
+	assert(Profile.used(restored) == 3 and restored.bestPurity.Gold == 100)
+	local brokerQuote = Purity.quote(gold, 3, stock, 3, true)
+	assert(brokerQuote == 396)
+	restored.skills.Broker = true
+	assert(Profile.sell(restored, 2) == 2 * brokerQuote and not next(restored.grades))
+	Profile.consume(miner, { Gold = 1 })
+	assert(not miner.grades.Gold and not miner.bag.Gold and miner.bestPurity.Gold == 100)
+	assert(not Purity.encode(miner.grades.Gold))
+
+	miner.skills.Fortune = true
+	miner.bag.Dirt = 6
+	local xp, cuts, count = miner.xp, miner.mined, miner.counts.Gold
+	awards, grade, units, record = Profile.recordCut(miner, "Gold", 30, sample(35, 1))
+	assert(grade == 65 and units == 2 and not record and miner.grades.Gold["65"] == 2)
+	assert(Profile.used(miner) == 8 and miner.counts.Gold == count + 1 and miner.mined == cuts + 1)
+	assert(miner.xp == xp + gold.xp)
+	Profile.consume(miner, { Gold = 1 })
+	awards, grade, units = Profile.recordCut(miner, "Gold", 30, sample(35, 1))
+	assert(units == 1 and Profile.used(miner) == 8)
+	Profile.consume(miner, { Dirt = 6 })
+	local _, hostGrade, hostUnits = Profile.recordCut(miner, "Stone", 5, sample(100, 1))
+	assert(not hostGrade and hostUnits == 1 and not miner.grades.Stone)
+	assert(Purity.quote(Ores.byName.Stone, 1, nil, 1, true) == Ores.byName.Stone.value)
+
+	local spill = Profile.new()
+	spill.levels.Capacity = 2
+	for i = 1, 10 do Profile.recordCut(spill, "Gold", 10, sample(if i == 1 then 1 else 100)) end
+	assert(Profile.spill(spill) == 1 and spill.bag.Gold == 9 and spill.grades.Gold["100"] == 9)
+	assert(not spill.grades.Gold["50"] and Profile.valid(spill))
+	for _, badGrades in { {Gold={["101"]=1}}, {Gold={["100"]=10}}, {Gold={["100"]=0.5}}, {Stone={["100"]=1}} } do
+		local damaged = Data.snapshot(spill)
+		damaged.grades = badGrades
+		assert(not Data.claim({profile=damaged}, "bad-assay", 1080))
+	end
+	local damaged = Data.snapshot(spill)
+	damaged.bestPurity.Gold = 65
+	assert(not Profile.valid(damaged))
+	print("PASS purity rolls, legacy prices, partial sale quotes, Fortune capacity, fees, spending and save roundtrip")
+end
 local stored = Data.claim(nil, "first", 1000)
 assert(stored.profile.introSeen == false)
 do
@@ -296,10 +361,13 @@ assert(table.find(Profile.recordCut(haul, "Starfall"), awards.LuckAndSkill.name)
 assert(not table.find(Profile.recordCut(haul, "Starfall"), awards.LuckAndSkill.name))
 local reader = Instance.new("Folder")
 local hiddenTitle, hiddenDetail = Guide.awardText(awards.CopperCollector, reader)
-assert(hiddenTitle == "??? Collector" and hiddenDetail == "Mine 50 ???.")
+assert(hiddenTitle == "Copper Collector" and hiddenDetail == "Mine 50 Copper.")
 reader:SetAttribute("FoundDirt", true)
 local _, sequenceText = Guide.awardText(scales, reader)
-assert(sequenceText == "Dirt → ??? → ??? → ??? → ??? → ??? → ???")
+assert(sequenceText == "Dirt → Stone → Coal → Copper → Iron → Gold → Diamond")
+assert(Guide.awardText(awards.FirstStarfall, reader) == "First ???")
+reader:SetAttribute("FoundStarfall", true)
+assert(Guide.awardText(awards.FirstStarfall, reader) == "First Starfall")
 reader:Destroy()
 do
 	local Skills = require(Shared.Skills)
@@ -345,6 +413,7 @@ do
 		math.abs(Skills.cutTime(1, Ores.byName.Stone, 1, 0, owned) - Ores.cutTime(1, Ores.byName.Stone, 1) * 0.7 * 0.85)
 			< 1e-6
 	)
+	Profile.consume(specialist, table.clone(specialist.bag))
 	specialist.bag = table.clone(Materials.supplies.Temper.recipe)
 assert(Profile.buySupply(specialist, "Temper") and specialist.temper == 45)
 	specialist.bag = table.clone(Materials.daily(day).recipe)
@@ -422,14 +491,13 @@ assert(
 )
 assert(Ores.byName.Dirt.xp == 0 and Ores.byName.Stone.xp == 0 and Ores.byName.Starfall.xp > Ores.byName.Emerald.xp)
 local top = Geology.new(11)
-for row = 1, 2 do
-	for x = -5, 4 do
-		for z = -11, -2 do
-			assert(top:material(Vector3.new(x, -row, z)) == Ores.byName.Dirt.material)
-		end
+for x = -5, 4 do
+	for z = -11, -2 do
+		assert(top:material(Vector3.new(x, -1, z)) == Ores.byName.Dirt.material)
+		assert(top:material(Vector3.new(x, -2, z)) ~= Ores.byName.Dirt.material)
 	end
-	assert(not Ores.byMaterial[top:material(Vector3.new(5, -row, -3))])
 end
+assert(not Ores.byMaterial[top:material(Vector3.new(5, -1, -3))])
 local hashes = {}
 for _, seed in { 11, 73129, 91003, 73129 } do
 	local geo = Geology.new(seed)
@@ -462,7 +530,7 @@ assert(hashes[11] ~= hashes[73129] and hashes[91003] ~= hashes[73129])
 assert(
 	Config.blockCoordinates(Vector3.new(-0.1, Config.FloorY - 27 * Config.Cell - 0.5, -9)) == Vector3.new(-1, -27, -2)
 )
-print("PASS two dirt layers, independent regional odds, repeatable fields and saved title levels")
+print("PASS one dirt layer, independent regional odds, repeatable fields and saved title levels")
 local surface = workspace.CitrineCove
 do
 	local guide = require(game.StarterPlayer.StarterPlayerScripts.Client.ExpeditionWaypoint).new()
@@ -488,6 +556,29 @@ do
 		end
 		assert(checked >= 2, "guidance disappeared between walking frames")
 	end
+	-- An approach on the outer bank follows its own bridge. A miner below the
+	-- crossing can see the nearest stairs and returns to their original objective on dry land.
+	local dryTarget = bridge.Position + Vector3.new(41, 0, -31)
+	guide:show(dryTarget, "Sell ore", Color3.new(1, 0.8, 0.2), true)
+	head.Position = bridge.Position + Vector3.new(41, 4, 20)
+	guide:trail(head, 15, false)
+	assert(#guide.path == 3 and math.abs(guide.path[1].X - head.Position.X) < 2, "missed nearby side bridge")
+	head.Position = bridge.Position + Vector3.new(14, -0.7, 0)
+	guide:trail(head, 16, false)
+	assert(guide.label.Text == "Climb the steps" and guide.path[1].X > bridge.Position.X, "no nearby canal exit")
+	local paths = surface["Sand path and bridge"]
+	local steps = {}
+	for _, block in paths:GetChildren() do
+		if (block.Name == "Canal step" or block.Name == "Canal landing") and math.abs(block.Position.X - guide.path[1].X) < 0.1 then
+			table.insert(steps, block.Position.Y + block.Size.Y/2)
+		end
+	end
+	table.sort(steps)
+	assert(#steps == 8 and steps[#steps] > bridge.Position.Y and steps[1] < bridge.Position.Y - 3)
+	for i = 2, #steps do assert(steps[i] - steps[i-1] < 0.8, "canal exit riser too high") end
+	head.Position = dryTarget + Vector3.yAxis * 4
+	guide:trail(head, 17, false)
+	assert(guide.anchor.WorldPosition == dryTarget and guide.label.Text == "Sell ore", "dry objective was lost")
 	head:Destroy()
 	guide.anchor:Destroy()
 end
@@ -580,6 +671,13 @@ do
 		local support = workspace:Raycast(cap.Position, -Vector3.yAxis * 1.3, stoneRay)
 		assert(support, "Unsupported sandstone cap at " .. tostring(point))
 	end
+	-- Check the visible roof in addition to its structural support. These were the
+	-- flat, exposed canopy and the player-sized pockets behind the front shelves.
+	local crest = include({ mapCopy["Working gallery"], bluffs })
+	for _, point in { Vector2.new(0, -14), Vector2.new(-7, -26), Vector2.new(7, -34), Vector2.new(-60, -30), Vector2.new(40, -30) } do
+		local ridge = workspace:Raycast(Vector3.new(point.X, 60, point.Y), -Vector3.yAxis * 23, crest)
+		assert(ridge and (ridge.Instance.Name == "Ridge meadow" or ridge.Instance.Name == "Grass shelf" or ridge.Instance.Name == "Gully shoulder"), "Uncapped mine roof at " .. tostring(point))
+	end
 	local trailRay = include({ highlands["Cableway trail"], mapCopy["Working gallery"] })
 	for _, x in { -19, 0, 19 } do
 		for z = -66, -59.5, 0.5 do
@@ -629,6 +727,19 @@ do
 	end
 	for _, part in visualOnly do
 		part.CanQuery = false
+	end
+end
+-- The high barrier sits on the outside of the rocky rim, including its angled joints.
+do
+	local edges, closed = {}, RaycastParams.new()
+	for _, piece in highlands["Rock rim"]:GetChildren() do
+		if piece.Name == "Outer cliff boundary" then table.insert(edges, piece) end
+	end
+	closed.FilterType, closed.FilterDescendantsInstances = Enum.RaycastFilterType.Include, edges
+	closed.RespectCanCollide = true
+	for angle = 0,359 do
+		local a = math.rad(angle)
+		assert(workspace:Raycast(world.origin + Vector3.new(0, 70, 30), Vector3.new(math.cos(a), 0, math.sin(a)) * 200, closed), "Open cliff top at " .. angle)
 	end
 end
 local gallery = mapCopy["Working gallery"]
@@ -1071,7 +1182,8 @@ for x = -5, 4 do
 		local top = center(x, -1, z) + Vector3.yAxis * Config.Cell
 		local hit = workspace:Raycast(top, -Vector3.yAxis * (2 * Config.Cell), onMap)
 		assert(hit and hit.Instance == entry(x, -2, z), "Fixed scenery obstructs the second layer")
-		assert(cut(x, -2, z) == "Dirt" and world:oreAt(center(x, -3, z)).name ~= "Dirt")
+		local second = cut(x, -2, z)
+		assert(second and second ~= "Dirt" and world:oreAt(center(x, -3, z)).name ~= "Dirt")
 	end
 end
 print(

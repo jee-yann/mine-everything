@@ -53,6 +53,7 @@ local function equip(player, char)
 	nameplate.Name, nameplate.Adornee, nameplate.Size = "Miner title", torso, UDim2.new(2.4, 48, 0.55, 14)
 	nameplate.MaxDistance, nameplate.LightInfluence, nameplate.Parent = 95, 0, kit
 	nameplate.AlwaysOnTop = true
+	nameplate.PlayerToHideFrom = player
 	human.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	local title = Instance.new("TextLabel")
 	title.Size, title.BackgroundTransparency, title.Font = UDim2.fromScale(1, 1), 1, Enum.Font.FredokaOne

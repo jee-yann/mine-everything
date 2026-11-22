@@ -23,7 +23,8 @@ local function run(origin)
 			local west = car and car:FindFirstChild("West terminal")
 			local east = car and car:FindFirstChild("East terminal")
 			if car and car.PrimaryPart and west and east then
-				local t = 0.5 - 0.46 * math.cos(phase + lane * 2.1)
+				-- Reverse with clearance for the full width of the hanging bucket and tower legs.
+				local t = 0.5 - 0.37 * math.cos(phase + lane * 2.1)
 				local segment = math.floor(t * 4) / 4
 				local nextT = segment + 0.25
 				local fraction = (t - segment) * 4

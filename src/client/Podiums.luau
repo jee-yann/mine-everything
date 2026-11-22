@@ -1,6 +1,38 @@
 local Players = game:GetService("Players")
 local Run = game:GetService("RunService")
 local Podiums = {}
+local function bottom(part)
+	local frame, size = part.CFrame, part.Size
+	local extent = math.abs(frame.RightVector.Y) * size.X + math.abs(frame.UpVector.Y) * size.Y
+		+ math.abs(frame.LookVector.Y) * size.Z
+	return frame.Y - extent / 2
+end
+
+function Podiums.soleY(model)
+	local feet, body, costume = math.huge, math.huge, math.huge
+	for _, part in model:GetDescendants() do
+		if not part:IsA("BasePart") or part.Transparency >= 0.99 or part.Name == "HumanoidRootPart" then continue end
+		local y = bottom(part)
+		if part.Parent == model then
+			body = math.min(body, y)
+			if part.Name == "LeftFoot" or part.Name == "RightFoot" or part.Name == "Left Leg" or part.Name == "Right Leg" then
+				feet = math.min(feet, y)
+			end
+		else
+			costume = math.min(costume, y)
+		end
+	end
+	if feet < math.huge then return feet end
+	if body < math.huge then return body end
+	if costume < math.huge then return costume end
+	local frame, size = model:GetBoundingBox()
+	return frame.Y - size.Y / 2
+end
+
+local function seatFigure(model, base)
+	local offset = base.Position.Y + base.Size.Y / 2 + 0.04 - Podiums.soleY(model)
+	if math.abs(offset) > 0.012 then model:PivotTo(model:GetPivot() + Vector3.yAxis * offset) end
+end
 local function makeFigure(id)
 	local player = Players:GetPlayerByUserId(id)
 	local char = player and player.Character
@@ -25,11 +57,17 @@ local function makeFigure(id)
 			or v:IsA("Sound")
 			or v:IsA("ParticleEmitter")
 			or v.Name == "Harbor pick"
+			or v.Name == "Prospector kit"
+			or v.Name == "Head clearance"
+			or v:IsA("Tool")
 		then
 			v:Destroy()
 		elseif v:IsA("BasePart") then
 			v.CanCollide, v.CanTouch, v.CanQuery = false, false, false
+			v.LocalTransparencyModifier = 0
 			v.Anchored = v.Name == "HumanoidRootPart"
+		elseif v:IsA("Motor6D") or v:IsA("AnimationConstraint") then
+			v.Transform = CFrame.identity
 		end
 	end
 	local root = model:FindFirstChild("HumanoidRootPart")
@@ -75,11 +113,9 @@ function Podiums.start(viewer, hud)
 				CFrame.new(base.Position)
 					* CFrame.Angles(0, math.rad(if slot.rank == 1 then 0 elseif slot.rank == 2 then -12 else 12), 0)
 			)
-			local foot = model:FindFirstChild("LeftFoot") or model:FindFirstChild("Left Leg")
-			local cf, sz = model:GetBoundingBox()
-			local bottom = if foot then foot.Position.Y - foot.Size.Y / 2 else cf.Y - sz.Y / 2
-			model:PivotTo(model:GetPivot() + Vector3.yAxis * (base.Position.Y + base.Size.Y / 2 + 0.14 - bottom))
 			model.Parent = base
+			seatFigure(model, base)
+			slot.settle = 4
 			local arm = model:FindFirstChild("RightShoulder", true) or model:FindFirstChild("Right Shoulder", true)
 			slot.arm = if arm and (arm:IsA("Motor6D") or arm:IsA("AnimationConstraint")) then arm else nil
 			slot.model = model
@@ -95,6 +131,14 @@ function Podiums.start(viewer, hud)
 		end)
 	end
 	local clock = 0
+	Run.PostSimulation:Connect(function()
+		for _, slot in slots do
+			if slot.model and slot.settle > 0 then
+				seatFigure(slot.model, slot.base)
+				slot.settle -= 1
+			end
+		end
+	end)
 	Run.PreSimulation:Connect(function(dt)
 		if hud.inOpening then
 			for _, slot in slots do

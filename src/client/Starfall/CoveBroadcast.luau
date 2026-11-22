@@ -10,7 +10,7 @@ local glassY, glassW, glassH = 4.55, 8.0, 4.5
 local roomLens = 47
 local roomTangent = math.tan(math.rad(roomLens / 2))
 
-local function watcher(world, foot, scale, clothes, skin, cap, side)
+local function watcher(world, foot, scale, clothes, skin, cap, side, arrival)
 	local person = S.group("Fan at the TV")
 	local torso, arm = S.group("Coat and cap"), S.group("Raised sleeve")
 	torso.Parent, arm.Parent = person, person
@@ -37,10 +37,11 @@ local function watcher(world, foot, scale, clothes, skin, cap, side)
 		flag.CastShadow = false
 		S.part(arm, "Pennant stick", CF(0, -1.34, 0), V(0.07, 0.94, 0.07), "B78152")
 	end
+	person.Name = if arrival then "Family at the door" else "Fan at the TV"
 	person.Parent = world
 	person:ScaleTo(scale)
 	person:PivotTo(foot)
-	return { torso = torso, arm = arm, foot = foot, scale = scale, side = side }
+	return { model = person, torso = torso, arm = arm, foot = foot, scale = scale, side = side, arrival = arrival }
 end
 
 local function room(world)
@@ -118,6 +119,8 @@ function Broadcast:draw(camera, frame, motion)
 		self.fans = {
 			watcher(world, CF(-3.55, 0, 4.1) * A(0, -0.38, 0), 1.19, "9B5E46", "BD8765", "F0B55E", 1),
 			watcher(world, CF(3.00, 0.43, 4.9) * A(0, 0.43, 0), 0.93, "3B8391", "C88965", "D97656", -1),
+			watcher(world, CF(-5.10, 0, 1.68) * A(0, -0.86, 0), 1.17, "546F74", "8B5D4C", "C8B48D", 1, -1.7),
+			watcher(world, CF(-4.36, 0, 2.34) * A(0, -0.63, 0), 0.78, "C59353", "9E7055", "7C5754", 1, -2.25),
 		}
 		S.part(world, "Child's footstool", CF(3, 0.23, 4.95), V(1.88, 0.46, 1.43), "B68355")
 	end
@@ -127,8 +130,8 @@ function Broadcast:draw(camera, frame, motion)
 	end
 	local age = frame - cuts.present
 	-- Start at shoulder height with the viewers. Pass the glass by the next cut.
-	local push = if motion then S.ease(age, 16, cuts.measure - cuts.present - 1) else 0
-	local z = 11.55 - 9.68 * push
+	local push = if motion then S.ease(age, 35, cuts.measure - cuts.present - 1) else 0
+	local z = 13.85 - 11.98 * push - (if motion then 0.38 * S.ease(age, 0, 35) * (1 - push) else 0)
 	local height = glassH / (2 * z * roomTangent)
 	local viewport = camera.ViewportSize
 	local width = height * (glassW / glassH) * viewport.Y / math.max(1, viewport.X)
@@ -141,7 +144,14 @@ function Broadcast:draw(camera, frame, motion)
 	for i, fan in self.fans do
 		local beat = if motion then S.ease(age, 2 + i * 3, 13 + i * 3) - 0.47 * S.ease(age, 20 + i, 35 + i) else 0.68
 		local scale, side = fan.scale, fan.side
-		local body = fan.foot * CF(0, (1.18 + 0.09 * beat) * scale, 0) * A(-0.12 * beat, side * 0.06 * beat, 0)
+		local footing = fan.foot
+		if fan.arrival then
+			local step = if motion then S.ease(age, (i - 3) * 6, 29 + (i - 3) * 9) else 1
+			local walk = if motion then 0.095 * math.sin(step * math.pi * 4) else 0
+			footing += V(fan.arrival * (1 - step), walk, 0)
+			fan.model:PivotTo(footing)
+		end
+		local body = footing * CF(0, (1.18 + 0.09 * beat) * scale, 0) * A(-0.12 * beat, side * 0.06 * beat, 0)
 		fan.torso:PivotTo(body)
 		fan.arm:PivotTo(body * CF(side * 0.91 * scale, 1.24 * scale, 0)
 			* A(0.52 + 1.87 * beat, 0, side * (0.12 + 0.20 * beat)))

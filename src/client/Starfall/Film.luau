@@ -142,12 +142,11 @@ local function vibration(frame)
 			+ 0.95 * pulse(frame, 300, 336, 24)
 			+ 2.35 * pulse(frame, 324, 366, 3)
 			+ 1.18 * pulse(frame, 353, 382, 3)
-			+ 0.73 * pulse(frame, 398, 433, 4)
-			+ 0.54 * pulse(frame, 444, 474, 3)
+			+ 0.24 * ease(frame, 325, 352) * (1 - ease(frame, 355, frames.seam))
 	end
 	local lift = math.sin(2 * math.pi * 3.1 * t + 0.35) + 0.31 * math.sin(2 * math.pi * 6.7 * t)
 	local sway = math.sin(2 * math.pi * 1.7 * t) + 0.23 * math.sin(2 * math.pi * 4.3 * t + 0.8)
-	local travel = if frame < frames.aftermath then pressure else 0
+	local travel = pressure * (1 - ease(frame, 373, 382))
 	return CF(travel * 0.11 * sway, travel * 0.13 * lift, 0)
 		* CFrame.Angles(
 			math.rad(0.61 * pressure * lift),

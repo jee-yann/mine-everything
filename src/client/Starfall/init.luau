@@ -129,7 +129,6 @@ function Opening.play(player, net, hud)
 		local skip, titles, curtain, strike = compose(screen, safe)
 		local function tap()
 			if film and film.arrival and film.pictureFrame and film.arrival:requestStrike(film.pictureFrame) then
-				strike.Visible = false
 				return true
 			end
 			return false
