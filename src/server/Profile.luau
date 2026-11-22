@@ -436,15 +436,6 @@ function Profile.buy(p, key)
 	if p.gold < price then
 		return false, "Need " .. (price - p.gold) .. " more gold"
 	end
-	local tiers = Materials.upgrades[key]
-	if tiers then
-		local recipe = tiers[p.levels[key]]
-		local name, short = Materials.missing(recipe, p.bag)
-		if name then
-			return false, string.format("Bring %d more %s to the Workshop", short, name)
-		end
-		Materials.consume(recipe, p.bag)
-	end
 	p.gold -= price
 	p.levels[key] += 1
 	return true, (item.label or key) .. " upgraded!", if key == "Power" then Profile.unlock(p, "PickUpgrade") else nil

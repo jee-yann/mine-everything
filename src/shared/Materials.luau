@@ -1,25 +1,6 @@
 local Ores = require(script.Parent.Ores)
 local Materials = {}
 
--- Indexed by the current equipment level. The starter pick can only cut hardness 1.
-Materials.upgrades = {
-	Power = {
-		{ Stone = 3, Coal = 1 },
-		{ Coal = 2, Copper = 2 },
-		{ Coal = 4, Copper = 3, Iron = 2 },
-		{ Copper = 5, Iron = 4, Gold = 2 },
-		{ Coal = 8, Copper = 6, Diamond = 3 },
-	},
-	Capacity = {
-		{ Dirt = 2, Coal = 1 },
-		{ Stone = 5, Coal = 2 },
-		{ Coal = 4, Copper = 2 },
-		{ Copper = 4, Iron = 2 },
-		{ Coal = 6, Copper = 4, Gold = 2 },
-		{ Coal = 8, Iron = 6, Diamond = 2 },
-		{ Copper = 10, Gold = 4, Emerald = 2 },
-	},
-}
 Materials.supplies = {
 	Flare = { name = "Survey flare", recipe = { Copper = 2, Coal = 3 } },
 	Temper = { name = "Pickaxe temper", recipe = { Coal = 4 } },

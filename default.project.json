@@ -1,5 +1,6 @@
 {
   "name": "EndlessMining",
+  "globIgnorePaths": ["**/MineOrigins"],
   "tree": {
     "$className": "DataModel",
     "$ignoreUnknownInstances": true,

@@ -149,7 +149,7 @@ function Audio.origins(parent)
 	if music.IsPlaying then
 		music:Stop()
 	end
-	local soundtrack = require(script.Parent.MineOrigins.Soundtrack)
+	local soundtrack = require(script.Parent.Starfall.Soundtrack)
 	return soundtrack(parent, musicChannel, sfxChannel)
 end
 local unlockNotes = {}

@@ -22,7 +22,9 @@ report.Parent = rep
 local done = {}
 report.OnServerEvent:Connect(function(player, stage, detail)
 	local n = rep.EndlessMiningNet
-	if stage == "gateApproach" then
+	if inputTest and stage == "respawnOpening" then
+		player:LoadCharacterAsync()
+	elseif stage == "gateApproach" then
 		local char = player.Character
 		char.HumanoidRootPart.Anchored = false
 		char:PivotTo(CFrame.new(n:GetAttribute("Origin") + Vector3.new(0, 3, 2)))

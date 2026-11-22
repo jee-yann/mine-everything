@@ -271,8 +271,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			W.gold
 		)
 	elseif kind == "milestone" then
-		local heading = if a == "ORE DISCOVERED" and point == "Starfall" then "IT KNOCKED BACK" else a
-		hud:milestone(heading, point, spread)
+		hud:milestone(a, point, spread)
 	elseif kind == "depart" then
 		release()
 		passage:depart(a, point)
@@ -551,7 +550,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 hud.root.Parent:SetAttribute("ControllerReady", true)
-local Opening = require(script.MineOrigins)
+local Opening = require(script.Starfall)
 local function playOpening()
 	if hud.inOpening or passage.active then return end
 	release()
@@ -572,6 +571,6 @@ task.spawn(function()
 		end
 		local character = player.Character
 		playOpening()
-		if player.Character == character then return end
+		if player.Character == character and character:IsDescendantOf(workspace) then return end
 	until not player.Parent
 end)

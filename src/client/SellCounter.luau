@@ -1,5 +1,5 @@
 local Shared = game:GetService("ReplicatedStorage").Shared
-local Ores, Materials = require(Shared.Ores), require(Shared.Materials)
+local Ores = require(Shared.Ores)
 local W, Slider = require(script.Parent.Widgets), require(script.Parent.Slider)
 local SellCounter = {}
 local stride = 124
@@ -14,7 +14,7 @@ local function makeRow(menu, ore, slot)
 	local stockFont = Instance.new("UITextSizeConstraint")
 	stockFont.MinTextSize, stockFont.MaxTextSize, stockFont.Parent = 12, 20, title
 	detail.Name, detail.RichText = "Unit price", true
-	detail.Position, detail.Size, detail.TextSize = UDim2.fromOffset(67, 29), UDim2.fromOffset(205, 36), 14
+	detail.Position, detail.Size, detail.TextSize = UDim2.fromOffset(67, 30), UDim2.fromOffset(205, 25), 14
 	detail.TextScaled = true
 	local detailFont = Instance.new("UITextSizeConstraint")
 	detailFont.MinTextSize, detailFont.MaxTextSize, detailFont.Parent = 10, 14, detail
@@ -26,7 +26,7 @@ local function makeRow(menu, ore, slot)
 	local less = W.button(row, "Fewer", 9, 66, 44, 44, W.muted, "−", "Select")
 	local more = W.button(row, "More", 222, 66, 44, 44, W.muted, "+", "Select")
 	local tint = ore.color:Lerp(W.white, 0.5)
-	local stock, quantity, price, needs = 0, 1, ore.value, ""
+	local stock, quantity, price = 0, 1, ore.value
 	local paint
 	local function draw()
 		local available = stock > 0
@@ -38,7 +38,7 @@ local function makeRow(menu, ore, slot)
 		less.Interactable, more.Interactable = quantity > 1, quantity < stock
 		less.TextTransparency = if less.Interactable then 0 else 0.55
 		more.TextTransparency = if more.Interactable then 0 else 0.55
-		detail.Text = W.unitPrice(price) .. "  ·  " .. W.goldAmount(stock - quantity) .. " left after sale" .. needs
+		detail.Text = W.unitPrice(price) .. "  ·  " .. W.goldAmount(stock - quantity) .. " left after sale"
 		paint(if stock > 1 then (quantity - 1) / (stock - 1) else 0, stock > 1)
 	end
 	local function step(delta)
@@ -59,14 +59,10 @@ local function makeRow(menu, ore, slot)
 		quantity = stock
 		draw()
 	end)
-	return function(count, multiplier, pickRecipe, bagRecipe)
+	return function(count, multiplier)
 		if count < stock then quantity = 1 end
 		stock, price = count, ore.value * multiplier
 		title.Text = ore.name .. "  " .. W.colored("×" .. W.goldAmount(count), tint) .. " in pack"
-		local requirements = {}
-		if pickRecipe[ore.name] then table.insert(requirements, "Pick needs " .. pickRecipe[ore.name]) end
-		if bagRecipe[ore.name] then table.insert(requirements, "Bag needs " .. bagRecipe[ore.name]) end
-		needs = if #requirements > 0 then "\n" .. table.concat(requirements, " · ") else ""
 		draw()
 	end
 end
@@ -76,8 +72,6 @@ function SellCounter.build(menu)
 	local empty = W.text(menu.list, "Your pack is empty", 0, 8, 447, 45, 18, W.muted)
 	table.insert(menu.updates, function()
 		local player = menu.player
-		local pickRecipe = Materials.upgrades.Power[player:GetAttribute("Power") or 1] or {}
-		local bagRecipe = Materials.upgrades.Capacity[player:GetAttribute("Capacity") or 1] or {}
 		local multiplier = if player:GetAttribute("DoubleGold") then 2 else 1
 		local value, blocks = 0, 0
 		for _, ore in Ores.list do
@@ -87,7 +81,7 @@ function SellCounter.build(menu)
 				rows[ore.name] = makeRow(menu, ore, slots)
 				slots += 1
 			end
-			if rows[ore.name] then rows[ore.name](count, multiplier, pickRecipe, bagRecipe) end
+			if rows[ore.name] then rows[ore.name](count, multiplier) end
 			value += count * ore.value * multiplier
 			blocks += count
 		end

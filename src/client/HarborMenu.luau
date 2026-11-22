@@ -203,7 +203,6 @@ function Menu:gear()
 	for i, key in Upgrades.order do
 		local item = Upgrades.items[key]
 		local title, detail, b = self:row(i, item.label or key, key, item.color)
-		twoLines(detail)
 		detail.Name, detail.RichText = "Requirements", true
 		W.outlineText(detail, 1)
 		local benefit = W.text(title.Parent, "", 247, 1, 188, 17, 13, W.aqua)
@@ -217,10 +216,13 @@ function Menu:gear()
 		table.insert(self.updates, function()
 			local level = self.player:GetAttribute(key) or 1
 			local price = Upgrades.price(key, level)
-			title.Text = (item.label or key) .. "  ·  Lv " .. level
 			local nextLevel = if price then level + 1 else level
+			title.Text = if key == "Power" and price then Upgrades.pickNames[nextLevel]
+				elseif key == "Capacity" and price then "Backpack  ·  Lv " .. nextLevel
+				else (item.label or key) .. "  ·  Lv " .. level
 			benefit.Text = if key == "Power" then "Mines " .. describe(key, nextLevel)
 				elseif key == "Capacity" then describe(key, nextLevel) .. " capacity"
+				elseif price then describe(key, level) .. " → " .. describe(key, nextLevel)
 				else describe(key, nextLevel)
 			if not price then
 				detail.Text = ""
@@ -229,24 +231,8 @@ function Menu:gear()
 			end
 			local gold = self.player:GetAttribute("Gold") or 0
 			local ready = gold >= price
-			local cost = requirement(W.number(price) .. " G", ready)
-			local caption = if ready then "Upgrade" else "Need " .. W.number(price - gold) .. " G"
-			local recipe = Materials.upgrades[key] and Materials.upgrades[key][level]
-			if recipe then
-				local bag = held(self.player, recipe)
-				title.Text = if key == "Power"
-					then Upgrades.pickNames[level + 1]
-					else "Backpack  ·  Lv " .. (level + 1)
-				local missing, count = Materials.missing(recipe, bag)
-				if missing then
-					caption = string.format("Need %d more %s", count, missing)
-					ready = false
-				end
-				detail.Text = ingredients(recipe, bag) .. "\n" .. cost
-			else
-				benefit.Text = describe(key, level) .. " → " .. describe(key, nextLevel)
-				detail.Text = cost
-			end
+			detail.Text = requirement(W.goldAmount(price) .. " G", ready)
+			local caption = if ready then "Upgrade" else "Need " .. W.goldAmount(price - gold) .. " G"
 			setButton(b, caption, if ready then W.green else unmet, ready)
 		end)
 	end
@@ -678,7 +664,7 @@ function Menu:open(key)
 		elseif key == "Pets" then "Equip one companion at a time."
 		elseif key == "Kit" then "Restock at Field Supplies beside the market."
 		elseif key == "Supplies" then "Bring mined materials to craft your supplies."
-		elseif key == "Gear" then "Find ingredient depths in the Ore Index."
+		elseif key == "Gear" then "Spend gold to upgrade your equipment."
 		elseif key == "Sell" then "Choose an amount, then tap Sell."
 		elseif key == "Passes" then "Visit Outfitters for game passes."
 		elseif key == "Achievements" then "Mine, explore and try new things. ??? reveals when you find the ore."
@@ -780,7 +766,7 @@ function Menu:refresh()
 		local value = (p:GetAttribute("BagValue") or 0) * (if p:GetAttribute("DoubleGold") then 2 else 1)
 		self.sub.Text = string.format("%d / %d slots   ·   %s G", p:GetAttribute("Used") or 0, cap, W.number(value))
 	elseif self.page == "Gear" then
-		self.sub.Text = W.number(p:GetAttribute("Gold") or 0) .. " gold available"
+		self.sub.Text = W.goldAmount(p:GetAttribute("Gold") or 0) .. " gold available"
 		if p:GetAttribute("ExpeditionStep") == "Upgrade" then
 			self.sub.Text ..= "  ·  Speed shortens every swing"
 		end

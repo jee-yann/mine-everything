@@ -58,30 +58,39 @@ local p = Profile.new()
 assert(not Profile.buy(p, "Radius"))
 p.bag = { Stone = 4, Coal = 3, Copper = 1 }
 assert(Profile.used(p) == 8 and Profile.sell(p) == 35 and Profile.used(p) == 0)
-assert(not Profile.buy(p, "Capacity") and p.gold == 35)
-p.bag = { Dirt = 2, Coal = 1 }
-assert(Profile.buy(p, "Capacity") and p.gold == 11 and Profile.stat(p, "Capacity") == 80)
-p.gold = 1e7
+assert(Profile.buy(p, "Capacity") and p.gold == 11 and Profile.stat(p, "Capacity") == 80 and Profile.used(p) == 0)
 local Upgrades = require(Shared.Upgrades)
-local Materials = require(Shared.Materials)
-for _, key in Upgrades.order do
-	for level = p.levels[key], #Upgrades.items[key].values - 1 do
-		local recipe = Materials.upgrades[key] and Materials.upgrades[key][level]
-		assert(key == "Speed" or recipe)
-		p.bag = table.clone(recipe or {})
-		if key == "Power" then
-			for name in p.bag do
-				assert(Ores.byName[name].hardness <= level, "recipe needs the pick it unlocks")
-			end
+for _, bag in { {}, { Dirt = 2, Stone = 3, Coal = 1, Copper = 2, Gold = 1 } } do
+	local miner = Profile.new()
+	miner.bag = table.clone(bag)
+	local startingLoad = Profile.used(miner)
+	local function checkBag()
+		assert(Profile.used(miner) == startingLoad, "workshop changed the pack's load")
+		for name, count in bag do
+			assert(miner.bag[name] == count, "workshop changed a stack of " .. name)
 		end
-		assert(Profile.buy(p, key) and Profile.used(p) == 0)
 	end
-	assert(not Profile.buy(p, key) and p.levels[key] == #Upgrades.items[key].values)
+	for _, key in { "Speed", "Power", "Capacity" } do
+		local values = Upgrades.items[key].values
+		for level = 1, #values - 1 do
+			local price = Upgrades.price(key, level)
+			miner.gold = price - 1
+			assert(not Profile.buy(miner, key) and miner.gold == price - 1 and miner.levels[key] == level)
+			checkBag()
+			miner.gold = price
+			assert(Profile.buy(miner, key) and miner.gold == 0 and miner.levels[key] == level + 1)
+			assert(Profile.stat(miner, key) == values[level + 1])
+			checkBag()
+		end
+		miner.gold = 1e7
+		assert(not Profile.buy(miner, key) and miner.gold == 1e7 and miner.levels[key] == #values)
+		checkBag()
+	end
+	assert(Profile.stat(miner, "Speed") == 0.20 and Profile.stat(miner, "Power") == 6 and Profile.stat(miner, "Capacity") == 7200)
+	miner.bag.Stone = 7201
+	assert(not Profile.valid(miner))
 end
-assert(Profile.stat(p, "Speed") == 0.20 and Profile.stat(p, "Power") == 6 and Profile.stat(p, "Capacity") == 7200)
-p.bag.Stone = 7201
-assert(not Profile.valid(p))
-print("PASS sale, costs, level caps, upgrade effects, profile capacity validation")
+print("PASS sales, gold-only upgrades with empty and stocked packs, exact costs, insufficient funds and level caps")
 local retired = Profile.new()
 retired.levels.Radius = 4
 assert(Data.claim({ profile = retired }, "migration", 0).profile.gold == 234)
@@ -194,10 +203,10 @@ assert(Profile.sell(split, 2, "Copper", "Stack") == 0)
 assert(Profile.sell(split, 2, "Fake", 1) == nil and Profile.sell(split, 2, "Coal", -1) == nil)
 assert(Profile.sell(split, 2, nil, "Stack") == nil and Profile.sell(split, 2, "Coal", nil) == nil)
 assert(split.gold == 72 and split.bag.Stone == 4 and split.bag.Coal == 2)
-assert(Profile.buy(split, "Power") and split.gold == 36 and split.bag.Stone == 1 and split.bag.Coal == 1)
-assert(Profile.sell(split, 1, "Stone", 1) == 2)
+assert(Profile.buy(split, "Power") and split.gold == 36 and split.bag.Stone == 4 and split.bag.Coal == 2)
+assert(Profile.sell(split, 1, "Stone", "Stack") == 8)
 local lastGold, lastAward, lastCount = Profile.sell(split, 1, "Coal", "Stack")
-assert(lastGold == 5 and lastAward == awards.CleanSale.name and lastCount == 1 and Profile.used(split) == 0)
+assert(lastGold == 10 and lastAward == awards.CleanSale.name and lastCount == 2 and Profile.used(split) == 0)
 for _, bag in { {}, { Stone = 2 }, { Dirt = 1, Coal = 2 }, { Gold = 0 } } do
 	haul.bag = bag
 	local _, award = Profile.sell(haul)
@@ -211,13 +220,12 @@ local _, repeatAward = Profile.sell(haul)
 assert(not repeatAward and haul.earned.CleanSale and not haul.earned.Scales)
 haul.gold = 36
 haul.bag = { Stone = 4 }
-assert(not Profile.buy(haul, "Power") and haul.gold == 36 and haul.bag.Stone == 4 and haul.levels.Power == 1)
-haul.bag.Coal = 1
 local bought, _, workshopAward = Profile.buy(haul, "Power")
-assert(bought and workshopAward == awards.PickUpgrade.name and haul.bag.Stone == 1 and haul.bag.Coal == nil)
+assert(bought and workshopAward == awards.PickUpgrade.name and haul.gold == 0 and haul.bag.Stone == 4)
 haul.earned.Sandwich = true
 assert(Profile.valid(haul) and Data.claim({ profile = haul }, "legacyAward", 32).profile.earned.Sandwich)
 assert(not table.find(Profile.recordCut(haul, "Starfall"), awards.LuckAndSkill.name))
+local Materials = require(Shared.Materials)
 local supplies = Profile.new()
 supplies.gold = 150
 supplies.bag = { Coal = 2, Copper = 1 }

@@ -2,18 +2,18 @@
 
 ![Citrine Cove in Roblox Studio](map/CitrineCove-preview.jpg)
 
-Citrine Cove is a multiplayer Roblox mining simulator. Aim at a cave wall or floor to highlight a single block, hold through the pickaxe swing, and bring the ore to the harbor. Each block face measures 6 × 6 studs. Every pick takes one block per cut. Speed shortens the cut and Power unlocks harder ore. A starter pack holds 36 blocks. Ore grants XP. Each level after the first awards one skill point. [Watch the opening in Roblox Studio](art/origins/It-Knocked-Back.mp4).
+Citrine Cove is a multiplayer Roblox mining simulator. Aim at a cave wall or floor to highlight a single block, hold through the pickaxe swing, and bring the ore to the harbor. Each block face measures 6 × 6 studs. Every pick takes one block per cut. Speed shortens the cut and Power unlocks harder ore. A starter pack holds 36 blocks. Ore grants XP. Each level after the first awards one skill point. [Watch the opening in Roblox Studio](art/starfall/Where-the-Stars-Took-Root-The-Fault-Reader.mp4).
 
 ## Play locally
 
 1. Open `build/Mine-Everything.rbxlx` in Roblox Studio, or use the existing **Endless Mining** Studio place connected to this project's Rojo server. To create the build from a fresh checkout, use the commands below.
-2. Press **F5**. A fresh save opens with *It Knocked Back*, a 49-second animated introduction. Pebbles lift as the meteor races overhead. A single ink-and-light frame marks contact. The blast clears to reveal a violet fissure that draws its light inward and closes. From above the same headland, three sun and moon crossings follow the forest, the first survey boat, and the workers building Citrine Cove. On the real footbridge, three taps into the shaft get three replies. Your own strike draws one last answer before the camera releases at the spawn compass. Use **Skip**, **Enter**, or gamepad **B** to start immediately. Replay the film from **Settings → It Knocked Back**. Follow the gold marker through the arch. Hold the left mouse button on the dirt floor, or aim the center dot and hold **Mine** on touch.
+2. Press **F5**. A fresh save opens with *Where the Stars Took Root*, a 65-second film photographed at 24 fps about the origin of Citrine Cove's ores. A fallen star burns across the island. The forest returns, and generations of prospectors reshape the crater into a working mine. Your avatar reads a fault and frees an emerald with a single blow. That feat earns the guild's commission to find Starfall. Use **Tap to light the route** on touch, **Space** on keyboard, or **X** on a controller to strike the survey beacon with your pick and light the path toward the mine. The swing plays automatically if you watch. Use **Skip**, **Enter**, or gamepad **B** at any time. To watch again, open **Settings → Where the Stars Took Root**. Follow the gold marker through the arch. Hold the left mouse button on the dirt floor, or aim the center dot and hold **Mine** on touch.
 3. Dig through the two dirt layers and look for black coal in the stone. Bring your haul to the amber **Sell** pad, then visit **Upgrades**. Speed costs 30 gold and shortens each swing. Buying a different upgrade also counts. Break another block with your new gear to finish the expedition. The guide remembers progress across visits and can be skipped in **Settings → First expedition**.
-4. The depth display counts blocks below the gallery. At 27 blocks deep you enter Iron Shelf. **Index** lists ore chances by depth, and **↑ Surface** brings you to the path outside the mine. The trip takes longer from greater depths. After eight blocks, **Jobs → First strike** awards 25 gold. A larger backpack costs 24 gold, 2 dirt and 1 coal.
+4. The depth display counts blocks below the gallery. At 27 blocks deep you enter Iron Shelf. **Index** lists ore chances by depth, and **↑ Surface** brings you to the path outside the mine. The trip takes longer from greater depths. After eight blocks, **Jobs → First strike** awards 25 gold. The first backpack upgrade costs 24 gold and raises capacity from 36 to 80 blocks.
 
 The place uses each player’s equipped Roblox avatar. If Studio Output reports an authentication error for a missing head or clothing texture, refresh the Studio sign-in and start another play session.
 
-The opening has its own score. The meteor's approach falls silent before the first strike. Bowed strings and percussion carry the construction sequence, and the underground reply echoes the interval first heard at the crater. The score, hammer, underground replies and character murmurs use sounds bundled with Roblox. Music and effects follow their respective volume controls. Settings’ motion preference also selects steadier camera shots.
+A violet meteor crosses the moonlit headland in three frames. Its broken corona marks ignition, then a thin expanding half-circle marks the shockwave reaching the camera. Generations later, a winding tower brings up slivers of the old seam. The centered **PRESENT DAY** card introduces the player's own field test. The score builds from the crater fires to the final challenge with drums and brass. The music and effects sliders control the film mix. Disabling menu motion or enabling Roblox's Reduce Motion setting suppresses the impact flashes, camera recoil and blur, and limits peak light. [Shot-by-shot storyboard](art/starfall/Storyboard.md)
 
 ![Music, sound effects and menu motion in Settings](map/Settings-preview.jpg)
 
@@ -60,9 +60,9 @@ Digging opens a shared route through five regions. Each eligible block independe
 
 The percentages apply to solid rock beneath the two dirt layers. Cave air yields no material.
 
-At the amber Sell counter, tap **E** (or tap the prompt on mobile) to choose a material. The slider starts at one. Drag it, use **−** and **+**, or choose **Select all** for that ore. The sale button shows the quantity, ore and exact gold payout. Beside it you can see how many will remain for upgrades. Press the sale button to trade the selection. **Sell entire pack** shows the total block count and payout for everything you carry. Holding the stall prompt also quick-sells the pack for the displayed amount.
+At the amber Sell counter, tap **E** (or tap the prompt on mobile) to choose a material. The slider starts at one. Drag it, use **−** and **+**, or choose **Select all** for that ore. The sale button shows the quantity, ore and exact gold payout. It also shows how many of that material will remain in your pack. Press the sale button to trade the selection. **Sell entire pack** shows the total block count and payout for everything you carry. Holding the stall prompt also quick-sells the pack for the displayed amount.
 
-Bring materials to the Workshop before selling your haul. The Copper Pick costs 36 gold, 3 stone and 1 coal. The first backpack upgrade costs 24 gold, 2 dirt and 1 coal. Each equipment tier has its own recipe, and the Workshop shows how many ingredients you have.
+Buy pickaxe Power, swing Speed and backpack Capacity with gold at the Workshop. The first upgrades cost 36 gold for the Copper Pick, 30 gold for faster swings, and 24 gold for the larger backpack.
 
 Field Supplies crafts consumables from the materials in your bag. A survey flare costs 2 copper and 3 coal. Deploy it from **Inventory → Supplies** to light a tunnel for 30 seconds and point toward a natural cave within 10 blocks. Four coal temper the pick for 25 successful hardness-2-or-higher cuts. The Jobs board posts one material delivery each UTC day and pays gold plus a survey flare.
 
@@ -85,7 +85,7 @@ Each completed cut removes the highlighted block. A mint border follows its expo
 | Seed, site, layers, reach, save interval and work budget | `src/shared/GameConfig.luau` |
 | Material appearance, sale value and required power | `src/shared/Ores.luau` |
 | Upgrade values, level caps and cost curves | `src/shared/Upgrades.luau` |
-| Equipment recipes, field supplies and daily deliveries | `src/shared/Materials.luau` |
+| Field supplies and daily delivery recipes | `src/shared/Materials.luau` |
 | Skill tree and mining bonuses | `src/shared/Skills.luau` |
 | Pets, achievement progress and skill points | `src/shared/FieldGuide.luau` |
 | Jobs and ranks | `src/shared/Expeditions.luau` |
@@ -128,7 +128,7 @@ $terrainTest = (Resolve-Path '.\tests\Mine.spec.luau').Path
 & $studioExe --task RunScript --localPlaceFile $miningPlace --runScriptFile $terrainTest --outputFile "$env:TEMP\EndlessMining-terrain.log" --quitAfterExecution
 ```
 
-Look for a standalone `MINING_TESTS_PASSED` output line. The map checks cover the walk from spawn, both market counters, their lights, the outer paths, 360 directions around the rock rim and the surface threshold and the diggable hut floor. The mining checks cover save ownership, profile validation, economy, three seeds, shared depletion, server reach and obstructions, two pure dirt layers, regional stone percentages, sealed caves, depth gates and long headings across chunk boundaries. Run the same Studio command with `tests/Origins.spec.luau` for the cutscene’s two camera matches, late-streaming entrance, reduced-motion shots and final spawn view. It prints `MINING_ORIGINS_TESTS_PASSED` on success.
+Look for a standalone `MINING_TESTS_PASSED` output line. The map checks cover the walk from spawn, both market counters, their lights, the outer paths, 360 directions around the rock rim and the surface threshold and the diggable hut floor. The mining checks cover save ownership, profile validation, economy, three seeds, shared depletion, server reach and obstructions, two pure dirt layers, regional stone percentages, sealed caves, depth gates and long headings across chunk boundaries. Run the same Studio command with `tests/Origins.spec.luau` for the cinematic’s shooting star, travelling blast, ash and regrowth, historical stages, reduced motion, late-streaming island, the precision blow, intact emerald, personalized guild commission, accelerating mine entrance, route beacon and camera handoff. It prints `MINING_ORIGINS_TESTS_PASSED` on success.
 
 Run the input and two-client checks with Python 3 and a signed-in Studio session. The runner builds two temporary places with the test players and music mute already configured.
 

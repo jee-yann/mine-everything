@@ -80,14 +80,30 @@ local function test()
 		assert(opening and titles.Skip and not gui.SafeArea.Visible, "skippable first visit")
 		local camera = workspace.CurrentCamera
 		local stage = camera:WaitForChild("Mine origins set", 4)
-		local resonance = opening:WaitForChild("Starfall resonance", 4)
+		local resonance = opening:WaitForChild("Star harmonics", 4)
+		local acousticRig = camera:WaitForChild("Cinematic sound sources", 4)
 		assert(stage and camera.CameraType == Enum.CameraType.Scriptable and not p:GetAttribute("IntroSeen"))
 		assert(
-			resonance.SoundGroup == harbor["Stone break"].SoundGroup
+			resonance.SoundGroup == song.SoundGroup
 				and resonance.SoundId == "rbxasset://sounds/volume_slider.ogg"
 		)
 		assert(not song.IsPlaying and resonance:FindFirstChildOfClass("ReverbSoundEffect"))
+		local effects = game.SoundService["Harbor effects"]
+		assert(opening["Residual ringing"].SoundGroup == effects and opening.Eruption.SoundGroup == effects)
+		assert(acousticRig.outbound["Ablation flypast"].SoundGroup == effects)
+		assert(acousticRig.inbound["Shale through the air"].SoundGroup == effects)
 		if r:GetAttribute("CheckSwing") then
+			local firstCharacter = p.Character
+			r:FireServer("respawnOpening")
+			waitFor(function()
+				return not opening.Parent and not stage.Parent and not acousticRig.Parent and p.Character and p.Character ~= firstCharacter
+			end, 14, "respawn releases the interrupted film")
+			opening = p.PlayerGui:WaitForChild("Mine origins", 12)
+			titles = p.PlayerGui:WaitForChild("Mine subtitles", 3)
+			camera = workspace.CurrentCamera
+			stage = camera:WaitForChild("Mine origins set", 4)
+			assert(opening and opening:WaitForChild("Landfall", 4) and titles.Skip and not p:GetAttribute("IntroSeen"))
+			kit = p.Character:WaitForChild("Prospector kit", 8)
 			-- Exercise the live music handoff with its output muted for the entire check.
 			local mix = song.SoundGroup.Volume
 			song.SoundGroup.Volume = 0
@@ -115,74 +131,85 @@ local function test()
 			rep:SetAttribute("MuteTestMusic", true)
 			song:Stop()
 			song.SoundGroup.Volume = mix
+		elseif p.UserId % 2 == 0 then
+			-- Leave while the other client watches, then keep both miners at
+			-- spawn until that private screening has also finished.
+			local peer
+			waitFor(function()
+				for _, miner in game.Players:GetPlayers() do
+					if miner ~= p then peer = miner end
+				end
+				return peer and peer:GetAttribute("ProfileReady")
+			end, 20, "the other first-time miner joined")
+			local input = game.UserInputService:CreateVirtualInput()
+			input:SendKey(true, Enum.KeyCode.Return)
+			task.wait(0.08)
+			input:SendKey(false, Enum.KeyCode.Return)
+			waitFor(function()
+				return not opening.Parent and not stage.Parent and p:GetAttribute("IntroSeen") and gui.SafeArea.Visible
+			end, 4, "one viewer can return to play independently")
+			assert(not peer:GetAttribute("IntroSeen"), "skipping marked the other miner as finished")
+			waitFor(function() return peer:GetAttribute("IntroSeen") end, 83, "the other miner finishes their film")
 		else
-			local landed, outbound, returned = false, 0, 0
 			local spawnAt = p.Character.HumanoidRootPart.Position
-			opening.Landfall.Played:Once(function()
-				landed = not song.IsPlaying
-			end)
-			opening["Survey knock"].Played:Connect(function()
-				outbound += 1
-			end)
-			opening["Returned knock"].Played:Connect(function()
-				returned += 1
-			end)
-			local coast = stage:WaitForChild("Primordial cove", 3)
-			local meteor = coast:WaitForChild("Starfall meteor", 3)
-			local core = meteor:WaitForChild("Starfall core", 2)
-			assert(coast:FindFirstChild("Plasma wake") and #coast["Plasma wake"]:GetChildren() > 5)
-			local initial = meteor:GetPivot().Position
+			local landed, eruption, breaker, fire, rock, lifted, collapse, bow
+			opening.Landfall.Played:Once(function() landed = os.clock() end)
+			opening["Collapsing crater wall"].Played:Once(function() collapse = os.clock() end)
+			opening.Eruption.Played:Once(function() eruption = os.clock() end)
+			opening["Shockwave arrival"].Played:Once(function() breaker = os.clock() end)
+			acousticRig.inbound["Shockwave bow"].Played:Once(function() bow = os.clock() end)
+			acousticRig.right["Fire in the fissure"].Played:Once(function() fire = os.clock() end)
+			acousticRig.left["Slumping basalt"].Played:Once(function() rock = os.clock() end)
+			opening["Pick settles on shoulder"].Played:Once(function() lifted = true end)
+			waitFor(function() return landed and collapse and eruption and breaker and bow end, 23, "collision, collapsing wall, eruption and traveling shock")
+			assert(collapse >= landed and collapse - landed < 0.45 and opening["Collapsing crater wall"].IsPlaying, "crumbling rock carries the blast to the coast")
+			assert(eruption - landed > 0.045 and eruption - landed < 0.23, "ignition follows contact by three film frames")
+			assert(math.abs(bow - breaker) < 0.12, "the stereo wave edge arrives with the second impact")
+			assert(breaker - landed > 3.2 and breaker - landed < 3.8, "the front reaches the fixed lens 84 film frames after impact")
+			waitFor(function() return fire and rock end, 7, "fire and settling debris sustain the burned basin")
+			assert(rock > breaker and fire > breaker, "the close aftermath follows the pressure wave")
 			waitFor(function()
-				return (meteor:GetPivot().Position - initial).Magnitude > 10
-			end, 5, "meteor physically crosses the cove")
+				return titles.Caption.Text:find("one seam", 1, true)
+			end, 10, "the cooled island retains its fracture")
 			waitFor(function()
-				return landed and coast:FindFirstChild("Impact crown") and meteor.Parent ~= coast
-			end, 12, "impact opens the crater")
+				return titles.Caption.Text:find("Prospectors", 1, true)
+			end, 12, "prospectors reach the island")
+			local card = titles:WaitForChild("Expedition title", 2)
+			local typeArea = card.Letterpress
 			waitFor(function()
-				local fault = coast:FindFirstChild("Sealed impact fault", true)
-				local light = fault and fault:FindFirstChildWhichIsA("PointLight", true)
-				return not core:IsDescendantOf(stage) and light and light.Brightness > 0.12
-			end, 6, "the hidden source lights the broken ground")
+				return card.Visible and typeArea.Lead.Text == "CITRINE COVE"
+					and typeArea.Headline.Visible and typeArea.Headline.Text == "PRESENT DAY"
+			end, 14, "the present-day title lands on the playable cove")
+			assert(card.AnchorPoint == Vector2.new(0.5, 0.5) and math.abs(card.Position.X.Scale - 0.5) < 0.001, "centered chapter card")
+			waitFor(function() return titles.Caption.Text:find("free the emerald", 1, true) end, 5, "the precision trial")
+			assert(not stage:FindFirstChild(p.Character.Name), "the first visit uses the live miner")
 			waitFor(function()
-				return stage:FindFirstChild("Citrine through time") and not coast.Parent
-			end, 8, "impact site gives way to the cove under construction")
-			assert(opening.Dissolve.BackgroundTransparency > 0.95, "visible geography through the time transition")
+				return lifted and card.Visible and typeArea.Headline.Text == "FAULT READER"
+					and typeArea.Lead.Text == p.DisplayName and stage:FindFirstChild("Expedition pick")
+			end, 10, "the successful miner is introduced by name")
+			local station = stage:WaitForChild("Starfall expedition station", 6)
+			local dispatch = station["Signed field dispatch"]["Guild commission"]
+			assert(dispatch:FindFirstChild(p.DisplayName) and dispatch:FindFirstChild("MASTER PROSPECTOR"))
+			local strike = titles:WaitForChild("Strike sample", 2)
+			waitFor(function() return strike.Visible end, 5, "expedition route control opens")
+			local landedSample
+			opening["Pick strikes Starfall"].Played:Once(function() landedSample = os.clock() end)
+			local tappedAt = os.clock()
+			local input = game.UserInputService:CreateVirtualInput()
+			input:SendKey(true, Enum.KeyCode.Space)
+			task.wait(0.06)
+			input:SendKey(false, Enum.KeyCode.Space)
+			waitFor(function() return landedSample and not strike.Visible end, 1.6, "input causes the player strike")
+			assert(landedSample - tappedAt < 0.9, "the beacon waited for the automatic swing")
+
 			waitFor(function()
-				return titles.Date.Text == "THE FIRST SURVEY"
-			end, 13, "vegetated island reaches first survey")
-			local crew = stage:WaitForChild("The knocking crew", 12)
-			local actor = crew["Expedition miner"]
-			assert(actor:FindFirstChildOfClass("Humanoid") and actor:FindFirstChild("Head"))
-			assert(
-				crew["Survey operator"]:FindFirstChild("Right Arm")
-					and crew["Survey operator"]:FindFirstChildOfClass("Humanoid")
-			)
+				return card.Visible and typeArea.Headline.Text == "STARFALL" and stage:FindFirstChild("Unreached Starfall lode")
+			end, 11, "the mine dive reveals the unreached lode")
 			waitFor(function()
-				return outbound == 3 and returned == 3
-			end, 12, "matched three-knock call and answer")
-			local gate = n:GetAttribute("Entrance")
-			assert(
-				(actor.Head.Position - gate).Magnitude < 16 and not stage:FindFirstChild("Survey bay"),
-				"actors use the actual streamed mine entrance"
-			)
-			local pick = crew["Harbor pick"]
-			local rest = pick:GetPivot()
-			waitFor(function()
-				return (pick:GetPivot().Position - rest.Position).Magnitude > 1
-			end, 6, "avatar lifts pick")
-			local light = crew["Signal stone"]["Listening seam"]:FindFirstChildWhichIsA("PointLight", true)
-			waitFor(function()
-				return light.Brightness > 0.8
-			end, 8, "the fault in the bedrock answers the player's hit")
-			waitFor(function()
-				return titles.Intertitle.Text == "IT KNOCKED BACK" and returned == 4
-			end, 8, "one deep answer leads back toward spawn")
-			waitFor(function()
-				return not crew.Parent and p.Character.Head.LocalTransparencyModifier < 1
-			end, 4, "real avatar revealed on the landing")
-			assert((p.Character.HumanoidRootPart.Position - spawnAt).Magnitude < 8, "the local film never moves the actual player")
+				return card.Visible and typeArea.Headline.Text == "REACH STARFALL."
+			end, 6, "the route points to the real mine")
+			assert((p.Character.HumanoidRootPart.Position - spawnAt).Magnitude < 8, "the private film moved the miner")
 			assert((spawnAt - n:GetAttribute("Landing")).Magnitude < 22)
-			assert(opening.Dissolve.BackgroundTransparency > 0.95, "handoff stays on the live map")
 		end
 		waitFor(function()
 			return not opening.Parent
@@ -191,7 +218,8 @@ local function test()
 				and p:GetAttribute("IntroSeen")
 				and gui.SafeArea.Visible
 				and workspace.CurrentCamera.CameraType ~= Enum.CameraType.Scriptable
-				and not camera:FindFirstChild("Mine origins focus")
+				and not camera:FindFirstChild("Specimen focus")
+				and not camera:FindFirstChild("Light through ash")
 				and not camera:FindFirstChild("Cinematic sound sources")
 		end, 16, "opening returns camera and HUD")
 	end
@@ -433,16 +461,16 @@ local function test()
 			return overlay.Visible and menu.Listings:FindFirstChild(listing)
 		end, 5, "open " .. page)
 		if page == "Gear" and r:GetAttribute("CheckSwing") then
-			local held = p:GetAttribute("HeldStone")
-			p:SetAttribute("HeldStone", 29)
-			local label = menu.Listings.Power.Requirements
-			waitFor(function()
-				return label.Text:find("✓ Stone 29/3", 1, true) and label.TextFits
-			end, 2, "workshop shows all carried ingredients")
+			for key, price in { Speed = 30, Power = 36, Capacity = 24 } do
+				local row = menu.Listings[key]
+				waitFor(function()
+					return row.Requirements.ContentText == "× " .. price .. " G" and row.Requirements.TextFits
+						and row.Action.Text == "Need " .. price .. " G" and not row.Action.Interactable
+				end, 2, "gold cost of " .. key .. " for a new miner")
+			end
 			local benefit = menu.Listings.Power.Benefit
-			assert(benefit.Text == "Mines Copper" and benefit.TextFits and not label.Text:find("Mines", 1, true))
+			assert(benefit.Text == "Mines Copper" and benefit.TextFits)
 			assert(benefit.AbsolutePosition.Y + benefit.AbsoluteSize.Y <= menu.Listings.Power.Action.AbsolutePosition.Y)
-			p:SetAttribute("HeldStone", held)
 		end
 		if page == "Pets" or page == "Passes" then
 			assert(pager.Animated and menu.Position == UDim2.fromScale(0.5, 0.5), "only tab content should swipe")
@@ -1159,7 +1187,7 @@ local function test()
 			assert(p:GetAttribute("ExpeditionStep") == "Dig" and p:GetAttribute("IntroSeen"))
 			assert(p:GetAttribute("SfxMuted") and p:GetAttribute("SfxVolume") == 80 and not row.Erase.Visible)
 			assert(menu.Listings["Sound effects"].Mute["Mute slash"].Visible)
-			local replay = menu.Listings["It Knocked Back"].Action
+			local replay = menu.Listings["Where the Stars Took Root"].Action
 			menu.Listings.CanvasPosition = Vector2.new(0,menu.Listings.AbsoluteCanvasSize.Y)
 			task.wait(.2)
 			clickButton(replay)
@@ -1178,14 +1206,14 @@ local function test()
 	local gameRay = RaycastParams.new()
 	gameRay.FilterDescendantsInstances = { p.Character }
 	local normals = { Vector3.yAxis, Vector3.zAxis, Vector3.xAxis, -Vector3.xAxis, -Vector3.zAxis, -Vector3.yAxis }
-	local function dig(count, requiredName)
+	local function dig(count)
 		-- Two miners deplete the same gallery. Re-aim at an exposed face each cut,
 		-- including the sides and the floor that open up behind the original wall.
 		local eye = head.Position
 		local best, side, material, score = nil, nil, nil, math.huge
 		for _, brick in workspace.CitrineCove.MineBlocks:GetChildren() do
 			local ore = ores.byName[brick.Name]
-			if not ore or ore.hardness > 1 or (requiredName and ore.name ~= requiredName) then
+			if not ore or ore.hardness > 1 then
 				continue
 			end
 			local half = brick.Size * 0.5
@@ -1268,6 +1296,7 @@ local function test()
 	assert(row.Visible and row["Sell quantity"].Interactable and row["Select stack"].Interactable)
 	assert(row.Stock.RichText and row.Stock.Text:find("×" .. initial .. "</font>", 1, true))
 	assert(row["Unit price"].Text:lower():find('<font color="#ffd14c">' .. selected.value .. " g each</font>", 1, true))
+	assert(not row["Unit price"].ContentText:find("needs", 1, true), "sell counter reserves ore for gear")
 	local portion = math.min(initial - 1, 3)
 	n.Action:FireServer("Sell", selected.name, portion)
 	waitFor(function()
@@ -1279,73 +1308,37 @@ local function test()
 		return p:GetAttribute("Used") == 36 - initial and not row["Select stack"].Interactable
 	end, 3, "sell one material")
 	assert(p:GetAttribute("Gold") == selected.value * initial and overlay.Visible)
-	-- Keep one mined coal for the next backpack. Sell the rest through the same menu.
-	assert(p:GetAttribute("HeldCoal") >= 1)
-	for _, ore in ores.list do
-		local attr = "Held" .. ore.name
-		local keep = if ore.name == "Coal" then 1 else 0
-		while p:GetAttribute(attr) > keep do
-			local before = p:GetAttribute(attr)
-			task.wait(0.25)
-			n.Action:FireServer("Sell", ore.name, if keep == 1 then 1 else "Stack")
-			waitFor(function() return p:GetAttribute(attr) < before end, 3, "sell surplus " .. ore.name)
-		end
-	end
-	local saleGold = value - ores.byName.Coal.value
-	assert(p:GetAttribute("Gold") == saleGold and p:GetAttribute("Used") == 1)
+	local saleGold = value
+	task.wait(0.25)
+	n.Action:FireServer("Sell")
+	waitFor(function()
+		return p:GetAttribute("Used") == 0 and p:GetAttribute("Gold") == saleGold
+	end, 3, "sell the entire remaining haul")
 	assert(p:GetAttribute("ExpeditionStep") == "Upgrade", "sale advanced the expedition")
 	r:FireServer("closePage")
 	waitFor(function() return not overlay.Visible and sellPrompt.Enabled end, 3, "return to sell prompt")
 	n.Action:FireServer("Buy", "Capacity")
 	task.wait(0.4)
 	assert(p:GetAttribute("Capacity") == 1 and p:GetAttribute("Gold") == saleGold, "workshop must require a visit")
-	visit("Gear", true)
-	local function checkBagRecipe(ready)
-		local row = menu.Listings:WaitForChild("Capacity", 3)
-		assert(row)
-		waitFor(function()
-			local requirements = row.Requirements
-			local text = requirements.Text
-			local function has(color, label)
-				return text:lower():find('<font color="#' .. color .. '">' .. label:lower() .. "</font>", 1, true)
-					~= nil
-			end
-			return requirements.RichText
-				and requirements.TextFits
-				and has("6eec96", "✓ 24 G")
-				and has(if ready then "6eec96" else "ff8d89", if ready then "✓ Dirt 2/2" else "× Dirt 0/2")
-				and has("6eec96", "✓ Coal 1/1")
-				and row.Action.Interactable == ready
-		end, 3, "individual bag ore and gold requirements")
-	end
-	checkBagRecipe(false)
-	n.Action:FireServer("Buy", "Capacity")
-	task.wait(0.3)
-	assert(p:GetAttribute("Capacity") == 1 and p:GetAttribute("Gold") == saleGold, "bag requires dirt")
 	visit("Supplies", true)
 	waitFor(function() return menu.Listings:FindFirstChild("Survey flare") end, 3, "Field Supplies")
 	assert(not menu.Listings:FindFirstChild("Coal") and not menu.Listings:FindFirstChild("Copper"))
 	n.Action:FireServer("Supply", "Coal")
 	task.wait(0.3)
-	assert(p:GetAttribute("HeldCoal") == 1 and p:GetAttribute("Gold") == saleGold)
-	r:FireServer("position")
-	waitFor(function()
-		return (p.Character.Head.Position - origin).Z < 0 and not overlay.Visible
-	end, 5, "return for bag materials")
-	for _ = 1, 60 do
-		if p:GetAttribute("HeldDirt") == 2 then
-			break
-		end
-		dig(1, "Dirt")
-		task.wait(0.14)
-	end
-	assert(p:GetAttribute("HeldDirt") == 2)
+	assert(p:GetAttribute("HeldCoal") == 0 and p:GetAttribute("Gold") == saleGold)
 	visit("Gear", true)
-	checkBagRecipe(true)
+	for key, price in { Speed = 30, Power = 36, Capacity = 24 } do
+		waitFor(function()
+			local gear = menu.Listings:FindFirstChild(key)
+			return gear and gear.Requirements.ContentText == "✓ " .. price .. " G"
+				and gear.Action.Interactable
+		end, 3, "can buy " .. key .. " with an empty pack")
+	end
 	n.Action:FireServer("Buy", "Capacity")
 	waitFor(function()
 		return p:GetAttribute("Capacity") == 2 and p:GetAttribute("Gold") == saleGold - 24
-	end, 5, "purchase")
+	end, 5, "buy backpack with sale gold alone")
+	assert(p:GetAttribute("Used") == 0)
 	assert(kit["Field pack"].Size.Magnitude > packSize.Magnitude, "pack grew after capacity upgrade")
 	assert(p:GetAttribute("ExpeditionStep") == "Return", "any workshop upgrade counts")
 	r:FireServer("position")
@@ -1358,13 +1351,13 @@ local function test()
 	end
 	assert(p:GetAttribute("Used") == 0, "multi-block request was accepted")
 	for i = 1, 100 do
-		if p:GetAttribute("Used") == 2 then
+		if p:GetAttribute("Used") == 4 then
 			break
 		end
 		dig(1)
 		task.wait(0.14)
 	end
-	assert(p:GetAttribute("Used") == 2, "single-block mining after upgrade")
+	assert(p:GetAttribute("Used") == 4, "single-block mining after upgrade")
 	assert(p:GetAttribute("ExpeditionStep") == "Done", "new gear tested in the field")
 	assert(p:GetAttribute("Found" .. discovered) and p:GetAttribute("Mined") == 40, "ore discovery and lifetime blocks")
 	n.Action:FireServer("Job", 2)
