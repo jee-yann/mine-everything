@@ -61,7 +61,7 @@ local function companion(folder, drake)
 	model.Parent = folder
 	return model, label
 end
-return function()
+return function(hud)
 	local folder = Instance.new("Folder")
 	folder.Name, folder.Parent = "Rock companions", workspace
 	local pets = {}
@@ -75,6 +75,10 @@ return function()
 	end
 	Players.PlayerRemoving:Connect(clear)
 	Run.RenderStepped:Connect(function(dt)
+		if hud.inOpening then
+			for p in pets do clear(p) end
+			return
+		end
 		local eye = workspace.CurrentCamera
 		if not eye then
 			return

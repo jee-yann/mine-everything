@@ -21,7 +21,9 @@ local shelves = {
 -- shadow maps. Bands follow the real horizon even when the camera rolls.
 local function nightSky()
 	local model = S.group("Night across the strait")
-	local sides, radius, high, low = 16, 2720, 1570, -380
+	-- Enclose the outermost flight camera (-600, 440, 370), the cloud
+	-- banks, and the island within a much shorter native draw distance.
+	local sides, radius, high, low = 16, 1250, 820, -200
 	local width = 2 * radius * math.tan(math.pi / sides) + 2
 	local cap = 2 * radius / 3 + 2
 	local random = Random.new(1775)
@@ -41,17 +43,17 @@ local function nightSky()
 		gui.SizingMode, gui.CanvasSize, gui.Parent = Enum.SurfaceGuiSizingMode.FixedSize, Vector2.new(640, 960), panel
 		local face = Instance.new("Frame")
 		face.Size, face.BorderSizePixel, face.BackgroundColor3, face.Parent =
-			UDim2.fromScale(1, 1), 0, hex(if roof then "0C162B" else "FFFFFF"), gui
+			UDim2.fromScale(1, 1), 0, hex(if roof then "141F38" else "FFFFFF"), gui
 		if not roof then
 			local gradient = Instance.new("UIGradient")
 			gradient.Rotation = 90
 			gradient.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, hex("0C162B")),
-				ColorSequenceKeypoint.new(0.62, hex("162641")),
-				ColorSequenceKeypoint.new(0.73, hex("354663")),
-				ColorSequenceKeypoint.new(0.79, hex("69738C")),
-				ColorSequenceKeypoint.new(0.82, hex("405777")),
-				ColorSequenceKeypoint.new(1, hex("3D5069")),
+				ColorSequenceKeypoint.new(0, hex("141F38")),
+				ColorSequenceKeypoint.new(0.62, hex("182942")),
+				ColorSequenceKeypoint.new(0.73, hex("2B3F5B")),
+				ColorSequenceKeypoint.new(0.79, hex("495873")),
+				ColorSequenceKeypoint.new(0.82, hex("2F4262")),
+				ColorSequenceKeypoint.new(1, hex("253955")),
 			})
 			gradient.Parent = face
 			for _ = 1, 17 do

@@ -1,4 +1,5 @@
 local S = require(script.Parent.Scenery)
+local GalleryRun = require(script.Parent.GalleryRun)
 local cut = require(script.Parent.ExposureSheet).frames
 local V = Vector3.new
 local Camera = {}
@@ -77,29 +78,10 @@ function Camera.frame(actor, _, motion)
 		-- The inlays run out under the lens. Follow their bearing low enough
 		-- for the next arrow to silhouette against the yellow sand.
 		local n = phase(contact + 6, contact + 26)
-		local exit = marker.exit.WorldPosition
-		local start = V(route.X, exit.Y, route.Z)
-		local line = start:Lerp(exit, 0.08 + 0.65 * n)
-		aim = line + route.LookVector * (4.6 * u) + V(0, (0.25 + 0.82 * n) * u, 0)
-		eye = line + route:VectorToWorldSpace(V(-2.3 + 1.05 * n, 2.12 - 0.63 * n, 2.8) * u)
+		eye, aim = GalleryRun.waymarks(actor, n)
 		lens, roll = 49, -4.8 + 3.7 * n
 	elseif frame < cut.lode then
-		local gate = route.Position
-			+ (actor.handoff.entrance or (actor.handoff.landing + route.LookVector * 72))
-			- actor.handoff.landing
-		local forward = route.LookVector
-		local right = route.RightVector
-		local low = V(0, 1.8, 0)
-		local ready = phase(contact + 26, cut.mineRun)
-		local run = if frame >= cut.mineRun and motion then phase(cut.mineRun, cut.lode) else 0
-		-- Pass between the real basalt piers at full speed. The gentle
-		-- approach has a nonzero tangent straight into the quintic dive.
-		local travel = 6 * run + 50 * run ^ 5
-		eye = gate + right * (-6.0 + 2.8 * ready + 2.5 * run)
-			+ low + V(0, 0.40 * ready + 0.28 * run, 0)
-			- forward * (35.8 - 4.1 * ready - travel)
-		aim = gate + forward * (4 + travel * 0.74) + V(0, 4.6 - 2.8 * run, 0)
-		lens, roll = 50 + 7 * run ^ 3, -1.6 + 0.6 * ready + 2.8 * run ^ 3
+		eye, aim, lens, roll = GalleryRun.gallery(actor, frame, contact + 26, motion)
 	else
 		local n = phase(cut.challenge, cut.endBlend)
 		eye = route * (V(-3.62 + 0.63 * n, 1.67 + 0.35 * n, 6.65 + 0.54 * n) * u)

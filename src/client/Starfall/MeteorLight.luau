@@ -188,7 +188,7 @@ function MeteorLight:draw(t, star, camera, motion, masterFrame)
 	local active = frame >= sheet.frames.terminal and t < 12.86
 	self.root.Parent = if active then self.stage else nil
 	local contact = if frame == sheet.frames.contact then 0.22 elseif frame < sheet.frames.ignition then 0.035 else 1
-	local sky = (if before then approach * 0.48 else contact * (1 - S.ease(t, 4.77, 6.23)))
+	local sky = (if before then approach * 0.16 else contact * (1 - S.ease(t, 4.77, 6.23)))
 		* (if motion then 1 else 0.56)
 	local level = math.floor(sky * 40 + 0.5)
 	if self.waterLevel ~= level or (before and approach > 0) then

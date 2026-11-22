@@ -82,6 +82,10 @@ local function test()
 		local returning = not r:GetAttribute("CheckSwing") and p.UserId % 2 == 0
 		assert(p:GetAttribute("IntroSeen") == returning, "the join loaded the expected viewing history")
 		local opening = p.PlayerGui:WaitForChild("Mine origins", 6)
+		local top = opening:WaitForChild("Top matte", 2)
+		local bottom = opening:WaitForChild("Bottom matte", 2)
+		assert(top.Size == bottom.Size and top.Size.Y.Scale >= 0.04 and top.Size.Y.Scale <= 0.09)
+		assert(top.BackgroundColor3 == Color3.new() and bottom.AnchorPoint.Y == 1 and bottom.Position.Y.Scale == 1)
 		local titles = p.PlayerGui:WaitForChild("Mine subtitles", 2)
 		assert(opening and titles and titles.Skip and not gui.SafeArea.Visible, "automatic skippable film on join")
 		local camera = workspace.CurrentCamera
@@ -94,11 +98,19 @@ local function test()
 				and resonance.SoundId == "rbxasset://sounds/volume_slider.ogg"
 		)
 		assert(not song.IsPlaying and resonance:FindFirstChildOfClass("ReverbSoundEffect"))
-		local effects = game.SoundService["Harbor effects"]
+		local effects = game.SoundService["Starfall effects"]
+		local gameplayEffects = game.SoundService["Harbor effects"]
+		assert(gameplayEffects.Volume == 0 and math.abs(effects.Volume - p:GetAttribute("SfxVolume") / 100) < 0.001,
+			"only film effects should be audible at the viewer's effects level")
 		assert(opening["Residual ringing"].SoundGroup == effects and opening.Eruption.SoundGroup == effects)
 		assert(acousticRig.outbound["Ablation flypast"].SoundGroup == effects)
 		assert(acousticRig.inbound["Shale through the air"].SoundGroup == effects)
 		if r:GetAttribute("CheckSwing") then
+			local mix = song.SoundGroup.Volume
+			song.SoundGroup.Volume = 0
+			rep:SetAttribute("MuteTestMusic", false)
+			local harborStarts = 0
+			local trackStarts = song.Played:Connect(function() harborStarts += 1 end)
 			local firstCharacter = p.Character
 			r:FireServer("respawnOpening")
 			waitFor(function()
@@ -110,10 +122,7 @@ local function test()
 			stage = camera:WaitForChild("Mine origins set", 4)
 			assert(opening and opening:WaitForChild("Landfall", 4) and titles.Skip and not p:GetAttribute("IntroSeen"))
 			kit = waitFor(equippedKit, 8, "replacement miner equipment")
-			-- Exercise the live music handoff with its output muted for the entire check.
-			local mix = song.SoundGroup.Volume
-			song.SoundGroup.Volume = 0
-			rep:SetAttribute("MuteTestMusic", false)
+			assert(harborStarts == 0 and not song.IsPlaying, "harbor music interrupted the replacement screening")
 			-- During a respawn the Scriptable camera can retain the retired Humanoid.
 			local retired = Instance.new("Model")
 			local subject = Instance.new("Humanoid")
@@ -133,7 +142,8 @@ local function test()
 			waitFor(function()
 				return song.IsPlaying and song.Volume > 0.06
 			end, 3, "music fades up after skip")
-			assert(song.SoundGroup.Volume == 0)
+			assert(harborStarts == 1 and song.SoundGroup.Volume == 0, "Skip handed music over exactly once")
+			trackStarts:Disconnect()
 			rep:SetAttribute("MuteTestMusic", true)
 			song:Stop()
 			song.SoundGroup.Volume = mix
@@ -146,6 +156,13 @@ local function test()
 				end
 				return peer and peer:GetAttribute("ProfileReady")
 			end, 20, "the other first-time miner joined")
+			local peerHead = waitFor(function()
+				local head = peer.Character and peer.Character:FindFirstChild("Head")
+				return head and head.LocalTransparencyModifier == 1 and head
+			end, 4, "the other miner is hidden from the first scene")
+			local badge = Instance.new("BillboardGui")
+			badge.Parent = peerHead
+			waitFor(function() return not badge.Enabled end, 2, "a late-streamed badge stays out of the film")
 			local input = game.UserInputService:CreateVirtualInput()
 			input:SendKey(true, Enum.KeyCode.Return)
 			task.wait(0.08)
@@ -154,6 +171,8 @@ local function test()
 				return not opening.Parent and not stage.Parent and p:GetAttribute("IntroSeen") and gui.SafeArea.Visible
 			end, 4, "one viewer can return to play independently")
 			assert(not peer:GetAttribute("IntroSeen"), "skipping marked the other miner as finished")
+			assert(peerHead.LocalTransparencyModifier < 1 and badge.Enabled, "Skip restores the other miner and their gear")
+			badge:Destroy()
 			local previousCharacter = p.Character
 			local reopened = false
 			local watch = p.PlayerGui.ChildAdded:Connect(function(child)
@@ -171,6 +190,13 @@ local function test()
 			waitFor(function() return peer:GetAttribute("IntroSeen") end, 83, "the other miner finishes their film")
 		else
 			local spawnAt = p.Character.HumanoidRootPart.Position
+			local orchestraStarts, fallbackNotes = 0, 0
+			opening["The Final Push 30B"].Played:Connect(function() orchestraStarts += 1 end)
+			for _, voice in opening:GetChildren() do
+				if voice.Name == "Expedition horns" or voice.Name == "Ostinato bass" then
+					voice.Played:Connect(function() fallbackNotes += 1 end)
+				end
+			end
 			local landed, eruption, breaker, fire, rock, lifted, collapse, bow
 			opening.Landfall.Played:Once(function() landed = os.clock() end)
 			opening["Collapsing crater wall"].Played:Once(function() collapse = os.clock() end)
@@ -180,7 +206,14 @@ local function test()
 			acousticRig.right["Fire in the fissure"].Played:Once(function() fire = os.clock() end)
 			acousticRig.left["Slumping basalt"].Played:Once(function() rock = os.clock() end)
 			opening["Pick settles on shoulder"].Played:Once(function() lifted = true end)
-			waitFor(function() return landed and collapse and eruption and breaker and bow end, 23, "collision, collapsing wall, eruption and traveling shock")
+			waitFor(function()
+				return opening["Atmospheric entry"].IsPlaying or landed or eruption or breaker
+			end, 30, "the film clock starts after native scene construction")
+			waitFor(function() return landed end, 13, "Landfall attack on frame 240")
+			waitFor(function() return eruption end, 2, "Eruption attack on frame 243")
+			waitFor(function() return collapse end, 2, "crater wall collapses after ignition")
+			waitFor(function() return breaker end, 5, "shockwave arrives on frame 324")
+			waitFor(function() return bow end, 1, "directional bow plays with the shockwave")
 			assert(collapse >= landed and collapse - landed < 0.45 and opening["Collapsing crater wall"].IsPlaying, "crumbling rock carries the blast to the coast")
 			assert(eruption - landed > 0.045 and eruption - landed < 0.23, "ignition follows contact by three film frames")
 			assert(math.abs(bow - breaker) < 0.12, "the stereo wave edge arrives with the second impact")
@@ -227,6 +260,14 @@ local function test()
 			waitFor(function()
 				return card.Visible and typeArea.Headline.Text == "REACH STARFALL."
 			end, 6, "the route points to the real mine")
+			assert((orchestraStarts == 1 and fallbackNotes == 0) or (orchestraStarts == 0 and fallbackNotes > 0),
+				"the screening must keep one musical arrangement through the hoist, portrait and mine")
+			for _, miner in game.Players:GetPlayers() do
+				if miner ~= p then
+					local head = miner.Character and miner.Character:FindFirstChild("Head")
+					assert(head and head.LocalTransparencyModifier == 1, "a respawned miner is still hidden at the live mine")
+				end
+			end
 			assert((p.Character.HumanoidRootPart.Position - spawnAt).Magnitude < 8, "the private film moved the miner")
 			assert((spawnAt - n:GetAttribute("Landing")).Magnitude < 22)
 		end
@@ -241,6 +282,7 @@ local function test()
 				and not camera:FindFirstChild("Light through ash")
 				and not camera:FindFirstChild("Cinematic sound sources")
 		end, 16, "opening returns camera and HUD")
+		waitFor(function() return math.abs(gameplayEffects.Volume - effects.Volume) < 0.001 end, 2, "gameplay sound restored after film")
 	end
 	local ownerVision
 	do

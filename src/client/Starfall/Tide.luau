@@ -1,4 +1,5 @@
 local S = require(script.Parent.Scenery)
+local Sprite = require(script.Parent.WorldSprite)
 local clock = require(script.Parent.Timeline)
 local V, CF = Vector3.new, CFrame.new
 local Tide = {}
@@ -38,10 +39,10 @@ local function sky(root)
 	grade.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromHex("10182F")),
 		ColorSequenceKeypoint.new(0.43, Color3.fromHex("293553")),
-		ColorSequenceKeypoint.new(0.60, Color3.fromHex("615471")),
-		ColorSequenceKeypoint.new(0.67, Color3.fromHex("D1A698")),
-		ColorSequenceKeypoint.new(0.72, Color3.fromHex("8CA6B6")),
-		ColorSequenceKeypoint.new(1, Color3.fromHex("60849C")),
+		ColorSequenceKeypoint.new(0.60, Color3.fromHex("454663")),
+		ColorSequenceKeypoint.new(0.67, Color3.fromHex("8C829A")),
+		ColorSequenceKeypoint.new(0.72, Color3.fromHex("536B89")),
+		ColorSequenceKeypoint.new(1, Color3.fromHex("384C6B")),
 	})
 	grade.Rotation, grade.Parent = 90, bg
 	local rng = Random.new(767)
@@ -76,11 +77,16 @@ function Tide.new(stage, base)
 	local glint = S.group("Distant traveller")
 	glint.Parent = root
 	local star = Vector3.zero
+	local core = S.part(glint, "First glint", CF(), Vector3.one * 1.25, "FFF0CE", Enum.Material.Neon)
+	core.Shape, core.CastShadow = Enum.PartType.Ball, false
+	local halo = Sprite.new(core, "Gold through the outer corona", "rbxasset://textures/glow.png", 0)
+	halo.card.Brightness = 3
+	Sprite.draw(halo, star, 40, 38, -12, Color3.fromHex("FFD6AD"), 0.12)
 	for _, d in { { 11, 1.3, 1.5 }, { -12, -1.4, 1.7 }, { -1.2, 10, 1.3 }, { 1.4, -10, 1.3 } } do
 		stroke(glint, star, star + across * d[1] + Vector3.yAxis * d[2], d[3], 0.01, "FFF0D3", 0.03)
 	end
-	local wake = stroke(root, star, star, 0.02, 2.0, "AB81C8", 0.17)
-	local hot = stroke(root, star, star, 0.02, 0.95, "FFE4B4", 0.05)
+	local wake = stroke(root, star, star, 0.02, 3.4, "C59AE6", 0.13)
+	local hot = stroke(root, star, star, 0.02, 1.40, "FFF0C4", 0.03)
 	local rng = Random.new(910)
 	local ripples = {}
 	for i = 1, 62 do

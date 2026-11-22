@@ -64,7 +64,7 @@ function Film.new(stage, screen, camera, handoff, motion, continueSetup)
 		end
 		self.arrival = Arrival.new(stage, handoff)
 		self.arrival.motion = motion
-		self.lode = StarfallLode.new(stage, base * CF(0, 94, -480))
+		self.lode = StarfallLode.new(stage, base * CF(0, 94, -480), self.island.set)
 		self.portrait = ProspectorPortrait.new(stage, screen)
 		self.impact = Impact.new(stage, screen, base, motion)
 	end, debug.traceback)

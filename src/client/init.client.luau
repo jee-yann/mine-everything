@@ -335,11 +335,12 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 	end
 end)
 net.Dust.OnClientEvent:Connect(function(point, spread, ore, finds, normal, loot)
+	if hud.inOpening then return end
 	fx:labels(finds, loot, normal, true)
 	fx:burst(point, spread, Ores.byName[ore], true)
 end)
 
-require(script.Podiums).start(player)
+require(script.Podiums).start(player, hud)
 
 Players.PlayerAdded:Connect(Swing.observe)
 for _, other in Players:GetPlayers() do
@@ -348,7 +349,7 @@ for _, other in Players:GetPlayers() do
 	end
 end
 
-require(script.RockCompanions)()
+require(script.RockCompanions)(hud)
 local lastDepth, lastRegion
 local function targetName(ore, center)
 	if ore.secret and not player:GetAttribute("Found" .. ore.name) then
@@ -559,9 +560,11 @@ local function playOpening()
 	hud:aimAt(nil)
 	hud:setShop(false)
 	Opening.play(player, net, hud)
-	Audio.startHarborMusic()
+	return true
 end
-hud.menu.replayOpening = playOpening
+hud.menu.replayOpening = function()
+	if playOpening() then Audio.startHarborMusic() end
+end
 task.spawn(function()
 	repeat
 		repeat task.wait(.1) until player:GetAttribute("ProfileReady") and net:GetAttribute("Ready")
@@ -570,6 +573,7 @@ task.spawn(function()
 		playOpening()
 		if player.Character == character and character:IsDescendantOf(workspace) then
 			joinOpeningPending = false
+			Audio.startHarborMusic()
 			return
 		end
 	until not player.Parent

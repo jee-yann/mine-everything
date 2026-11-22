@@ -21,8 +21,8 @@ The crater and the mine share a site in Citrine Cove. A fork of violet light sur
 | 46.13–49.13 s | On the shoulder pose the harbor falls away into a graphic portrait. The player’s actual display name lands above **FAULT READER**. | The brass returns and the name lands on a downbeat. |
 | 49.13–51.71 s | Hold the signed guild dispatch naming the same miner the expedition lead. | A paper snap punctuates the cut back to the harbor. |
 | 51.71–57.67 s | The avatar stands beside the route beacon. Space, X or touch starts the swing. Cut on the strike to the opening seal and follow six lit waymarks inland. | The steel and the notes travelling down the road follow the actual input. |
-| 57.67–59.17 s | The approach speeds up into a quintic camera move between the working mine’s basalt piers. | A short rush crests inside the gallery. |
-| 59.17–62.17 s | Continue underground, then track slowly across the faceted Starfall twin. **MYTHICAL ORE / STARFALL** appears after the viewer can see the crystal. | A high fifth carries through the change of scale. |
+| 57.67–59.17 s | Follow the waymarks between the playable mine’s basalt piers. Pass the hanging lamps and tip down over a timber-lined shaft in the dig floor. Its violet seam leads the eye to a small glint below the ladder. | Wind passes the lens at the arch. Its echo carries down the shaft. |
+| 59.17–62.17 s | Follow the same seam into the chamber. The glint resolves into the faceted Starfall twin as the camera settles on the crystal. **MYTHICAL ORE / STARFALL** appears once the mineral is in view. | A high fifth carries through the change of scale. |
 | 62.17–65.08 s | Back at spawn, the player and their destination share the picture. **BE FIRST TO / REACH STARFALL.** The view settles into the player’s own camera. | Brass resolves into the working harbor. |
 
 ## Footage studies
@@ -86,12 +86,12 @@ The small sparks above the secondary fires and the dust along the meteor use the
 
 ## Studio recording
 
-The [finished film](Where-the-Stars-Took-Root-The-Fault-Reader.mp4) was recorded in Studio Play at 1920 × 1080 with stereo sound. The cinematic runs for 1,562 exposures at 24 fps (65.08 s), followed by 22 frames of gameplay in the 66-second recording. The trial blow lands at 42.83 s. In this take the player pressed Space and the beacon strike landed on frame 1290 at 53.75 s.
+Studio Play supplied the 1920 × 1080 picture and stereo sound for this recording. The film runs for 1,562 exposures at 24 fps (65.08 s), followed by half a second of gameplay. The trial blow lands at 42.83 s. This take shows the automatic beacon strike at 55.50 s. [Watch the film](Where-the-Stars-Took-Root-The-Fault-Reader.mp4)
 
 Frames 237–239 carry the terminal descent. Contact is frame 240 at 10.000 s. Frame 241 returns to ordinary moonlight and frame 242 tightens down to a pin. The main eruption opens on frame 243 at 10.125 s. The broken circle surrounds ignition on frame 246. Frame 247 goes white and the following exposures reverse and change the ray shapes. In the second sequence, frame 323 gives one ordinary view of the oncoming water. The original torn white crest crosses the full-color eruption on frames 324 and 325. Frame 326 goes black. The final printed exposure is frame 328, two frames earlier than the previous edit. [Frames from the Studio recording](The-Fault-Reader-frames.jpg)
 
 The recorded score uses 2nd Foundation Music’s *The Final Push 30B* from APM Music. Drums build under the settlement and brass carries the challenge into the harbor. The sound of the pick hitting the beacon follows the player’s input. If the track is unavailable, the client plays a locally voiced adventure score. The music and sound effects groups follow the player's saved mixer settings. [Creator Store track](https://create.roblox.com/store/asset/1848015198) · [Roblox licensed music in recordings](https://en.help.roblox.com/hc/en-us/articles/360038525351-Using-Licensed-Music-in-Videos)
 
-First-time players perform the closing shot with their live character. For a replay from underground, the client stages a copy of the player's dressed character at the compass and restores their original view. The printed commission carries the player’s Roblox display name. The beacon opens only for that viewer. A portrait lens keeps the entire dispatch in view.
+On each join, the player performs the closing shot with their own character. For an underground replay, the client stages a copy of the dressed character at the compass and restores the original view. The printed commission carries the player’s Roblox display name. Other players, their equipment and their companions stay out of the shot on the viewer’s client, including when someone joins or respawns. The black bars withdraw as the camera returns to the player.
 
 Studio checks cover interrupted respawn, Skip, independent playback for two players, the player’s interactive strike, the route lights and the return to the Dig waypoint.

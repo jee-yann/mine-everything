@@ -28,7 +28,12 @@ function Entry.new(face)
 	local root = S.group("Ionised entry envelope")
 	local axis = S.part(root, "Wake axis", CF(), Vector3.one * 0.05, "FFFFFF")
 	axis.Transparency, axis.CastShadow = 1, false
-	S.light(axis, "FFB878", 33, 2.6)
+	S.light(axis, "FFBC87", 35, 3.8)
+	-- A single optically hot leading edge remains visible without the
+	-- fullscreen Bloom effect. It rolls behind the actual stone on the chase.
+	local nose = Sprite.new(axis, "Bow shock flare", "rbxasset://textures/glow.png", 0)
+	nose.card.Brightness = 2.75
+	Sprite.draw(nose, V(4.15, 0.3, 1.0), 7.0, 6.5, -14, Color3.fromHex("FFDAA5"), 0.20)
 	-- Optically thin bow: the same pointed surface reads against both a dark
 	-- sky and the cliff. The hollow flank leaves the fractured stone visible.
 	local rings = { { 8.42, 0.18 }, { 7.35, 1.14 }, { 5.1, 2.7 }, { 0.75, 4.72 }, { -4.5, 5.65 } }
@@ -124,25 +129,23 @@ function Entry.new(face)
 	for i = 1, 9 do
 		motes[i] = Sprite.new(axis, "Ablated mineral dust", Sprite.sparks, 0.08)
 	end
-	local afterglow = {}
 	for i, pos in { V(-2, 0, 0), V(-11, 1, 1), V(-19, 0, -2), V(-32, -1, 1) } do
 		local glow = Sprite.new(
 			axis,
 			"Bloom suspended in the ionised wake",
-			"rbxasset://textures/ui/InGameMenu/BackgroundGlow.png",
+			"rbxasset://textures/particles/explosion01_implosion_main.dds",
 			0
 		)
-		glow.card.Brightness = 2.8
+		glow.card.Brightness = 2.4
 		Sprite.draw(
 			glow,
 			pos,
-			12 + i * 4,
-			9 + 2.9 * i,
+			18 + i * 5,
+			19 + 2.8 * i,
 			0,
-			Color3.fromHex(if i % 2 == 0 then "AF73FF" else "FFC496"),
-			0.20 + 0.07 * i
+			Color3.fromHex(if i % 2 == 0 then "FFB680" else "B175F8"),
+			0.32 + 0.08 * i
 		)
-		afterglow[i] = glow
 	end
 	local scraps = {}
 	for i = 1, 11 do
@@ -161,7 +164,6 @@ function Entry.new(face)
 	end
 	return setmetatable({
 		root = root,
-		afterglow = afterglow,
 		motes = motes,
 		streams = streams,
 		rings = ringsOfAir,

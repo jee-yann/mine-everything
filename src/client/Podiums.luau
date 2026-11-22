@@ -44,7 +44,7 @@ local function makeFigure(id)
 	model.Name = "Podium miner"
 	return model
 end
-function Podiums.start(viewer)
+function Podiums.start(viewer, hud)
 	local slots = {}
 	local function clear(slot)
 		if slot.model then
@@ -96,6 +96,12 @@ function Podiums.start(viewer)
 	end
 	local clock = 0
 	Run.PreSimulation:Connect(function(dt)
+		if hud.inOpening then
+			for _, slot in slots do
+				if slot.id then clear(slot) end
+			end
+			return
+		end
 		clock += dt
 		if clock >= 0.5 then
 			clock = 0

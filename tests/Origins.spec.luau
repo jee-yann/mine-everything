@@ -439,22 +439,52 @@ local function check(motion, live, remote)
 	assert(((tool.tool:GetPivot() * tool.tip) - station.core.WorldPosition).Magnitude < 0.035, "pick must hit the route seal")
 	film:expose(offered + 27, live)
 	assert(station.runnels[6].strokes[1].Material == Enum.Material.Neon, "the strike lights the far end of the route")
-	local function runStep(frame)
-		film:expose(frame, live)
-		local eye = cam.CFrame.Position
-		film:expose(frame + 1, live)
-		return (cam.CFrame.Position - eye).Magnitude
+	local run = require(source.GalleryRun)
+	local origin = run.origin(film.arrival)
+	local mouth = origin + run.mouth
+	if motion then
+		local tall = {
+			handoff = { landing = origin + Vector3.new(0, 4.96, 89), origin = origin },
+			mineBearing = CFrame.new(origin + Vector3.new(0, 4.96, 89)), unit = 1.85,
+			marker = { exit = { WorldPosition = origin + Vector3.new(0, 0, 89 - 29.88 * 1.85) } },
+		}
+		local first, lastZ = cuts.prompt + 8 + 26, math.huge
+		for frame = first, cuts.mineRun do
+			local eye = run.gallery(tall, frame, first, true)
+			assert(eye.Z < lastZ, "earliest strike must keep travelling towards the arch with a tall avatar")
+			lastZ = eye.Z
+		end
 	end
-	local startRun = runStep(cuts.mineRun + 1)
-	local endRun = runStep(cuts.lode - 2)
-	assert(if motion then startRun > 0.05 and endRun > startRun * 12 else endRun < 0.001, "mine dolly must accelerate through the arch")
+	film:expose(cuts.mineRun + 18, live)
+	local inHall = cam.CFrame.Position - origin
+	assert(math.abs(inHall.X) < 25 and inHall.Y > 1 and inHall.Y < 10 and inHall.Z < -6 and inHall.Z > -60,
+		"lens must enter the actual working gallery above its playable dig floor")
+	local photographed = {}
+	for item, original in film.lode.hidden do
+		assert(item.LocalTransparencyModifier == 1, "excavation must clear the photographed column")
+		photographed[item] = original
+	end
+	assert(next(photographed), "the photographed shaft did not open in the live or replica floor")
+	film:expose(cuts.lode - 2, live)
+	local prev = cam.CFrame.Position
+	film:expose(cuts.lode - 1, live)
+	local endRun = (cam.CFrame.Position - prev).Magnitude
+	if motion then
+		assert((cam.CFrame.Position - mouth).Magnitude < 1.5 and cam.CFrame.LookVector.Y < -0.97,
+			"the dive must pass through the floor opening")
+	else
+		assert(endRun < 0.001, "reduced motion must hold the gallery view")
+	end
 	local lip = film.lode.model:GetPivot()
 	local approach = lip:ToObjectSpace(cam.CFrame)
 	film:expose(cuts.lode, live)
 	local chamber = film.lode.model:GetPivot():ToObjectSpace(cam.CFrame)
+	for item, original in photographed do
+		assert(item.LocalTransparencyModifier == original, "transition must restore each floor brick")
+	end
 	if motion then
 		local stride = (chamber.Position - approach.Position).Magnitude
-		assert(stride >= endRun and stride < endRun * 1.22, "lens lost its velocity in the throat")
+		assert(math.abs(stride - endRun) < 0.14, "lens lost its velocity in the throat")
 		assert(approach.LookVector:Dot(chamber.LookVector) > 0.99, "gallery and crystal must share the sightline")
 	end
 	film:expose(cuts.lode + 32, live)
@@ -485,8 +515,16 @@ local function check(motion, live, remote)
 	-- Repeat the release with sky, local lamps and optics actively changed.
 	if not live then
 		film:draw(if motion then 4.56 else 7.62, false)
+	else
+		film:expose(cuts.mineRun + 18, true)
+		assert(next(film.lode.hidden), "skip fixture must start above an open shaft")
 	end
 	film:Destroy()
+	if live then
+		for item, original in photographed do
+			assert(item.LocalTransparencyModifier == original, "skipping must restore the original dig cell")
+		end
+	end
 	assert(root["Hat glints"].TimeScale == 1 and root["Prism Ribbon"].Enabled, "avatar cosmetics must resume")
 	assert(#stage:GetChildren() == 0 and #screen:GetChildren() == 0, "private assets survived release")
 	for _, item in saved do

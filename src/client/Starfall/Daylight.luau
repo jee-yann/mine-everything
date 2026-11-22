@@ -6,6 +6,8 @@ local sheet = require(script.Parent.ExposureSheet)
 local terminal = require(script.Parent.TerminalLight)
 local Moonlight = require(script.Parent.Moonlight)
 local V, CF, hex = Vector3.new, CFrame.new, Color3.fromHex
+local offshoreMoon = V(-0.933, 0.309, 0.183).Unit
+local ancientHour = 2.65
 local Daylight = {}
 Daylight.__index = Daylight
 
@@ -127,7 +129,7 @@ function Daylight.new(stage)
 end
 
 local solar = {
-	{ clock.recovery, 4.78 },
+	{ clock.recovery, ancientHour },
 	{ 14.7, 15.2 },
 	{ 16.70, 32.6 },
 	{ 19.30, 37.4 },
@@ -143,10 +145,10 @@ local solar = {
 }
 local function hourAt(t, motion, finish)
 	if t < clock.recovery then
-		return 4.78
+		return ancientHour
 	end
 	if not motion then
-		return 4.78 + (finish - 4.78) * S.ease(t, clock.recovery, clock.match)
+		return ancientHour + (finish - ancientHour) * S.ease(t, clock.recovery, clock.match)
 	end
 	for i = 2, #solar do
 		local a, b = solar[i - 1], solar[i]
@@ -172,7 +174,9 @@ function Daylight:draw(t, motion, base, masterFrame)
 	local ash = S.ease(t, clock.contact + 0.17, 6.35) * (1 - S.ease(t, clock.recovery + 0.30, 15.83))
 	local heat
 	if frame < sheet.frames.contact then
-		heat = approach * 0.52
+		-- The streak illuminates the cove locally. A smaller exposure lift
+		-- keeps the sky dark through all three frames of its arrival.
+		heat = approach * 0.19
 	elseif frame < sheet.frames.ignition then
 		heat = if frame == sheet.frames.contact then 0.22 else 0.02
 	else
@@ -184,16 +188,16 @@ function Daylight:draw(t, motion, base, masterFrame)
 		* (1 - S.ease(frame, sheet.frames.coast - 3, sheet.frames.coast))
 	self.grade.Enabled = look > 0.001 and not (motion and edit.at(frame))
 	if self.grade.Enabled then
-		local stock = hex("FFF0D9"):Lerp(hex("C6D7FF"), night):Lerp(hex("A2C8FF"), ancient)
+		local stock = hex("FFF0D9"):Lerp(hex("C6D7FF"), night):Lerp(hex("B7CFFF"), ancient)
 		self.grade.TintColor = Color3.new(1, 1, 1)
 			:Lerp(stock:Lerp(hex("F9CEBF"), ash * 0.50):Lerp(arrivalColor, hot * 0.69), look)
 		self.grade.Contrast = (0.07 + 0.035 * ancient - 0.055 * ash - 0.06 * veil) * look
-		self.grade.Saturation = (-0.055 - 0.30 * ancient + 0.10 * ash) * look
+		self.grade.Saturation = (-0.055 - 0.17 * ancient + 0.10 * ash + 0.13 * hero) * look
 	end
-	-- Photograph night using a cool grazing key. The strong directional
-	-- source gives even the wide shot a single, coherent cast shadow.
-	local moonKey = frame < 570
-	Lighting.ClockTime = if moonKey then 16.78 - 0.8 * (1 - ancient) else hour
+	-- A true night sky must remain behind the painted horizon when a lower
+	-- graphics level drops distant geometry or disables post-processing.
+	local moonKey = frame < 570 and hour < 6.15
+	Lighting.ClockTime = hour
 	Lighting.GeographicLatitude = self.latitude + (34 - self.latitude) * history
 	local top = hex("FFD2A5"):Lerp(hex("8DAEDF"), night):Lerp(hex("82ADF1"), ancient)
 	Lighting.ColorShift_Top = self.top:Lerp(top:Lerp(hex("D99F8C"), ash * 0.40):Lerp(arrivalColor, hot), look)
@@ -202,15 +206,17 @@ function Daylight:draw(t, motion, base, masterFrame)
 	Lighting.EnvironmentDiffuseScale = self.diffuse + (0.30 + 0.14 * (1 - ancient) - self.diffuse) * look
 	Lighting.EnvironmentSpecularScale = self.specular + (0.83 - 0.60 * ancient - self.specular) * look
 	Lighting.ExposureCompensation = self.exposure
-		+ (0.06 - 0.35 * ancient + 0.32 * basin - 0.04 * ash) * look
+		+ (0.06 - 0.13 * ancient + 0.32 * basin - 0.04 * ash) * look
 		+ hot * 1.83
 	Lighting.Brightness = self.brightness + (2.25 - ancient * 0.55 + night * 0.15 - self.brightness) * look + hot * 2.45
-	local skyFill = hex("716B78"):Lerp(hex("414F72"), night):Lerp(hex("405573"), ancient)
+	local skyFill = hex("716B78"):Lerp(hex("414F72"), night):Lerp(hex("788BB0"), ancient)
 	Lighting.OutdoorAmbient =
 		self.outdoor:Lerp(skyFill:Lerp(hex("615169"), ash * 0.63):Lerp(arrivalColor, hot * 0.65), look)
-	local shadow = hex("493B47"):Lerp(hex("172136"), night):Lerp(hex("151D32"), ancient)
+	local shadow = hex("493B47"):Lerp(hex("273048"), night):Lerp(hex("27364D"), ancient)
 	Lighting.Ambient = self.ambient:Lerp(shadow:Lerp(hex("50333B"), ash * 0.56):Lerp(arrivalColor, hot * 0.50), look)
-	local moonDirection = if moonKey then Lighting:GetSunDirection() else Lighting:GetMoonDirection()
+	-- The visible low moon, its reflected path and the local cliff lights
+	-- occupy the same bearing throughout the ancient offshore shot.
+	local moonDirection = if moonKey then offshoreMoon else Lighting:GetMoonDirection()
 	self.lunar:draw(
 		base,
 		moonDirection,

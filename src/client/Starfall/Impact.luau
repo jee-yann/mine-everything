@@ -73,50 +73,38 @@ local function face(parent, a, b, c, tint, material, collector, castsShadow)
 end
 
 local function meteor()
-	local basalt = {}
 	local shell = S.group("Aureole · Blender shell")
 	local geode = {
-		[15] = "AB70CF",
-		[17] = "8541AC",
-		[19] = "613982",
-		[21] = "9251BE",
-		[22] = "703E97",
-		[23] = "C184E3",
-		[24] = "905CA8",
+		[15] = "D99CF9",
+		[16] = "AA69C5",
+		[17] = "B377DF",
+		[19] = "8C56AC",
+		[21] = "B475E7",
+		[22] = "9256B5",
+		[23] = "F2D4FF",
+		[24] = "C28DDE",
 	}
 	for _, f in Sculpture.faces do
 		local original = Sculpture.palette[f[1]]
-		local tint = geode[f[1]] or (if original == "FBB773" then "EB9A59" else original)
-		local marks = if f[1] <= 14 and original ~= "FBB773" then {} else nil
-		face(
-			shell,
-			V(f[2], f[3], f[4]),
-			V(f[5], f[6], f[7]),
-			V(f[8], f[9], f[10]),
-			tint,
-			if f[1] == 15 or f[1] == 21 or f[1] == 23 or original == "FBB773" then neon else smooth,
-			marks
-		)
-		if marks and #marks > 0 then
+		local a, b, c = V(f[2], f[3], f[4]), V(f[5], f[6], f[7]), V(f[8], f[9], f[10])
+		local tint = geode[f[1]] or original
+		local finish = if f[1] <= 15 or f[1] == 17 or f[1] == 21 or f[1] == 23 then neon else smooth
+		if f[1] <= 14 and original ~= "FBB773" then
 			local cold = Color3.fromHex(original)
-			-- The thin lithic plates retain painted bounce when low-quality
-			-- lighting drops their point source. Their direction gives every
-			-- bevel a different value across the camera-facing portion.
-			local a, b, c = V(f[2], f[3], f[4]), V(f[5], f[6], f[7]), V(f[8], f[9], f[10])
+			-- Emissive, directionally shaded crust throughout the flight.
+			-- A distant shot cannot rely on an engine-selected point light.
 			local n = (b - a):Cross(c - a).Unit
 			local incidence = math.clamp(0.31 + 0.53 * n:Dot(V(-0.21, 0.71, 0.67).Unit), 0, 1)
 			local value = math.clamp(incidence + 0.88 * (cold.R - 0.30), 0, 1)
-			local warm = Color3.fromHex("6D484C"):Lerp(Color3.fromHex("B58368"), value)
-			for _, part in marks do
-				table.insert(basalt, { part, cold, warm })
-			end
+			tint = Color3.fromHex("75494F"):Lerp(Color3.fromHex("DC9C72"), value):ToHex()
 		end
+		face(shell, a, b, c, tint, finish)
 	end
 	-- A broad bounce from the luminous wake picks out the basalt's plate edges
 	-- on the dark side of the approach, including during the undercranked insert.
 	local fill = S.part(shell, "Bounce off the exposed glass", CF(-1.5, 4, 7.6), Vector3.one * 0.06, "DBBDF4")
 	fill.Transparency, fill.CastShadow = 1, false
-	S.light(fill, "E7B9FF", 23, 2.7)
+	S.light(fill, "E7B9FF", 28, 4.2)
 	-- Three different depths around the exposed bed. Rock plates can travel
 	-- in front of the pinlights and the broad lavender bloom as it rolls.
 	for i, socket in { V(-1.2, 0.0, 3.02), V(1.92, 0.4, 3.31), V(3.91, 0.86, 3.55) } do
@@ -133,7 +121,7 @@ local function meteor()
 			0.28
 		)
 	end
-	return shell, basalt
+	return shell
 end
 
 local function plates()
@@ -291,10 +279,10 @@ end
 function Impact.new(stage, screen, base, motion)
 	local root = S.group("Starfall pressure front")
 	root.Parent = stage
-	local shell, basalt = meteor()
+	local shell = meteor()
 	local cast = S.part(root, "Plasma bounce on facing plates", CF(), Vector3.one * 0.07, "E8BBA1")
 	cast.Transparency, cast.CastShadow = 1, false
-	local keyLight = S.light(cast, "FFD09F", 34, 7.1)
+	S.light(cast, "FFD09F", 38, 9.8)
 	local bed, seams, light = plates()
 	bed:PivotTo(base * CF(contact))
 	return setmetatable({
@@ -303,9 +291,7 @@ function Impact.new(stage, screen, base, motion)
 		base = base,
 		motion = motion,
 		shell = shell,
-		basalt = basalt,
 		cast = cast,
-		keyLight = keyLight,
 		entry = Entry.new(face),
 		wake = AblationWake.new(base, contact, direction, motion),
 		plume = Plume.new(root, base, motion),
@@ -347,18 +333,9 @@ function Impact:draw(t, camera, masterFrame)
 	self.shell.Parent = if flying then self.root else nil
 	if flying then
 		local p = Impact.position(t, frame)
-		local hero = frame >= frames.crystal and frame < frames.coast
-		if self.hero ~= hero then
-			for _, swatch in self.basalt do
-				swatch[1].Color = if hero then swatch[3] else swatch[2]
-				swatch[1].Material = if hero then neon else smooth
-			end
-			self.hero = hero
-		end
 		self.cast.Parent = self.root
 		local pose = self.base * CFrame.lookAt(p, p + direction) * CFrame.Angles(0, math.pi / 2, 0)
 		self.cast.CFrame = pose * CF(5.50, -9.76, 6.64)
-		self.keyLight.Brightness = if hero then 8.6 else 2.4
 		local row = Track.bodies[math.clamp(frame - frames.entry + 1, 1, #Track.bodies)]
 		self.shell:PivotTo(pose * CF(0, 0, 0, table.unpack(row, 4, 12)))
 		self.entry:draw(t, pose, self.root, self.motion, frame)

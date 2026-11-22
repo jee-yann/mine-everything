@@ -1,4 +1,5 @@
 local S = require(script.Parent.Scenery)
+local Run = require(script.Parent.GalleryRun)
 local cut = require(script.Parent.ExposureSheet).frames
 local V, CF = Vector3.new, CFrame.new
 local Lode = {}
@@ -8,46 +9,73 @@ local shale = { "303247", "414053", "46465D", "364254", "51485B", "383B50", "4E4
 local facets = { "474084", "6754AF", "8774BB", "4A477F", "585296", "352C60" }
 local terminations = { "9582D8", "E5CEFA", "B7E4FF", "8296CA", "6B69B0", "695798" }
 
--- This mouth is seen first among the timber and lamps of the working mine.
--- Its chipped lip passes the lens before the camera opens onto the crystal.
-local function adit(model)
-	local stone = { "525361", "605D64", "424656", "646067", "4D4C5D", "676569" }
-	local rings = {
-		{ 15.4, 6.3, 26.7, 0.45, 0.02 },
-		{ 8.3, 4.8, 29.4, 0.65, -0.03 },
-		{ 3.4, 2.3, 29.6, 0.82, 0.07 },
-		{ 2.3, 1.5, 26.3, 0.30, -0.04 },
-		{ 3.8, 2.7, 19.8, 0.77, 0.12 },
-		{ 5.2, 3.6, 15.4, 0.83, 0.06 },
-		{ 7.2, 4.5, 9.7, 0.58, 0.02 },
+-- The mouth occupies one excavated floor brick. Local +Z points out of the
+-- shaft. The cut timber, rungs and exposed mineral seam lead the eye down.
+local function shaft(model)
+	local sections = {
+		{ 22.03, 2.99, 0 },
+		{ 21.68, 2.62, 0 },
+		{ 19.3, 2.49, 0.04 },
+		{ 16.0, 2.54, 0.46 },
+		{ 12.2, 3.58, 1.28 },
+		{ 8.7, 6.18, 2.14 },
 	}
 	local previous
-	for row, section in rings do
+	for row, section in sections do
 		local ring = {}
-		for i = 1, 12 do
-			local theta = i * math.pi / 6 + section[5]
-			local n = 0.91 + 0.11 * math.sin(i * 2.7 + row * 0.55)
-			ring[i] = V(-0.65 + section[1] * math.cos(theta) * n, 1.54 + section[2] * math.sin(theta) * n,
-				section[3] + section[4] * math.cos(2.1 * theta + row * 0.7))
+		for i = 1, 8 do
+			local a = math.pi / 4 * (i - 1)
+			local x, y = math.cos(a), math.sin(a)
+			local r = section[2] / math.max(math.abs(x), math.abs(y))
+			local fault = if row <= 2 then 1 else 0.94 + 0.07 * math.sin(i * 2.3 + row)
+			ring[i] = V(x * r * fault, y * r * fault + section[3], section[1])
 		end
 		if previous then
-			local palette = if row <= 3 then stone else shale
-			for i, p in ring do
+			for i, point in ring do
 				local j = i % #ring + 1
-				S.facet(model, "Rift wall", previous[i], previous[j], p, palette[1 + (row + i * 3) % #palette])
-				S.facet(model, "Rift wall", previous[j], ring[j], p, palette[1 + (row * 3 + i) % #palette])
-				if (row == 3 or row == 4) and (i == 2 or i == 7 or i == 9) then
-					local a = p:Lerp(previous[i], 0.12)
-					local b = p:Lerp(previous[j], 0.61)
-					S.facet(model, "Calcite at the gallery face", a + V(0, 0, 0.035), b + V(0, 0, 0.035),
-						b:Lerp(previous[j], 0.07) + V(0, 0, 0.035), "ABA1AF")
+				local tint = if row <= 3
+					then (if i % 2 == 0 then "825B47" else "6D5246")
+					else shale[(i + row) % #shale + 1]
+				S.facet(model, "Exposed dig face", previous[i], previous[j], point, tint)
+				S.facet(model, "Exposed dig face", previous[j], ring[j], point, tint)
+				if i == 2 or i == 3 then
+					local a = previous[i]:Lerp(previous[j], 0.30 + row % 3 * 0.13)
+					local b = point:Lerp(ring[j], 0.30 + (row + 1) % 3 * 0.13)
+					local inset = V(-0.018, -0.022, 0)
+					S.facet(
+						model,
+						"Thread of violet in the cut",
+						a + inset,
+						b + inset,
+						b:Lerp(ring[j], 0.07) + inset,
+						if row < 4 then "AB99AA" else "B29CE2",
+						if row >= 4 then Enum.Material.Neon else nil
+					)
 				end
 			end
 		end
 		previous = ring
 	end
+	for _, side in { -1, 1 } do
+		S.part(model, "Collar timber", CF(side * 2.89, 0, 22.15), V(0.40, 6.28, 0.36), "76553E", Enum.Material.Wood)
+		S.part(model, "Collar crosspiece", CF(0, side * 2.9, 22.17), V(5.48, 0.40, 0.40), "986C46", Enum.Material.Wood)
+		S.part(model, "Ladder rail", CF(-2.34, side * 0.64, 18.53), V(0.16, 0.14, 7.2), "6C7780", Enum.Material.Metal)
+		for _, y in { -2.9, 2.9 } do
+			S.part(
+				model,
+				"Iron corner plate",
+				CF(side * 2.79, y, 22.40),
+				V(0.57, 0.46, 0.07),
+				"4F5555",
+				Enum.Material.Metal
+			)
+			S.part(model, "Drift bolt", CF(side * 2.79, y, 22.45), V(0.14, 0.14, 0.06), "BAA482", Enum.Material.Metal)
+		end
+	end
+	for i = 0, 6 do
+		S.part(model, "Ladder rung", CF(-2.30, 0, 21.8 - i), V(0.11, 1.35, 0.12), "B4A48C", Enum.Material.Metal)
+	end
 end
-
 -- Photograph this sealed pocket from inside the rock. Each band of strata
 -- changes its radius and twist independently as it recedes into the fissure.
 local function chamber(model)
@@ -149,10 +177,10 @@ local function opticalStar(parent, position)
 	return arms
 end
 
-function Lode.new(stage, at)
+function Lode.new(stage, at, island)
 	local model = S.group("Unreached Starfall lode")
 	chamber(model)
-	adit(model)
+	shaft(model)
 	local base = CF(0.56, -2.05, -1.5)
 	local bed = V(0.46, -1.19, -1.48)
 	local ledge = {
@@ -197,28 +225,108 @@ function Lode.new(stage, at)
 		anchor.Transparency = 1
 		S.light(anchor, light[2], light[3], light[4])
 	end
+	-- Match the real shaft's orientation to the sun when the camera passes
+	-- below the dig floor and moves into the isolated geological cutaway.
+	at *= Run.shaft.Rotation
 	model:PivotTo(at)
-	return setmetatable({ model = model, stage = stage, at = at, arms = rays }, Lode)
+	return setmetatable({ model = model, stage = stage, at = at, arms = rays, island = island, hidden = {} }, Lode)
+end
+
+-- The server keeps simulating its ordinary dig cells. The one photographed
+-- column is opened only on this client, including ore relief streamed mid-shot.
+function Lode:closeShaft()
+	if self.stream then
+		self.stream:Disconnect()
+		self.stream = nil
+	end
+	for item, original in self.hidden do
+		if item.Parent and item.LocalTransparencyModifier == 1 then
+			item.LocalTransparencyModifier = original
+		end
+	end
+	table.clear(self.hidden)
+end
+
+function Lode:openShaft(actor, origin)
+	local mouth = origin + Run.mouth
+	local function cover(part)
+		if (part:IsA("BasePart") or part:IsA("Decal")) and self.hidden[part] == nil then
+			self.hidden[part] = part.LocalTransparencyModifier
+			part.LocalTransparencyModifier = 1
+		end
+	end
+	local function inspect(item)
+		if not item:IsA("BasePart") and not item:IsA("Decal") then
+			return
+		end
+		local block = item
+		while block and block.Parent do
+			local folder = block.Parent.Name
+			if folder == "MineBlocks" or folder == "EditFace" or folder:match("_EditFace$") then
+				break
+			end
+			if not block.Parent:IsA("Model") and not block.Parent:IsA("BasePart") then
+				return
+			end
+			block = block.Parent
+		end
+		if not block or not block.Parent or not block:IsA("BasePart") then
+			return
+		end
+		local offset = block.Position - mouth
+		if math.abs(offset.X) < 0.06 and math.abs(offset.Z) < 0.06 and offset.Y < 0 and offset.Y > -36 then
+			cover(item)
+			if item == block then
+				for _, child in block:GetDescendants() do
+					cover(child)
+				end
+			end
+		end
+	end
+	if actor.replayLanding and self.island then
+		for _, group in self.island:GetChildren() do
+			if group.Name:match("_EditFace$") then
+				for _, part in group:GetChildren() do
+					inspect(part)
+				end
+			end
+		end
+		return
+	end
+	local function watch(site)
+		if self.stream then self.stream:Disconnect() end
+		self.stream = site.DescendantAdded:Connect(inspect)
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Include
+		params.FilterDescendantsInstances = { site }
+		for _, part in workspace:GetPartBoundsInBox(CF(mouth - V(0, 18, 0)), V(0.2, 35.8, 0.2), params) do
+			inspect(part)
+		end
+	end
+	local site = workspace:FindFirstChild("CitrineCove")
+	if site then
+		watch(site)
+	else
+		self.stream = workspace.ChildAdded:Connect(function(child)
+			if child.Name == "CitrineCove" then watch(child) end
+		end)
+	end
 end
 
 function Lode:expose(frame, motion, actor)
 	local visible = frame >= cut.beacon and frame < cut.challenge
 	local parent = if visible then self.stage else nil
-	if visible then
-		local inMine = frame < cut.lode
-		if self.inMine ~= inMine then
-			local placement = self.at
-			if inMine then
-				local route = actor.mineBearing
-				local delta = if actor.handoff.entrance then actor.handoff.entrance - actor.handoff.landing
-					else route.LookVector * 72
-				placement = (route + delta) * CF(0, 0.90, -47)
-			end
-			self.model:PivotTo(placement)
-			self.inMine = inMine
+	local inMine = visible and frame < cut.lode
+	if self.inMine ~= inMine then
+		self:closeShaft()
+		self.inMine = inMine
+		if inMine then
+			local origin = Run.origin(actor)
+			self.model:PivotTo(CF(origin) * Run.shaft)
+			self:openShaft(actor, origin)
+		else
+			self.model:PivotTo(self.at)
 		end
-	else
-		self.inMine = nil
 	end
 	if self.model.Parent ~= parent then
 		self.model.Parent = parent
@@ -233,19 +341,11 @@ function Lode:expose(frame, motion, actor)
 end
 
 function Lode:camera(frame, motion, portrait)
-	local t = if motion then (frame - cut.lode) / (cut.challenge - cut.lode) else 0.6
-	-- Carry the incoming push for four exposures, then let the chamber
-	-- open up into a steady lateral move and hold its best-lit facet.
-	local age = frame - cut.lode
-	local tail = if motion then math.exp(-0.40 * age) else 0
-	-- At age zero the position, tilt and focal length exactly continue the
-	-- entrance shot. Both spaces contain the very same rock at the same scale.
-	local eye = V(-2.30 + 1.72 * t + 1.60 * tail, 0.38 + 0.58 * t + 1.20 * tail, 8.1 - 1.72 * t + 14.6 * tail)
-	local look = V(if portrait then 0.46 else -0.38, 0.85 + 0.32 * t, -1.35):Lerp(V(0, 0.9, 1.56), tail)
-	return eye, look, 42 + 15 * tail, math.rad(-3.7 + 1.35 * t + 5.5 * tail)
+	return Run.chamber(frame, motion, portrait)
 end
 
 function Lode:Destroy()
+	self:closeShaft()
 	self.model:Destroy()
 end
 return Lode

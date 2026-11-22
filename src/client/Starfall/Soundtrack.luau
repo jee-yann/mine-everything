@@ -1,15 +1,11 @@
--- Starfall Rush. Recorded orchestra and local sound effects share the existing
--- player mixer. The opening and the offline music cues use installed sounds.
+-- Music and location effects have separate player-controlled buses.
 local sheet = require(script.Parent.ExposureSheet)
 local fps, frame = sheet.fps, sheet.frames
 local contact, ignition, eruption, breaker = frame.contact / fps, frame.ignition / fps, frame.eruption / fps, frame.breaker / fps
-local scoreIn, scoreOut = 458 / fps, (frame.duration - 1) / fps
+local chooseScoreAt = 458 / fps
+local scoreIn, scoreOut = frame.settlement / fps, (frame.duration - 1) / fps
 local backswing = 8
 local automaticContact = frame.autoStrike + backswing
--- Let the hoist and the trial take the foreground, then bring the recorded
--- brass back on the reveal. The released recording keeps its original tempo.
-local interludeIn = 740 / fps
-local interludeOut = (frame.portrait + 9) / fps
 local aftermath = frame.aftermath / fps
 local passStart, passEnd = frame.flyby / fps, frame.coast / fps
 
@@ -36,6 +32,8 @@ local bank = {
 	tide = timbre("Tide under the stars", "action_swim.mp3", 1.34, 2.92, 0.92, 0.38, 0.54),
 	swell = timbre("Atmospheric entry", "action_falling.ogg", 0.72, 5.42, 7.7, 0.44, 0.14),
 	pass = timbre("Ablation flypast", "action_falling.ogg", 3.03, 4.92, 6.85, 0.18, 0.15),
+	tunnel = timbre("Air drawn through the mine", "action_falling.ogg", 2.52, 4.93, 5.6, 0.24, 0.40),
+	drift = timbre("Gallery stone resonance", "impact_explosion_03.mp3", 0.49, 1.61, 0.34, 0.14, 0.90),
 	shear = timbre("Crystal skin tearing away", "action_swim.mp3", 0.20, 1.07, 3.10, 0.018, 0.19),
 	pressure = timbre("Pressure front", "impact_explosion_03.mp3", 0.44, 2.06, 0.78, 1.30, 0.11),
 	shudder = timbre("Headland tremor", "impact_water.mp3", 0.04, 0.88, 0.99, 0.035, 0.35),
@@ -44,7 +42,7 @@ local bank = {
 	ear = instrument("Residual ringing", "volume_slider.ogg", 0.154422, 0.157030, 1.40, 0.024, 0.39, 1.45),
 	vent = timbre("Eruption", "impact_explosion_03.mp3", 0.026, 1.69, 1.09, 0.003, 0.33),
 	body = timbre("Ignition body", "impact_explosion_03.mp3", 0.075, 1.42, 0.61, 0.017, 0.37),
-	echo = timbre("Report from the far rock face", "impact_explosion_03.mp3", 0.13, 1.35, 0.53, 0.045, 0.41),
+	echo = timbre("Report from the far rock face", "impact_explosion_03.mp3", 0.22, 1.35, 0.44, 0.09, 0.56),
 	steam = timbre("Steam escaping the broken shore", "action_swim.mp3", 2.05, 3.26, 3.1, 0.75, 0.68),
 	collapse = timbre("Collapsing crater wall", "impact_explosion_03.mp3", 0.18, 0.95, 0.83, 0.22, 0.58),
 	blast = timbre("Shockwave bow", "impact_water.mp3", 0.047, 0.72, 1.48, 0.005, 0.19),
@@ -91,6 +89,8 @@ bank.cello.eq = { 1, -3, -13 }
 bank.cello.room = { 1.3, -13 }
 bank.tide.eq = { -2, -5, -15 }
 bank.pass.eq = { -8, 1, 3 }
+bank.tunnel.eq, bank.tunnel.room = { -7, 2, -5 }, { 0.68, -13 }
+bank.drift.eq, bank.drift.room = { 3, -8, -18 }, { 1.45, -11 }
 bank.shear.eq = { -19, -1, 4 }
 bank.pressure.eq = { 2, -8, -20 }
 bank.shudder.eq = { 4, -12, -26 }
@@ -148,7 +148,7 @@ local function arrange()
 	play("shear", frame.terminal / fps, contact - frame.terminal / fps, 1.35, 0.78, 2.30, "left")
 	-- A bone-dry contact and the held image lead the expansion by three frames.
 	-- The rock face answers from the right after the first pressure and debris.
-	play("fracture", contact, 0.10, 1.85, 0.74, 1.50)
+	play("fracture", contact, ignition - contact, 1.85, 0.74, 1.50)
 	play("split", contact, 0.079, 2.83, 0.24, 2.20)
 	play("vent", ignition, 1.72, 0.99, 1.02, 0.67)
 	play("body", ignition, 1.62, 0.66, 0.83, 0.47)
@@ -196,7 +196,11 @@ local function arrange()
 	end
 
 	-- Water, cable and the two loose chips bridge the successive settlements.
+	play("wind", frame.recovery / fps + 0.40, 6.20, 0.61, 0.37, 0.41, "left")
+	note("glass", (frame.recovery + 42) / fps, 67, 1.85, 0.34)
+	note("glass", (frame.landing - 12) / fps, 74, 1.52, 0.31)
 	play("keel", frame.landing / fps, 1.48, 0.83, 0.86, 0.57)
+	play("tide", (frame.landing + 14) / fps, 2.17, 0.53, 0.62, 0.65)
 	play("pulley", 789 / fps, 44 / fps, 0.73, 1.04, 1.22, "left")
 	play("sand", 829 / fps, 0.17, 1.20, 0.76, 0.86, "right")
 	play("sand", 836 / fps, 0.11, 1.69, 0.49, 1.18, "right")
@@ -214,7 +218,8 @@ local function arrange()
 	note("prism", (frame.revealGem + 14) / fps, 90, 0.52, 0.35, "right")
 	play("lift", (frame.portrait + 2) / fps, 0.14, 1.18, 0.95)
 	play("paper", frame.commission / fps, 0.15, 0.91, 0.88)
-	play("pass", (frame.mineRun + 17) / fps, 0.76, 1.18, 0.72, 2.39, "inbound")
+	play("tunnel", frame.mineRun / fps, (frame.lode - frame.mineRun + 3) / fps, 0.75, 1.05, 1.88, "inbound")
+	play("drift", (frame.lode - 2) / fps, 1.39, 0.62, 0.70, 0.48)
 	note("prism", (frame.lode + 4) / fps, 69, 0.88, 0.51, "left")
 	note("prism", (frame.lode + 32) / fps, 88, 0.63, 0.90, "right")
 	note("prism", (frame.lode + 33) / fps, 100, 0.30, 0.31, "right")
@@ -314,13 +319,13 @@ local function makeVoice(preset, parent, channel)
 	return s
 end
 
-local function mix(event, age, alternateGain)
+local function mix(event, age)
 	local s = bank[event.key]
 	local gain = math.min(1, age / s.attack, (event.length - age) / s.release)
 	if s.decay then
 		gain *= math.exp(-s.decay * math.max(0, age - s.attack))
 	end
-	event.voice.Volume = s.level * event.gain * math.max(0, gain) * (if event.alternate then alternateGain else 1)
+	event.voice.Volume = s.level * event.gain * math.max(0, gain)
 	event.voice.PlaybackSpeed = event.pitch + (event.glide - event.pitch) * age / event.length
 end
 
@@ -379,19 +384,25 @@ return function(parent, musicGroup, effectsGroup)
 	end)
 	local nextCue, nextStrike, active = 1, 1, {}
 	local strikeAt
-	local lastTime, blend, played = 0, 0, false
-	local function startDue(queue, index, t, alternateGain)
+	local useRecording, scoreStarted
+	local function startDue(queue, index, t)
 		while queue[index] and queue[index].at <= t do
 			local event = queue[index]
 			local preset = bank[event.key]
 			local age = t - event.at
-			if age < event.length then
+			if age < event.length and (not event.alternate or useRecording == false) then
 				local span = preset.last - preset.first
-				local seek = if preset.hz then age * event.pitch % span else 0
-				mix(event, math.min(event.length, math.max(age, math.min(preset.attack, 0.012))), alternateGain)
-				event.voice.TimePosition = preset.first + seek
-				event.voice:Play()
-				table.insert(active, event)
+				local elapsed = age * (event.pitch + (event.glide - event.pitch) * age / (2 * event.length))
+				-- Enter a sustained sound in time after a dropped render. Percussion
+				-- still strikes at its attack while its authored cue window is open.
+				local seek = if event.voice.Looped then elapsed % span
+					elseif age > 0.06 and preset.attack > 0.01 then elapsed else 0
+				if seek < span then
+					mix(event, math.min(event.length, math.max(age, math.min(preset.attack, 0.012))))
+					event.voice.TimePosition = preset.first + seek
+					event.voice:Play()
+					table.insert(active, event)
+				end
 			end
 			index += 1
 		end
@@ -407,35 +418,39 @@ return function(parent, musicGroup, effectsGroup)
 				event.at += strikeAt - automaticContact / fps
 			end
 		end
-		local dt = math.max(0, t - lastTime)
-		lastTime = t
-		if t >= scoreIn and t < scoreOut then
-			local age = t - scoreIn
-			local inInterlude = t >= interludeIn and t < interludeOut
-			local recordingAge = age - (if t >= interludeOut then interludeOut - interludeIn else 0)
-			if inInterlude and played then
-				score:Stop()
-				played = false
-			elseif not inInterlude and not played and score.IsLoaded and recordingAge < score.TimeLength then
-				score.TimePosition = recordingAge
-				score:Play()
-				played = true
+		-- Commit to one arrangement for this screening. A late network load must
+		-- never replace the live arrangement halfway through a phrase.
+		if useRecording == nil and t >= chooseScoreAt then
+			useRecording = score.IsLoaded and score.TimeLength >= 24
+			if useRecording then
+				local speed = math.min(1, score.TimeLength / (scoreOut - scoreIn))
+				score.PlaybackSpeed = speed
+				if speed < 0.99 then
+					local tuning = Instance.new("PitchShiftSoundEffect")
+					tuning.Octave, tuning.Parent = 1 / speed, score
+				end
 			end
-			local playing = score.IsPlaying
-			local transition = if t < interludeIn then math.clamp((interludeIn - t) / 0.70, 0, 1) else 1
-			blend = math.min(transition, math.clamp(blend + (if playing then dt else -dt) / 0.55, 0, 1))
-			local emphasis = math.max(duck(t, 910 / fps), duck(t, frame.proofStrike / fps),
-				duck(t, (frame.portrait + 9) / fps), duck(t, (frame.lode + 32) / fps), duck(t, (frame.challenge + 4) / fps))
-
+		end
+		if useRecording and t >= scoreIn and t < scoreOut then
+			local age = t - scoreIn
+			if not scoreStarted then
+				score.TimePosition = age * score.PlaybackSpeed
+				score:Play()
+				scoreStarted = true
+			end
+			local emphasis = math.max(duck(t, 789 / fps), duck(t, 910 / fps), duck(t, frame.proofStrike / fps),
+				duck(t, (frame.portrait + 9) / fps), duck(t, frame.lode / fps), duck(t, (frame.challenge + 4) / fps))
 			if strikeAt then
 				emphasis = math.max(emphasis, duck(t, strikeAt))
 			end
-			local envelope = math.clamp(math.min(age / 1.25, (scoreOut - t) / 0.63), 0, 1)
-			score.Volume = (1.28 - 0.36 * emphasis) * blend * envelope
-		elseif played and score.IsPlaying then
+			-- Ease the same orchestra underneath the measured blow and let it
+			-- rise naturally with the emerald, the guild portrait and the mine.
+			local trial = math.clamp(math.min((t * fps - frame.present + 18) / 24, (frame.revealGem + 20 - t * fps) / 23), 0, 1)
+			local envelope = math.clamp(math.min(age / 1.15, (scoreOut - t) / 0.70), 0, 1)
+			score.Volume = (1.22 - 0.46 * trial - 0.32 * emphasis) * envelope
+		elseif scoreStarted and score.IsPlaying then
 			score:Stop()
 		end
-		local alternateGain = 1 - blend
 		local camera = workspace.CurrentCamera
 		if camera then
 			local view = camera.CFrame
@@ -448,7 +463,7 @@ return function(parent, musicGroup, effectsGroup)
 				local pass = math.clamp((t - breaker) / 0.62, 0, 1)
 				anchors.inbound.Position = view * Vector3.new(20 - 46 * pass, 2, -24 + 31 * pass)
 			elseif t >= frame.mineRun / fps then
-				local rush = math.clamp((t * fps - frame.mineRun - 17) / 19, 0, 1)
+				local rush = math.clamp((t * fps - frame.mineRun) / (frame.lode - frame.mineRun), 0, 1)
 				anchors.inbound.Position = view * Vector3.new(-3 + 4 * rush, 1, -20 + 25 * rush)
 			end
 		end
@@ -459,12 +474,12 @@ return function(parent, musicGroup, effectsGroup)
 				event.voice:Stop()
 				table.remove(active, i)
 			else
-				mix(event, age, alternateGain)
+				mix(event, age)
 			end
 		end
-		nextCue = startDue(fixed, nextCue, t, alternateGain)
+		nextCue = startDue(fixed, nextCue, t)
 		if strikeAt then
-			nextStrike = startDue(strikes, nextStrike, t, alternateGain)
+			nextStrike = startDue(strikes, nextStrike, t)
 		end
 	end
 end

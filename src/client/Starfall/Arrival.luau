@@ -185,8 +185,6 @@ function Arrival:start()
 	self.lens.Name = "Expedition focus"
 	self.lens.NearIntensity, self.lens.FarIntensity = 0, 0.47
 	self.lens.Parent = self.stage.Parent
-	self.visitors = {}
-	self.hidden = {}
 	if self.channels then
 		self.before = Run.PreAnimation:Connect(function()
 			for _, ch in self.poses do
@@ -321,29 +319,6 @@ function Arrival:draw(t, picture)
 	if not self.root then
 		self:start()
 	end
-	-- Each viewer has the compass to themselves for this take, including
-	-- when a second player joins or respawns in the middle of the insert.
-	for _, player in Players:GetPlayers() do
-		local neighbor = player.Character
-		if neighbor and neighbor ~= self.handoff.root.Parent and not self.visitors[neighbor] then
-			local root = neighbor:FindFirstChild("HumanoidRootPart")
-			if root and (root.Position - self.root.Position).Magnitude < 28 then
-				local function mask(item)
-					if item:IsA("BasePart") then
-						self.hidden[item] = item.LocalTransparencyModifier
-						item.LocalTransparencyModifier = 1
-					elseif item:IsA("BillboardGui") and item.Enabled then
-						self.hidden[item] = true
-						item.Enabled = false
-					end
-				end
-				for _, item in neighbor:GetDescendants() do
-					mask(item)
-				end
-				self.visitors[neighbor] = neighbor.DescendantAdded:Connect(mask)
-			end
-		end
-	end
 	if frame >= F.autoStrike and not self.contactFrame then
 		self.contactFrame = F.autoStrike + 8
 	end
@@ -383,19 +358,7 @@ function Arrival:release()
 			item[property] = entry[3]
 		end
 	end
-	for _, listener in self.visitors or {} do
-		listener:Disconnect()
-	end
-	for item, original in self.hidden or {} do
-		if item.Parent then
-			if item:IsA("BasePart") then
-				item.LocalTransparencyModifier = original
-			else
-				item.Enabled = original
-			end
-		end
-	end
-	self.costume, self.visitors, self.hidden = nil, nil, nil
+	self.costume = nil
 	if self.lens then
 		self.lens:Destroy()
 		self.lens = nil

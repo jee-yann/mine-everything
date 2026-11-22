@@ -10,6 +10,7 @@ local FirstFindTitles = require(script.FirstFindTitles)
 local sheet = require(script.ExposureSheet)
 local W = require(script.Parent.Widgets)
 local Opening = {}
+local hideOtherMiners = require(script.HideOtherMiners)
 
 local function layer(owner, name, order, insets)
 	local gui = Instance.new("ScreenGui")
@@ -20,6 +21,21 @@ local function layer(owner, name, order, insets)
 end
 local function compose(screen, safe)
 	local ink = Color3.fromHex("101724")
+	local top = Instance.new("Frame")
+	top.Name, top.BackgroundColor3, top.BorderSizePixel = "Top matte", Color3.new(), 0
+	top.ZIndex, top.Parent = 50, screen
+	local bottom = top:Clone()
+	bottom.Name, bottom.AnchorPoint = "Bottom matte", Vector2.new(0, 1)
+	bottom.Position, bottom.Parent = UDim2.fromScale(0, 1), screen
+	local function fitMatte(frame)
+		local size = screen.AbsoluteSize
+		local aspect = size.X / math.max(1, size.Y)
+		local height = if aspect < 1 then 0.06 else math.clamp((1 - aspect / 2.16) / 2, 0.045, 0.085)
+		local release = math.clamp((frame - sheet.frames.handoff) / (sheet.frames.endBlend - sheet.frames.handoff), 0, 1)
+		local bar = UDim2.fromScale(1, height * (1 - release * release * (3 - 2 * release)))
+		top.Size, bottom.Size = bar, bar
+	end
+	fitMatte(0)
 	local fade = W.frame(screen, "Dissolve", 0, 0, 1, 1, ink)
 	fade.Size, fade.BackgroundTransparency, fade.ZIndex = UDim2.fromScale(1, 1), 0, 20
 	local shade = W.frame(screen, "Caption shade", 0, 0, 1, 1, ink)
@@ -55,6 +71,7 @@ local function compose(screen, safe)
 	return skip,
 		function(t, black, picture, motion, contact)
 			local frame = picture or 0
+			fitMatte(frame)
 			strike.Visible = frame >= sheet.frames.prompt and frame < sheet.frames.autoStrike and not contact
 			if strike.Visible then
 				local device = Input.PreferredInput
@@ -91,6 +108,7 @@ function Opening.play(player, net, hud)
 	end
 	local h = {
 		root = root,
+		origin = net:GetAttribute("Origin"),
 		landing = landing,
 		entrance = net:GetAttribute("Entrance"),
 		view = camera.CFrame,
@@ -110,10 +128,11 @@ function Opening.play(player, net, hud)
 	local safe = layer(player.PlayerGui, "Mine subtitles", 25, Enum.ScreenInsets.CoreUISafeInsets)
 	local stage = Instance.new("Folder")
 	stage.Name, stage.Parent = "Mine origins set", camera
-	local controls, restoreControls, chat, film, fade
+	local controls, restoreControls, chat, film, fade, showOtherMiners
 	local skipped, finished = false, false
 	hud.inOpening, hud.root.Visible, reticle.Enabled, Prompts.Enabled = true, false, false, false
 	local function run()
+		showOtherMiners = hideOtherMiners(player)
 		local skip, titles, curtain, strike = compose(screen, safe)
 		local function tap()
 			if film and film.arrival and film.pictureFrame and film.arrival:requestStrike(film.pictureFrame) then
@@ -273,6 +292,9 @@ function Opening.play(player, net, hud)
 		W.tween(fade, 0.20, { BackgroundTransparency = 1 }).Completed:Wait()
 	end
 	screen:Destroy()
+	if showOtherMiners then
+		showOtherMiners()
+	end
 	hud.inOpening = false
 	if not ok then
 		warn("Starfall opening:", reason)
