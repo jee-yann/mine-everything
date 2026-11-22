@@ -33,6 +33,7 @@ function Guide:hide()
 end
 
 function Guide:mark(position, text, tint, surface, part)
+	self.marked = true
 	self.waypoint:show(position, text, tint, surface, part)
 end
 
@@ -205,15 +206,13 @@ function Guide:update(head, inMine, depth, mobile, full, aimed)
 		or now >= self.nextUpdate or (self.mineTarget and not self.mineTarget.Parent) then
 		self.lastStep, self.wasFull, self.wasMobile, self.nextUpdate = step, full, mobile, now + 0.16
 		self.control, self.mineTarget, self.surfaceSale = nil, nil, false
-		self.waypoint:clear()
+		self.marked = false
 		self.title, self.help = self:objective(head, inMine, depth, mobile, full, step)
 		self.title = string.format("%d/5 · %s", steps[step], self.title)
-		if not inMine and self.pin.Enabled and (self.anchor.WorldPosition - head.Position).Magnitude > 12 then
-			self.waypoint:trail(head)
-		end
+		if not self.marked then self.waypoint:clear() end
 	end
 	local motion = self.player:GetAttribute("MenuMotion") ~= false and not Gui.ReducedMotionEnabled
-	self.waypoint:draw(workspace.CurrentCamera, motion, aimed)
+	self.outdoorHead, self.motion, self.aimed = if inMine then nil else head, motion, aimed
 	local control = self.control
 	local spotlight = self.surfaceSale and self.hud and control and control.Visible and control.Parent.Visible
 		and not Gui.MenuIsOpen and not Input:GetFocusedTextBox() and not (self.hud.chatInput and self.hud.chatInput.IsFocused)
@@ -238,6 +237,10 @@ function Guide:update(head, inMine, depth, mobile, full, aimed)
 	end
 	self.button:point(control, motion, if spotlight then "Spotlight" elseif self.hud and control == self.hud.surface then "Right" else "Left")
 	return self.title, self.help
+end
+
+function Guide:draw()
+	self.waypoint:draw(workspace.CurrentCamera, self.motion, self.aimed, self.outdoorHead)
 end
 
 return Guide

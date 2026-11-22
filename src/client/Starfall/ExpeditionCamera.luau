@@ -83,20 +83,20 @@ function Camera.frame(actor, _, motion)
 			lens -= 2.8 * lift
 			roll -= 2.1 * lift
 		end
-	elseif age < 26 then
+	elseif age < 18 then
 		-- Hold on the steel for contact. Descend on the open side of the
 		-- station with the discharge, then follow the lit metal across sand.
-		local n = phase(contact + 6, contact + 26)
+		local n = phase(contact, contact + 18)
 		local follow = if motion then S.ease(age, 2, 17) elseif age < 6 then 0 else 1
 		local kick = if motion then S.ease(age, 0, 1) * (1 - S.ease(age, 1, 6)) else 0
 		local closeEye = surface + route:VectorToWorldSpace(V(3.36 + 0.19 * kick, 0.92, 0.86) * u)
 		local closeAim = surface + route.RightVector * 0.08 * u
-		local lowEye, lowAim = GalleryRun.waymarks(actor, n)
+		local lowEye, lowAim = GalleryRun.gallery(actor, frame, contact + 4, motion)
 		eye, aim = closeEye:Lerp(lowEye, follow), closeAim:Lerp(lowAim, follow)
-		lens = 40 + kick + (9 - kick) * follow
-		roll = (-5.2 + 3.5 * kick) * (1 - follow) + (-4.8 + 3.7 * n) * follow
+		lens = 40 + kick + (14 - kick) * follow
+		roll = (-5.2 + 3.5 * kick) * (1 - follow) + -2.6 * (1 - n) * follow
 	elseif frame < cut.lode then
-		eye, aim, lens, roll = GalleryRun.gallery(actor, frame, contact + 26, motion)
+		eye, aim, lens, roll = GalleryRun.gallery(actor, frame, contact + 4, motion)
 	else
 		-- Replace the tip of the lode with the miner's silhouette at the
 		-- same screen position. Keep retreating into the playable camera.

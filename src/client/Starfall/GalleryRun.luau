@@ -1,4 +1,5 @@
 local cut = require(script.Parent.ExposureSheet).frames
+local Curve = require(script.Parent.TravelCurve)
 local V = Vector3.new
 local Run = {}
 
@@ -41,21 +42,6 @@ end
 -- its local -Z points straight down. Both views photograph one lens trajectory.
 local matchEye, velocity = V(-0.20, 0.05, 21.25), V(0.045, 0.045, -1.05)
 local matchLook = V(-0.20, 0.91, 14.85)
-local eyeRail = {
-	{ V(-2.1, 3.65, 31.5), V(0.04, 0.02, -1.50), cut.mineRun - 12 },
-	{ V(-2.05, 4.12, 12.0), V(-0.077, 0.045, -1.72), cut.mineRun },
-	{ V(-6.5, 5.05, -19.3), V(-0.40, 0.008, -1.79), cut.mineRun + 18 },
-	{ V(-9.46, 4.68, -32.5), V(-0.17, -0.16, -1.28), cut.lode - 10 },
-	{ V(-9.53, 2.92, -38.35), V(0.088, -0.64, -0.45), cut.lode - 4 },
-	{ Run.shaft * matchEye, Run.shaft:VectorToWorldSpace(velocity), cut.lode },
-}
-local lookRail = {
-	{ V(-0.5, 5.10, -1.7), V(-0.01, 0.02, -0.75), cut.mineRun - 12 },
-	{ V(-2.5, 3.75, -15), V(-0.29, -0.11, -1.23), cut.mineRun },
-	{ V(-9.35, 1.24, -39.2), V(-0.15, -0.13, -0.61), cut.mineRun + 18 },
-	{ V(-9.4, -0.60, -39.62), V(0.018, -0.40, 0.015), cut.lode - 10 },
-	{ Run.shaft * matchLook, Run.shaft:VectorToWorldSpace(V(0.045, 0, -0.62)), cut.lode },
-}
 local deepEye = {
 	{ matchEye, velocity, cut.lode },
 	{ V(-0.40, 0.93, 10.35), V(-0.09, 0.059, -0.56), cut.lode + 14 },
@@ -70,51 +56,47 @@ local deepLook = {
 	{ V(-0.38, 1.17, -1.35), Vector3.zero, cut.challenge - 1 },
 }
 
-function Run.waymarks(actor, n)
-	local route, u = actor.mineBearing, actor.unit
-	local exit = actor.marker.exit.WorldPosition
-	local start = V(route.X, exit.Y, route.Z)
-	local line = start:Lerp(exit, 0.08 + 0.65 * n)
-	local aim = line + route.LookVector * (4.6 * u) + V(0, (0.25 + 0.82 * n) * u, 0)
-	local eye = line + route:VectorToWorldSpace(V(2.55 - 1.22 * n, 2.12 - 0.63 * n, 2.8) * u)
-	return eye, aim
+-- Positions are in the playable grid's coordinates. Keep the lens low over
+-- the bridge, skim left of the hanging lamp, then tip through the opening.
+local function buildApproach(actor)
+	local origin, u, bearing = Run.origin(actor), actor.unit, actor.mineBearing
+	local exit = actor.marker.exit.WorldPosition - origin
+	local foot = V(bearing.X - origin.X, exit.Y, bearing.Z - origin.Z)
+	local forward = bearing.LookVector
+	local start = foot + forward * (3.4 * u)
+	local eyes = {
+		start + bearing:VectorToWorldSpace(V(2.55, 2.12, 2.8) * u),
+		V(-1.70, 3.4, 44), V(-2.05, 4.12, 12), V(-6.5, 5.05, -19.3),
+		V(-9.25, 4.68, -32.5), V(-9.43, 2.92, -38.35), Run.shaft * matchEye,
+	}
+	local aims = {
+		start + forward * (4.6 * u) + V(0, 0.67 * u, 0),
+		V(0.4, 1.75, 27), V(-2.5, 3.75, -15), V(-9.35, 1.24, -39.2),
+		V(-9.4, -0.6, -39.62), V(-9.36, -3.2, -39.8), Run.shaft * matchLook,
+	}
+	actor.galleryEye = Curve.new(eyes, Run.shaft:VectorToWorldSpace(velocity))
+	actor.galleryLook = Curve.new(aims)
 end
 
-local function approach(a, b, t, span)
-	if span <= 32 then
-		return hermite(a, b, t, span)
-	end
-	-- A player can ring the beacon three seconds early. Preserve both end
-	-- velocities in short ramps and distribute the extra time over the bridge.
-	-- Scaling a single cubic's handles across this interval can reverse a dolly.
-	local ramp, elapsed = 5, t * span
-	local coast = (b[1] - a[1] - (a[2] + b[2]) * (ramp / 2)) / (span - ramp)
-	if elapsed < ramp then
-		return a[1] + a[2] * elapsed + (coast - a[2]) * (elapsed ^ 2 / (2 * ramp))
-	elseif elapsed > span - ramp then
-		local remaining = span - elapsed
-		return b[1] - b[2] * remaining + (b[2] - coast) * (remaining ^ 2 / (2 * ramp))
-	end
-	return a[1] + (a[2] + coast) * (ramp / 2) + coast * (elapsed - ramp)
-end
-
-function Run.gallery(actor, frame, first, motion)
+function Run.gallery(actor, frame, launch, motion)
 	local origin = Run.origin(actor)
+	if not actor.galleryEye then buildApproach(actor) end
+	local curve = actor.galleryEye
 	if not motion then
-		local f = if frame < cut.mineRun then cut.mineRun - 12 else cut.mineRun + 18
-		return origin + sample(eyeRail, f), origin + sample(lookRail, f), 54, 0
+		local at = if frame < cut.mineRun then 2 else 4
+		return origin + curve.points[at], origin + actor.galleryLook.points[at], 54, 0
 	end
-	if frame < eyeRail[1][3] then
-		local e0, a0 = Run.waymarks(actor, 1)
-		local previousEye, previousAim = Run.waymarks(actor, 0.95)
-		local span = eyeRail[1][3] - first
-		local t = math.clamp((frame - first) / span, 0, 1)
-		return origin + approach({ e0 - origin, e0 - previousEye }, eyeRail[1], t, span),
-			origin + approach({ a0 - origin, a0 - previousAim }, lookRail[1], t, span),
-			49 + t * 5,
-			-1.1 * (1 - t)
-	end
-	return origin + sample(eyeRail, frame), origin + sample(lookRail, frame), 54, 0
+	local span = math.max(1, cut.lode - launch)
+	local elapsed = math.clamp(frame - launch, 0, span)
+	-- Distance is linear over the whole approach. In the last twelve pictures
+	-- match the speed of the lens already travelling inside the shaft.
+	local blend = math.min(12, span)
+	local speed = (curve.length - velocity.Magnitude * blend / 2) / (span - blend / 2)
+	local tail = math.max(0, elapsed - (span - blend))
+	local distance = speed * elapsed + (velocity.Magnitude - speed) * tail * tail / (2 * blend)
+	local eye, segment, t = curve:sample(distance)
+	local aim = actor.galleryLook:position(segment, t)
+	return origin + eye, origin + aim, 54, 0
 end
 
 function Run.chamber(frame, motion, portrait)

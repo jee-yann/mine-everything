@@ -2,6 +2,7 @@ local Island = require(script.Parent.Island)
 local Impact = require(script.Parent.Impact)
 local Arrival = require(script.Parent.Arrival)
 local StarfallLode = require(script.Parent.StarfallLode)
+local CoveBroadcast = require(script.Parent.CoveBroadcast)
 local ProspectorPortrait = require(script.Parent.ProspectorPortrait)
 local Daylight = require(script.Parent.Daylight)
 local MeteorLight = require(script.Parent.MeteorLight)
@@ -67,6 +68,7 @@ function Film.new(stage, screen, camera, handoff, motion, continueSetup, nightLo
 		self.arrival.motion = motion
 		self.lode = StarfallLode.new(stage, base * CF(0, 94, -480), self.island.set)
 		self.arrival.marker.signal.chamber = self.lode.at
+		self.broadcast = CoveBroadcast.new(screen)
 		self.portrait = ProspectorPortrait.new(stage, screen)
 		self.impact = Impact.new(stage, screen, base, motion)
 	end, debug.traceback)
@@ -296,6 +298,7 @@ function Film:draw(t, liveReady, frame)
 	self.impact:draw(t, self.camera, frame)
 	self.illumination:draw(t, Impact.position(t, frame), self.camera, move, frame)
 	self.daylight:focus(self.camera, base, t, move)
+	self.broadcast:draw(self.camera, frame, move)
 	self.portrait:draw(self.arrival, self.camera, frame, move)
 	return black
 end
@@ -317,7 +320,7 @@ function Film:holdCamera()
 end
 
 function Film:Destroy()
-	for _, name in { "portrait", "daylight", "illumination", "impact", "arrival", "lode", "tide", "island" } do
+	for _, name in { "broadcast", "portrait", "daylight", "illumination", "impact", "arrival", "lode", "tide", "island" } do
 		if self[name] then
 			self[name]:Destroy()
 		end

@@ -166,6 +166,9 @@ function W.button(parent, name, x, y, w, h, tint, label, cue)
 end
 function W.closeButton(parent, x, y, size)
 	local button = W.button(parent, "Close", x, y, size, size, rgb(225, 64, 76), "×", "Close")
+	-- Roblox releases first-person mouse capture while a modal button is visible.
+	-- The normal camera takes the pointer back when the panel is hidden.
+	button.Modal = true
 	button.AutoButtonColor = false
 	button.TextColor3, button.TextSize = W.white, 28
 	local gleam = button["Enamel highlight"]

@@ -102,6 +102,10 @@ function Profile.spill(p)
 	return loss
 end
 
+-- Legacy profiles can return with a full pre-rebalance bag. This ceiling is for
+-- reading saves only; every new cut uses the current workshop and skill capacity.
+local oldBackpackSlots = { 36, 80, 170, 360, 760, 1600, 3400, 7200 }
+
 -- Refuse incompatible records instead of silently replacing them with defaults.
 function Profile.valid(p)
 	if type(p) ~= "table" or p.version ~= 1 or type(p.levels) ~= "table" or type(p.bag) ~= "table" then
@@ -232,9 +236,8 @@ function Profile.valid(p)
 			end
 		end
 	end
-	-- An earlier starter bag held 36 before skill bonuses. Its ore remains
-	-- sellable across rejoins. MiningService checks today's capacity on each cut.
-	local storedCapacity = if p.levels.Capacity == 1 then Skills.capacity(36, p.skills) else Profile.stat(p, "Capacity")
+	local level = p.levels.Capacity
+	local storedCapacity = Skills.capacity(math.max(oldBackpackSlots[level] or 0, Upgrades.items.Capacity.values[level]), p.skills)
 	return (p.temper == nil or integer(p.temper, Materials.temperCharges + Skills.bonus(p.skills, "charges")))
 		and Profile.used(p) <= storedCapacity
 end

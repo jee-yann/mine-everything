@@ -1,86 +1,29 @@
--- Each cut has its own two-line type lockup. Size the whole lockup in the
--- safe viewport so the measured letter sizes and leading stay together.
 local Titles = {}
 local cuts = require(script.Parent.ExposureSheet).frames
 local cream, ochre, ink = Color3.fromHex("FFF6DD"), Color3.fromHex("FFD063"), Color3.fromHex("152121")
 local condensed = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
+
+-- Size the two lines as one piece of type. Each composition has a bottom
+-- margin inside the exposed image, measured after the letterbox and UI insets.
 local cues = {
-	{
-		first = 906,
-		last = 938,
-		lead = "CITRINE COVE",
-		headline = "PRESENT DAY",
-		centered = true,
-		accent = 4,
-		x = 0.047,
-		y = 0.12,
-		w = 0.44,
-		h = 0.31,
-		phoneY = 0.12,
-		angle = -4,
-		leadSize = 42,
-		mainSize = 118,
-		width = 628,
-		leading = 49,
-	},
-	{
-		first = cuts.lode + 13,
-		last = cuts.challenge - 2,
-		lead = "THE RAREST ORE",
-		headline = "STARFALL",
-		x = 0.040,
-		y = 0.62,
-		w = 0.43,
-		h = 0.29,
-		phoneY = 0.70,
-		angle = -3,
-		leadSize = 60,
-		mainSize = 92,
-		width = 480,
-		leading = 54,
-	},
-	{
-		first = cuts.portrait + 7,
-		last = cuts.commission - 2,
-		player = true,
-		headline = "GEM HUNTER",
-		x = 0.05,
-		y = 0.65,
-		w = 0.43,
-		h = 0.25,
-		phoneY = 0.73,
-		angle = -3.5,
-		leadSize = 44,
-		mainSize = 88,
-		width = 535,
-		leading = 49,
-	},
-	{
-		first = cuts.challenge + 2,
-		last = cuts.handoff + 22,
-		lead = "WILL YOU FIND",
-		headline = "STARFALL FIRST?",
-		x = 0.043,
-		y = 0.58,
-		w = 0.52,
-		h = 0.29,
-		phoneY = 0.69,
-		angle = -4,
-		leadSize = 64,
-		mainSize = 94,
-		width = 690,
-		leading = 57,
-	},
+	{ first = 906, last = 938, lead = "CITRINE COVE", headline = "PRESENT DAY", centered = true,
+		width = 535, leadSize = 87, mainSize = 87, leading = 82, widthFraction = 0.57, heightFraction = 0.34 },
+	{ first = cuts.portrait + 7, last = cuts.commission - 2, player = true, headline = "GEM HUNTER",
+		width = 505, leadSize = 42, mainSize = 89, leading = 36, widthFraction = 0.43, heightFraction = 0.25 },
+	{ first = cuts.lode + 13, last = cuts.challenge - 2, lead = "THE RAREST ORE", headline = "STARFALL",
+		width = 455, leadSize = 44, mainSize = 90, leading = 39, widthFraction = 0.41, heightFraction = 0.24 },
+	{ first = cuts.challenge + 2, last = cuts.handoff + 22, lead = "WILL YOU FIND", headline = "STARFALL FIRST?",
+		width = 665, leadSize = 49, mainSize = 88, leading = 45, widthFraction = 0.48, heightFraction = 0.25 },
 }
 
 local function lettering(group, name, color)
 	local label = Instance.new("TextLabel")
 	label.Name, label.BackgroundTransparency, label.BorderSizePixel = name, 1, 0
 	label.FontFace, label.TextColor3 = condensed, color
-	label.TextXAlignment, label.TextYAlignment = Enum.TextXAlignment.Left, Enum.TextYAlignment.Center
+	label.TextYAlignment = Enum.TextYAlignment.Center
 	label.ZIndex, label.Parent = 9, group
 	local outline = Instance.new("UIStroke")
-	outline.Color, outline.Thickness, outline.Transparency = ink, 1.5, 0.12
+	outline.Color, outline.Thickness, outline.Transparency = ink, 1.6, 0.08
 	outline.Parent = label
 	local shadow = label:Clone()
 	shadow.Name, shadow.ZIndex, shadow.TextColor3 = name .. " shadow", 8, ink
@@ -88,11 +31,12 @@ local function lettering(group, name, color)
 	return label, shadow
 end
 
-local function setLine(label, shadow, text, size, width, top)
+local function setLine(label, shadow, text, size, width, top, centered)
 	for _, item in { label, shadow } do
 		local offset = if item == shadow then Vector2.new(2, 3) else Vector2.zero
 		item.Text, item.TextSize = text, size
-		item.Size = UDim2.fromOffset(width + 12, size * 1.13)
+		item.TextXAlignment = if centered then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
+		item.Size = UDim2.fromOffset(width, size * 1.18)
 		item.Position = UDim2.fromOffset(offset.X, top + offset.Y)
 	end
 end
@@ -103,7 +47,6 @@ function Titles.new(safe, screen)
 	local dusk = Instance.new("Frame")
 	dusk.Name, dusk.BackgroundColor3, dusk.BorderSizePixel = "Chapter exposure", Color3.fromHex("131D33"), 0
 	dusk.Size, dusk.ZIndex, dusk.Visible, dusk.Parent = UDim2.fromScale(1, 1), 5, false, screen
-
 	local group = Instance.new("Frame")
 	group.Name, group.BackgroundTransparency, group.Visible = "Expedition title", 1, false
 	group.ZIndex, group.Parent = 8, safe
@@ -114,7 +57,7 @@ function Titles.new(safe, screen)
 	local lead, leadShadow = lettering(typeArea, "Lead", cream)
 	local main, mainShadow = lettering(typeArea, "Headline", ochre)
 	local active
-	return function(frame, motion)
+	return function(frame, motion, top, bottom)
 		local cue
 		for _, item in cues do
 			if frame >= item.first and frame <= item.last then
@@ -126,52 +69,46 @@ function Titles.new(safe, screen)
 		dusk.Visible = cue ~= nil and cue.centered == true
 		if dusk.Visible then
 			local edge = math.clamp(math.min(frame - 904, 940 - frame) / 4, 0, 1)
-			dusk.BackgroundTransparency = 1 - 0.60 * edge
+			dusk.BackgroundTransparency = 1 - 0.64 * edge
 		end
 		if not cue then
 			active = nil
 			return
 		end
-		local height = cue.leading + cue.mainSize * 1.13
+		local height = cue.leading + cue.mainSize * 1.18
 		if active ~= cue then
-			for _, line in { lead, leadShadow, main, mainShadow } do
-				line.TextXAlignment = if cue.centered then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
-			end
 			lead.TextColor3 = if cue.centered then ochre else cream
 			main.TextColor3 = if cue.centered then cream else ochre
 			local leadSize = cue.leadSize
 			if cue.player then
-				-- Keep a 20-character display name on one line in the printed card.
-				local width = game:GetService("TextService"):GetTextSize(name, leadSize, Enum.Font.SourceSansBold, Vector2.new(4000, 200)).X
-				leadSize = math.min(leadSize, math.floor(leadSize * cue.width / math.max(1, width * 1.2)))
+				-- Reserve the same baseline for long Roblox display names.
+				local measured = game:GetService("TextService"):GetTextSize(name, leadSize, Enum.Font.SourceSansBold, Vector2.new(4000, 200)).X
+				leadSize = math.min(leadSize, math.floor(leadSize * cue.width / math.max(1, measured * 1.22)))
 			end
-			setLine(lead, leadShadow, if cue.player then name else cue.lead, leadSize, cue.width, 0)
-			setLine(main, mainShadow, cue.headline, cue.mainSize, cue.width, cue.leading)
+			setLine(lead, leadShadow, if cue.player then name else cue.lead, leadSize, cue.width,
+				(cue.leadSize - leadSize) * 1.18, cue.centered)
+			setLine(main, mainShadow, cue.headline, cue.mainSize, cue.width, cue.leading, cue.centered)
 			typeArea.Size = UDim2.fromOffset(cue.width, height)
 			active = cue
 		end
 		local size = safe.AbsoluteSize
-		local narrow = size.X < size.Y
-		local fit = (if narrow then 1 else 1.24)
-			* math.min(
-				size.X * (if narrow then 0.85 else cue.w) / cue.width,
-				size.Y * (if narrow then 0.18 else cue.h) / height
-			)
+		top, bottom = top or 0, bottom or size.Y
+		local pictureHeight = math.max(1, bottom - top)
+		local fraction = if size.X < pictureHeight then 0.81 else cue.widthFraction
+		local fit = math.min(size.X * fraction / cue.width, pictureHeight * cue.heightFraction / height)
 		local age = frame - cue.first
-		local stamp = if motion and age < 4 then (1 - age / 4) ^ 2 else 0
-		local offset = if motion and age < 2 then 0.012 * (2 - age) else 0
-		scale.Scale = fit * (1 + (if cue.centered then 0 else 0.08) * stamp)
+		local stamp = if motion and not cue.centered then math.max(0, 1 - age / 4) ^ 2 else 0
+		scale.Scale = math.max(0.01, fit * (1 + 0.035 * stamp))
+		group.Size = UDim2.fromOffset(cue.width * scale.Scale, height * scale.Scale)
 		if cue.centered then
 			group.AnchorPoint = Vector2.new(0.5, 0.5)
-			group.Position = UDim2.fromScale(0.5, 0.47)
+			group.Position = UDim2.new(0.5, 0, 0, top + pictureHeight * 0.5)
 		else
-			group.AnchorPoint = Vector2.zero
-			group.Position = UDim2.fromScale(cue.x - offset, if narrow then cue.phoneY else cue.y)
+			group.AnchorPoint = Vector2.new(0, 1)
+			group.Position = UDim2.new(0.065 - 0.008 * stamp, 0, 0, bottom - pictureHeight * 0.095)
 		end
-		group.Size = UDim2.fromOffset(cue.width * fit, height * fit)
-		group.Rotation = if cue.centered then 0 else cue.angle - 2 * stamp
-		main.Visible, mainShadow.Visible =
-			not motion or age >= (cue.accent or 2), not motion or age >= (cue.accent or 2)
+		group.Rotation = if cue.centered then 0 else -2 - stamp
+		main.Visible, mainShadow.Visible = true, true
 	end
 end
 

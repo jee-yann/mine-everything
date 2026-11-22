@@ -1,5 +1,6 @@
 local S = require(script.Parent.Scenery)
 local Run = require(script.Parent.GalleryRun)
+local Curve = require(script.Parent.TravelCurve)
 local Sprite = require(script.Parent.WorldSprite)
 local F = require(script.Parent.ExposureSheet).frames
 local V, CF = Vector3.new, CFrame.new
@@ -138,60 +139,36 @@ function Signal:place(marker, actor)
 	self.world, self.unit = CF(origin), actor.unit
 	self.face = marker.site.Rotation
 	local u = actor.unit
-	local points, times = {}, {}
-	local function add(f, p)
-		table.insert(times, f)
-		table.insert(points, p)
+	-- One physical route across the planks, the sill and the cut face. The
+	-- player chooses launch time. The tip travels the same distance on each
+	-- picture, including the exposure that matches into the isolated chamber.
+	local points = { marker.core.WorldPosition - origin, marker.site * V(-0.24 * u, -1.69 * u, 0.43 * u) - origin }
+	for _, vane in marker.runnels do
+		table.insert(points, vane.at.WorldPosition - origin + V(0, 0.13 * u, 0))
 	end
-	add(0, marker.core.WorldPosition - origin)
-	add(2, marker.site * V(-0.24 * u, -1.69 * u, 0.43 * u) - origin)
-	for i, vane in marker.runnels do
-		add(4 + 3 * (i - 1), vane.at.WorldPosition - origin + V(0, 0.13 * u, 0))
-	end
-	-- Fixed-picture landmarks begin after the final vane. Heights are the
-	-- native bridge planks, threshold, dig floor and exposed wall of the shaft.
-	self.relative = #points
-	add(F.mineRun - 15, V(0.44, 1.55, 25.9))
-	add(F.mineRun - 8, V(-0.37, 1.87, 12.9))
-	add(F.mineRun, V(0.14, 1.29, -0.42))
-	add(F.mineRun + 5, V(-0.88, 1.12, -11.8))
-	add(F.mineRun + 12, V(-3.60, 1.15, -22.76))
-	add(F.mineRun + 18, V(-5.77, 0.82, -32.38))
-	-- Round the corner of the collar and follow the far cut face. It is
-	-- visible down the lens in both landscape and a tall portrait crop.
-	add(F.lode - 14, Run.shaft * V(2.98, 0.04, 22.41))
-	add(F.lode - 12, Run.shaft * V(1.72, 2.85, 22.47))
-	add(F.lode - 9, Run.shaft * V(0.83, 2.82, 22.51))
-	add(F.lode - 5, Run.shaft * V(0.25, 2.46, 20.05))
-	self.lip = #points
-	add(F.lode, Run.shaft * V(0.30, 2.88, 16.11))
-	add(F.lode + 5, Run.shaft * V(0.77, 3.96, 10.72))
-	add(F.lode + 10, Run.shaft * V(1.21, 2.73, 3.15))
-	add(F.lode + 16, Run.shaft * V(0.96, 0.55, -0.97))
-	self.points, self.times = points, times
+	for _, at in {
+		V(0.24, 1.55, 25.9), V(0.11, 1.87, 12.9), V(0.14, 1.29, -0.42),
+		V(-0.88, 1.12, -11.8), V(-3.60, 1.15, -22.76), V(-5.77, 0.82, -32.38),
+	} do table.insert(points, at) end
+	self.sill = #points - 3
+	for _, at in {
+		V(2.85, 0.50, 22.41), V(1.90, 2.04, 22.43), V(0.99, 2.82, 22.12), V(0.45, 2.92, 20.05),
+		V(0.30, 2.88, 16.11), V(0.61, 2.97, 10.72), V(1.14, 2.01, 3.15), V(0.96, 0.55, -0.97),
+	} do table.insert(points, Run.shaft * at) end
+	self.lip, self.match = #points - 4, #points - 3
+	self.points, self.curve = points, Curve.new(points)
 	for i, v in points do
 		self.waypoints[i].Position = v
 	end
 end
 
 function Signal:time(i, contact)
-	return self.times[i] + (if i <= self.relative then contact else 0)
+	return contact + (F.lode - contact) * self.curve.stops[i] / self.curve.stops[self.match]
 end
 
-function Signal:sample(f, contact)
-	local p = self.points
-	if f <= contact then
-		return p[1]
-	end
-	for i = 2, #p do
-		local right = self:time(i, contact)
-		if f <= right then
-			local left = self:time(i - 1, contact)
-			local t = math.clamp((f - left) / (right - left), 0, 1)
-			return p[i - 1]:Lerp(p[i], t)
-		end
-	end
-	return p[#p]
+function Signal:sample(frame, contact)
+	local distance = (frame - contact) * self.curve.stops[self.match] / (F.lode - contact)
+	return self.curve:sample(distance)
 end
 
 function Signal:basis(frame)
@@ -200,16 +177,17 @@ end
 
 function Signal:draw(stage, frame, contact, motion)
 	local age = frame - contact
-	if age < 0 or frame >= F.lode + 22 then
+	local arrived = self:time(#self.points, contact)
+	if age < 0 or frame >= arrived + 6 then
 		self:hide()
 		return nil
 	end
 	local basis, u = self:basis(frame), self.unit
 	self.base.CFrame = basis
 	self.root.Parent = stage
-	local ageAtLip = frame - (F.lode - 5)
+	local ageAtLip = frame - self:time(self.lip, contact)
 	local atLip = ageAtLip >= 0
-	local finish = 1 - S.ease(frame, F.lode + 13, F.lode + 22)
+	local finish = 1 - S.ease(frame, arrived - 2, arrived + 6)
 	local point = self:sample(frame, contact)
 	local hit = if atLip then ageAtLip else age
 	local strike = if motion then (1 - S.ease(hit, 1, 8)) else 0

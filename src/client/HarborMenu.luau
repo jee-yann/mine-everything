@@ -54,19 +54,20 @@ function Menu.new(root, player, net, close)
 	self.modal = modal
 	local header = W.frame(modal, "Marquee", 7, 7, 466, 73, W.aqua, 12)
 	self.header = header
-	W.gradient(header, Color3.new(1, 1, 1), Color3.fromRGB(200, 177, 232), 24)
+	self.headerGradient = W.enamel(header, W.ink, W.ocean)
 	for i = 1, 3 do
 		local stripe = W.frame(header, "Sunburst", 323 + i * 17, 10, 10, 52, W.white, 4)
 		stripe.Rotation, stripe.BackgroundTransparency = 22, 0.76
 	end
 	self.iconWell = W.frame(header, "Badge", 12, 11, 50, 50, W.white, 12)
 	W.stroke(self.iconWell, W.ink, 2)
-	self.heading = W.title(header, "", 74, 4, 322, 37, 30, W.ink, true)
-	self.sub = W.text(header, "", 76, 39, 329, 23, 15, W.ink, true)
+	self.heading = W.title(header, "", 74, 2, 316, 42, 33, W.white, true)
+	W.outlineText(self.heading, 1.8)
+	self.sub = W.text(header, "", 76, 42, 313, 24, 17, W.white, true)
 	self.sub.Name = "Summary"
 	self.sub.TextScaled = true
 	local summaryFont = Instance.new("UITextSizeConstraint")
-	summaryFont.MinTextSize, summaryFont.MaxTextSize, summaryFont.Parent = 10, 15, self.sub
+	summaryFont.MinTextSize, summaryFont.MaxTextSize, summaryFont.Parent = 12, 17, self.sub
 	local closeButton = W.closeButton(header, 404, 9, 55)
 	self.closeButton = closeButton
 	closeButton.Activated:Connect(close)
@@ -86,7 +87,10 @@ function Menu.new(root, player, net, close)
 	self.tabViewport, self.pager, self.tabLists = viewport, pager, {}
 	local footer = W.frame(modal, "Status", 11, 371, 458, 28, W.ink, 8)
 	self.footer = footer
-	self.status = W.text(footer, "", 8, 0, 442, 28, 14, W.muted)
+	self.status = W.text(footer, "", 8, 0, 442, 28, 15, W.white)
+	self.status.TextScaled = true
+	local statusFont = Instance.new("UITextSizeConstraint")
+	statusFont.MinTextSize, statusFont.MaxTextSize, statusFont.Parent = 12, 15, self.status
 	self.sellAll = W.button(footer, "Sell all", 242, 3, 210, 44, W.gold, "Sell entire pack", "Select")
 	self.sellAll.TextScaled = true
 	local sellFont = Instance.new("UITextSizeConstraint")
@@ -144,11 +148,17 @@ local function revealRow(list, row)
 	list.CanvasPosition = Vector2.new(0, math.clamp(list.CanvasPosition.Y, math.max(0, bottom + 3 - viewHeight), top))
 end
 function Menu:layout(width, height, touch)
-	local designHeight = if touch and width > height then math.clamp(height - 14, 270, 408) else 408
+	-- Give landscape phones larger type and touch targets by scrolling the rows
+	-- inside the card. Keep the header, footer and close button within safe bounds.
+	local shortLandscape = width > height and (touch or height < 470)
+	local maxScale = if shortLandscape then 1.38 else 1.76
+	local minHeight = if shortLandscape then 270 else 408
+	local scale = math.clamp(math.min((width - 18) / 480, (height - 18) / minHeight), 0.3, maxScale)
+	local designHeight = if shortLandscape then math.clamp(math.floor((height - 18) / scale), minHeight, 408) else 408
 	local resized = self.designHeight ~= designHeight
-	self.scale.Scale = math.clamp(math.min((width - 18) / 480, (height - 14) / designHeight), 0.3, 1.38)
+	self.scale.Scale = scale
 	self.modal.Size = UDim2.fromOffset(480, designHeight)
-	local closeSize = if touch then math.clamp(math.ceil(44 / self.scale.Scale), 48, 72) else 48
+	local closeSize = math.clamp(math.ceil(44 / scale), 48, 72)
 	self.closeButton.Size = UDim2.fromOffset(closeSize, closeSize)
 	self.closeButton.Position = UDim2.fromOffset(462 - closeSize, (73 - closeSize) / 2)
 	self.designHeight = designHeight
@@ -160,13 +170,15 @@ function Menu:layout(width, height, touch)
 end
 function Menu:row(i, name, icon, color)
 	local row = W.frame(self.list, name, 1, 1 + (i - 1) * 69, 447, 62, W.card, 10)
-	W.enamel(row, color:Lerp(W.panel, 0.55), W.panel)
+	W.enamel(row, color:Lerp(W.panel, 0.76), W.panel)
 	W.frame(row, "Color tab", 0, 12, 4, 38, color, 2)
 	local plate = W.frame(row, "Badge", 9, 8, 46, 46, color, 9)
 	W.stroke(plate, W.ink, 2)
 	Icons.draw(plate, icon, 5, 5, 36, color)
-	local title = W.title(row, name, 67, 5, 238, 25, 20, W.white, true)
-	local detail = W.text(row, "", 67, 32, 253, 21, 14, W.muted, true)
+	local title = W.title(row, name, 67, 3, 249, 27, 21, W.white, true)
+	W.outlineText(title, 1.1)
+	local detail = W.text(row, "", 67, 29, 249, 31, 15, W.muted, true)
+	detail.TextWrapped = true
 	local cues = { Gear = "Buy", Jobs = "Job", Settings = "Select", Store = "Select" }
 	local button = W.button(row, "Action", 322, 12, 113, 38, color, "", cues[self.page])
 	return title, detail, button
@@ -222,11 +234,11 @@ function Menu:gear()
 		self.gearButtons[key] = b
 		detail.Name, detail.RichText = "Requirements", true
 		W.outlineText(detail, 1)
-		local benefit = W.text(title.Parent, "", 247, 1, 188, 17, 13, W.aqua)
+		local benefit = W.text(title.Parent, "", 247, 1, 188, 18, 15, W.aqua)
 		benefit.Name, benefit.TextXAlignment = "Benefit", Enum.TextXAlignment.Right
 		b.Position = UDim2.fromOffset(322, 21)
 		b.TextWrapped = true
-		b.TextSize = 14
+		b.TextSize = 16
 		b.Activated:Connect(function()
 			self.net.Action:FireServer("Buy", key)
 		end)
@@ -669,7 +681,8 @@ function Menu:open(key)
 	if self.icon then
 		self.icon:Destroy()
 	end
-	self.page, self.header.BackgroundColor3, self.heading.Text = key, page.color, page.name
+	self.page, self.heading.Text = key, page.name
+	self.headerGradient.Color = ColorSequence.new(W.ink, page.color:Lerp(W.panel, 0.48))
 	self:sizeListings()
 	self.trim.Color = ColorSequence.new(page.color:Lerp(W.panel, 0.46), W.panel)
 	self.icon =

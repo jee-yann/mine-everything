@@ -15,7 +15,7 @@ Deep under Citrine Cove, the fallen star still glows. Miners have searched for i
 | 26.88–29.63 s | A skiff brings people and supplies ashore below the quarry headland. | Water and rigging introduce a new rhythm. |
 | 29.63–35.38 s | Paths, frames and sheds replace the survey camp. At 32.50 s one camera picks up the hoist and follows the loaded skip until its two violet slivers come loose. | The cable takes weight. The fragments drop on different beats. |
 | 35.38–39.13 s | The tower registers against the same shore in the wide. **CITRINE COVE / PRESENT DAY** centers over the playable map. | A short hit lands with the chapter heading. |
-| 39.13–41.21 s | A cut across the testing bench places the limestone between the camera and the miner. The test permits a single blow. | Gravel shifts under the miner’s boots. |
+| 39.13–41.21 s | Two miners are watching Cove TV. The younger fan lifts a pennant as the player lines up the rock on the live feed. The camera pushes through the TV into the same workbench shot. | Gravel shifts under the miner’s boots. |
 | 41.21–43.88 s | In one angle the miner reads the fault and draws the pick back. A short silver arc follows the beak into the seam at 42.83 s. The two halves fall away in turn. | Steel rings against the seam. Each slab has its own landing. |
 | 43.88–46.13 s | Track along the newly exposed, intact emerald. Let the falling chips settle around it. | Two notes ring off the facets. |
 | 46.13–49.13 s | On the shoulder pose the harbor falls away into a graphic portrait. The player’s actual display name lands above **GEM HUNTER**. | The brass returns and the name lands on a downbeat. |
@@ -105,7 +105,9 @@ The Euphoric Games Community VFX pack was isolated in a disposable Studio place.
 
 The small sparks above the secondary fires and the dust along the meteor use the FireSpecs1 emitter's texture from Anime/Fire-01. Roblox identifies image 11187840108 as Images/DotGlow by Yuruzuu. A separate Studio session successfully preloaded the image. The film positions and fades those textured motes on each picture exposure. All main fire, smoke and pressure geometry is bundled with the place. [Roblox Creator Store asset permissions](https://create.roblox.com/docs/production/creator-store)
 
-## Studio recording
+## Previous Studio recording
+
+The linked recording predates the Cove TV shot and the latest title, beacon and camera changes. Press **Play** in Studio to see the current cut.
 
 Studio supplied one 1920 × 1080 picture for each exposure. The stereo track comes from a real-time Play session with the interactive strike on the same frame. The film runs for 1,562 exposures at 24 fps (65.08 s), followed by half a second of gameplay. The trial blow lands at 42.83 s. In this take the player presses Space and strikes the route beacon at 54.125 s. The pulse reaches the mine threshold at 57.67 s and flares on the shaft wall at 58.96 s. [Watch the film](Where-the-Stars-Took-Root.mp4)
 

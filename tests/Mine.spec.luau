@@ -58,7 +58,7 @@ local p = Profile.new()
 assert(not Profile.buy(p, "Radius"))
 p.bag = { Stone = 4, Coal = 3, Copper = 1 }
 assert(Profile.used(p) == 8 and Profile.sell(p) == 35 and Profile.used(p) == 0)
-assert(Profile.buy(p, "Capacity") and p.gold == 27 and Profile.stat(p, "Capacity") == 80 and Profile.used(p) == 0)
+assert(Profile.buy(p, "Capacity") and p.gold == 27 and Profile.stat(p, "Capacity") == 16 and Profile.used(p) == 0)
 local Upgrades = require(Shared.Upgrades)
 do
 	local starter = Profile.new()
@@ -84,6 +84,23 @@ do
 	assert(Profile.used(resumed) == 32 and Profile.sell(resumed) == 32 and resumed.gold == 52)
 	old.bag.Dirt = 37
 	assert(not Data.claim({ profile = old }, "oversize", 32))
+
+	for level, oldBase in { 36, 80, 170, 360, 760, 1600, 3400, 7200 } do
+		local veteran = Profile.new()
+		veteran.levels.Capacity = level
+		veteran.skills = { Pack = true, PackII = true, PackIII = true, DeepPockets = true }
+		local skills = require(Shared.Skills)
+		local oldSlots = skills.capacity(oldBase, veteran.skills)
+		veteran.bag = { Dirt = oldSlots - 1, Coal = 1 }
+		local loaded = Data.claim({ profile = veteran }, "veteran", 50).profile
+		assert(Upgrades.items.Capacity.values[level] == level * 8)
+		assert(Profile.stat(loaded, "Capacity") == skills.capacity(level * 8, veteran.skills))
+		assert(Profile.sell(loaded, 1, "Coal", "Stack") == 5)
+		local rejoined = Data.claim({ profile = Data.snapshot(loaded) }, "again", 51).profile
+		assert(Profile.sell(rejoined) == oldSlots - 1 and Profile.used(rejoined) == 0)
+		veteran.bag.Dirt = oldSlots + 1
+		assert(not Data.claim({ profile = veteran }, "too-large", 52))
+	end
 end
 for _, bag in { {}, { Dirt = 2, Stone = 3, Coal = 1, Copper = 2, Gold = 1 } } do
 	local miner = Profile.new()
@@ -111,7 +128,7 @@ for _, bag in { {}, { Dirt = 2, Stone = 3, Coal = 1, Copper = 2, Gold = 1 } } do
 		assert(not Profile.buy(miner, key) and miner.gold == 1e7 and miner.levels[key] == #values)
 		checkBag()
 	end
-	assert(Profile.stat(miner, "Speed") == 0.20 and Profile.stat(miner, "Power") == 6 and Profile.stat(miner, "Capacity") == 7200)
+	assert(Profile.stat(miner, "Speed") == 0.20 and Profile.stat(miner, "Power") == 6 and Profile.stat(miner, "Capacity") == 64)
 	miner.bag.Stone = 7201
 	assert(not Profile.valid(miner))
 end
@@ -447,6 +464,33 @@ assert(
 )
 print("PASS two dirt layers, independent regional odds, repeatable fields and saved title levels")
 local surface = workspace.CitrineCove
+do
+	local guide = require(game.StarterPlayer.StarterPlayerScripts.Client.ExpeditionWaypoint).new()
+	local bridge = surface["Sand path and bridge"]["Bridge decking"]
+	local head = Instance.new("Part")
+	head.Anchored, head.CanCollide, head.Parent = true, false, workspace
+	local top = bridge.Position + Vector3.new(0, 4, bridge.Size.Z / 2 - 2)
+	guide:show(bridge.Position - Vector3.zAxis * 32, "Mine", Color3.new(1, 0.8, 0.2), true)
+	for _, moving in { true, false } do
+		head.Position = top
+		guide:trail(head, 10, moving)
+		local before, checked = {}, 0
+		for _, part in guide.anchor:GetChildren() do
+			if part.Name == "Trail chevron" and part.Transparency < 0.2 then before[part] = part.Position end
+		end
+		head.Position -= Vector3.zAxis * 0.25
+		guide:trail(head, 10 + 1 / 60, moving)
+		for part, at in before do
+			if part.Transparency >= 0.2 then continue end
+			local distance = (part.Position - at) * Vector3.new(1, 0, 1)
+			assert(math.abs(distance.Magnitude - (if moving then 4.2 / 60 else 0)) < 0.01, "ground arrows drifted with the player")
+			checked += 1
+		end
+		assert(checked >= 2, "guidance disappeared between walking frames")
+	end
+	head:Destroy()
+	guide.anchor:Destroy()
+end
 local world = World.new(Config.LandscapeSeed, surface)
 local mapCopy = surface:Clone()
 local coast = mapCopy.TideCoast

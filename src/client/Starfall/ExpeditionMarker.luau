@@ -327,7 +327,7 @@ local function energized(parts, strength)
 	end
 end
 function ExpeditionMarker:draw(a, frame, contact)
-	if frame < F.commission or frame >= F.lode + 22 then
+	if frame < F.commission or frame >= self.signal:time(#self.signal.points, contact) + 6 then
 		self:hide()
 		return
 	end
@@ -352,7 +352,7 @@ function ExpeditionMarker:draw(a, frame, contact)
 		energized(strand, S.ease(age, i - 2, i + 2) * (1 - S.ease(frame, F.lode - 7, F.lode)))
 	end
 	for i, lamp in self.runnels do
-		local first = 3 + (i - 1) * 3
+		local first = self.signal:time(i + 2, contact) - contact - 1
 		local rise = S.ease(age, first, first + 2)
 		local burst = rise * (1 - S.ease(age, first + 2, first + 7))
 		local fade = S.ease(frame, F.lode - 12 + (#self.runnels - i) * 1.8, F.lode - 6 + (#self.runnels - i) * 1.8)

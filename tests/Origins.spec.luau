@@ -494,6 +494,16 @@ local function check(motion, live, remote)
 	local tool = film.arrival.assay
 	film:expose(cuts.measure, live)
 	assert(not station.invitation:IsDescendantOf(stage), "the commission must follow the trial")
+	film:expose(cuts.present + 4, live)
+	local tv = film.broadcast
+	assert(tv.view.Visible and tv.bug.Visible and #tv.fans == 2 and proof.model.Parent == stage,
+		"the viewers must see the player's live trial inside the TV")
+	local wide, firstFist = tv.camera.CFrame, tv.fans[2].arm:GetPivot()
+	film:expose(cuts.present + 25, live)
+	assert((tv.camera.CFrame ~= wide) == motion and (tv.fans[2].arm:GetPivot() ~= firstFist) == motion,
+		"the fans and the move into the screen must honor reduced motion")
+	film:expose(cuts.measure, live)
+	assert(not tv.view.Visible and not tv.bug.Visible, "clear the TV before the pick swing")
 	local gem = proof.gem.WorldPosition
 	local shut = proof.left.CFrame
 	for picture = cuts.proofStrike - 4, cuts.proofStrike do film:expose(picture, live) end
@@ -542,14 +552,28 @@ local function check(motion, live, remote)
 	assert(((tool.tool:GetPivot() * tool.tip) - station.core.WorldPosition).Magnitude < 0.035, "pick must hit the route seal")
 	assert((station.signalPosition - station.core.WorldPosition).Magnitude < 0.035, "the live contact must start the signal at the struck facet")
 	assert(station.signal.sparks[1].ray.Enabled == motion, "reduced motion must suppress flying strike sparks")
-	film:expose(offered + 27, live)
-	assert(station.runnels[6].strokes[1].Material == Enum.Material.Neon, "the strike lights the far end of the route")
-	assert((station.signalPosition - station.runnels[6].at.WorldPosition).Magnitude < 0.34,
-		"nineteen pictures after a player-timed strike the pulse reaches the sixth vane")
+	-- The same distance of ground lights up on every exposure for either an
+	-- early tap or the automatic one. Sparse decorations along the route must
+	-- never act as evenly timed stops for the signal.
+	local signal = station.signal
+	local contact = film.arrival.contactFrame
+	for _, hit in { cuts.prompt + 8, contact, cuts.autoStrike + 8 } do
+		local pace = signal.curve.stops[signal.match] / (cuts.lode - hit)
+		for f = hit + 2, cuts.lode + 3 do
+			local step = (signal:sample(f, hit) - signal:sample(f - 1, hit)).Magnitude
+			assert(step > pace * 0.76 and step < pace * 1.035, "the light must carry its speed through each bend")
+		end
+	end
+	local lastVane = #station.runnels + 2
+	local vaneFrame = signal:time(lastVane, contact)
+	film:expose(math.ceil(vaneFrame), live)
+	assert(station.runnels[6].strokes[1].Material == Enum.Material.Neon, "the signal lights the far vane as it passes")
+	assert((signal.world * signal:sample(vaneFrame, contact) - station.runnels[6].at.WorldPosition).Magnitude < 0.34,
+		"the wake must cross the sixth copper inlay")
 	assert(station.signal.trail[2].wire.Enabled == motion, "reduced motion must retain only the calm ground trace")
-	film:expose(cuts.mineRun, live)
 	local bearer = require(source.GalleryRun).origin(film.arrival)
-	assert((station.signalPosition - bearer - Vector3.new(0.14, 1.29, -0.42)).Magnitude < 0.035,
+	local sillFrame = signal:time(signal.sill, contact)
+	assert((signal.world * signal:sample(sillFrame, contact) - bearer - Vector3.new(0.14, 1.29, -0.42)).Magnitude < 0.035,
 		"the energy head must cross the actual mine sill on the approach")
 	local run = require(source.GalleryRun)
 	local origin = run.origin(film.arrival)
@@ -560,7 +584,7 @@ local function check(motion, live, remote)
 			mineBearing = CFrame.new(origin + Vector3.new(0, 4.96, 89)), unit = 1.85,
 			marker = { exit = { WorldPosition = origin + Vector3.new(0, 0, 89 - 29.88 * 1.85) } },
 		}
-		local first, lastZ = cuts.prompt + 8 + 26, math.huge
+		local first, lastZ = cuts.prompt + 8 + 4, math.huge
 		for frame = first, cuts.mineRun do
 			local eye = run.gallery(tall, frame, first, true)
 			assert(eye.Z < lastZ, "earliest strike must keep travelling towards the arch with a tall avatar")

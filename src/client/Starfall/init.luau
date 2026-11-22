@@ -7,6 +7,7 @@ local StarterGui = game:GetService("StarterGui")
 local Audio = require(script.Parent.HarborAudio)
 local Film = require(script.Film)
 local FirstFindTitles = require(script.FirstFindTitles)
+local BeaconPrompt = require(script.BeaconPrompt)
 local sheet = require(script.ExposureSheet)
 local W = require(script.Parent.Widgets)
 local Opening = {}
@@ -34,6 +35,11 @@ local function compose(screen, safe)
 		local release = math.clamp((frame - sheet.frames.handoff) / (sheet.frames.endBlend - sheet.frames.handoff), 0, 1)
 		local bar = UDim2.fromScale(1, height * (1 - release * release * (3 - 2 * release)))
 		top.Size, bottom.Size = bar, bar
+		-- Both ScreenGuis use Roblox UI coordinates. Intersect the actual
+		-- camera aperture with the CoreUI/notch-safe screen for this device.
+		local offset = screen.AbsolutePosition.Y - safe.AbsolutePosition.Y
+		local bars = size.Y * bar.Y.Scale
+		return math.max(0, offset + bars), math.min(safe.AbsoluteSize.Y, offset + size.Y - bars)
 	end
 	fitMatte(0)
 	local fade = W.frame(screen, "Dissolve", 0, 0, 1, 1, ink)
@@ -49,7 +55,7 @@ local function compose(screen, safe)
 		Vector2.new(0.5, 1), UDim2.fromScale(0.5, 0.92), UDim2.fromScale(0.88, 0.095)
 	caption.TextStrokeColor3 = ink
 	local limit = Instance.new("UITextSizeConstraint")
-	limit.MinTextSize, limit.MaxTextSize, limit.Parent = 12, 33, caption
+	limit.MinTextSize, limit.MaxTextSize, limit.Parent = 13, 39, caption
 	local skip = Instance.new("TextButton")
 	skip.Name, skip.Text, skip.Font, skip.TextSize = "Skip", "Skip  ›", Enum.Font.BuilderSansMedium, 16
 	skip.AnchorPoint, skip.Position, skip.Size = Vector2.new(1, 0), UDim2.new(1, -12, 0, 6), UDim2.fromOffset(84, 44)
@@ -57,35 +63,22 @@ local function compose(screen, safe)
 	skip.BorderSizePixel, skip.Parent = 0, safe
 	W.round(skip, 7)
 	skip.ZIndex = 12
-	local strike = Instance.new("TextButton")
-	strike.Name, strike.Visible, strike.Selectable = "Strike sample", false, false
-	strike.Font, strike.TextSize, strike.TextColor3 = Enum.Font.BuilderSansExtraBold, 18, ink
-	strike.BackgroundColor3, strike.BorderSizePixel, strike.ZIndex = Color3.fromHex("FFE192"), 0, 11
-	strike.Size, strike.AnchorPoint = UDim2.fromOffset(194, 48), Vector2.new(0.5, 1)
-	strike.Position, strike.Parent = UDim2.fromScale(0.5, 0.96), safe
-	W.round(strike, 7)
-	local line = Instance.new("UIStroke")
-	line.ApplyStrokeMode, line.Color, line.Thickness, line.Parent =
-		Enum.ApplyStrokeMode.Border, Color3.fromHex("513D29"), 2, strike
+	local strike, drawPrompt = BeaconPrompt(safe)
 	local title = FirstFindTitles.new(safe, screen)
 	return skip,
 		function(t, black, picture, motion, contact)
 			local frame = picture or 0
-			fitMatte(frame)
-			strike.Visible = frame >= sheet.frames.prompt and frame < sheet.frames.autoStrike and not contact
-			if strike.Visible then
-				local device = Input.PreferredInput
-				strike.Text = if device == Enum.PreferredInput.Touch
-					then "Tap to light the path"
-					elseif device == Enum.PreferredInput.Gamepad then "X   Light the path"
-					else "Light the path  [Space]"
-			end
+			local pictureTop, pictureBottom = fitMatte(frame)
+			local pictureHeight = math.max(1, pictureBottom - pictureTop)
+			caption.Position = UDim2.new(0.5, 0, 0, pictureBottom - math.max(8, pictureHeight * 0.047))
+			caption.Size = UDim2.new(0.86, 0, 0, math.clamp(pictureHeight * 0.068, 27, 63))
+			drawPrompt(frame, motion, contact, pictureTop, pictureBottom)
 			local text, opacity = Film.caption(t)
 			caption.Text, caption.TextTransparency, caption.TextStrokeTransparency =
 				text, 1 - opacity, 1 - 0.62 * opacity
 			shade.BackgroundTransparency = 1 - 0.78 * opacity
 			fade.BackgroundTransparency = 1 - black
-			title(picture or 0, motion)
+			title(frame, motion, pictureTop, pictureBottom)
 		end,
 		fade,
 		strike

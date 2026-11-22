@@ -538,6 +538,8 @@ local function test()
 			end
 			return overlay.Visible and menu.Listings:FindFirstChild(listing)
 		end, 5, "open " .. page)
+		local close = if page == "Skills" then overlay["Skill map"]["Map header"].Close else menu.Marquee.Close
+		assert(close.Visible and close.Modal, page .. " must release the first-person pointer")
 		if page == "Gear" and r:GetAttribute("CheckSwing") then
 			for key, price in { Speed = 30, Power = 36, Capacity = 8 } do
 				local row = menu.Listings[key]
@@ -1435,7 +1437,7 @@ local function test()
 	end
 	n.Action:FireServer("Buy", "Capacity")
 	waitFor(function()
-		return p:GetAttribute("Capacity") == 2 and p:GetAttribute("Gold") == saleGold - 8
+		return p:GetAttribute("Capacity") == 2 and p:GetAttribute("PackSlots") == 16 and p:GetAttribute("Gold") == saleGold - 8
 	end, 5, "buy backpack with sale gold alone")
 	assert(p:GetAttribute("Used") == 0)
 	assert(kit["Field pack"].Size.Magnitude > packSize.Magnitude, "pack grew after capacity upgrade")
@@ -1450,14 +1452,21 @@ local function test()
 		task.wait(0.12)
 	end
 	assert(p:GetAttribute("Used") == 0, "multi-block request was accepted")
+	local upgradeSlots = p:GetAttribute("PackSlots")
+	local secondSale = 0
 	for i = 1, 100 do
-		if p:GetAttribute("Mined") == 40 then
-			break
+		if p:GetAttribute("Mined") == 40 then break end
+		if p:GetAttribute("Used") == upgradeSlots then
+			secondSale = p:GetAttribute("BagValue")
+			visit("Sell", true)
+			waitFor(function() return p:GetAttribute("Used") == 0 end, 5, "sell the full upgraded pack")
+			r:FireServer("position")
+			waitFor(function() return (p.Character.Head.Position - origin).Z < 0 and not overlay.Visible end, 5, "back to mine")
 		end
 		dig(1)
 		task.wait(0.14)
 	end
-	assert(p:GetAttribute("Used") == 40 - starterSlots, "single-block mining after upgrade")
+	assert(secondSale > 0 and p:GetAttribute("Used") == 40 - starterSlots - upgradeSlots, "second and third mining trips")
 	assert(p:GetAttribute("ExpeditionStep") == "Done", "new gear tested in the field")
 	assert(discovered and p:GetAttribute("Found" .. discovered) and p:GetAttribute("Mined") == 40, "ore discovery and lifetime blocks")
 	n.Action:FireServer("Job", 2)
@@ -1489,7 +1498,7 @@ local function test()
 		return p:GetAttribute("SeenAchievementsPetName")
 	end, 5, "scroll reads new achievement")
 	local afterJob = p:GetAttribute("Gold")
-	assert(afterJob == saleGold - 8 + 80 + 25)
+	assert(afterJob == saleGold - 8 + secondSale + 80 + 25)
 	task.wait(0.25)
 	n.Action:FireServer("Job", 2)
 	task.wait(0.3)

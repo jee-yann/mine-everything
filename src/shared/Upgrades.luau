@@ -15,7 +15,7 @@ local upgrades = {
 		color = rgb(255, 147, 100),
 	},
 	Capacity = {
-		values = { 8, 80, 170, 360, 760, 1600, 3400, 7200 },
+		values = { 8, 16, 24, 32, 40, 48, 56, 64 },
 		firstPrice = 8,
 		base = 24,
 		growth = 2.5,

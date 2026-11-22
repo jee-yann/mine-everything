@@ -4,24 +4,40 @@ local V = Vector3.new
 local Waypoint = {}
 Waypoint.__index = Waypoint
 
-local arrows = 3
-local spacing = 3.7
+local arrowCount, spacing, near = 4, 4.8, 2.8
 local arms = {
-	CFrame.new(-0.43, 0, 0) * CFrame.Angles(0, -0.68, 0),
-	CFrame.new(0.43, 0, 0) * CFrame.Angles(0, 0.68, 0),
+	CFrame.new(-0.62, 0, 0) * CFrame.Angles(0, -0.64, 0),
+	CFrame.new(0.62, 0, 0) * CFrame.Angles(0, 0.64, 0),
 }
+
+local function strip(parent, name, size)
+	local part = Instance.new("Part")
+	part.Name, part.Size, part.Material = name, size, Enum.Material.Neon
+	part.Anchored, part.CanCollide, part.CanTouch, part.CanQuery, part.CastShadow = true, false, false, false, false
+	part.Transparency, part.Parent = 1, parent
+	return part
+end
 
 local function makeChevrons(parent)
 	local marks = {}
-	for i = 1, arrows * 2 do
-		local arm = Instance.new("Part")
-		arm.Name = "Trail chevron"
-		arm.Size = V(0.28, 0.09, 1.45)
-		arm.Anchored, arm.CanCollide, arm.CanTouch, arm.CanQuery, arm.CastShadow = true, false, false, false, false
-		arm.Material, arm.Transparency, arm.Parent = Enum.Material.Neon, 1, parent
-		marks[i] = arm
+	for i = 1, arrowCount do
+		local mark = { face = {}, border = {} }
+		for arm = 1, 2 do
+			mark.border[arm] = strip(parent, "Chevron edge", V(0.66, 0.09, 2.39))
+			mark.border[arm].Material, mark.border[arm].Color = Enum.Material.SmoothPlastic, Color3.fromRGB(39, 30, 35)
+			mark.face[arm] = strip(parent, "Trail chevron", V(0.41, 0.12, 2.12))
+		end
+		marks[i] = mark
 	end
 	return marks
+end
+
+local function hideMark(mark)
+	if not mark.visible then return end
+	mark.visible = false
+	for i = 1, 2 do
+		mark.face[i].Transparency, mark.border[i].Transparency = 1, 1
+	end
 end
 
 function Waypoint.new(root)
@@ -52,8 +68,7 @@ function Waypoint:clear()
 	self.pin.Enabled, self.glow.Enabled, self.glow.Adornee = false, false, nil
 	if self.edge then self.edge.Visible = false end
 	if self.marks then
-		table.clear(self.trailPoints)
-		for _, arm in self.marks do arm.Transparency = 1 end
+		for _, mark in self.marks do hideMark(mark) end
 	end
 end
 
@@ -66,69 +81,103 @@ function Waypoint:show(position, text, tint, surface, part)
 	if self.edge then self.edge.TextColor3 = tint end
 end
 
--- Lead across the actual bridge deck when the player and destination are on opposite banks.
-function Waypoint:trail(head)
+function Waypoint:placeMark(mark, flat, forward, eyeY, strength, now)
+	-- Reuse the sampled ground plane while crossing a small patch. XY
+	-- and heading still follow the actual route every rendered frame.
+	if not mark.sample or (mark.sample - flat).Magnitude > 0.7 or math.abs(eyeY - mark.eyeY) > 1.5
+		or (not mark.hit and now >= mark.retry) then
+		mark.sample, mark.eyeY, mark.retry = flat, eyeY, now + 0.25
+		local hit = workspace:Raycast(flat + V(0, eyeY + 1, 0), -Vector3.yAxis * 15, self.ground)
+		if hit and hit.Normal.Y > 0.77 and hit.Position.Y < eyeY - 1 then
+			mark.hit, mark.normal = hit.Position, hit.Normal
+		else
+			mark.hit = nil
+		end
+	end
+	if not mark.hit then hideMark(mark) return end
+	local normal, hit = mark.normal, mark.hit
+	local height = hit.Y - (normal.X * (flat.X - hit.X) + normal.Z * (flat.Z - hit.Z)) / normal.Y
+	local center = flat + V(0, height, 0) + normal * 0.16
+	local tangent = forward - normal * normal:Dot(forward)
+	local at = CFrame.lookAt(center, center + tangent, normal)
+	for j, offset in arms do
+		local base = at * offset
+		mark.border[j].CFrame, mark.border[j].Transparency = base, 1 - 0.92 * strength
+		mark.face[j].CFrame = base + normal * 0.061
+		mark.face[j].Color, mark.face[j].Transparency = self.label.TextColor3, 1 - strength
+	end
+	mark.visible = true
+end
+
+-- Lay a short section of the route on fixed ground intervals. Walking toward
+-- a chevron passes it naturally, even between updates of the tutorial objective.
+function Waypoint:trail(head, now, motion)
 	local island = workspace:FindFirstChild("CitrineCove")
 	local paths = island and island:FindFirstChild("Sand path and bridge")
 	local bridge = paths and paths:FindFirstChild("Bridge decking")
-	if not bridge then return end
-	local target, start = self.anchor.WorldPosition, head.Position
-	if math.abs(start.Y - bridge.Position.Y) > 13 then return end
-	local b, half = bridge.Position, bridge.Size.Z / 2
-	if (start.Z > b.Z - half and target.Z < b.Z - half) or (start.Z < b.Z + half and target.Z > b.Z + half) then
-		local sign = if target.Z < b.Z then 1 else -1
-		local side = (start.Z - b.Z) * sign
-		target = if side > half + 4 then b + Vector3.zAxis * (sign * half) else b - Vector3.zAxis * (sign * (half + 3))
+	if not head or not bridge or math.abs(head.Position.Y - bridge.Position.Y) > 13 then
+		if self.marks then for _, mark in self.marks do hideMark(mark) end end
+		return
 	end
-	local flat = V(target.X - start.X, 0, target.Z - start.Z)
-	if flat.Magnitude < 6 then return end
 	if not self.marks then
 		self.marks = makeChevrons(self.anchor)
-		self.trailPoints = {}
+		self.path = {}
 		self.ground = RaycastParams.new()
 		self.ground.FilterType, self.ground.RespectCanCollide = Enum.RaycastFilterType.Include, true
 	end
-	self.ground.FilterDescendantsInstances = { island }
-	local forward = flat.Unit
-	-- Sample the walkable surface at guide-update speed. The chevrons can then
-	-- travel between samples at render speed without raycasting each frame.
-	for i = 1, arrows + 1 do
-		local distance = 4 + (i - 1) * spacing
-		if distance > flat.Magnitude - 1 then break end
-		local hit = workspace:Raycast(start + forward * distance + Vector3.yAxis, -Vector3.yAxis * 14, self.ground)
-		if hit and hit.Normal.Y > 0.85 and hit.Position.Y < start.Y - 1.5 then
-			local point = hit.Position + hit.Normal * 0.15
-			local tangent = forward - hit.Normal * forward:Dot(hit.Normal)
-			self.trailPoints[i] = CFrame.lookAt(point, point + tangent, hit.Normal)
+	if self.groundIsland ~= island then
+		self.ground.FilterDescendantsInstances = { island }
+		self.groundIsland = island
+		for _, mark in self.marks do mark.sample = nil end
+	end
+	local root = head.AssemblyRootPart or head
+	local start = V(root.Position.X, 0, root.Position.Z)
+	local goal = self.anchor.WorldPosition
+	local target = V(goal.X, 0, goal.Z)
+	local b = V(bridge.Position.X, 0, bridge.Position.Z)
+	local half, sign = bridge.Size.Z / 2, if target.Z < b.Z then 1 else -1
+	local side = (start.Z - b.Z) * sign
+	table.clear(self.path)
+	if (target.Z - b.Z) * sign < -half and side > -half then
+		if side > half then table.insert(self.path, b + Vector3.zAxis * (sign * half)) end
+		table.insert(self.path, b - Vector3.zAxis * (sign * half))
+	end
+	table.insert(self.path, target)
+
+	local length, previous = 0, start
+	for _, point in self.path do
+		length += (point - previous).Magnitude
+		previous = point
+	end
+	local travel = if motion then now * 4.2 else 0
+	local first = math.floor((length - near + travel) / spacing)
+	for i = 0, arrowCount - 1 do
+		local index = first - i
+		local mark = self.marks[index % arrowCount + 1]
+		local along = length + travel - index * spacing
+		if along > length - 1.5 then hideMark(mark) continue end
+		local remaining, segmentStart = along, start
+		for _, stop in self.path do
+			local segment = stop - segmentStart
+			local distance = segment.Magnitude
+			if remaining > distance or distance < 0.001 then
+				remaining -= distance
+				segmentStart = stop
+				continue
+			end
+			local forward = segment / distance
+			local flat = segmentStart + forward * remaining
+			local fade = math.min(along - near, near + arrowCount * spacing - along, length - 1.5 - along)
+			self:placeMark(mark, flat, forward, head.Position.Y, math.clamp(fade / 0.8, 0, 1), now)
+			break
 		end
 	end
 end
 
-function Waypoint:draw(camera, motion, aimed)
+function Waypoint:draw(camera, motion, aimed, outdoorHead)
 	if not self.pin.Enabled then return end
 	local now = os.clock()
-	if self.marks then
-		local phase = if motion then (now / 1.15) % 1 else 0
-		for i = 1, arrows do
-			local from, to = self.trailPoints[i], self.trailPoints[i + 1]
-			if from then
-				local at = from
-				if to and math.abs(to.Y - from.Y) < 1.8 then at = from:Lerp(to, phase) end
-				local strength = 0.83
-				if motion and (i == 1 or not self.trailPoints[i - 1]) then
-					strength *= math.clamp(phase / 0.22, 0, 1)
-				end
-				if motion and (i == arrows or not to) then
-					strength *= math.clamp((1 - phase) / 0.22, 0, 1)
-				end
-				for j, offset in arms do
-					local arm = self.marks[(i - 1) * 2 + j]
-					arm.CFrame = at * offset
-					arm.Color, arm.Transparency = self.label.TextColor3, 1 - strength
-				end
-			end
-		end
-	end
+	self:trail(outdoorHead, now, motion)
 	if self.glow.Adornee then
 		-- When the pick is already aimed here its normal mining rim takes over.
 		self.glow.OutlineTransparency = if self.glow.Adornee == aimed then 1 else 0.12
