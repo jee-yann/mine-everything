@@ -70,8 +70,8 @@ player:GetAttributeChangedSignal("ExpeditionStep"):Connect(function()
 	previousStep = step
 end)
 local receipt = require(script.SaleReceipt).new(hud)
-task.spawn(require(script.Tramway), origin)
-require(script.MineView).start(player, origin, hud)
+task.spawn(require(script.Tramway).run, origin)
+local restoreSurfaceLight = require(script.MineView).start(player, origin, hud)
 task.spawn(require(script.OreFaces))
 local function cancelStroke()
 	if rig then
@@ -491,7 +491,7 @@ local function sampleAim()
 		local ore = Ores.byName[hit.Instance.Name]
 		local worth = if ore.secret and not player:GetAttribute("Found" .. ore.name)
 			then "???"
-			else W.number(ore.value * (if player:GetAttribute("DoubleGold") then 2 else 1)) .. " G"
+			else W.possiblePrice(ore, player)
 		local stats = "Hardness " .. Config.strength(center.Y - origin.Y) .. "  ·  " .. worth
 		hud:guide("Mine " .. string.lower(targetName(ore, center)), instruction or (if mobile then stats else "Hold to mine  ·  " .. stats), true)
 	else
@@ -607,6 +607,7 @@ local function playOpening()
 	fx:aim(nil)
 	hud:aimAt(nil)
 	hud:setShop(false)
+	restoreSurfaceLight()
 	Opening.play(player, net, hud)
 	return true
 end

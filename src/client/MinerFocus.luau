@@ -1,4 +1,6 @@
 local Players = game:GetService("Players")
+local Tween = game:GetService("TweenService")
+local Gui = game:GetService("GuiService")
 local Focus = {}
 Focus.__index = Focus
 local range = 180
@@ -42,18 +44,20 @@ end
 
 function Focus:update(underground, hit, origin, params)
 	local target = if underground and hit then self:characterOf(hit.Instance) else nil
-	if underground and not target and self.tapTarget and os.clock() < self.tapUntil then
+	if not underground or (self.tapTarget and os.clock() >= self.tapUntil) then
+		self.tapTarget = nil
+	elseif self.tapTarget and self.tapTarget ~= target then
 		local tag = self.tags[self.tapTarget]
 		local head = tag and tag.gui.Adornee
+		local visible = false
 		if head and head.Parent then
 			local delta = head.Position - origin
 			if delta.Magnitude <= range then
 				local sight = workspace:Raycast(origin, delta, params)
-				if sight and sight.Instance:IsDescendantOf(self.tapTarget) then target = self.tapTarget end
+				visible = sight ~= nil and sight.Instance:IsDescendantOf(self.tapTarget)
 			end
 		end
-	else
-		self.tapTarget = nil
+		if visible then target = self.tapTarget else self.tapTarget = nil end
 	end
 	if underground == self.underground and target == self.target then return end
 	self.underground, self.target = underground, target
@@ -63,6 +67,18 @@ function Focus:update(underground, hit, origin, params)
 		tag.gui.Enabled = if underground then focused else tag.enabled
 		tag.gui.MaxDistance = if focused then range else tag.range
 		tag.gui.Size = if focused then UDim2.fromOffset(145, 38) else tag.size
+		if tag.lift then
+			tag.lift:Cancel()
+			tag.gui.StudsOffset = tag.restingOffset
+			tag.lift = nil
+		end
+		if focused and Players.LocalPlayer:GetAttribute("MenuMotion") ~= false and not Gui.ReducedMotionEnabled then
+			tag.restingOffset = tag.gui.StudsOffset
+			tag.gui.StudsOffset = tag.restingOffset - Vector3.yAxis * 0.2
+			tag.lift = Tween:Create(tag.gui, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ StudsOffset = tag.restingOffset })
+			tag.lift:Play()
+		end
 	end
 end
 

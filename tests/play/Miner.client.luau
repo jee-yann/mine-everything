@@ -400,9 +400,10 @@ local function test()
 	end
 	local car = workspace.CitrineCove["Citrine Highlands"]["Moving cabins"]["Ore carrier 1"]
 	local start = car:GetPivot().Position
+	-- A bucket can be loading at the terminal when this client arrives.
 	waitFor(function()
 		return (car:GetPivot().Position - start).Magnitude > 0.12
-	end, 4, "tram movement")
+	end, 9, "tram leaves its loading stop")
 	local overlay = gui.SafeArea.ShopOverlay
 	local menu = overlay["Harbor menu"]
 	local map = workspace.CitrineCove
@@ -821,7 +822,10 @@ local function test()
 		local warm = Color3.fromRGB(255, 225, 169)
 		painter:aim({ face })
 		assert(not painter.faceLamp and not painter.preview:FindFirstChildWhichIsA("Light", true), "hover lit a block")
+		local rim = painter.preview["Selected block"]:FindFirstChildOfClass("Beam")
+		local idleBrightness = rim.Brightness
 		painter:setMiningLight(face, 9, warm)
+		assert(rim.Brightness < idleBrightness, "the working lamp takes visual priority over the mint outline")
 		local source = painter.faceLamp
 		assert(
 			source.Enabled
@@ -835,6 +839,7 @@ local function test()
 		painter:setMiningLight(face + Vector3.one, 15, ores.byName.Emerald.color)
 		assert(source == painter.faceLamp and source.Range == 15 and source.Color == ores.byName.Emerald.color)
 		painter:setMiningLight(nil)
+		assert(rim.Brightness == idleBrightness, "hover must restore the outline")
 		assert(not source.Enabled)
 		for i = 1, 6 do
 			painter:oreLight(face + Vector3.xAxis * i, false)
@@ -1543,6 +1548,8 @@ local function test()
 			return p.Character.HumanoidRootPart["Prism Ribbon"].Enabled == enabled
 		end, 3, "toggle owned trail")
 	end
+	local coastalAir = assert(game.Lighting:FindFirstChildOfClass("Atmosphere"))
+	local outdoorDistance = game.Lighting.FogEnd
 	r:FireServer("minedShaft")
 	waitFor(function()
 		local blocks = p:GetAttribute("TestShaftDepth")
@@ -1551,6 +1558,9 @@ local function test()
 			and gui.SafeArea.Location.Depth.Text
 				== (if blocks == 1 then "1 block deep" else blocks .. " blocks deep")
 	end, 4, "return starts inside the mined shaft")
+	waitFor(function()
+		return coastalAir.Parent ~= game.Lighting and game.Lighting.FogEnd < outdoorDistance
+	end, 3, "entering the actual shaft limits distant visibility")
 	n.Action:FireServer("Surface")
 	local passage = p.PlayerGui.SurfaceReturn
 	waitFor(function()
@@ -1564,6 +1574,7 @@ local function test()
 	waitFor(function()
 		return not passage.Enabled
 	end, 6, "surface fade completed")
+	assert(coastalAir.Parent == game.Lighting and game.Lighting.FogEnd == outdoorDistance, "return restores the original sky")
 	assert(os.clock() - departed > 0.6 and not song.IsPlaying, "depth travel and test mute")
 	do
 		local other

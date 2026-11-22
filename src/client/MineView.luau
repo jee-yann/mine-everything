@@ -1,6 +1,7 @@
 local Run = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Config = require(game.ReplicatedStorage.Shared.GameConfig)
+local TunnelVisibility = require(script.Parent.TunnelVisibility)
 local View = {}
 local galleryBounce = Color3.fromRGB(100, 88, 73)
 local palettes = {
@@ -23,6 +24,7 @@ function View.start(player, origin, hud)
 	local grid, shade, lastTarget, lastRegion, lastBounce = nil, 0, 0, nil, nil
 	local blendTime = 0
 	local previousEye, previousChar
+	local tunnel, headlamp = TunnelVisibility.new(), nil
 	local faded, bodyParts, nextScan = {}, {}, 0
 	-- Give Roblox its own first-person transparency back before its camera update.
 	Run:BindToRenderStep("Restore miner opacity", Enum.RenderPriority.Camera.Value - 1, function()
@@ -109,8 +111,16 @@ function View.start(player, origin, hud)
 		end
 		if char ~= previousChar then
 			previousEye, previousChar = nil, char
+			headlamp = nil
 			bodyParts, nextScan = {}, 0
 		end
+		local head = char and char:FindFirstChild("Head")
+		local depth = if inside and head and camera then origin.Y + Config.FloorY - head.Position.Y else 0
+		if depth > 0 and (not headlamp or not headlamp.Parent) then
+			local mount = root:FindFirstChild("Lamp mount")
+			headlamp = mount and mount:FindFirstChildOfClass("PointLight")
+		end
+		if depth <= 0 then tunnel:restore() end
 		if not root or not camera or not inside then
 			previousEye = nil
 			return
@@ -118,14 +128,11 @@ function View.start(player, origin, hud)
 		if not grid or not grid.Parent then
 			local island = workspace:FindFirstChild("CitrineCove")
 			grid = island and island:FindFirstChild("MineBlocks")
-			if not grid then
-				return
-			end
+			if not grid then return end
 			ray.FilterDescendantsInstances = { grid }
 			overlap.FilterDescendantsInstances = { grid }
 		end
 		-- Keep the near clipping plane on the player's side of a solid wall.
-		local head = char:FindFirstChild("Head")
 		if not head then
 			return
 		end
@@ -152,6 +159,10 @@ function View.start(player, origin, hud)
 		if (point - view.Position).Magnitude > 0.005 then
 			camera.CFrame = view.Rotation + point
 		end
+		if depth > 0 then
+			tunnel:update(depth, (point - head.Position).Magnitude, if headlamp then headlamp.Range else 25,
+				char:GetAttribute("PickReach") or Config.Reach)
+		end
 		local opacity = math.clamp((4.4 - (point - head.Position).Magnitude) / 2.8, 0, 1)
 		if opacity > 0 then
 			if os.clock() >= nextScan then
@@ -172,5 +183,13 @@ function View.start(player, origin, hud)
 			end
 		end
 	end)
+	-- A replay can start mid-tunnel. Hand the surface lighting back to the
+	-- film before it captures its initial atmosphere and lighting properties.
+	return function()
+		tunnel:restore()
+		Lighting.Ambient, Lighting.OutdoorAmbient = daylight, outdoor
+		grade.Enabled = false
+		previousEye, lastTarget, shade = nil, nil, 0
+	end
 end
 return View

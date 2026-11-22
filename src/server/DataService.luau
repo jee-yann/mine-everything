@@ -3,6 +3,7 @@ local Http = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local Config = require(game:GetService("ReplicatedStorage").Shared.GameConfig)
 local Profile = require(script.Parent.Profile)
+local Field = require(game.ReplicatedStorage.Shared.FieldRewards)
 local Data = {}
 local store
 local function getStore()
@@ -28,6 +29,7 @@ function Data.snapshot(p)
 		firstTrip = table.clone(p.firstTrip),
 		gold = p.gold,
 		gems = p.gems, stampCount = p.stampCount, stampDay = p.stampDay,
+		shiftDay = p.shiftDay, shiftSeconds = p.shiftSeconds, shiftClaims = p.shiftClaims,
 		hasteCuts = p.hasteCuts, stoneChips = p.stoneChips, pulses = p.pulses,
 		oreCompass = p.oreCompass, auraOff = p.auraOff,
 		mined = p.mined,
@@ -186,6 +188,7 @@ function Data.save(player, session, release)
 		return
 	end
 	session.busy = true
+	Field.trackShift(session, os.time())
 	local snapshot = Data.snapshot(session.profile)
 	local depth = Profile.depthRecord(snapshot)
 	if not release or depth ~= session.indexedDepth then
@@ -214,6 +217,7 @@ function Data.resetProgress(player, session)
 	local ok = session.practice or (session.writable and writeSnapshot(player, session, Data.snapshot(fresh), false))
 	if ok then
 		session.profile = fresh
+		session.shiftAt = os.time()
 		if session.writable then
 			indexDepth(session, player.UserId, 0)
 		end

@@ -31,7 +31,34 @@ function Page.attendance(menu)
 		claim.BackgroundColor3 = if ready then W.violet else W.muted
 		claim.Interactable, claim.AutoButtonColor = ready, ready
 	end)
-	return 1
+	local _, description, collect = menu:row(2, "Time in the cove", "Jobs", W.aqua)
+	local shown
+	local function showTime()
+		shown = menu.player:GetAttribute("ShiftPrize")
+		local prize = shown and Field.shiftRewards[shown]
+		local due = menu.player:GetAttribute("ShiftReadyAt")
+		local ready = prize ~= nil and due == 0
+		if prize then
+			description.Text = string.format("Play %d minutes today for %d %s", prize.seconds / 60, prize.gems,
+				if prize.gems == 1 then "gem" else "gems")
+			local left = math.max(0, math.ceil((due or 0) - workspace:GetServerTimeNow()))
+			collect.Text = if ready then "Claim +" .. prize.gems else string.format("%d:%02d", math.floor(left / 60), left % 60)
+		else
+			description.Text = if shown then "All three rewards claimed today" else "Play 10, 20 and 60 minutes for gems"
+			collect.Text = if shown then "Complete" else "Loading"
+		end
+		collect.BackgroundColor3 = if ready then W.green else W.muted
+		collect.Interactable, collect.AutoButtonColor = ready, ready
+	end
+	collect.Activated:Connect(function() menu.net.Action:FireServer("ShiftPrize", shown) end)
+	table.insert(menu.updates, showTime)
+	task.defer(function()
+		while collect.Parent and menu.overlay.Visible and menu.page == "Jobs" do
+			showTime()
+			task.wait(1)
+		end
+	end)
+	return 2
 end
 
 function Page.extraKit(menu)

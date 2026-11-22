@@ -56,6 +56,15 @@ do
 	local _, hostGrade, hostUnits = Profile.recordCut(miner, "Stone", 5, sample(100, 1))
 	assert(not hostGrade and hostUnits == 1 and not miner.grades.Stone)
 	assert(Purity.quote(Ores.byName.Stone, 1, nil, 1, true) == Ores.byName.Stone.value)
+	local copper = Ores.byName.Copper
+	for _, broker in {false, true} do
+		local lowPrice, highPrice = Purity.priceRange(copper, broker)
+		assert(lowPrice == Purity.quote(copper, 1, {["50"] = 1}, 1, broker))
+		assert(highPrice == Purity.quote(copper, 1, {["100"] = 1}, 1, broker))
+		assert(highPrice > lowPrice)
+	end
+	local rockLow, rockHigh = Purity.priceRange(Ores.byName.Stone, true)
+	assert(rockLow == rockHigh and rockLow == Ores.byName.Stone.value)
 
 	local spill = Profile.new()
 	spill.levels.Capacity = 2
@@ -563,6 +572,19 @@ do
 	head.Position = bridge.Position + Vector3.new(41, 4, 20)
 	guide:trail(head, 15, false)
 	assert(#guide.path == 3 and math.abs(guide.path[1].X - head.Position.X) < 2, "missed nearby side bridge")
+	local deck
+	for _, candidate in guide.decks do
+		if math.abs(candidate.Position.X - head.Position.X) < 2 then deck = candidate end
+	end
+	local parent = assert(deck, "missing streamed deck").Parent
+	deck.Parent = nil
+	task.wait()
+	guide:trail(head, 15.1, false)
+	assert(not table.find(guide.decks, deck) and math.abs(guide.path[1].X - head.Position.X) > 20, "routed across an unloaded bridge")
+	deck.Parent = parent
+	task.wait()
+	guide:trail(head, 15.2, false)
+	assert(table.find(guide.decks, deck) and math.abs(guide.path[1].X - head.Position.X) < 2, "ignored newly streamed bridge")
 	head.Position = bridge.Position + Vector3.new(14, -0.7, 0)
 	guide:trail(head, 16, false)
 	assert(guide.label.Text == "Climb the steps" and guide.path[1].X > bridge.Position.X, "no nearby canal exit")
@@ -646,6 +668,37 @@ for _, x in { -73, -63, -56, 52, 68, 76 } do
 	end
 end
 local highlands = mapCopy["Citrine Highlands"]
+do
+	local rail = highlands["Ore siding"]
+	local gardens = highlands["Compass gardens"]
+	local tracks = {}
+	for _, part in rail:GetChildren() do
+		if part.Name == "Rail" then table.insert(tracks, part) end
+	end
+	assert(#tracks == 2)
+	for _, piece in gardens:GetChildren() do
+		if not piece:IsA("BasePart") then continue end
+		local frame, size = piece.CFrame, piece.Size * 0.5
+		local rx = math.abs(frame.RightVector.X)*size.X + math.abs(frame.UpVector.X)*size.Y + math.abs(frame.LookVector.X)*size.Z
+		local rz = math.abs(frame.RightVector.Z)*size.X + math.abs(frame.UpVector.Z)*size.Y + math.abs(frame.LookVector.Z)*size.Z
+		for _, track in tracks do
+			assert(math.abs(piece.Position.X - track.Position.X) > rx + track.Size.X/2
+				or math.abs(piece.Position.Z - track.Position.Z) > rz + track.Size.Z/2, "planting across a running rail: " .. piece.Name)
+		end
+	end
+	local boards, steps = 0, 0
+	for _, part in rail:GetChildren() do
+		if part.Name == "Wharf step" then steps += 1 end
+		if part.Name == "Planked rail crossing" then
+			boards += 1
+			for _, track in tracks do
+				assert(math.abs(part.Position.X - track.Position.X) - (part.Size.X + track.Size.X)/2 >= 0.1,
+					"crossing boards cover a wagon's wheel flange")
+			end
+		end
+	end
+	assert(boards == 15 and steps == 3, "unload platform lost its pedestrian approach")
+end
 -- The bluff caps sit above the excavated gallery. Check underneath them too:
 -- a top-down floor check alone can miss a player-sized slot in the sandstone.
 do
@@ -940,6 +993,32 @@ for _, key in { "Jobs", "Store", "Book", "Supplies" } do
 	assert(stall:FindFirstChildWhichIsA("BillboardGui", true) and stall:FindFirstChildWhichIsA("PointLight", true))
 end
 local back = highlands["Cableway trail"]
+do
+	local relay = require(game.StarterPlayer.StarterPlayerScripts.Client.Tramway)
+	local tram = highlands["Ridge tramway"]
+	for lane = 1, 3 do
+		local car = highlands["Moving cabins"]["Ore carrier " .. lane]
+		assert(car.ModelStreamingMode == Enum.ModelStreamingMode.Atomic, "bucket and its cargo must stream together")
+		local w, e = car["West terminal"].Value, car["East terminal"].Value
+		local receive, angle, drop, loaded = relay.sample(w, e, 0.55)
+		local feed, _, _, filled = relay.sample(w, e, 0.115)
+		local empty, _, _, returning = relay.sample(w, e, 0.80)
+		assert(loaded and filled and not returning and angle > 0.7 and drop.Y < -3.45
+			and receive.X < empty.X and empty.X < feed.X, "ore must travel west, tip and return empty")
+		local ready, bin = false, false
+		for _, item in tram:GetChildren() do
+			if item.Name == "Receiving hopper floor" then
+				bin = bin or (item.Position - (world.origin + receive + Vector3.new(-1, -8.89, 0))).Magnitude < 0.02
+			elseif item.Name == "Ore feed spout" then
+				local endA = item.Position + item.CFrame.LookVector*item.Size.Z/2
+				local endB = item.Position - item.CFrame.LookVector*item.Size.Z/2
+				local fillPoint = world.origin + feed - Vector3.yAxis*1.35
+				ready = ready or math.min((endA - fillPoint).Magnitude, (endB - fillPoint).Magnitude) < 0.02
+			end
+		end
+		assert(bin and ready, "both ends of each cable need a physical transfer point")
+	end
+end
 local obstructions = { mapCopy["Honey bluffs"], highlands["Ridge tramway"] }
 for _, piece in back:GetChildren() do
 	if piece.Name == "Tower footing" then
@@ -1247,5 +1326,22 @@ for _, kind in { "Cache", "Lava", "Egg" } do
 		assert(prompt and prompt.ActionText == (if kind == "Egg" then "Hatch" else "Open"))
 	end
 	support:Destroy()
+end
+do
+	local Lighting = game:GetService("Lighting")
+	local Tunnel = require(game.StarterPlayer.StarterPlayerScripts.Client.TunnelVisibility)
+	local air = assert(Lighting:FindFirstChildOfClass("Atmosphere"))
+	local color, first, last = Lighting.FogColor, Lighting.FogStart, Lighting.FogEnd
+	local visibility = Tunnel.new()
+	visibility:update(30, 0, 25, 34)
+	local deepEnd = Lighting.FogEnd
+	assert(not Lighting:FindFirstChildOfClass("Atmosphere") and Lighting.FogStart == 20 and deepEnd == 49)
+	visibility:update(2, 0, 25, 34)
+	assert(Lighting.FogEnd > deepEnd * 5, "daylight reaches the mouth of the shaft")
+	visibility:update(30, 12, 49, 54)
+	assert(Lighting.FogEnd == 85 and Lighting.FogStart > 49, "longer lamp and third-person camera move the falloff")
+	visibility:update(0, 0, 25, 34)
+	assert(air.Parent == Lighting and Lighting.FogColor == color and Lighting.FogStart == first and Lighting.FogEnd == last)
+	print("PASS tunnel sight follows lamp range, depth, camera offset and restores coastal atmosphere")
 end
 print("MINING_TESTS_PASSED")

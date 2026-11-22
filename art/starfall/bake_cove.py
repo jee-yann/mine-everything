@@ -412,7 +412,7 @@ def ground(x, z, year):
 def map_time(path, k, x, y, z):
     top, site = (path + ["", ""])[:2]
     low = k.lower()
-    if k in ("SiteOrigin", "Landing"):
+    if k in ("SiteOrigin", "Landing", "Outer cliff boundary"):
         return None
     if top == "EditFace":
         return 20.28
@@ -434,6 +434,8 @@ def map_time(path, k, x, y, z):
             if k == "Bridge pile"
             else 20.18 if k in ("Timber deck", "Footboard") else 23.72
         )
+    if site == "Turquoise cascade" and k in ("Culvert keystone", "Drain cheek", "Drain shadow"):
+        return 21.98
     if top == "Honey bluffs" or site == "Turquoise cascade" or top == "Spring falls":
         return 0
     if site == "Cableway trail" and k in (
@@ -468,10 +470,18 @@ def map_time(path, k, x, y, z):
             else 20.28 if "wall" in low else 22.64
         )
     if site == "Ore siding":
+        if k in ("Wharf pile", "Tipple timber"):
+            return 20.38
+        if k in ("Loading bin", "Wagon unload platform"):
+            return 20.64
+        if k in ("Bin band", "Ore chute"):
+            return 20.77
         if k == "Sleeper":
             return 20.80 + 0.09 * int(ramp(z, 6, 86) * 10)
         if k == "Rail":
             return 21.75 if x < -91 else 21.86
+        if k in ("Planked rail crossing", "Wharf step", "Stop shoe", "Rail stop"):
+            return 21.92
         offset = round(ramp(z, 22, 47) * 2) * 0.065
         return offset + (
             21.96
@@ -479,6 +489,8 @@ def map_time(path, k, x, y, z):
             else 22.08 if "bed" in low else 22.20 if "wagon" in low else 22.35
         )
     if top == "Sand path and bridge":
+        if k in ("Canal landing", "Canal step", "Canal handrail", "Rail post"):
+            return 20.33
         if k == "Bridge bearer" or k == "Bridge post":
             return 19.53
         if k == "Bridge plank":
@@ -577,7 +589,7 @@ def extract(parent, path):
             if k == "Weathered sandstone" and previous != k:
                 bluff_district = ("west" if x < 0 else "east") if abs(x) < 59 else None
             district, previous = bluff_district, k
-        elif k in ("Mine roof slope", "Rear roof slope"):
+        elif k in ("Mine roof slope", "Rear roof slope", "Ridge sandstone", "Ridge meadow", "Gully shoulder", "Gully bed"):
             district = "strata"
         elif k in (
             "Sloping bluff foundation",

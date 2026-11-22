@@ -38,11 +38,11 @@ local function petPortrait(parent, drake)
 end
 
 function Pages.pets(menu)
-	local _, detail, equip = menu:row(1, "Pocket Rock", "Pets", W.violet)
+	local _, detail, equip = menu:row(1, "Pocket Rock", nil, W.violet)
 	equip.Activated:Connect(function()
 		menu.net.Action:FireServer("Pet", if menu.player:GetAttribute("Pet") == "Rock" then "" else "Rock")
 	end)
-	local _, drakeDetail, drake = menu:row(2, "Cave Drake", "Pets", W.aqua)
+	local _, drakeDetail, drake = menu:row(2, "Cave Drake", nil, W.aqua)
 	drake.Activated:Connect(function()
 		menu.net.Action:FireServer("Pet", if menu.player:GetAttribute("Pet") == "Drake" then "" else "Drake")
 	end)
@@ -74,10 +74,15 @@ function Pages.pets(menu)
 			box.Text = name
 		end)
 	end
-	table.insert(menu.updates, function()
-		local active = menu.player:GetAttribute("Pet") == "Rock"
+	local previewSpecies, previousPet
+	local function refresh()
+		local pet = menu.player:GetAttribute("Pet") or ""
+		if pet ~= previousPet then previewSpecies, previousPet = nil, pet end
+		local active = pet == "Rock"
 		local ownsDrake = menu.player:GetAttribute("DrakeUnlocked") == true
-		local flying = menu.player:GetAttribute("Pet") == "Drake"
+		local flying = pet == "Drake"
+		local showDrake = if previewSpecies then previewSpecies == "Drake" else flying
+		local equipped = if showDrake then flying else active
 		drakeDetail.Text = if ownsDrake
 			then "Flying cave companion"
 			else "Hatch an egg in a natural cave below 185 blocks"
@@ -85,16 +90,36 @@ function Pages.pets(menu)
 		drake.BackgroundColor3 = if flying then W.green elseif ownsDrake then W.aqua else W.muted
 		local name = menu.player:GetAttribute("PetName") or "Pebble"
 		detail.Text = name .. "   ·   Pocket companion"
-		caption.Text = if active or flying then "EQUIPPED" else "COMPANION PREVIEW"
-		petName.Text = if active or flying then name else "Pocket Rock"
+		caption.Text = if equipped then "EQUIPPED" else "COMPANION PREVIEW"
+		petName.Text = if equipped then name elseif showDrake then "Cave Drake" else "Pocket Rock"
 		species.TextWrapped = true
-		species.Text = if not (active or flying) then "Equip a pet to bring it along."
+		species.Text = if showDrake and not ownsDrake then "Hatch a cave egg to bring this drake along."
+			elseif not equipped then "Equip a pet to bring it along."
 			elseif menu.player:GetAttribute("OreCompass") then "Ore compass · Spots nearby ore"
 			else "Craft a compass to help find ore."
-		rockView.Visible, drakeView.Visible = not flying, flying
+		rockView.Visible, drakeView.Visible = not showDrake, showDrake
 		box.PlaceholderText = name
 		equip.Text, equip.BackgroundColor3 = if active then "Unequip" else "Equip", if active then W.green else W.violet
-	end)
+	end
+	for key, row in { Rock = detail.Parent, Drake = drakeDetail.Parent } do
+		local badge = row.Badge
+		badge.BackgroundColor3 = W.ink
+		local view = petPortrait(badge, key == "Drake")
+		view.Active = false
+		local button = W.clearButton(badge, "Preview", 0, 0, 46, 46, "Select")
+		button.ZIndex = view.ZIndex + 1
+		button.Activated:Connect(function()
+			previewSpecies = key
+			refresh()
+			local list = display.Parent
+			local offset = display.AbsolutePosition.Y - list.AbsolutePosition.Y
+			local spare = list.AbsoluteWindowSize.Y - display.AbsoluteSize.Y
+			if offset < 0 or offset > spare then
+				list.CanvasPosition += Vector2.new(0, offset - spare / 2)
+			end
+		end)
+	end
+	table.insert(menu.updates, refresh)
 	return 6
 end
 function Pages.achievements(menu)
@@ -156,8 +181,7 @@ function Pages.index(menu)
 			name.Text = if hidden then "???" else ore.name .. (if found then "   ✓" else "")
 			worth.Text = if hidden
 				then "Mine it to identify"
-				else W.unitPrice(ore.value * (if menu.player:GetAttribute("DoubleGold") then 2 else 1))
-					.. "   ·   " .. ore.xp .. " base XP"
+				else W.colored(W.possiblePrice(ore, menu.player), W.gold) .. "   ·   " .. ore.xp .. " base XP"
 		end)
 	end
 	local y = 30

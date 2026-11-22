@@ -42,6 +42,15 @@ net.Parent = Rep
 
 local sessions, loading, closing, nextAction = {}, {}, {}, {}
 local shuttingDown = false
+local function updateShift(player, session, now)
+	Field.trackShift(session, now)
+	local p = session.profile
+	local index = p.shiftClaims + 1
+	local prize = Field.shiftRewards[index]
+	local due = if not prize then nil elseif p.shiftSeconds >= prize.seconds then 0 else now + prize.seconds - p.shiftSeconds
+	if player:GetAttribute("ShiftPrize") ~= index then player:SetAttribute("ShiftPrize", index) end
+	if player:GetAttribute("ShiftReadyAt") ~= due then player:SetAttribute("ShiftReadyAt", due) end
+end
 local function applySkills(player, p)
 	local char = player.Character
 	if not char then
@@ -199,6 +208,7 @@ local function join(player)
 	end
 	board.Parent = player
 	sessions[player], loading[player] = session, nil
+	updateShift(player, session, os.time())
 	for key, value in session.profile.preferences do
 		player:SetAttribute(key, value)
 	end
@@ -330,6 +340,7 @@ local function action(player, key, option, value)
 				moveCharacter(char, CFrame.new(landing))
 			end
 			s.climb, s.lavaUntil = nil, nil
+			updateShift(player, s, os.time())
 			sync(player, s.profile)
 			applySkills(player, s.profile)
 		end
@@ -390,6 +401,7 @@ local function action(player, key, option, value)
 		and key ~= "Flare"
 		and key ~= "Deliver"
 		and key ~= "Stamp"
+		and key ~= "ShiftPrize"
 		and key ~= "Aura"
 		and key ~= "Pulse"
 		and key ~= "OwnerClear"
@@ -429,6 +441,14 @@ local function action(player, key, option, value)
 		if day then
 			sync(player, p)
 			net.Feedback:FireClient(player, "hint", string.format("Day %d stamped! +%d gems", day, gems))
+		end
+	elseif key == "ShiftPrize" then
+		local at = os.time()
+		local gems = Field.claimShift(s, at, option)
+		updateShift(player, s, at)
+		if gems then
+			sync(player, p)
+			net.Feedback:FireClient(player, "hint", string.format("Shift reward! +%d %s", gems, if gems == 1 then "gem" else "gems"))
 		end
 	elseif key == "Aura" and type(option) == "boolean" and Profile.hasUpgrade(p) then
 		p.auraOff = not option
@@ -636,7 +656,8 @@ task.spawn(function()
 end)
 task.spawn(function()
 	while task.wait(0.5) do
-		local day = math.floor(os.time() / 86400)
+		local at = os.time()
+		local day = math.floor(at / 86400)
 		if net:GetAttribute("OrderDay") ~= day then
 			net:SetAttribute("OrderDay", day)
 		end
@@ -644,6 +665,7 @@ task.spawn(function()
 			if s.resetting then
 				continue
 			end
+			updateShift(player, s, at)
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			if not root then
 				s.climb = nil

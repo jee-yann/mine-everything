@@ -185,7 +185,7 @@ function Menu:row(i, name, icon, color)
 	W.frame(row, "Color tab", 0, 12, 4, 38, color, 2)
 	local plate = W.frame(row, "Badge", 9, 8, 46, 46, color, 9)
 	W.stroke(plate, W.ink, 2)
-	Icons.draw(plate, icon, 5, 5, 36, color)
+	if icon then Icons.draw(plate, icon, 5, 5, 36, color) end
 	local title = W.title(row, name, 67, 3, 249, 27, 21, W.white, true)
 	W.outlineText(title, 1.1)
 	local detail = W.text(row, "", 67, 29, 249, 31, 15, W.muted, true)
@@ -425,7 +425,7 @@ function Menu:pack()
 			item.row.Position, item.row.Visible = UDim2.fromOffset(1, 1 + (i - 1) * 69), true
 			item.count.Text = "×" .. entry.amount
 			local grade = if low then (if low == high then low .. "%" else low .. "–" .. high .. "%") .. " pure"
-				else W.unitPrice(entry.ore.value * multiplier)
+				else W.unitPrice(value / entry.amount)
 			item.detail.Text = grade .. "  ·  " .. W.goldAmount(value) .. " G in pack"
 		end
 		empty.Visible = #held == 0
@@ -478,6 +478,7 @@ function Menu:attention(key)
 		end
 	elseif key == "Jobs" then
 		local day = self.net:GetAttribute("OrderDay") or 0
+		if p:GetAttribute("ShiftReadyAt") == 0 then return true end
 		if (p:GetAttribute("StampDay") or 0) < day then return true end
 		local recipe = Materials.daily(day).recipe
 		if (p:GetAttribute("DailyClaim") or 0) < day and not Materials.missing(recipe, held(p, recipe)) then

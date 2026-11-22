@@ -20,6 +20,9 @@ function Profile.new()
 		gems = 0,
 		stampDay = 0,
 		stampCount = 0,
+		shiftDay = 0,
+		shiftSeconds = 0,
+		shiftClaims = 0,
 		hasteCuts = 0,
 		stoneChips = 0,
 		pulses = 0,
@@ -148,9 +151,12 @@ function Profile.valid(p)
 	end
 	-- Legacy profiles may omit all of the field rewards.
 	for key, max in { gems = 9e15, stampDay = 9e15, stampCount = 7, hasteCuts = Field.hasteCuts,
-		stoneChips = Field.stoneChips, pulses = 9e15 } do
+		stoneChips = Field.stoneChips, pulses = 9e15, shiftDay = 9e15, shiftSeconds = Field.maxShiftTime,
+		shiftClaims = #Field.shiftRewards } do
 		if p[key] ~= nil and not integer(p[key], max) then return false end
 	end
+	local claimed = Field.shiftRewards[p.shiftClaims or 0]
+	if claimed and (p.shiftSeconds or 0) < claimed.seconds then return false end
 	for _, key in { "oreCompass", "auraOff" } do
 		if p[key] ~= nil and type(p[key]) ~= "boolean" then return false end
 	end
@@ -296,7 +302,7 @@ function Profile.valid(p)
 end
 
 function Profile.upgradeSave(p)
-	for _, key in { "gems", "stampDay", "stampCount", "hasteCuts", "stoneChips", "pulses" } do
+	for _, key in { "gems", "stampDay", "stampCount", "shiftDay", "shiftSeconds", "shiftClaims", "hasteCuts", "stoneChips", "pulses" } do
 		p[key] = p[key] or 0
 	end
 	-- Profiles predating the opening belong to returning players.

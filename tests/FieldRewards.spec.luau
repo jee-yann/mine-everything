@@ -9,7 +9,7 @@ local Pulse = require(Server.MinePulse)
 local Config = require(Shared.GameConfig)
 
 local legacy = Profile.new()
-for _, key in { "gems", "stampDay", "stampCount", "hasteCuts", "stoneChips", "pulses" } do legacy[key] = nil end
+for _, key in { "gems", "stampDay", "stampCount", "shiftDay", "shiftSeconds", "shiftClaims", "hasteCuts", "stoneChips", "pulses" } do legacy[key] = nil end
 local p = assert(Data.claim({profile = legacy}, "new session", 1000)).profile
 assert(p.gems == 0 and p.hasteCuts == 0 and not Profile.hasUpgrade(p))
 for day, payout in Field.stamps do
@@ -43,6 +43,38 @@ assert(Profile.hasUpgrade(restored))
 snapshot.stampCount = 8
 assert(not Profile.valid(snapshot))
 print("PASS gem card rollover, missed days, duplicate claims, recipes, saved charges, first-upgrade aura")
+
+local visit = { profile = p }
+local start = 20101 * 86400
+Field.trackShift(visit, start)
+Field.trackShift(visit, start + 599)
+Field.trackShift(visit, start + 599)
+assert(p.shiftSeconds == 599 and not Field.claimShift(visit, start + 599, 1))
+local saved = Data.snapshot(p)
+local returnVisit = { profile = assert(Data.claim({ profile = saved }, "return", start + 2000)).profile }
+local resumed = returnVisit.profile
+Field.trackShift(returnVisit, start + 2000)
+assert(resumed.shiftSeconds == 599 and not Field.claimShift(returnVisit, start + 2000, 1))
+assert(not Field.claimShift(returnVisit, start + 2001, 3))
+assert(Field.claimShift(returnVisit, start + 2001, 1) == 1)
+assert(not Field.claimShift(returnVisit, start + 2001, 1) and resumed.gems == 3)
+assert(not Field.claimShift(returnVisit, start + 2600, 2))
+assert(Field.claimShift(returnVisit, start + 2601, 2) == 2)
+assert(Field.claimShift(returnVisit, start + 12000, 3) == 4 and resumed.gems == 9)
+assert(resumed.shiftSeconds == 3600 and not Field.claimShift(returnVisit, start + 12000, 3))
+local sameDay = { profile = assert(Data.claim({ profile = Data.snapshot(resumed) }, "third", start + 22000)).profile }
+assert(not Field.claimShift(sameDay, start + 22000, 1))
+Field.trackShift(sameDay, start + 86400 + 9)
+assert(sameDay.profile.shiftClaims == 0 and sameDay.profile.shiftSeconds == 9)
+assert(not Field.claimShift(sameDay, start + 86400 + 9, 1))
+local followingDay = { profile = sameDay.profile }
+Field.trackShift(followingDay, start + 3 * 86400 + 16000)
+assert(sameDay.profile.shiftSeconds == 0 and sameDay.profile.shiftClaims == 0)
+assert(not Field.claimShift(followingDay, start + 3 * 86400 + 16000, 1))
+local corrupt = Data.snapshot(sameDay.profile)
+corrupt.shiftClaims = 3
+assert(not Profile.valid(corrupt))
+print("PASS online shift timer, no offline or duplicate credit, all three claims, midnight and reconnect")
 
 local folder = Instance.new("Folder")
 folder.Parent = workspace

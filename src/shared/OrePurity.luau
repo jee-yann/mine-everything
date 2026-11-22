@@ -61,6 +61,11 @@ local function unitPrice(ore, grade, broker)
 	return math.round(ore.value * percent * buyer / 10000)
 end
 
+function Purity.priceRange(ore, broker)
+	local low = unitPrice(ore, nil, broker)
+	return low, if ore.host then low else unitPrice(ore, grades[#grades], broker)
+end
+
 local function priceStack(ore, count, stock, quantity, broker, take)
 	local remain = math.clamp(quantity, 0, count)
 	local ungraded = count

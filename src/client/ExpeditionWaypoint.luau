@@ -61,7 +61,14 @@ function Waypoint.new(root)
 		edge.Name, edge.AnchorPoint, edge.Visible = "Expedition direction", Vector2.one * 0.5, false
 		W.outlineText(edge, 2.4)
 	end
-	return setmetatable({ anchor = anchor, pin = pin, label = label, tip = tip, glow = glow, edge = edge }, Waypoint)
+	local self = setmetatable({ anchor = anchor, pin = pin, label = label, tip = tip, glow = glow, edge = edge }, Waypoint)
+	anchor.Destroying:Once(function()
+		if self.addedCrossing then
+			self.addedCrossing:Disconnect()
+			self.removedCrossing:Disconnect()
+		end
+	end)
+	return self
 end
 
 function Waypoint:clear()
@@ -136,6 +143,40 @@ local function shortestCrossing(decks, start, target)
 	return nearest, farthest
 end
 
+-- A side bridge or stair can stream in after the main deck (and leave again).
+-- Track only the route pieces that are present on this client.
+function Waypoint:watchCrossings(island, paths, bridge)
+	if self.addedCrossing then
+		self.addedCrossing:Disconnect()
+		self.removedCrossing:Disconnect()
+	end
+	self.bridge, self.decks, self.exits = bridge, { bridge }, {}
+	self.waterFloor = bridge.Position.Y - 1.7
+	local function listFor(part)
+		if part.Name == "Timber deck" and part.Parent and part.Parent.Name == "Creek crossing" then
+			return self.decks
+		elseif part.Name == "Canal landing" and part.Parent == paths then
+			return self.exits
+		end
+	end
+	local function attach(part)
+		local list = listFor(part)
+		if list and not table.find(list, part) then table.insert(list, part) end
+	end
+	self.addedCrossing = island.DescendantAdded:Connect(attach)
+	self.removedCrossing = island.DescendantRemoving:Connect(function(part)
+		local list = if part.Name == "Timber deck" then self.decks elseif part.Name == "Canal landing" then self.exits else nil
+		local i = list and table.find(list, part)
+		if i then table.remove(list, i) end
+	end)
+	local highlands = island:FindFirstChild("Citrine Highlands")
+	local meadows = highlands and highlands:FindFirstChild("Outer meadows")
+	if meadows then
+		for _, part in meadows:GetDescendants() do attach(part) end
+	end
+	for _, part in paths:GetChildren() do attach(part) end
+end
+
 function Waypoint:trail(head, now, motion)
 	local island = workspace:FindFirstChild("CitrineCove")
 	local paths = island and island:FindFirstChild("Sand path and bridge")
@@ -158,18 +199,7 @@ function Waypoint:trail(head, now, motion)
 	local root = head.AssemblyRootPart or head
 	local start, target = flat(root.Position), flat(self.destination)
 	if self.bridge ~= bridge then
-		self.bridge, self.decks, self.exits = bridge, { bridge }, {}
-		local highlands = island:FindFirstChild("Citrine Highlands")
-		local meadows = highlands and highlands:FindFirstChild("Outer meadows")
-		if meadows then
-			for _, deck in meadows:GetDescendants() do
-				if deck.Name == "Timber deck" then table.insert(self.decks, deck) end
-			end
-		end
-		for _, piece in paths:GetChildren() do
-			if piece.Name == "Canal landing" then table.insert(self.exits, piece) end
-		end
-		self.waterFloor = bridge.Position.Y - 1.7
+		self:watchCrossings(island, paths, bridge)
 	end
 	table.clear(self.path)
 	local exit

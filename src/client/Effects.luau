@@ -7,6 +7,7 @@ local Debris = game:GetService("Debris")
 local Effects = {}
 Effects.__index = Effects
 local rng = Random.new()
+local idleRim, workingRim = 1.25, 0.85
 function Effects.new()
 	local self = setmetatable({ activeChips = 0, lastBurst = 0, markers = {}, oreLabels = {} }, Effects)
 	local preview = Instance.new("Folder")
@@ -25,7 +26,7 @@ end
 function Effects:chime(pitch)
 	Audio.reward(pitch)
 end
-local function newMarker()
+local function newMarker(brightness)
 	local marker = Instance.new("Part")
 	marker.Name, marker.Anchored, marker.Transparency = "Selected block", true, 1
 	marker.CanCollide, marker.CanTouch, marker.CanQuery, marker.CastShadow = false, false, false, false
@@ -49,7 +50,7 @@ local function newMarker()
 				local edge = Instance.new("Beam")
 				edge.Name, edge.Attachment0, edge.Attachment1 = "Rim", corner, neighbor
 				edge.FaceCamera, edge.Segments, edge.LightInfluence = true, 1, 0
-				edge.LightEmission, edge.Brightness = 0.8, 1.9
+				edge.LightEmission, edge.Brightness = 0.65, brightness
 				edge.Color = ColorSequence.new(Color3.fromRGB(94, 238, 205))
 				edge.Width0, edge.Width1 = 0.085, 0.085
 				edge.Transparency = NumberSequence.new(0.04)
@@ -95,6 +96,15 @@ function Effects:clearOreLights()
 end
 
 function Effects:setMiningLight(facePoint, range, tint)
+	local active = facePoint ~= nil
+	if active ~= (self.faceLamp ~= nil and self.faceLamp.Enabled) then
+		-- Keep the edge readable without a cyan bloom over the lantern's pool.
+		for _, marker in self.markers do
+			for _, edge in marker:GetChildren() do
+				if edge:IsA("Beam") then edge.Brightness = if active then workingRim else idleRim end
+			end
+		end
+	end
 	if facePoint then
 		if not self.faceLamp then
 			self.faceMount, self.faceLamp = surveyLight("Face lantern")
@@ -116,7 +126,7 @@ function Effects:aim(cells)
 		for i, center in cells do
 			local marker = self.markers[i]
 			if not marker then
-				marker = newMarker()
+				marker = newMarker(if self.faceLamp and self.faceLamp.Enabled then workingRim else idleRim)
 				self.markers[i] = marker
 			end
 			if marker.Position ~= center then

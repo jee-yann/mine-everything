@@ -8,6 +8,32 @@ local nightLook = require(source.NightLook)
 local lighting = game.Lighting
 local landing = workspace.CitrineCove["Sand path and bridge"].Landing.Position + Vector3.yAxis * 4
 local mapSize = #workspace.CitrineCove:GetDescendants()
+do
+	local set = source.CoveChronicle
+	local first = {}
+	for _, parcel in set:GetChildren() do
+		local entry = tonumber(string.match(parcel.Name, "^(%d+)_"))
+		if entry then
+			for _, part in parcel:GetChildren() do
+				first[part.Name] = math.min(entry, first[part.Name] or math.huge)
+			end
+		end
+	end
+	for _, name in { "Distant sandbar", "Distant grass", "Outer cliff boundary" } do
+		assert(not set:FindFirstChild(name, true), "obsolete scenery in Starfall: " .. name)
+	end
+	for _, name in { "Spring run", "Canal step", "Roof strut", "Loading bin", "Wagon unload platform", "Wharf step", "Planked rail crossing" } do
+		local live = assert(workspace.CitrineCove:FindFirstChild(name, true), name)
+		local match = false
+		for _, part in set:GetDescendants() do
+			if part.Name == name and (part.Position - live.Position).Magnitude < 0.02 then match = true break end
+		end
+		assert(match, "film and playable island disagree about " .. name)
+	end
+	assert(first["Tipple timber"] < first["Loading bin"] and first["Loading bin"] < first.Rail
+		and first["Wagon unload platform"] < first["Wagon bed"], "the historic ore rail needs a loading and receiving end")
+	assert(set["Basin infill"]["13.57_15.43"]:FindFirstChild("Ridge sandstone"), "ridge should settle before people arrive")
+end
 local hour, exposure, color, haze =
 	lighting.ClockTime, lighting.ExposureCompensation, lighting.SeaAir.Color, lighting.SeaAir.Haze
 local saved = {}
