@@ -513,6 +513,52 @@ assert(site.stations.Sell:IsA("ProximityPrompt") and site.stations.Shop:IsA("Pro
 mapCopy.Parent = workspace
 do
 	local art = require(Shared.MineralRelief)
+	local looks = require(Shared.OreLooks)
+	local kit = require(Shared.ReliefKit)
+	local starfall = Ores.list[#Ores.list]
+	assert(starfall.name == "Starfall", "Starfall stays the last ore")
+	for _, ore in Ores.list do
+		assert(ore == starfall or ore.value < starfall.value, "Starfall stays the most valuable ore")
+		local look = looks.ores[ore.name]
+		assert(ore.host or look, ore.name .. " needs an OreLooks entry")
+		assert(not look or kit.recipes[look.relief], ore.name .. " uses an unknown relief recipe")
+		assert(not (look and look.crown) or kit.crowns[look.crown], ore.name .. " uses an unknown crown")
+	end
+	for name, rock in looks.rock do
+		for variant = 1, 3 do
+			local decor = art.decor(name, CFrame.identity, variant)
+			local count = #decor:GetChildren()
+			assert(count >= 3 and count <= 16, name .. " decor stays light")
+			decor:Destroy()
+		end
+		assert(kit.recipes[rock.decor], name .. " uses an unknown decor recipe")
+	end
+	-- Drawn faces: every block that can be mined has one, and each drawing fills its whole face.
+	local drawings = game:GetService("StarterPlayer").StarterPlayerScripts.Client.OreDrawings
+	local http, encoding = game:GetService("HttpService"), game:GetService("EncodingService")
+	for _, value in drawings:GetChildren() do
+		local drawing = http:JSONDecode(value.Value)
+		local tape = encoding:Base64Decode(buffer.fromstring(drawing.tape))
+		local filled, off = 0, 0
+		while off < buffer.len(tape) do
+			local count = buffer.readu8(tape, off + 4)
+			off += 5
+			for _ = 1, count do
+				filled += buffer.readu16(tape, off)
+				assert(buffer.readu8(tape, off + 2) < #drawing.palette, value.Name .. " drawing uses a missing colour")
+				off += 3
+			end
+		end
+		assert(filled == drawing.width * drawing.height, value.Name .. " drawing must fill its face")
+	end
+	for _, ore in Ores.list do
+		assert(drawings:FindFirstChild(ore.name) or drawings:FindFirstChild(ore.name .. "-1"), ore.name .. " needs a drawn face")
+		if art.hasCrown(ore.name) then
+			local crystals = art.crown(ore.name, CFrame.identity)
+			assert(#crystals:GetChildren() >= 3 and #crystals:GetChildren() <= 30, ore.name .. " crystals stay light")
+			crystals:Destroy()
+		end
+	end
 	local signatures = {}
 	for _, ore in Ores.list do
 		if ore.host then continue end

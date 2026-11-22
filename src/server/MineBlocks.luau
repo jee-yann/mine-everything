@@ -99,21 +99,15 @@ local function brick(self, p, material)
 	local part = Instance.new("Part")
 	part.Name = if ore then ore.name else "Packed earth"
 	local strength = Config.strength(Config.FloorY + (p.Y + 0.5) * cell)
-	local grade = if ore and ore.name == "Stone" then Config.StoneGrades[strength] else nil
-	local tint = if grade then grade.color elseif ore then ore.color else Color3.fromRGB(111, 77, 59)
+	-- Ink & Facet (OreLooks): flat rock in the stone grade's colour. Ores sit in that same rock.
+	local tint = if ore then Art.rockColor(ore.name, Config.StoneGrades[strength].color) else Color3.fromRGB(111, 77, 59)
 	if material == Enum.Material.Ice then
 		tint = Config.layer((-p.Y - 0.5) * cell).color
 	end
-	if ore and Art.matrix[ore.name] then
-		tint = Color3.fromHex(Art.matrix[ore.name]):Lerp(ore.color, 0.22)
-	end
 	local grain = (p.X * 7 + p.Y * 3 + p.Z * 11) % 5
 	part.Color = tint:Lerp(if grain < 2 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1), math.abs(grain - 2) * 0.016)
-	part.Material = if not ore
-		then Enum.Material.SmoothPlastic
-		elseif not ore.host then Enum.Material.SmoothPlastic
-		else Enum.Material.Plastic
-	local face = if grade then grade.face elseif ore and ore.host then Enum.SurfaceType.Studs else Enum.SurfaceType.Smooth
+	part.Material = Enum.Material.SmoothPlastic
+	local face = Enum.SurfaceType.Smooth
 	part.TopSurface, part.BottomSurface, part.LeftSurface, part.RightSurface, part.FrontSurface, part.BackSurface =
 		face, face, face, face, face, face
 	part.Anchored, part.CanTouch, part.CastShadow = true, false, true

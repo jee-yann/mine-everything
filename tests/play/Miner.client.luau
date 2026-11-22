@@ -22,6 +22,16 @@ local function expectGuideArrow(button)
 	end, 3, "onboarding arrow on " .. button.Name)
 	assert(button.Interactable and not marker.Active, "onboarding blocked its own action")
 end
+-- The art on an ore block's open faces: its drawn faces, or relief models when drawings are unavailable.
+local function faceArt(block)
+	local found = {}
+	for _, child in block:GetChildren() do
+		if child:IsA("Model") or (child:IsA("Decal") and child.Name == block.Name .. " face") then
+			table.insert(found, child)
+		end
+	end
+	return found
+end
 local function checkOreFaces()
 	local folder = Instance.new("Folder")
 	folder:AddTag(require(rep.Shared.GameConfig).MineBlockTag)
@@ -39,21 +49,21 @@ local function checkOreFaces()
 	end
 	waitFor(function()
 		for _, block in blocks do
-			if not block:FindFirstChild("Iron relief") then return false end
+			if #faceArt(block) == 0 then return false end
 		end
 		return true
 	end, 3, "nearby and distant ore faces all have their texture in a crowded cave")
 	local block = blocks[1]
-	local first = block["Iron relief"]
+	local first = faceArt(block)[1]
 	block:SetAttribute("OpenFaces", 3)
-	waitFor(function() return #block:GetChildren() == 2 end, 2, "newly exposed ore face receives art")
+	waitFor(function() return #faceArt(block) == 2 end, 2, "newly exposed ore face receives art")
 	assert(first.Parent == block)
 	block:SetAttribute("OpenFaces", 2)
-	waitFor(function() return not first.Parent and #block:GetChildren() == 1 end, 2, "sealed face loses its art")
+	waitFor(function() return not first.Parent and #faceArt(block) == 1 end, 2, "sealed face loses its art")
 	block.Parent = nil
 	waitFor(function() return #block:GetChildren() == 0 end, 2, "streamed-out block releases its art")
 	block.Parent = folder
-	waitFor(function() return block:FindFirstChild("Iron relief") end, 2, "restreamed ore receives art")
+	waitFor(function() return #faceArt(block) > 0 end, 2, "restreamed ore receives art")
 	folder:Destroy()
 end
 local function test()
