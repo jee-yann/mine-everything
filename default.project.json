@@ -1,5 +1,6 @@
 {
   "name": "EndlessMining",
+  "globIgnorePaths": ["**/MineOrigins"],
   "tree": {
     "$className": "DataModel",
     "$ignoreUnknownInstances": true,
@@ -29,7 +30,7 @@
     "StarterGui": {
       "$ignoreUnknownInstances": true,
       "$properties": {
-        "ScreenOrientation": "Sensor"
+        "ScreenOrientation": "LandscapeSensor"
       }
     },
     "StarterPlayer": {

@@ -58,30 +58,81 @@ local p = Profile.new()
 assert(not Profile.buy(p, "Radius"))
 p.bag = { Stone = 4, Coal = 3, Copper = 1 }
 assert(Profile.used(p) == 8 and Profile.sell(p) == 35 and Profile.used(p) == 0)
-assert(not Profile.buy(p, "Capacity") and p.gold == 35)
-p.bag = { Dirt = 2, Coal = 1 }
-assert(Profile.buy(p, "Capacity") and p.gold == 11 and Profile.stat(p, "Capacity") == 80)
-p.gold = 1e7
+assert(Profile.buy(p, "Capacity") and p.gold == 27 and Profile.stat(p, "Capacity") == 16 and Profile.used(p) == 0)
 local Upgrades = require(Shared.Upgrades)
-local Materials = require(Shared.Materials)
-for _, key in Upgrades.order do
-	for level = p.levels[key], #Upgrades.items[key].values - 1 do
-		local recipe = Materials.upgrades[key] and Materials.upgrades[key][level]
-		assert(key == "Speed" or recipe)
-		p.bag = table.clone(recipe or {})
-		if key == "Power" then
-			for name in p.bag do
-				assert(Ores.byName[name].hardness <= level, "recipe needs the pick it unlocks")
-			end
-		end
-		assert(Profile.buy(p, key) and Profile.used(p) == 0)
+do
+	local starter = Profile.new()
+	assert(Profile.stat(starter, "Capacity") == 8)
+	for _ = 1, 7 do
+		Profile.recordCut(starter, "Dirt")
+		assert(Profile.expeditionStep(starter) == "Ore")
 	end
-	assert(not Profile.buy(p, key) and p.levels[key] == #Upgrades.items[key].values)
+	Profile.recordCut(starter, "Dirt")
+	assert(Profile.expeditionStep(starter) == "Sell" and starter.xp == 0)
+	assert(Profile.sell(starter) == 8 and Profile.expeditionStep(starter) == "Upgrade")
+	assert(Upgrades.onboardingPick(starter.gold) == "Capacity" and Profile.buy(starter, "Capacity"))
+	assert(starter.gold == 0 and Upgrades.price("Capacity", 2) == 60 and Profile.expeditionStep(starter) == "Return")
+	Profile.recordCut(starter, "Dirt")
+	assert(Profile.expeditionStep(starter) == "Done")
+
+	local old = Profile.new()
+	old.bag = { Dirt = 32, Coal = 4 }
+	local saved = Data.claim({ profile = old }, "old-pack", 30).profile
+	assert(Profile.used(saved) == 36 and Profile.stat(saved, "Capacity") == 8)
+	assert(Profile.sell(saved, 1, "Coal", "Stack") == 20)
+	local resumed = Data.claim({ profile = Data.snapshot(saved) }, "resume-pack", 31).profile
+	assert(Profile.used(resumed) == 32 and Profile.sell(resumed) == 32 and resumed.gold == 52)
+	old.bag.Dirt = 37
+	assert(not Data.claim({ profile = old }, "oversize", 32))
+
+	for level, oldBase in { 36, 80, 170, 360, 760, 1600, 3400, 7200 } do
+		local veteran = Profile.new()
+		veteran.levels.Capacity = level
+		veteran.skills = { Pack = true, PackII = true, PackIII = true, DeepPockets = true }
+		local skills = require(Shared.Skills)
+		local oldSlots = skills.capacity(oldBase, veteran.skills)
+		veteran.bag = { Dirt = oldSlots - 1, Coal = 1 }
+		local loaded = Data.claim({ profile = veteran }, "veteran", 50).profile
+		assert(Upgrades.items.Capacity.values[level] == level * 8)
+		assert(Profile.stat(loaded, "Capacity") == skills.capacity(level * 8, veteran.skills))
+		assert(Profile.sell(loaded, 1, "Coal", "Stack") == 5)
+		local rejoined = Data.claim({ profile = Data.snapshot(loaded) }, "again", 51).profile
+		assert(Profile.sell(rejoined) == oldSlots - 1 and Profile.used(rejoined) == 0)
+		veteran.bag.Dirt = oldSlots + 1
+		assert(not Data.claim({ profile = veteran }, "too-large", 52))
+	end
 end
-assert(Profile.stat(p, "Speed") == 0.20 and Profile.stat(p, "Power") == 6 and Profile.stat(p, "Capacity") == 7200)
-p.bag.Stone = 7201
-assert(not Profile.valid(p))
-print("PASS sale, costs, level caps, upgrade effects, profile capacity validation")
+for _, bag in { {}, { Dirt = 2, Stone = 3, Coal = 1, Copper = 2, Gold = 1 } } do
+	local miner = Profile.new()
+	miner.bag = table.clone(bag)
+	local startingLoad = Profile.used(miner)
+	local function checkBag()
+		assert(Profile.used(miner) == startingLoad, "workshop changed the pack's load")
+		for name, count in bag do
+			assert(miner.bag[name] == count, "workshop changed a stack of " .. name)
+		end
+	end
+	for _, key in { "Speed", "Power", "Capacity" } do
+		local values = Upgrades.items[key].values
+		for level = 1, #values - 1 do
+			local price = Upgrades.price(key, level)
+			miner.gold = price - 1
+			assert(not Profile.buy(miner, key) and miner.gold == price - 1 and miner.levels[key] == level)
+			checkBag()
+			miner.gold = price
+			assert(Profile.buy(miner, key) and miner.gold == 0 and miner.levels[key] == level + 1)
+			assert(Profile.stat(miner, key) == values[level + 1])
+			checkBag()
+		end
+		miner.gold = 1e7
+		assert(not Profile.buy(miner, key) and miner.gold == 1e7 and miner.levels[key] == #values)
+		checkBag()
+	end
+	assert(Profile.stat(miner, "Speed") == 0.20 and Profile.stat(miner, "Power") == 6 and Profile.stat(miner, "Capacity") == 64)
+	miner.bag.Stone = 7201
+	assert(not Profile.valid(miner))
+end
+print("PASS sales, gold-only upgrades with empty and stocked packs, exact costs, insufficient funds and level caps")
 local retired = Profile.new()
 retired.levels.Radius = 4
 assert(Data.claim({ profile = retired }, "migration", 0).profile.gold == 234)
@@ -194,10 +245,10 @@ assert(Profile.sell(split, 2, "Copper", "Stack") == 0)
 assert(Profile.sell(split, 2, "Fake", 1) == nil and Profile.sell(split, 2, "Coal", -1) == nil)
 assert(Profile.sell(split, 2, nil, "Stack") == nil and Profile.sell(split, 2, "Coal", nil) == nil)
 assert(split.gold == 72 and split.bag.Stone == 4 and split.bag.Coal == 2)
-assert(Profile.buy(split, "Power") and split.gold == 36 and split.bag.Stone == 1 and split.bag.Coal == 1)
-assert(Profile.sell(split, 1, "Stone", 1) == 2)
+assert(Profile.buy(split, "Power") and split.gold == 36 and split.bag.Stone == 4 and split.bag.Coal == 2)
+assert(Profile.sell(split, 1, "Stone", "Stack") == 8)
 local lastGold, lastAward, lastCount = Profile.sell(split, 1, "Coal", "Stack")
-assert(lastGold == 5 and lastAward == awards.CleanSale.name and lastCount == 1 and Profile.used(split) == 0)
+assert(lastGold == 10 and lastAward == awards.CleanSale.name and lastCount == 2 and Profile.used(split) == 0)
 for _, bag in { {}, { Stone = 2 }, { Dirt = 1, Coal = 2 }, { Gold = 0 } } do
 	haul.bag = bag
 	local _, award = Profile.sell(haul)
@@ -211,13 +262,12 @@ local _, repeatAward = Profile.sell(haul)
 assert(not repeatAward and haul.earned.CleanSale and not haul.earned.Scales)
 haul.gold = 36
 haul.bag = { Stone = 4 }
-assert(not Profile.buy(haul, "Power") and haul.gold == 36 and haul.bag.Stone == 4 and haul.levels.Power == 1)
-haul.bag.Coal = 1
 local bought, _, workshopAward = Profile.buy(haul, "Power")
-assert(bought and workshopAward == awards.PickUpgrade.name and haul.bag.Stone == 1 and haul.bag.Coal == nil)
+assert(bought and workshopAward == awards.PickUpgrade.name and haul.gold == 0 and haul.bag.Stone == 4)
 haul.earned.Sandwich = true
 assert(Profile.valid(haul) and Data.claim({ profile = haul }, "legacyAward", 32).profile.earned.Sandwich)
 assert(not table.find(Profile.recordCut(haul, "Starfall"), awards.LuckAndSkill.name))
+local Materials = require(Shared.Materials)
 local supplies = Profile.new()
 supplies.gold = 150
 supplies.bag = { Coal = 2, Copper = 1 }
@@ -301,7 +351,8 @@ assert(Profile.buySupply(specialist, "Temper") and specialist.temper == 45)
 	assert(
 		Profile.deliver(specialist, day, day) and specialist.flares == 2 and not Profile.deliver(specialist, day, day)
 	)
-	assert(Profile.stat(specialist, "Capacity") == 70)
+	assert(Profile.stat(specialist, "Capacity") == 35)
+	-- An old 36-slot bag could legally hold 70 with all hauling skills.
 	specialist.bag = { Stone = 70 }
 	local record = Data.commit({ owner = "skills" }, "skills", specialist, 100, true)
 	local rejoined = Data.claim(record, "next", 101).profile
@@ -413,6 +464,33 @@ assert(
 )
 print("PASS two dirt layers, independent regional odds, repeatable fields and saved title levels")
 local surface = workspace.CitrineCove
+do
+	local guide = require(game.StarterPlayer.StarterPlayerScripts.Client.ExpeditionWaypoint).new()
+	local bridge = surface["Sand path and bridge"]["Bridge decking"]
+	local head = Instance.new("Part")
+	head.Anchored, head.CanCollide, head.Parent = true, false, workspace
+	local top = bridge.Position + Vector3.new(0, 4, bridge.Size.Z / 2 - 2)
+	guide:show(bridge.Position - Vector3.zAxis * 32, "Mine", Color3.new(1, 0.8, 0.2), true)
+	for _, moving in { true, false } do
+		head.Position = top
+		guide:trail(head, 10, moving)
+		local before, checked = {}, 0
+		for _, part in guide.anchor:GetChildren() do
+			if part.Name == "Trail chevron" and part.Transparency < 0.2 then before[part] = part.Position end
+		end
+		head.Position -= Vector3.zAxis * 0.25
+		guide:trail(head, 10 + 1 / 60, moving)
+		for part, at in before do
+			if part.Transparency >= 0.2 then continue end
+			local distance = (part.Position - at) * Vector3.new(1, 0, 1)
+			assert(math.abs(distance.Magnitude - (if moving then 4.2 / 60 else 0)) < 0.01, "ground arrows drifted with the player")
+			checked += 1
+		end
+		assert(checked >= 2, "guidance disappeared between walking frames")
+	end
+	head:Destroy()
+	guide.anchor:Destroy()
+end
 local world = World.new(Config.LandscapeSeed, surface)
 local mapCopy = surface:Clone()
 local coast = mapCopy.TideCoast

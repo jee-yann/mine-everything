@@ -73,8 +73,14 @@ function Aura.start(player, hud)
 		prompt.Enabled = not hud.overlay.Visible
 		local blocks = player:GetAttribute("Used") or 0
 		local value = (player:GetAttribute("BagValue") or 0) * (if player:GetAttribute("DoubleGold") then 2 else 1)
-		prompt.ObjectText = if blocks == 0 then "Pack empty" else string.format("Hold to sell %s %s · +%s G",
-			W.goldAmount(blocks), if blocks == 1 then "block" else "blocks", W.goldAmount(value))
+		prompt.ObjectText = if blocks == 0
+			then "Pack empty"
+			else string.format(
+				"Hold to sell %s %s · +%s G",
+				W.goldAmount(blocks),
+				if blocks == 1 then "block" else "blocks",
+				W.goldAmount(value)
+			)
 	end
 	Collection:GetInstanceAddedSignal("OreSellPrompt"):Connect(updateSellPrompt)
 	local function refreshSellPrompts()
@@ -142,7 +148,13 @@ function Aura.start(player, hud)
 		local human = char and char:FindFirstChildOfClass("Humanoid")
 		for pad, aura in pads do
 			local state = "far"
-			if root and human and human.Health > 0 and (pad.Position - root.Position).Magnitude <= 85 then
+			if
+				not hud.inOpening
+				and root
+				and human
+				and human.Health > 0
+				and (pad.Position - root.Position).Magnitude <= 85
+			then
 				local at = pad.CFrame:PointToObjectSpace(root.Position)
 				local half = pad.Size * 0.5
 				local standingHeight = math.max(human.HipHeight + root.Size.Y * 0.5, root.Size.Y * 1.5)

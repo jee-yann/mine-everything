@@ -61,8 +61,10 @@ function Profile.expeditionStep(p)
 	local trip = p.firstTrip
 	if trip.skipped then return "Skipped" end
 	if p.mined == 0 then return "Dig" end
-	if p.xp == 0 then return "Ore" end
-	if not trip.sold then return "Sell" end
+	if not trip.sold then
+		if p.xp == 0 and Profile.used(p) < Profile.stat(p, "Capacity") then return "Ore" end
+		return "Sell"
+	end
 	if not ownsUpgrade(p) then return "Upgrade" end
 	return if trip.tried then "Done" else "Return"
 end
@@ -99,6 +101,10 @@ function Profile.spill(p)
 	end
 	return loss
 end
+
+-- Legacy profiles can return with a full pre-rebalance bag. This ceiling is for
+-- reading saves only; every new cut uses the current workshop and skill capacity.
+local oldBackpackSlots = { 36, 80, 170, 360, 760, 1600, 3400, 7200 }
 
 -- Refuse incompatible records instead of silently replacing them with defaults.
 function Profile.valid(p)
@@ -230,8 +236,10 @@ function Profile.valid(p)
 			end
 		end
 	end
+	local level = p.levels.Capacity
+	local storedCapacity = Skills.capacity(math.max(oldBackpackSlots[level] or 0, Upgrades.items.Capacity.values[level]), p.skills)
 	return (p.temper == nil or integer(p.temper, Materials.temperCharges + Skills.bonus(p.skills, "charges")))
-		and Profile.used(p) <= Profile.stat(p, "Capacity")
+		and Profile.used(p) <= storedCapacity
 end
 
 function Profile.upgradeSave(p)
@@ -435,15 +443,6 @@ function Profile.buy(p, key)
 	end
 	if p.gold < price then
 		return false, "Need " .. (price - p.gold) .. " more gold"
-	end
-	local tiers = Materials.upgrades[key]
-	if tiers then
-		local recipe = tiers[p.levels[key]]
-		local name, short = Materials.missing(recipe, p.bag)
-		if name then
-			return false, string.format("Bring %d more %s to the Workshop", short, name)
-		end
-		Materials.consume(recipe, p.bag)
 	end
 	p.gold -= price
 	p.levels[key] += 1
