@@ -30,7 +30,11 @@ def make_project(folder, mode):
     tree["ReplicatedStorage"].setdefault("$attributes", {}).update(
         MuteTestMusic=True, MiningTestMode=mode, MiningTestRun=folder.name
     )
-    tree["ServerScriptService"]["Server"].setdefault("$attributes", {})["StudioMineSeed"] = 74109
+    server = tree["ServerScriptService"]["Server"]
+    server.setdefault("$attributes", {})["StudioMineSeed"] = 74109
+    if mode == "Multiplayer":
+        # The test driver seeds the returning player's save before the game accepts joins.
+        tree.setdefault("ServerStorage", {})["Server"] = tree["ServerScriptService"].pop("Server")
     tree["ServerScriptService"]["MiningPlaytest"] = {
         "$path": str(TESTS / "play" / "Driver.server.luau")
     }

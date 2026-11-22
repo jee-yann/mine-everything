@@ -4,12 +4,16 @@ local r = rep:WaitForChild("MiningTestReport")
 local function waitFor(check, seconds, msg)
 	local start = os.clock()
 	repeat
-		if check() then
-			return
+		local result = check()
+		if result then
+			return result
 		end
 		task.wait(0.08)
 	until os.clock() - start > seconds
 	error(msg)
+end
+local function equippedKit()
+	return p.Character and p.Character:FindFirstChild("Prospector kit", true)
 end
 local function checkOreFaces()
 	local folder = Instance.new("Folder")
@@ -64,7 +68,7 @@ local function test()
 	waitFor(function()
 		return p.Character:FindFirstChild("Harbor pick")
 	end, 8, "equipped pickaxe")
-	local kit = p.Character:FindFirstChild("Prospector kit", true)
+	local kit = waitFor(equippedKit, 8, "starter equipment")
 	assert(kit and kit["Miner title"].TextLabel.Text:find("Noob Miner", 1, true), "starter backpack and title")
 	local packSize = kit["Field pack"].Size
 	local harbor = game.SoundService:WaitForChild("Harbor audio", 8)
@@ -75,14 +79,16 @@ local function test()
 	end, 18, "controller starts without a loading screen")
 	assert(not p.Character.HumanoidRootPart.Anchored, "free to move at spawn")
 	do
+		local returning = not r:GetAttribute("CheckSwing") and p.UserId % 2 == 0
+		assert(p:GetAttribute("IntroSeen") == returning, "the join loaded the expected viewing history")
 		local opening = p.PlayerGui:WaitForChild("Mine origins", 6)
 		local titles = p.PlayerGui:WaitForChild("Mine subtitles", 2)
-		assert(opening and titles.Skip and not gui.SafeArea.Visible, "skippable first visit")
+		assert(opening and titles and titles.Skip and not gui.SafeArea.Visible, "automatic skippable film on join")
 		local camera = workspace.CurrentCamera
 		local stage = camera:WaitForChild("Mine origins set", 4)
 		local resonance = opening:WaitForChild("Star harmonics", 4)
 		local acousticRig = camera:WaitForChild("Cinematic sound sources", 4)
-		assert(stage and camera.CameraType == Enum.CameraType.Scriptable and not p:GetAttribute("IntroSeen"))
+		assert(stage and camera.CameraType == Enum.CameraType.Scriptable)
 		assert(
 			resonance.SoundGroup == song.SoundGroup
 				and resonance.SoundId == "rbxasset://sounds/volume_slider.ogg"
@@ -103,7 +109,7 @@ local function test()
 			camera = workspace.CurrentCamera
 			stage = camera:WaitForChild("Mine origins set", 4)
 			assert(opening and opening:WaitForChild("Landfall", 4) and titles.Skip and not p:GetAttribute("IntroSeen"))
-			kit = p.Character:WaitForChild("Prospector kit", 8)
+			kit = waitFor(equippedKit, 8, "replacement miner equipment")
 			-- Exercise the live music handoff with its output muted for the entire check.
 			local mix = song.SoundGroup.Volume
 			song.SoundGroup.Volume = 0
@@ -131,9 +137,8 @@ local function test()
 			rep:SetAttribute("MuteTestMusic", true)
 			song:Stop()
 			song.SoundGroup.Volume = mix
-		elseif p.UserId % 2 == 0 then
-			-- Leave while the other client watches, then keep both miners at
-			-- spawn until that private screening has also finished.
+		elseif returning then
+			-- The returning miner skips while the first-time miner keeps watching.
 			local peer
 			waitFor(function()
 				for _, miner in game.Players:GetPlayers() do
@@ -149,6 +154,20 @@ local function test()
 				return not opening.Parent and not stage.Parent and p:GetAttribute("IntroSeen") and gui.SafeArea.Visible
 			end, 4, "one viewer can return to play independently")
 			assert(not peer:GetAttribute("IntroSeen"), "skipping marked the other miner as finished")
+			local previousCharacter = p.Character
+			local reopened = false
+			local watch = p.PlayerGui.ChildAdded:Connect(function(child)
+				if child.Name == "Mine origins" then reopened = true end
+			end)
+			r:FireServer("respawnAfterOpening")
+			waitFor(function()
+				return p.Character and p.Character ~= previousCharacter and p.Character:GetAttribute("MiningViewReady")
+			end, 14, "completed viewer respawned with the gameplay camera ready")
+			kit = waitFor(equippedKit, 8, "replacement miner equipment")
+			task.wait(1)
+			watch:Disconnect()
+			assert(not reopened and gui.SafeArea.Visible and workspace.CurrentCamera.CameraType == Enum.CameraType.Custom,
+				"a normal respawn after Skip should stay in gameplay")
 			waitFor(function() return peer:GetAttribute("IntroSeen") end, 83, "the other miner finishes their film")
 		else
 			local spawnAt = p.Character.HumanoidRootPart.Position

@@ -55,6 +55,7 @@ local landing = net:GetAttribute("Landing")
 local entrance = net:GetAttribute("Entrance")
 local passage = require(script.Passage).new(player, net)
 local expedition = require(script.FirstExpedition).new(player, net)
+local joinOpeningPending = true
 local previousStep = player:GetAttribute("ExpeditionStep")
 player:GetAttributeChangedSignal("ExpeditionStep"):Connect(function()
 	local step = player:GetAttribute("ExpeditionStep")
@@ -432,7 +433,7 @@ local function sampleAim()
 		hud.reticle.BackgroundColor3 = if valid then W.aqua else W.white
 	end
 	local objective, instruction
-	if ready and player:GetAttribute("IntroSeen") then
+	if ready and not joinOpeningPending and player:GetAttribute("IntroSeen") then
 		objective, instruction = expedition:update(head, inMine, depth, mobile, space <= 0)
 	else
 		expedition:hide()
@@ -565,12 +566,11 @@ task.spawn(function()
 	repeat
 		repeat task.wait(.1) until player:GetAttribute("ProfileReady") and net:GetAttribute("Ready")
 			and player.Character and player.Character:GetAttribute("MiningViewReady")
-		if player:GetAttribute("IntroSeen") then
-			Audio.startHarborMusic()
-			return
-		end
 		local character = player.Character
 		playOpening()
-		if player.Character == character and character:IsDescendantOf(workspace) then return end
+		if player.Character == character and character:IsDescendantOf(workspace) then
+			joinOpeningPending = false
+			return
+		end
 	until not player.Parent
 end)
