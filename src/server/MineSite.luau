@@ -43,7 +43,7 @@ function MineSite.bind(map, world)
 	local sell = stations.Sell
 	sell:AddTag("OreSellPrompt")
 	sell.ActionText, sell.ObjectText = "Tap to choose ores", "Hold to sell whole pack"
-	sell.HoldDuration, sell.ClickablePrompt = 0.85, true
+	sell.HoldDuration, sell.ClickablePrompt = 0.65, true
 	for key, prompt in stations do
 		markCounter(prompt.Parent, counterStyles[key])
 	end

@@ -62,7 +62,7 @@ Mineral finds also roll a purity from 50% to 100%. Grade bonuses range from base
 
 The percentages apply to solid rock beneath the dirt floor. Cave air yields no material.
 
-At the amber Sell counter, tap **E** (or tap the prompt on mobile) to choose a material. The slider starts at one. Drag it, use **−** and **+**, or choose **Select all** for that ore. The sale button shows the quantity, ore and exact gold payout. It also shows how many of that material will remain in your pack. Press the sale button to trade the selection. **Sell entire pack** shows the total block count and payout for everything you carry. Holding the stall prompt also quick-sells the pack for the displayed amount.
+At the amber Sell counter, tap **E** (or tap the prompt on mobile) to choose a material. The slider starts at one. Drag it, use **−** and **+**, or choose **Select all** for that ore. The sale button shows the quantity, ore and exact gold payout. It also shows how many of that material will remain in your pack. Press the sale button to trade the selection. **Sell entire pack** shows the total block count and payout for everything you carry. Holding the stall prompt for 0.65 seconds quick-sells the pack for the displayed amount.
 
 Buy pickaxe Power, swing Speed and backpack Capacity with gold at the Workshop. The first upgrades cost 36 gold for the Copper Pick, 30 gold for faster swings, and 8 gold for the larger backpack.
 
