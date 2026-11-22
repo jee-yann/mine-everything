@@ -135,8 +135,11 @@ function MeteorLight.new(stage, base, island)
 			local mount = anchor(root, "Raking light")
 			local spot = Instance.new("SpotLight")
 			spot.Face, spot.Angle, spot.Range = Enum.NormalId.Front, 122, 60
-			spot.Shadows, spot.Brightness, spot.Parent = i <= (if low then 1 else 3), 0, mount
-			table.insert(pools, { shore = shore, mount = mount, light = spot })
+			-- The fire reaches the two ledges on opposite banks of the vent.
+			-- Their projected rays must cast away from the same source.
+			local craterBank = i == 1 or i == 3
+			spot.Shadows, spot.Brightness, spot.Parent = craterBank or (i == 2 and not low), 0, mount
+			table.insert(pools, { shore = shore, mount = mount, light = spot, craterBank = craterBank })
 		end
 	end
 	local rng, waves = Random.new(41422), {}
@@ -188,7 +191,9 @@ function MeteorLight:draw(t, star, camera, motion, masterFrame)
 	local active = frame >= sheet.frames.terminal and t < 12.86
 	self.root.Parent = if active then self.stage else nil
 	local contact = if frame == sheet.frames.contact then 0.22 elseif frame < sheet.frames.ignition then 0.035 else 1
-	local sky = (if before then approach * 0.16 else contact * (1 - S.ease(t, 4.77, 6.23)))
+	-- Most of the light on the sea lives in the reflection below the vent.
+	-- The broad water tiles only catch a little scattered light from the air.
+	local sky = (if before then approach * 0.16 else 0.23 * contact * (1 - S.ease(t, 4.77, 6.23)))
 		* (if motion then 1 else 0.56)
 	local level = math.floor(sky * 40 + 0.5)
 	if self.waterLevel ~= level or (before and approach > 0) then
@@ -208,7 +213,7 @@ function MeteorLight:draw(t, star, camera, motion, masterFrame)
 	local glow = descent * (0.19 + 0.81 * burning) * (1 - S.ease(t, 9.14, 12.86))
 	local source = star
 	if t >= clock.contact then
-		source += V(-5, 8 + 62 * S.ease(t, clock.contact, 5.65), -3)
+		source += V(-5, 8 + 47 * S.ease(t, clock.contact + 0.19, 5.88), -3)
 	end
 	local adapted = if motion then 1 else 0.55
 	local skyKey = 1 - S.ease(t, clock.contact, clock.contact + 0.68)
@@ -216,13 +221,19 @@ function MeteorLight:draw(t, star, camera, motion, masterFrame)
 	self.lamp.Position = self.base * source
 	self.key.Color, self.key.Brightness = lightColor, glow * adapted * 13
 	for _, p in self.pools do
+		p.light.Enabled = before or p.craterBank
+		if not p.light.Enabled then
+			continue
+		end
 		local receiver = p.shore
 		local incident = source - receiver
 		local distance = incident.Magnitude
 		local ray = V(incident.X, math.max(13, incident.Y), incident.Z).Unit
 		p.mount.CFrame = self.base * CFrame.lookAt(receiver + ray * 33, receiver)
 		p.light.Color = lightColor
-		p.light.Brightness = glow * (0.55 + 8.7 / (1 + (distance / 73) ^ 2)) * (0.042 + 0.958 * skyKey) * adapted
+		p.light.Angle = if before then 122 else 88
+		p.light.Brightness = glow * (0.55 + 8.7 / (1 + (distance / 73) ^ 2))
+			* (if before then 1 else 0.09 + 0.71 * skyKey) * adapted
 	end
 
 	-- Find the reflected image of the moving source, then sample rough facets

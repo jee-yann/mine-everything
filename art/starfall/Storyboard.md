@@ -32,17 +32,19 @@ The opening is a live scene on each player's device. `ExposureSheet` counts 24 f
 ### Preview a shot
 
 1. In Studio **Edit** mode, open the **Command Bar** and enter `workspace:SetAttribute("StarfallPreviewFrame", 225)`. Press **Play**. Frame 225 is the quiet offshore shot at 9.375 seconds.
-2. In the **Client** view, select **Workspace → StarfallPreview** in Explorer. Open **Properties → Attributes**. Change **Frame** to inspect a different instant. Try **8**, **30** and **51** for the shooting star, **204** for the view behind the meteor, or **225** for the island before it lights up.
+2. In the **Client** view, select **Workspace → StarfallPreview** in Explorer. Open **Properties → Attributes**. Change **Frame** to inspect a different instant. Try **30** for the shooting star, **204** for the view behind the meteor, **225** for tree shadows before contact, **253** for the flash subsiding, or **276** for the fire lighting the crater.
 3. Adjust **Exposure** for overall brightness. **ShadowFill** sets the color in the unlit ground and **RimStrength** controls how much light catches the edges. **RimColor** tints that light and **SkyColor** changes the sky. Start with the rim strength if the ledges stand out too much. Check the sky and the island on the same frame as you work.
 4. Check **PrintSettings** and copy the block starting with `return table.freeze({` from Studio’s **Output** window. Set **Frame** to **-1** to watch the film from the beginning with these settings and sound, or use **Skip** to enter gameplay.
 
-![The shooting star, chase, and offshore hold before and after the night lighting edit](Night-lighting-comparison.jpg)
+![Matched Studio frames showing tree shadows, the ignition flash, and the rising fireball before and after the lighting change](Night-lighting-comparison.jpg)
 
 ### Save the look
 
 The permanent settings are in **StarterPlayer → StarterPlayerScripts → Client → Starfall → NightLook**. After stopping Play, paste the exported block into that ModuleScript in the place you want to save. For this Rojo project, paste it into `src/client/Starfall/NightLook.luau` on disk and let Rojo sync it, or rebuild the place. In a standalone Studio place, save the place after editing the ModuleScript. Play again to check the saved result. To return a regular Studio place to its usual Play behavior, run `workspace:SetAttribute("StarfallPreviewFrame", nil)` in Edit mode.
 
 `Tide.luau` controls the first 54 frames, including the star and its reflection. `Daylight.luau` applies the changes in light over time. `Moonlight.luau` lights the historical coast from offshore. The tree silhouettes and the shapes of the light on the shelf edges were baked from the island geometry. The rebuild command for a changed coastline is under **Lighting and wave travel**.
+
+In the offshore shot, `Daylight.luau` sets `Lighting.ClockTime` to **17.15** and `GeographicLatitude` to **33.9**. This gives the trees a low, directional source that lines up with their baked shadows. The dark sky and blue fill make it read as moonlight. The flying camera uses the true night clock, and the original clock resumes on the cut into the fissure at frame **462**. At ignition, the rising fire and two crater banks supply the warm light. The shadowed foreground stays blue.
 
 ## Footage studies
 

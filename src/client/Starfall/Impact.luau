@@ -381,8 +381,8 @@ function Impact:draw(t, camera, masterFrame)
 		end
 		local pulse = S.ease(t, 8.68, 9.38) * (1 - S.ease(t, 10.65, 12.18))
 		local bounce = if self.motion and blastAge >= -0.00001 then 1 - S.ease(blastAge, 0.04, 0.39) else 0
-		self.light.Brightness = 0.12 + 0.64 * pulse + 3.6 * bounce
-		self.light.Range = 13 + 44 * bounce
+		self.light.Brightness = 0.12 + 0.64 * pulse + 0.9 * bounce
+		self.light.Range = 13 + 5 * bounce
 		self.light.Color = Color3.fromHex("BB85FF"):Lerp(Color3.fromHex("FFAA63"), bounce)
 		for _, s in self.seams do
 			local travel = S.ease(t, 8.54 + 0.052 * s.d, 8.89 + 0.052 * s.d)

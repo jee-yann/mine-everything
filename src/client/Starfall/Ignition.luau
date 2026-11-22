@@ -126,7 +126,8 @@ function Ignition.new(base, contact, motion)
 		Enum.Material.Neon
 	)
 	ball.Shape, ball.CastShadow = Enum.PartType.Ball, false
-	local light = S.light(ball, "FFDBB2", 60, 8)
+	local light = S.light(ball, "FFBD84", 15, 3)
+	light.Shadows = true
 	local bounce = {}
 	for i, where in { V(-29, 11, 19), V(28, 16, 48), V(44, 20, -10) } do
 		local socket = attachment(post)
@@ -238,9 +239,11 @@ function Ignition:draw(frame, parent, camera)
 	self.ball.CFrame = self.base * CFrame.new(self.contact + V(0, rise, 0))
 	self.ball.Transparency = if contact then 1 else 0.08 + 0.92 * S.ease(age, 7, 25)
 	self.ball.Color = Color3.fromHex("FFE7B5"):Lerp(Color3.fromHex("FFA354"), S.ease(age, 9, 22))
-	self.light.Range = math.min(60, 18 + size)
+	-- The fireball lights the vent floor. The climbing shadow source in
+	-- MeteorLight owns the much larger pool on the surrounding terraces.
+	self.light.Range = math.min(24, 15 + size * 0.24)
 	self.light.Enabled = not contact
-	self.light.Brightness = if contact then 0 else (if self.motion then 8 else 1.4) * (1 - S.ease(age, 8, 23))
+	self.light.Brightness = if contact then 0 else (if self.motion then 3 else 1.0) * (1 - S.ease(age, 8, 23))
 	local growth = 0.43 + 0.57 * S.ease(age, 0, 5)
 	local transfer = Edit.at(frame)
 	local ion = self.motion and transfer and transfer.mode == "ultraviolet"

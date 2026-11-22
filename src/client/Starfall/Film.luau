@@ -58,6 +58,7 @@ function Film.new(stage, screen, camera, handoff, motion, continueSetup, nightLo
 			return
 		end
 		self.island = Island.new(stage, base)
+		self.daylight.lunar:relight(base, 0)
 		self.illumination = MeteorLight.new(stage, base, self.island.set)
 		if continueSetup and not continueSetup() then
 			return

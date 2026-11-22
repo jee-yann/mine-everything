@@ -6,10 +6,11 @@ local sheet = require(script.Parent.ExposureSheet)
 local terminal = require(script.Parent.TerminalLight)
 local Moonlight = require(script.Parent.Moonlight)
 local V, CF, hex = Vector3.new, CFrame.new, Color3.fromHex
--- This bearing is shared by the photographed disc, real shadow lights and
--- the native receiver mesh baked from the cove by bake_moonlight.py.
-local offshoreMoon = V(-0.959, 0.218, 0.181).Unit
 local ancientHour = 2.65
+-- This low sun shares the surveyed moon's bearing to within 0.1 degree.
+-- Night stock and the stage sky supply its colour. Roblox's solar shadow
+-- pass retains enough direct light to separate the silhouettes at this angle.
+local lunarShadowHour = 17.15
 local Daylight = {}
 Daylight.__index = Daylight
 
@@ -179,6 +180,7 @@ function Daylight:draw(t, motion, base, masterFrame)
 	end
 	local hot = heat * (if motion then 1 else 0.52)
 	local quiet = 1 - S.ease(frame, sheet.frames.contact, sheet.frames.ignition + 9)
+	local offshore = 1 - S.ease(frame, sheet.frames.aftermath, sheet.frames.seam)
 	local veil = S.ease(t, 7.46, 7.62) * (1 - S.ease(t, 7.77, 8.59))
 	local hero = S.ease(frame, sheet.frames.entry - 2, sheet.frames.entry + 7)
 		* (1 - S.ease(frame, sheet.frames.coast - 3, sheet.frames.coast))
@@ -187,33 +189,38 @@ function Daylight:draw(t, motion, base, masterFrame)
 		local stock = hex("FFF0D9"):Lerp(hex("C6D7FF"), night):Lerp(hex("B7CFFF"), ancient)
 		self.grade.TintColor = Color3.new(1, 1, 1)
 			:Lerp(stock:Lerp(hex("F9CEBF"), ash * 0.50):Lerp(arrivalColor, hot * 0.69), look)
-		self.grade.Contrast = (0.07 + 0.035 * ancient - 0.065 * quiet - 0.055 * ash - 0.06 * veil) * look
+		self.grade.Contrast = (0.07 + 0.035 * ancient - 0.04 * quiet - (0.055 - 0.025 * offshore) * ash - 0.06 * veil) * look
 		self.grade.Saturation = (-0.055 - 0.17 * ancient + 0.10 * ash + 0.13 * hero) * look
 	end
-	-- A true night sky must remain behind the painted horizon when a lower
-	-- graphics level drops distant geometry or disables post-processing.
+	-- The clock driving the story, sky and time-lapse remains on its own
+	-- timeline. The flying camera can see past the set on lower settings.
+	-- Switch to the stronger key on the cut to the enclosed offshore view.
 	local moonKey = frame < 570 and hour < 6.15
-	Lighting.ClockTime = hour
-	Lighting.GeographicLatitude = self.latitude + (34 - self.latitude) * history
+	local shadowKey = frame >= sheet.frames.coast and frame < sheet.frames.seam
+	Lighting.ClockTime = if shadowKey then lunarShadowHour else hour
+	Lighting.GeographicLatitude = if shadowKey then 33.9 else self.latitude + (34 - self.latitude) * history
 	local top = hex("FFD2A5"):Lerp(hex("8DAEDF"), night):Lerp(hex("82ADF1"), ancient)
-	Lighting.ColorShift_Top = self.top:Lerp(top:Lerp(hex("D99F8C"), ash * 0.40):Lerp(arrivalColor, hot), look)
+	Lighting.ColorShift_Top = self.top:Lerp(top:Lerp(hex("D99F8C"), ash * 0.40):Lerp(arrivalColor, hot * 0.34), look)
 	Lighting.ColorShift_Bottom = self.bottom:Lerp(hex("3D394D"):Lerp(hex("252F48"), night), look * 0.70)
-	Lighting.ShadowSoftness = self.softness + (0.09 + 0.18 * ash - self.softness) * look
-	Lighting.EnvironmentDiffuseScale = self.diffuse + (0.30 - 0.13 * quiet + 0.14 * (1 - ancient) - self.diffuse) * look
+	Lighting.ShadowSoftness = self.softness + (0.09 - 0.025 * offshore + (0.18 - 0.04 * offshore) * ash - self.softness) * look
+	Lighting.EnvironmentDiffuseScale = self.diffuse + (0.30 - 0.21 * offshore + 0.14 * (1 - ancient) - self.diffuse) * look
 	Lighting.EnvironmentSpecularScale = self.specular + (0.83 - 0.60 * ancient - self.specular) * look
 	Lighting.ExposureCompensation = self.exposure
 		+ (0.06 - 0.13 * ancient + 0.32 * basin - 0.04 * ash) * look
-		+ hot * 1.83
+		+ hot * (if frame < sheet.frames.contact then 1.83 else 0.46)
 		+ self.nightLook.Exposure * quiet * (1 - 0.7 * hero)
-	Lighting.Brightness = self.brightness + (2.25 - ancient * 0.55 - 0.22 * quiet + night * 0.15 - self.brightness) * look + hot * 2.45
-	local skyFill = hex("716B78"):Lerp(hex("414F72"), night):Lerp(hex("788BB0"), ancient):Lerp(self.nightLook.ShadowFill, quiet)
+	-- The native shadow source shares the bearing of the baked silhouettes.
+	-- During ignition leave those occluded planes cool. Actual crater lights
+	-- supply the orange illumination on the faces that can see the fire.
+	Lighting.Brightness = self.brightness + (2.25 - ancient * 0.55 + 1.38 * offshore + night * 0.15 - self.brightness) * look
+	local skyFill = hex("716B78"):Lerp(hex("414F72"), night):Lerp(hex("788BB0"), ancient):Lerp(self.nightLook.ShadowFill, offshore)
 	Lighting.OutdoorAmbient =
-		self.outdoor:Lerp(skyFill:Lerp(hex("615169"), ash * 0.63):Lerp(arrivalColor, hot * 0.65), look)
+		self.outdoor:Lerp(skyFill:Lerp(hex("615169"), ash * (0.63 - 0.42 * offshore)):Lerp(arrivalColor, hot * 0.09), look)
 	local shadow = hex("493B47"):Lerp(hex("273048"), night):Lerp(hex("27364D"), ancient)
-		:Lerp(Color3.new():Lerp(self.nightLook.ShadowFill, 0.30), quiet)
-	Lighting.Ambient = self.ambient:Lerp(shadow:Lerp(hex("50333B"), ash * 0.56):Lerp(arrivalColor, hot * 0.50), look)
+		:Lerp(Color3.new():Lerp(self.nightLook.ShadowFill, 0.23), offshore)
+	Lighting.Ambient = self.ambient:Lerp(shadow:Lerp(hex("50333B"), ash * (0.56 - 0.42 * offshore)), look)
 	-- The offshore source is inferred from the cliff edges and cast shadows.
-	local moonDirection = if moonKey then offshoreMoon else Lighting:GetMoonDirection()
+	local moonDirection = if moonKey then Moonlight.direction else Lighting:GetMoonDirection()
 	self.lunar:draw(
 		base,
 		moonDirection,
@@ -230,7 +237,7 @@ function Daylight:draw(t, motion, base, masterFrame)
 				:Lerp(hex("718CAF"), ancient)
 				:Lerp(self.nightLook.SkyColor:Lerp(hex("596075"), 0.55), quiet)
 				:Lerp(hex("D1BBCB"), dawn * (1 - ancient))
-				:Lerp(arrivalColor, hot)
+				:Lerp(arrivalColor, hot * 0.38)
 				:Lerp(hex("CE917D"), ash)
 				:Lerp(hex("929DBC"), 0.80 * basin),
 			history
@@ -251,8 +258,8 @@ function Daylight:draw(t, motion, base, masterFrame)
 			+ 0.067 * veil
 			+ 0.04 * basin
 			- 0.075 * ancient
-		self.air.Haze = self.haze + 1.38 * ash + 1.02 * hot + 1.67 * veil + 1.15 * basin
-		self.air.Glare = self.glare + 0.60 * hot + 0.18 * ash
+		self.air.Haze = self.haze + (1.38 - 0.60 * offshore) * ash + 0.28 * hot + 1.67 * veil + 1.15 * basin
+		self.air.Glare = self.glare + 0.24 * hot + 0.18 * ash
 		self.air.Offset = self.offset - 0.085 * ash
 	end
 	self.bloom.Enabled = t >= clock.entry and t < 15.8

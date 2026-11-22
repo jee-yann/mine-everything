@@ -138,6 +138,7 @@ local function check(motion, live, remote)
 	end
 	film:expose(sheet.frames.coast - 1, false)
 	assert(film.daylight.lunar.chaseHorizon.Parent == stage, "missing far water in the aerial chase")
+	assert(lighting:GetSunDirection().Y < 0, "the visible sky in the flight must remain night on low graphics")
 	for picture = sheet.frames.coast, sheet.frames.terminal - 1 do
 		film:expose(picture, false)
 		assert(
@@ -164,11 +165,18 @@ local function check(motion, live, remote)
 		"ledge edges must follow the artist's rim strength")
 	assert(shade.Transparency < 0.65 and math.abs(lighting.OutdoorAmbient.R - nightLook.ShadowFill.R) < 0.01,
 		"the shadowed ground must take its open-sky fill from NightLook")
-	assert(math.abs(lunar.beams[1].light.Brightness - 8.3 * nightLook.RimStrength) < 0.01)
+	local shadowSource = lighting:GetSunDirection()
+	assert(shadowSource.Y > 0.1 and shadowSource.Y < 0.35, "the native key should graze the terraces")
+	assert((-lunar.beams[1].mount.CFrame.LookVector):Dot(shadowSource) > 0.995,
+		"the native and local keys must cast the tree shadows in the same direction")
+	assert(lunar.beams[1].light.Brightness > 0 and lunar.beams[1].light.Brightness < 6,
+		"the shelf spots should support the native key")
+	assert(lunar.mistImages[1].image.ImageTransparency < 1, "missing moonlight in the mist")
 	local fall = film.island.set:FindFirstChild("Falling water", true)
 	assert(fall and fall.Color.B - fall.Color.R < 0.22, "the moonlit cascade should not glow cyan")
 	local moonlitStone = lunar.tint[1]
 	assert(moonlitStone and moonlitStone.part.Color ~= moonlitStone.day, "missing private night palette")
+	local offshoreColor = moonlitStone.part.Color
 	local previousHeat = cold
 	local phone = { camera = { ViewportSize = Vector2.new(390, 844) }, motion = motion }
 	function film:frame(...)
@@ -204,7 +212,8 @@ local function check(motion, live, remote)
 	assert(water and water.part.Color ~= water.base, "the surrounding sea must catch the trail")
 	film:expose(sheet.frames.contact, false)
 	assert(not film.impact.shell.Parent and not film.impact.entry.root.Parent, "meteor survived contact")
-	assert(moonlitStone.part.Color == moonlitStone.day and lunar.aprons.Parent == stage, "contact broke the held horizon")
+	assert(moonlitStone.part.Color == offshoreColor and lunar.aprons.Parent == stage,
+		"terrain outside the flash must hold its night palette during contact")
 	local sites = film.island.faults.sites
 	local near, far = sites[1], sites[1]
 	for _, v in sites do
@@ -224,6 +233,8 @@ local function check(motion, live, remote)
 	film:draw(10.5, false)
 	assert(water.part.Color == water.night, "water must return to moonlight when the fire reflection passes")
 	assert(not lunar.relief.Parent and not lunar.aprons.Parent, "offshore lighting survived the cut to the crater")
+	assert(moonlitStone.part.Color == moonlitStone.day and lunar.mistImages[1].image.ImageTransparency == 1,
+		"the close fissure shot must release the offshore lighting")
 	assert(
 		outerSlab.where == "landed" and (outerSlab.rest.Position - outerSlab.target).Magnitude > 12,
 		"missing lasting displacement"
@@ -257,6 +268,28 @@ local function check(motion, live, remote)
 				not film.impact.plume.hidden and flash.light.Enabled and flash.ball.Transparency < 1,
 				"ignition missed its report"
 			)
+		end
+		if picture == 253 or picture == sheet.frames.eruption or picture == 276 then
+			local illumination = film.illumination
+			local sourcePosition = illumination.lamp.Position
+			assert(illumination.key.Shadows and illumination.key.Brightness > 1, "missing shadow source at the vent")
+			local litBanks = 0
+			for _, pool in illumination.pools do
+				if pool.light.Enabled then
+					litBanks += 1
+					local bank = film.base * pool.shore
+					local horizontal = Vector3.new(1, 0, 1)
+					local fromFire = ((bank - sourcePosition) * horizontal).Unit
+					local lightRay = (pool.mount.CFrame.LookVector * horizontal).Unit
+					assert(pool.light.Shadows and fromFire:Dot(lightRay) > 0.98, "bank shadow points toward the vent")
+				end
+			end
+			assert(litBanks == 2, "the blast should rake the two crater banks")
+			for _, tile in illumination.receivers do
+				if tile.part.Name == "Deep water" then
+					assert(tile.part.Color.R - tile.night.R < 0.09, "the whole sea lit up with the fire reflection")
+				end
+			end
 		end
 		if motion then
 			local lens = film.impact.lens

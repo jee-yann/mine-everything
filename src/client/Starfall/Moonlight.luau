@@ -5,6 +5,8 @@ local frames = require(script.Parent.ExposureSheet).frames
 local V, CF, hex = Vector3.new, CFrame.new, Color3.fromHex
 local Moonlight = {}
 Moonlight.__index = Moonlight
+-- Survey bearing used to bake the cove's projected silhouettes.
+Moonlight.direction = V(-0.959, 0.218, 0.181).Unit
 
 -- Moonlit stone and foliage retain separate local values under a saturated
 -- blue key. Only the prehistoric models are exposed to this stock.
@@ -32,6 +34,43 @@ local pigments = {
 }
 
 local cascade = { ["Falls crest"] = true, ["Falling water"] = true, ["Whitewater"] = true, ["Current"] = true }
+-- A little sea mist hangs in the two gaps below the western canopy. Stretch
+-- the soft particles along the incident light. Terrain occludes each ribbon.
+local function lightThroughMist(look)
+	local group = S.group("Moonlight through sea mist")
+	local images = {}
+	local axis = -Moonlight.direction
+	local eye = require(script.Parent.Timeline).breakerEye
+	for _, gap in {
+		{ V(-58, 45, 32), 77, 9, 0.21 },
+		{ V(-62, 48, 37), 56, 4.5, 0.16 },
+		{ V(-8, 61, -61), 68, 11, 0.15 },
+	} do
+		local center, length, width, density = table.unpack(gap)
+		local up = (eye - center):Cross(axis).Unit
+		local plane = CFrame.fromMatrix(center, axis, up)
+		local mist = S.part(group, "Mist in a canopy gap", plane, V(length, width, 0.05), "FFFFFF")
+		mist.Transparency, mist.CastShadow = 1, false
+		local surface = Instance.new("SurfaceGui")
+		surface.Face = Enum.NormalId.Back
+		surface.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+		surface.CanvasSize = Vector2.new(384, 64)
+		surface.LightInfluence, surface.Brightness, surface.Parent = 0, 1, mist
+		local image = Instance.new("ImageLabel")
+		image.Size, image.BackgroundTransparency = UDim2.fromScale(1, 1), 1
+		image.Image = "rbxasset://textures/particles/smoke_main.dds"
+		image.ImageColor3, image.ImageTransparency, image.Parent = look.RimColor, 1, surface
+		local feather = Instance.new("UIGradient")
+		feather.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.32, 0.10),
+			NumberSequenceKeypoint.new(0.58, 0.06), NumberSequenceKeypoint.new(1, 1),
+		})
+		feather.Parent = image
+		table.insert(images, { image = image, density = density })
+	end
+	return group, images
+end
+
 local shelves = {
 	V(-69, 62, -77),
 	V(-16, 65, -87),
@@ -96,6 +135,8 @@ end
 function Moonlight.new(stage, nightLook)
 	nightLook = nightLook or require(script.Parent.NightLook)
 	local root = S.group("Moonlight on Citrine Cove")
+	local mist, mistImages = lightThroughMist(nightLook)
+	mist.Parent = root
 	local beams = {}
 	for i, target in shelves do
 		local mount = S.part(root, "Lunar key", CF(), Vector3.one * 0.1, "FFFFFF")
@@ -127,7 +168,7 @@ function Moonlight.new(stage, nightLook)
 	local ink = relief:GetChildren()
 	for _, facet in ink do
 		if facet.Name == "Umbra" then
-			facet.Color = Color3.new():Lerp(nightLook.ShadowFill, 0.34)
+			facet.Color = Color3.new():Lerp(nightLook.ShadowFill, 0.19)
 		else
 			facet.Material = Enum.Material.Neon
 			facet.Color = Color3.new():Lerp(nightLook.RimColor, if facet.Name == "LunarGrass" then 0.75 else 0.86)
@@ -173,6 +214,8 @@ function Moonlight.new(stage, nightLook)
 	return setmetatable({
 		stage = stage,
 		root = root,
+		mist = mist,
+		mistImages = mistImages,
 		sky = nightSky(nightLook.SkyColor),
 		nightLook = nightLook,
 		beams = beams,
@@ -188,12 +231,15 @@ function Moonlight.new(stage, nightLook)
 end
 
 function Moonlight:relight(base, frame)
-	local strength = 1 - S.ease(frame, 237, 249)
-	if self.strength == strength and self.island then
+	local strength = 1 - S.ease(frame, frames.ignition, frames.waveLaunch + 12)
+	-- Keep the unburnt parcels in their night palette as the advancing wave
+	-- lights them. Restore the authored materials on the cut into the fissure.
+	local tinted = frame < frames.seam
+	if self.strength == strength and self.tinted == tinted and self.island then
 		return
 	end
 	local island = self.stage:FindFirstChild("Citrine Cove through the ages")
-	if island and not self.island and frame < 240 then
+	if island and not self.island and tinted then
 		for _, piece in island:GetDescendants() do
 			local swatch = pigments[piece.Name]
 			if (swatch or cascade[piece.Name]) and piece:IsA("BasePart") then
@@ -204,8 +250,13 @@ function Moonlight:relight(base, frame)
 					if n.Y < 0 then
 						n = -n
 					end
-					local incidence = n:Dot(base:VectorToWorldSpace(V(-0.959, 0.218, 0.181).Unit))
+					local incidence = n:Dot(base:VectorToWorldSpace(Moonlight.direction))
 					moon = self.nightLook.ShadowFill:Lerp(moon:Lerp(self.nightLook.RimColor, 0.35), math.clamp(0.40 + incidence * 0.80, 0, 1))
+				end
+				if piece.Name == "Mountain flank" or piece.Name == "Far slope" or piece.Name == "Summit facet" then
+					-- Sea air softens the pale, offshore spurs behind the headland.
+					local depth = -base:PointToObjectSpace(piece.Position).Z
+					moon = moon:Lerp(self.nightLook.SkyColor, 0.67 * S.ease(depth, 118, 190))
 				end
 				table.insert(self.tint, { part = piece, day = piece.Color, moon = moon })
 			end
@@ -214,16 +265,16 @@ function Moonlight:relight(base, frame)
 	end
 	self.relief.Parent = if strength > 0 then self.stage else nil
 	if not self.placed then
+		self.mist:PivotTo(base)
 		self.relief:PivotTo(base)
 		self.aprons:PivotTo(base)
 		self.placed = true
 	end
 	for _, facet in self.ink do
-		local amount = if facet.Name == "Umbra" then 0.41 elseif facet.Name == "Canopy"
+		local amount = if facet.Name == "Umbra" then 0.63 elseif facet.Name == "Canopy"
 			then 0.50 * self.nightLook.RimStrength else 0.70 * self.nightLook.RimStrength
 		facet.Transparency = 1 - strength * amount
 	end
-	local tinted = frame < 240
 	if self.island and self.tinted ~= tinted then
 		for _, swatch in self.tint do
 			swatch.part.Color = if tinted then swatch.moon else swatch.day
@@ -236,6 +287,14 @@ end
 function Moonlight:draw(base, direction, observer, frame, level, night, heat, ash)
 	self.frame = frame
 	self:relight(base, frame)
+	local mistAmount = if frame >= frames.flyby and frame < frames.ignition
+		then level * self.nightLook.RimStrength * (1 - S.ease(frame, frames.terminal, frames.ignition)) else 0
+	if mistAmount ~= self.mistAmount then
+		for _, fog in self.mistImages do
+			fog.image.ImageTransparency = 1 - fog.density * mistAmount
+		end
+		self.mistAmount = mistAmount
+	end
 	self.aprons.Parent = if frame >= frames.coast and frame < frames.aftermath then self.stage else nil
 	if self.aprons.Parent then
 		self.hazeWash.BackgroundColor3 =
@@ -252,14 +311,14 @@ function Moonlight:draw(base, direction, observer, frame, level, night, heat, as
 	end
 	-- Before dawn the source moves imperceptibly. Keep the local shadow maps
 	-- stable while the camera photographs light moving through the trees.
-	if self.direction ~= direction or self.base ~= base then
+	if self.lastDirection ~= direction or self.base ~= base then
 		for _, v in self.beams do
-			v.mount.CFrame = base * CFrame.lookAt(v.target + direction * 31, v.target)
+			v.mount.CFrame = base * CFrame.lookAt(v.target + direction * 42, v.target)
 		end
-		self.direction, self.base = direction, base
+		self.lastDirection, self.base = direction, base
 	end
 	for _, v in self.beams do
-		v.light.Brightness = 8.3 * self.nightLook.RimStrength * level
+		v.light.Brightness = 4.6 * self.nightLook.RimStrength * level
 	end
 	local axis = V(direction.X, 0, direction.Z).Unit
 	local across = axis:Cross(Vector3.yAxis)
