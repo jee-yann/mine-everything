@@ -1,6 +1,6 @@
 # Where the Stars Took Root
 
-The crater and the mine share a site in Citrine Cove. A fork of violet light survives the impact in the bedrock. Generations of prospectors follow that trace. In the present day the player's own miner reads a fault in a limestone sample. One blow opens the stone around an intact emerald. The guild commissions that miner to find Starfall. An interactive strike opens the route, and the camera races ahead to show the player what waits below.
+Deep under Citrine Cove, the fallen star still glows. Miners have searched for it for years and brought back only tiny pieces. In the present day, the player cracks a rock with one swing and leaves the emerald inside whole. That feat earns them the name **Gem Hunter**. The miners pick them to find Starfall. The player can strike a beacon to light the path, and the camera follows the light into the mine.
 
 | Time | Picture | Sound |
 | --- | --- | --- |
@@ -18,12 +18,12 @@ The crater and the mine share a site in Citrine Cove. A fork of violet light sur
 | 39.13–41.21 s | A cut across the testing bench places the limestone between the camera and the miner. The test permits a single blow. | Gravel shifts under the miner’s boots. |
 | 41.21–43.88 s | In one angle the miner reads the fault and draws the pick back. A short silver arc follows the beak into the seam at 42.83 s. The two halves fall away in turn. | Steel rings against the seam. Each slab has its own landing. |
 | 43.88–46.13 s | Track along the newly exposed, intact emerald. Let the falling chips settle around it. | Two notes ring off the facets. |
-| 46.13–49.13 s | On the shoulder pose the harbor falls away into a graphic portrait. The player’s actual display name lands above **FAULT READER**. | The brass returns and the name lands on a downbeat. |
+| 46.13–49.13 s | On the shoulder pose the harbor falls away into a graphic portrait. The player’s actual display name lands above **GEM HUNTER**. | The brass returns and the name lands on a downbeat. |
 | 49.13–51.71 s | Read the miner’s name on the guild dispatch. The camera draws back past the seal, revealing the miner already in position beside the beacon. | A paper snap punctuates the cut back to the harbor. |
 | 51.71–57.67 s | Space, X or touch starts the swing. The lens tightens with the backswing. Hold as sparks split from the seal, then tilt down with the violet-white pulse as it catches six waymarks in succession. | The steel rings on contact. The last waymark answers from its position on the road. |
 | 57.67–59.17 s | Catch the moving light on the bridge, follow it between the playable mine’s basalt piers and descend past the hanging lamps. Its afterglow holds the path in view as the head reaches the shaft wall. | A note marks the bridge. At the shaft, the rock answers the beacon an octave lower. |
-| 59.17–62.17 s | The pulse runs down the seam and fades at the foot of the faceted Starfall twin. Give the eye time to travel up its facets. **MYTHICAL ORE / STARFALL** appears once the mineral is in view. | A high fifth carries through the change of scale. |
-| 62.17–65.08 s | Cut from the lit crystal to the player’s silhouette at the same point in the frame. The mine entrance is ahead of them at spawn. **BE FIRST TO / REACH STARFALL.** The view settles into the player’s own camera. | Brass resolves into the working harbor. |
+| 59.17–62.17 s | The pulse runs down the seam and fades at the foot of the faceted Starfall twin. Give the eye time to travel up its facets. **THE RAREST ORE / STARFALL** appears once the mineral is in view. | A high fifth carries through the change of scale. |
+| 62.17–65.08 s | Cut from the lit crystal to the player’s silhouette at the same point in the frame. The mine entrance is ahead of them at spawn. **WILL YOU FIND / STARFALL FIRST?** The view settles into the player’s own camera. | Brass resolves into the working harbor. |
 
 ## Tune the opening in Studio
 
@@ -107,9 +107,9 @@ The small sparks above the secondary fires and the dust along the meteor use the
 
 ## Studio recording
 
-Studio supplied one 1920 × 1080 picture for each exposure. The stereo track comes from a real-time Play session with the interactive strike on the same frame. The film runs for 1,562 exposures at 24 fps (65.08 s), followed by half a second of gameplay. The trial blow lands at 42.83 s. In this take the player presses Space and strikes the route beacon at 54.125 s. The pulse reaches the mine threshold at 57.67 s and flares on the shaft wall at 58.96 s. [Watch the film](Where-the-Stars-Took-Root-The-Fault-Reader.mp4)
+Studio supplied one 1920 × 1080 picture for each exposure. The stereo track comes from a real-time Play session with the interactive strike on the same frame. The film runs for 1,562 exposures at 24 fps (65.08 s), followed by half a second of gameplay. The trial blow lands at 42.83 s. In this take the player presses Space and strikes the route beacon at 54.125 s. The pulse reaches the mine threshold at 57.67 s and flares on the shaft wall at 58.96 s. [Watch the film](Where-the-Stars-Took-Root.mp4)
 
-Frames 237–239 carry the terminal descent. Contact is frame 240 at 10.000 s. Frame 241 returns to ordinary moonlight and frame 242 tightens down to a pin. The main eruption opens on frame 243 at 10.125 s. The broken circle surrounds ignition on frame 246. Frame 247 goes white and the following exposures reverse and change the ray shapes. In the second sequence, frame 323 gives one ordinary view of the oncoming water. The original torn white crest crosses the full-color eruption on frames 324 and 325. Frame 326 goes black. The final printed exposure is frame 328, two frames earlier than the previous edit. [Frames from the Studio recording](The-Fault-Reader-frames.jpg)
+Frames 237–239 carry the terminal descent. Contact is frame 240 at 10.000 s. Frame 241 returns to ordinary moonlight and frame 242 tightens down to a pin. The main eruption opens on frame 243 at 10.125 s. The broken circle surrounds ignition on frame 246. Frame 247 goes white and the following exposures reverse and change the ray shapes. In the second sequence, frame 323 gives one ordinary view of the oncoming water. The original torn white crest crosses the full-color eruption on frames 324 and 325. Frame 326 goes black. The final printed exposure is frame 328, two frames earlier than the previous edit. [Frames from the Studio recording](Starfall-frames.jpg)
 
 The recorded score uses 2nd Foundation Music’s *The Final Push 30B* from APM Music. Drums build under the settlement and brass carries the challenge into the harbor. The sound of the pick hitting the beacon follows the player’s input. If the track is unavailable, the client plays a locally voiced adventure score. The music and sound effects groups follow the player's saved mixer settings. [Creator Store track](https://create.roblox.com/store/asset/1848015198) · [Roblox licensed music in recordings](https://en.help.roblox.com/hc/en-us/articles/360038525351-Using-Licensed-Music-in-Videos)
 

@@ -54,13 +54,15 @@ local origin = net:GetAttribute("Origin")
 local landing = net:GetAttribute("Landing")
 local entrance = net:GetAttribute("Entrance")
 local passage = require(script.Passage).new(player, net)
-local expedition = require(script.FirstExpedition).new(player, net)
+local expedition = require(script.FirstExpedition).new(player, net, hud)
 local joinOpeningPending = true
 local previousStep = player:GetAttribute("ExpeditionStep")
 player:GetAttributeChangedSignal("ExpeditionStep"):Connect(function()
 	local step = player:GetAttribute("ExpeditionStep")
 	if previousStep and previousStep ~= "Skipped" and step == "Done" then
-		hud:notice("First expedition complete!", "The next discovery is yours.", W.gold)
+		local nextGoal = if (player:GetAttribute("Power") or 1) == 1 then "Next goal: a Copper Pick to mine copper"
+			else "Find your next ore in the Ore Index"
+		hud:notice("First expedition complete!", nextGoal, W.gold)
 	end
 	previousStep = step
 end)
@@ -164,7 +166,16 @@ UIS.InputBegan:Connect(function(input, processed)
 	if hud.overlay.Visible then
 		return
 	end
-	if not mobile and input.UserInputType == Enum.UserInputType.MouseButton1 then
+	if input.KeyCode == Enum.KeyCode.R or input.KeyCode == Enum.KeyCode.ButtonY or input.KeyCode == Enum.KeyCode.DPadUp then
+		local navigating = input.KeyCode ~= Enum.KeyCode.R and GuiService.SelectedObject
+		local modified = input.KeyCode == Enum.KeyCode.R and (input:IsModifierKeyDown(Enum.ModifierKey.Ctrl)
+			or input:IsModifierKeyDown(Enum.ModifierKey.Alt) or input:IsModifierKeyDown(Enum.ModifierKey.Meta))
+		if hud.surface.Visible and hud.surface.Parent.Visible and not navigating and not modified then
+			net.Action:FireServer("Surface")
+		end
+		return
+	end
+	if (not mobile and input.UserInputType == Enum.UserInputType.MouseButton1) or input.KeyCode == Enum.KeyCode.ButtonR2 then
 		held = input
 	end
 end)
@@ -215,8 +226,9 @@ UIS.InputEnded:Connect(function(input)
 		held == input
 		or (
 			held
-			and held.UserInputType == Enum.UserInputType.MouseButton1
 			and input.UserInputType == held.UserInputType
+			and (held.UserInputType == Enum.UserInputType.MouseButton1
+				or (held.KeyCode == Enum.KeyCode.ButtonR2 and input.KeyCode == held.KeyCode))
 		)
 	then
 		if hud.touchActions.enabled then
@@ -231,14 +243,17 @@ UIS.TextBoxFocused:Connect(release)
 GuiService.MenuOpened:Connect(release)
 hud.overlay:GetPropertyChangedSignal("Visible"):Connect(release)
 hud.mine:GetPropertyChangedSignal("Visible"):Connect(function()
-	if not hud.mine.Visible then
+	if not hud.mine.Visible and not (held and held.KeyCode == Enum.KeyCode.ButtonR2) then
 		release()
 	end
 end)
 UIS:GetPropertyChangedSignal("PreferredInput"):Connect(function()
+	-- The first trigger press can itself switch a hybrid device to gamepad.
+	local trigger = if UIS.PreferredInput == Enum.PreferredInput.Gamepad and held and held.KeyCode == Enum.KeyCode.ButtonR2 then held else nil
 	mobile = UIS.PreferredInput == Enum.PreferredInput.Touch
 	hud:placePanels(mobile)
 	release()
+	held = trigger
 end)
 
 net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, normal)
@@ -250,6 +265,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			hud.menu.map:showPurchase(a)
 		end
 	elseif kind == "loot" then
+		expedition.lastCut = point
 		local best = Ores.byName.Dirt
 		for name in a do
 			local ore = Ores.byName[name]
@@ -406,7 +422,8 @@ local function sampleAim()
 		return
 	end
 	local ready = net:GetAttribute("Ready") and player:GetAttribute("ProfileReady")
-	local screen = if mobile then camera.ViewportSize * 0.5 else UIS:GetMouseLocation()
+	local centerAim = mobile or UIS.PreferredInput == Enum.PreferredInput.Gamepad
+	local screen = if centerAim then camera.ViewportSize * 0.5 else UIS:GetMouseLocation()
 	local ray = camera:ViewportPointToRay(screen.X, screen.Y)
 	local reach = char:GetAttribute("PickReach") or Config.Reach
 	local hit = workspace:Raycast(ray.Origin, ray.Direction * (reach + 48), params)
@@ -429,18 +446,20 @@ local function sampleAim()
 	fx:aim(cells)
 	local valid = cells ~= nil and #cells == 1
 	hud:aimAt(screen, valid, locked ~= nil or (cells ~= nil and space <= 0))
-	hud.reticle.Visible = mobile
-	if mobile then
+	hud.reticle.Visible = centerAim
+	if centerAim then
 		hud.reticle.BackgroundColor3 = if valid then W.aqua else W.white
 	end
 	local objective, instruction
 	if ready and not joinOpeningPending and player:GetAttribute("IntroSeen") then
-		objective, instruction = expedition:update(head, inMine, depth, mobile, space <= 0)
+		objective, instruction = expedition:update(head, inMine, depth, mobile, space <= 0, if valid then hit.Instance else nil)
 	else
 		expedition:hide()
 	end
 	if not ready then
 		hud:guide("Opening the mine…", "Preparing your pack and the mine", true)
+	elseif objective then
+		hud:guide(objective, instruction, not expedition.spotlight.layer.Visible)
 	elseif space <= 0 then
 		hud:guide(
 			"Backpack full",
@@ -456,8 +475,6 @@ local function sampleAim()
 			else W.number(ore.value * (if player:GetAttribute("DoubleGold") then 2 else 1)) .. " G"
 		local stats = "Hardness " .. Config.strength(center.Y - origin.Y) .. "  ·  " .. worth
 		hud:guide("Mine " .. string.lower(targetName(ore, center)), instruction or (if mobile then stats else "Hold to mine  ·  " .. stats), true)
-	elseif objective then
-		hud:guide(objective, instruction, true)
 	else
 		hud:guide("", "", false)
 	end

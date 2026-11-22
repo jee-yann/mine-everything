@@ -76,9 +76,9 @@ local function compose(screen, safe)
 			if strike.Visible then
 				local device = Input.PreferredInput
 				strike.Text = if device == Enum.PreferredInput.Touch
-					then "Tap to light the route"
-					elseif device == Enum.PreferredInput.Gamepad then "X   Light the route"
-					else "Light the route  [Space]"
+					then "Tap to light the path"
+					elseif device == Enum.PreferredInput.Gamepad then "X   Light the path"
+					else "Light the path  [Space]"
 			end
 			local text, opacity = Film.caption(t)
 			caption.Text, caption.TextTransparency, caption.TextStrokeTransparency =

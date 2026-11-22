@@ -58,8 +58,33 @@ local p = Profile.new()
 assert(not Profile.buy(p, "Radius"))
 p.bag = { Stone = 4, Coal = 3, Copper = 1 }
 assert(Profile.used(p) == 8 and Profile.sell(p) == 35 and Profile.used(p) == 0)
-assert(Profile.buy(p, "Capacity") and p.gold == 11 and Profile.stat(p, "Capacity") == 80 and Profile.used(p) == 0)
+assert(Profile.buy(p, "Capacity") and p.gold == 27 and Profile.stat(p, "Capacity") == 80 and Profile.used(p) == 0)
 local Upgrades = require(Shared.Upgrades)
+do
+	local starter = Profile.new()
+	assert(Profile.stat(starter, "Capacity") == 8)
+	for _ = 1, 7 do
+		Profile.recordCut(starter, "Dirt")
+		assert(Profile.expeditionStep(starter) == "Ore")
+	end
+	Profile.recordCut(starter, "Dirt")
+	assert(Profile.expeditionStep(starter) == "Sell" and starter.xp == 0)
+	assert(Profile.sell(starter) == 8 and Profile.expeditionStep(starter) == "Upgrade")
+	assert(Upgrades.onboardingPick(starter.gold) == "Capacity" and Profile.buy(starter, "Capacity"))
+	assert(starter.gold == 0 and Upgrades.price("Capacity", 2) == 60 and Profile.expeditionStep(starter) == "Return")
+	Profile.recordCut(starter, "Dirt")
+	assert(Profile.expeditionStep(starter) == "Done")
+
+	local old = Profile.new()
+	old.bag = { Dirt = 32, Coal = 4 }
+	local saved = Data.claim({ profile = old }, "old-pack", 30).profile
+	assert(Profile.used(saved) == 36 and Profile.stat(saved, "Capacity") == 8)
+	assert(Profile.sell(saved, 1, "Coal", "Stack") == 20)
+	local resumed = Data.claim({ profile = Data.snapshot(saved) }, "resume-pack", 31).profile
+	assert(Profile.used(resumed) == 32 and Profile.sell(resumed) == 32 and resumed.gold == 52)
+	old.bag.Dirt = 37
+	assert(not Data.claim({ profile = old }, "oversize", 32))
+end
 for _, bag in { {}, { Dirt = 2, Stone = 3, Coal = 1, Copper = 2, Gold = 1 } } do
 	local miner = Profile.new()
 	miner.bag = table.clone(bag)
@@ -309,7 +334,8 @@ assert(Profile.buySupply(specialist, "Temper") and specialist.temper == 45)
 	assert(
 		Profile.deliver(specialist, day, day) and specialist.flares == 2 and not Profile.deliver(specialist, day, day)
 	)
-	assert(Profile.stat(specialist, "Capacity") == 70)
+	assert(Profile.stat(specialist, "Capacity") == 35)
+	-- An old 36-slot bag could legally hold 70 with all hauling skills.
 	specialist.bag = { Stone = 70 }
 	local record = Data.commit({ owner = "skills" }, "skills", specialist, 100, true)
 	local rejoined = Data.claim(record, "next", 101).profile

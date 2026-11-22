@@ -56,6 +56,7 @@ function Hud.new(player, net, mobile)
 	self.wallet = wallet
 	Icons.draw(wallet, "Coins", 0, 1, 47)
 	self.gold = W.title(wallet, "0", 50, -1, 170, 52, 46, W.gold, true)
+	self.gold.Size = UDim2.new(1, -50, 0, 52)
 	self.gold.TextScaled = true
 	local goldSize = Instance.new("UITextSizeConstraint")
 	goldSize.MinTextSize, goldSize.MaxTextSize, goldSize.Parent = 17, 46, self.gold
@@ -302,6 +303,11 @@ function Hud.new(player, net, mobile)
 		self.depth.Size = UDim2.fromOffset(locWidth, 21)
 		W.anchor(loc, 0.5, 0, UDim2.fromOffset(titleX, if inTopbar then top else 7))
 		local narrow = width < 515
+		-- Leave a left column for the wallet when the region and shortcuts
+		-- share its row on a compact screen. The gold amount scales to fit.
+		local walletWidth = if narrow then math.clamp(math.min(titleX - titleHalf,
+			width - margin - pairWidth) - leftEdge - 6, 96, 220) else 220
+		wallet.Size = UDim2.fromOffset(walletWidth, 52)
 		local rosterRoom = if edge then height * 0.45 else height - 18 - self.haul.Size.Y.Offset * s
 		local rosterHeight, browsing = self.roster:layout(s, margin, edge, rosterRoom, self.mobile)
 		self.roster.panel.Visible = playing and (not self.mobile or browsing)
@@ -363,11 +369,11 @@ function Hud.new(player, net, mobile)
 			toolsBottom = levelY + 46
 			tools.Size = UDim2.fromOffset(150, toolsBottom - gearY)
 			self.levelRing.button.Position = UDim2.fromOffset(104, levelY - gearY)
-			local walletTop = belowChat(leftEdge, math.floor(height * (if width > height then 0.36 else 0.42)), 220, 52)
-			if narrow and leftEdge + 220 > right - 150 and walletTop < gearY + 46 and walletTop + 52 > rowY then
+			local walletTop = belowChat(leftEdge, math.floor(height * (if width > height then 0.36 else 0.42)), walletWidth, 52)
+			if narrow and leftEdge + walletWidth > right - 150 and walletTop < gearY + 46 and walletTop + 52 > rowY then
 				walletTop = gearY + 50
 			end
-			if narrow and leftEdge + 220 > right - 46 and walletTop < toolsBottom and walletTop + 52 > levelY then
+			if narrow and leftEdge + walletWidth > right - 46 and walletTop < toolsBottom and walletTop + 52 > levelY then
 				walletTop = toolsBottom + 4
 			end
 			if not self.mobile then
@@ -531,13 +537,14 @@ function Hud:refresh()
 	self.edgeCount.TextColor3 = if used >= cap then W.gold else W.white
 	self.fill.BackgroundColor3 = if used >= cap then W.gold else W.green
 	self.surface.Text = if used >= cap then "↑ Surface · Full" else "↑ Surface"
-	if used >= cap and (self.lastUsed or 0) < cap and self.player:GetAttribute("MenuMotion") ~= false then
+	if used >= cap and (self.lastUsed or 0) < cap and self.player:GetAttribute("MenuMotion") ~= false
+		and not GuiService.ReducedMotionEnabled then
 		self.surface.BackgroundColor3 = W.white
 		W.tween(self.surface, 0.7, { BackgroundColor3 = W.gold })
 	end
 	if used ~= self.lastUsed or cap ~= self.lastCap then
 		self.lastUsed, self.lastCap = used, cap
-		W.tween(self.fill, 0.15, { Size = UDim2.fromScale(used / cap, 1) })
+		W.tween(self.fill, 0.15, { Size = UDim2.fromScale(math.clamp(used / cap, 0, 1), 1) })
 	end
 	local held = Ores.carried(p)
 	for _, row in self.rows do

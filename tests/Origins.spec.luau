@@ -530,7 +530,7 @@ local function check(motion, live, remote)
 	film:expose(cuts.commission, live)
 	assert(not proof.model.Parent and not film.portrait.root.Visible and station.invitation:IsDescendantOf(stage))
 	local dispatch = station.model["Signed field dispatch"]["Guild commission"]
-	assert(dispatch:FindFirstChild(char.Name) and dispatch:FindFirstChild("MASTER PROSPECTOR"), "personal reputation on dispatch")
+	assert(dispatch:FindFirstChild(char.Name) and dispatch:FindFirstChild("TO FIND STARFALL"), "the miners chose the player")
 	assert(not film.arrival:requestStrike(cuts.prompt - 1))
 	local offered = cuts.prompt + 14
 	film:expose(offered, live)

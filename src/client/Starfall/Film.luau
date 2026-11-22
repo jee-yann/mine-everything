@@ -17,14 +17,14 @@ Film.duration = frames.duration / sheet.fps
 
 local captions = {
 	{ 0.06, 2.14, "Millions of years ago" },
-	{ 12.12, 15.74, "Beneath the crater, one seam kept its light." },
-	{ 16.99, 19.36, "Prospectors followed its trace inland." },
-	{ sheet.sceneTime(786), sheet.sceneTime(851), "Only splinters ever reached the surface." },
+	{ 12.12, 15.74, "Deep in the rock, the star still glowed." },
+	{ 16.99, 19.36, "Miners came to find it." },
+	{ sheet.sceneTime(786), sheet.sceneTime(851), "All they found were tiny pieces." },
 }
 function Film.caption(t)
 	local picture = sheet.frameForScene(t)
 	if picture >= frames.present + 2 and picture < frames.measure + 12 then
-		return "One strike to free the emerald.", ease(picture, frames.present + 2, frames.present + 7)
+		return "One hit. Keep the gem whole.", ease(picture, frames.present + 2, frames.present + 7)
 			* (1 - ease(picture, frames.measure + 7, frames.measure + 12))
 	end
 	for _, cue in captions do

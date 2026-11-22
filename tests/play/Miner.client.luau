@@ -15,6 +15,13 @@ end
 local function equippedKit()
 	return p.Character and p.Character:FindFirstChild("Prospector kit", true)
 end
+local function expectGuideArrow(button)
+	local marker = waitFor(function()
+		local mark = button:FindFirstChild("Guide highlight")
+		return mark and mark.Visible and mark:FindFirstChild("Guide arrow") and mark
+	end, 3, "onboarding arrow on " .. button.Name)
+	assert(button.Interactable and not marker.Active, "onboarding blocked its own action")
+end
 local function checkOreFaces()
 	local folder = Instance.new("Folder")
 	folder:AddTag(require(rep.Shared.GameConfig).MineBlockTag)
@@ -221,10 +228,10 @@ local function test()
 			waitFor(function() return fire and rock end, 7, "fire and settling debris sustain the burned basin")
 			assert(rock > breaker and fire > breaker, "the close aftermath follows the pressure wave")
 			waitFor(function()
-				return titles.Caption.Text:find("one seam", 1, true)
+				return titles.Caption.Text:find("the star still glowed", 1, true)
 			end, 10, "the cooled island retains its fracture")
 			waitFor(function()
-				return titles.Caption.Text:find("Prospectors", 1, true)
+				return titles.Caption.Text:find("Miners came to find it", 1, true)
 			end, 12, "prospectors reach the island")
 			local card = titles:WaitForChild("Expedition title", 2)
 			local typeArea = card.Letterpress
@@ -233,15 +240,15 @@ local function test()
 					and typeArea.Headline.Visible and typeArea.Headline.Text == "PRESENT DAY"
 			end, 14, "the present-day title lands on the playable cove")
 			assert(card.AnchorPoint == Vector2.new(0.5, 0.5) and math.abs(card.Position.X.Scale - 0.5) < 0.001, "centered chapter card")
-			waitFor(function() return titles.Caption.Text:find("free the emerald", 1, true) end, 5, "the precision trial")
+			waitFor(function() return titles.Caption.Text:find("Keep the gem whole", 1, true) end, 5, "the precision trial")
 			assert(not stage:FindFirstChild(p.Character.Name), "the first visit uses the live miner")
 			waitFor(function()
-				return lifted and card.Visible and typeArea.Headline.Text == "FAULT READER"
+				return lifted and card.Visible and typeArea.Headline.Text == "GEM HUNTER"
 					and typeArea.Lead.Text == p.DisplayName and stage:FindFirstChild("Expedition pick")
 			end, 10, "the successful miner is introduced by name")
 			local station = stage:WaitForChild("Starfall expedition station", 6)
 			local dispatch = station["Signed field dispatch"]["Guild commission"]
-			assert(dispatch:FindFirstChild(p.DisplayName) and dispatch:FindFirstChild("MASTER PROSPECTOR"))
+			assert(dispatch:FindFirstChild(p.DisplayName) and dispatch:FindFirstChild("TO FIND STARFALL"))
 			local strike = titles:WaitForChild("Strike sample", 2)
 			waitFor(function() return strike.Visible end, 5, "expedition route control opens")
 			local landedSample
@@ -258,7 +265,7 @@ local function test()
 				return card.Visible and typeArea.Headline.Text == "STARFALL" and stage:FindFirstChild("Unreached Starfall lode")
 			end, 11, "the mine dive reveals the unreached lode")
 			waitFor(function()
-				return card.Visible and typeArea.Headline.Text == "REACH STARFALL."
+				return card.Visible and typeArea.Headline.Text == "STARFALL FIRST?"
 			end, 6, "the route points to the real mine")
 			assert((orchestraStarts == 1 and fallbackNotes == 0) or (orchestraStarts == 0 and fallbackNotes > 0),
 				"the screening must keep one musical arrangement through the hoist, portrait and mine")
@@ -297,8 +304,16 @@ local function test()
 			local _, touch = guide:objective(eye, true, 0, true, false, "Dig")
 			local _, mouse = guide:objective(eye, true, 0, false, false, "Dig")
 			assert(touch:find("hold Mine") and mouse:find("mouse button"))
-			local _, touchSale = guide:objective(eye, false, 0, true, true, "Ore")
+			local sellEye = { Position = n:GetAttribute("SellPosition") + Vector3.yAxis * 4 }
+			local _, touchSale = guide:objective(sellEye, false, 0, true, true, "Ore")
 			assert(touchSale:find("Tap the prompt") and guide.label.Text:find("Sell"))
+			assert(guide.waypoint.glow.Adornee:HasTag("MiningInteractionPad"), "draw attention to the actual Sell pad")
+			guide:objective({Position = n:GetAttribute("Entrance")}, false, 0, false, false, "Dig")
+			assert(guide.label.Text == "Dig floor", "carry the player through the doorway")
+			local floorEye = {Position = n:GetAttribute("DigFloor") + Vector3.yAxis * 5}
+			guide:objective(floorEye, true, 0, true, false, "Dig")
+			local first = guide.waypoint.glow.Adornee
+			assert(first and first.Name == "Dirt" and first.Parent == workspace.CitrineCove.MineBlocks, "guide selects a real diggable floor block")
 			local probe = { Position = Vector3.new(3000, 1800, 3000) }
 			local coal = Instance.new("Part")
 			coal.Name, coal.Anchored, coal.Size = "Coal", true, Vector3.one * 6
@@ -310,6 +325,8 @@ local function test()
 			guide.nextSearch = 0
 			assert(guide:visibleOre(probe) == coal, "mark the exposed coal")
 			coal:Destroy()
+			guide:hide()
+			assert(not guide.pin.Enabled and not guide.waypoint.glow.Enabled)
 			guide.anchor:Destroy()
 		end
 	end
@@ -522,7 +539,7 @@ local function test()
 			return overlay.Visible and menu.Listings:FindFirstChild(listing)
 		end, 5, "open " .. page)
 		if page == "Gear" and r:GetAttribute("CheckSwing") then
-			for key, price in { Speed = 30, Power = 36, Capacity = 24 } do
+			for key, price in { Speed = 30, Power = 36, Capacity = 8 } do
 				local row = menu.Listings[key]
 				waitFor(function()
 					return row.Requirements.ContentText == "× " .. price .. " G" and row.Requirements.TextFits
@@ -1301,20 +1318,27 @@ local function test()
 		n.Mine:FireServer(best, side, count, 2 ^ count - 1)
 		n.Swing:FireServer(false)
 	end
+	local starterSlots = p:GetAttribute("PackSlots")
+	assert(starterSlots == 8, "the first pack introduces a short trip")
 	for i = 1, 650 do
 		dig(1)
-		if p:GetAttribute("Used") == 36 then
+		if p:GetAttribute("Used") == starterSlots then
 			break
 		end
 		task.wait(0.12)
 	end
-	assert(p:GetAttribute("Used") == 36, "starter pack incomplete: " .. tostring(p:GetAttribute("Used")))
-	assert(p:GetAttribute("ExpeditionStep") == "Sell", "collected an actual ore")
-	waitFor(function()
-		return discovered
-	end, 4, "first ore discovery")
+	assert(p:GetAttribute("Used") == starterSlots, "starter pack incomplete: " .. tostring(p:GetAttribute("Used")))
+	assert(p:GetAttribute("ExpeditionStep") == "Sell", "a full starter pack must always lead to sale")
+	local spotlight = waitFor(function()
+		local layer = safe:FindFirstChild("Surface spotlight")
+		return layer and layer.Visible and layer
+	end, 3, "focus Surface when the starter pack fills")
+	for _, side in { "Top", "Bottom", "Left", "Right" } do
+		assert(not spotlight[side].Active, "the shade must leave Surface usable")
+	end
+	assert(spotlight["Return arrow"].Visible and safe.Location.Surface.Interactable)
 	local value = p:GetAttribute("BagValue")
-	assert(value >= 36, "material valuation")
+	assert(value >= starterSlots, "material valuation")
 	local quantity, total, earnedXP = 0, 0, 0
 	for _, ore in ores.list do
 		local held = p:GetAttribute("Held" .. ore.name)
@@ -1328,23 +1352,25 @@ local function test()
 		total += held * ore.value
 		earnedXP += held * ore.xp
 	end
-	assert(quantity == 36 and total == value, "pack quantities and value")
+	assert(quantity == starterSlots and total == value, "pack quantities and value")
 	assert(p:GetAttribute("MiningXP") == earnedXP, "XP from each material in the first haul")
 	local level = require(rep.Shared.Expeditions).level(earnedXP)
 	assert(p:GetAttribute("Level") == level and controls.Equipment.Power.Visible, "level and equipment HUD")
 	n.Action:FireServer("Sell")
 	task.wait(0.4)
-	assert(p:GetAttribute("Used") == 36 and p:GetAttribute("Gold") == 0, "exchange must require a visit")
+	assert(p:GetAttribute("Used") == starterSlots and p:GetAttribute("Gold") == 0, "exchange must require a visit")
 	visit("Sell", false)
+	waitFor(function() return not spotlight.Visible end, 3, "release the Surface spotlight at the exchange")
 	local sellPrompt = counters.Sell.Service
 	task.wait(0.25)
 	sellPrompt:InputHoldBegin()
 	task.wait(0.08)
 	sellPrompt:InputHoldEnd()
 	waitFor(function()
-		return overlay.Visible and menu.Listings:FindFirstChild("Coal") and not sellPrompt.Enabled
+		return overlay.Visible and menu.Status["Sell all"].Interactable and not sellPrompt.Enabled
 	end, 4, "tap opens sell menu")
-	assert(p:GetAttribute("Used") == 36 and p:GetAttribute("Gold") == 0, "a tap must not sell the pack")
+	assert(p:GetAttribute("Used") == starterSlots and p:GetAttribute("Gold") == 0, "a tap must not sell the pack")
+	expectGuideArrow(menu.Status["Sell all"])
 	local selected
 	for _, ore in ores.list do
 		if ore.host and p:GetAttribute("Held" .. ore.name) > 1 then
@@ -1361,12 +1387,12 @@ local function test()
 	local portion = math.min(initial - 1, 3)
 	n.Action:FireServer("Sell", selected.name, portion)
 	waitFor(function()
-		return p:GetAttribute("Used") == 36 - portion and p:GetAttribute("Gold") == selected.value * portion
+		return p:GetAttribute("Used") == starterSlots - portion and p:GetAttribute("Gold") == selected.value * portion
 	end, 3, "sell chosen quantity")
 	task.wait(0.22)
 	n.Action:FireServer("Sell", selected.name, "Stack")
 	waitFor(function()
-		return p:GetAttribute("Used") == 36 - initial and not row["Select stack"].Interactable
+		return p:GetAttribute("Used") == starterSlots - initial and not row["Select stack"].Interactable
 	end, 3, "sell one material")
 	assert(p:GetAttribute("Gold") == selected.value * initial and overlay.Visible)
 	local saleGold = value
@@ -1376,6 +1402,7 @@ local function test()
 		return p:GetAttribute("Used") == 0 and p:GetAttribute("Gold") == saleGold
 	end, 3, "sell the entire remaining haul")
 	assert(p:GetAttribute("ExpeditionStep") == "Upgrade", "sale advanced the expedition")
+	expectGuideArrow(menu.Marquee.Close)
 	r:FireServer("closePage")
 	waitFor(function() return not overlay.Visible and sellPrompt.Enabled end, 3, "return to sell prompt")
 	n.Action:FireServer("Buy", "Capacity")
@@ -1388,20 +1415,32 @@ local function test()
 	task.wait(0.3)
 	assert(p:GetAttribute("HeldCoal") == 0 and p:GetAttribute("Gold") == saleGold)
 	visit("Gear", true)
-	for key, price in { Speed = 30, Power = 36, Capacity = 24 } do
+	for key, price in { Speed = 30, Power = 36, Capacity = 8 } do
 		waitFor(function()
 			local gear = menu.Listings:FindFirstChild(key)
-			return gear and gear.Requirements.ContentText == "✓ " .. price .. " G"
-				and gear.Action.Interactable
-		end, 3, "can buy " .. key .. " with an empty pack")
+			local affordable = saleGold >= price
+			return gear and gear.Requirements.ContentText == (if affordable then "✓ " else "× ") .. price .. " G"
+				and gear.Action.Interactable == affordable
+		end, 3, "correct cost of " .. key .. " after selling")
+	end
+	do
+		local upgrades = require(rep.Shared.Upgrades)
+		for gold, key in { [0] = "Capacity", [7] = "Capacity", [8] = "Capacity", [29] = "Capacity", [30] = "Speed" } do
+			local suggested, price = upgrades.onboardingPick(gold)
+			assert(suggested == key and price == upgrades.price(key, 1))
+		end
+		local pick = upgrades.onboardingPick(saleGold)
+		expectGuideArrow(menu.Listings[pick].Action)
+		assert(not menu.Listings.Power.Action:FindFirstChild("Guide highlight"), "only one upgrade cue at a time")
 	end
 	n.Action:FireServer("Buy", "Capacity")
 	waitFor(function()
-		return p:GetAttribute("Capacity") == 2 and p:GetAttribute("Gold") == saleGold - 24
+		return p:GetAttribute("Capacity") == 2 and p:GetAttribute("Gold") == saleGold - 8
 	end, 5, "buy backpack with sale gold alone")
 	assert(p:GetAttribute("Used") == 0)
 	assert(kit["Field pack"].Size.Magnitude > packSize.Magnitude, "pack grew after capacity upgrade")
 	assert(p:GetAttribute("ExpeditionStep") == "Return", "any workshop upgrade counts")
+	expectGuideArrow(menu.Marquee.Close)
 	r:FireServer("position")
 	waitFor(function()
 		return (p.Character.Head.Position - origin).Z < 0 and not overlay.Visible
@@ -1412,15 +1451,15 @@ local function test()
 	end
 	assert(p:GetAttribute("Used") == 0, "multi-block request was accepted")
 	for i = 1, 100 do
-		if p:GetAttribute("Used") == 4 then
+		if p:GetAttribute("Mined") == 40 then
 			break
 		end
 		dig(1)
 		task.wait(0.14)
 	end
-	assert(p:GetAttribute("Used") == 4, "single-block mining after upgrade")
+	assert(p:GetAttribute("Used") == 40 - starterSlots, "single-block mining after upgrade")
 	assert(p:GetAttribute("ExpeditionStep") == "Done", "new gear tested in the field")
-	assert(p:GetAttribute("Found" .. discovered) and p:GetAttribute("Mined") == 40, "ore discovery and lifetime blocks")
+	assert(discovered and p:GetAttribute("Found" .. discovered) and p:GetAttribute("Mined") == 40, "ore discovery and lifetime blocks")
 	n.Action:FireServer("Job", 2)
 	n.Action:FireServer("Job", 1)
 	waitFor(function()
@@ -1450,7 +1489,7 @@ local function test()
 		return p:GetAttribute("SeenAchievementsPetName")
 	end, 5, "scroll reads new achievement")
 	local afterJob = p:GetAttribute("Gold")
-	assert(afterJob == saleGold - 24 + 80 + 25)
+	assert(afterJob == saleGold - 8 + 80 + 25)
 	task.wait(0.25)
 	n.Action:FireServer("Job", 2)
 	task.wait(0.3)

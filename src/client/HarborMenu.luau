@@ -1,9 +1,12 @@
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Market = game:GetService("MarketplaceService")
 local RunService = game:GetService("RunService")
+local Gui = game:GetService("GuiService")
+local Input = game:GetService("UserInputService")
 local Upgrades, Expeditions, Ores = require(Shared.Upgrades), require(Shared.Expeditions), require(Shared.Ores)
 local Settings = require(script.Parent.Settings)
 local SellCounter = require(script.Parent.SellCounter)
+local GuideButton = require(script.Parent.GuideButton)
 local Catalog = require(Shared.PassCatalog)
 local Materials = require(Shared.Materials)
 local W, Icons = require(script.Parent.Widgets), require(script.Parent.Icons)
@@ -35,6 +38,7 @@ Menu.pages = {
 function Menu.new(root, player, net, close)
 	local self = setmetatable({ player = player, net = net, prices = {}, updates = {} }, Menu)
 	self.preferences = Settings.new(player, net)
+	self.guideButton = GuideButton.new()
 	local shade = Instance.new("Frame")
 	shade.Name, shade.Size, shade.BackgroundColor3, shade.BackgroundTransparency =
 		"ShopOverlay", UDim2.fromScale(1, 1), W.ink, 0.25
@@ -133,8 +137,15 @@ function Menu:sizeListings()
 	self.status.Size, self.status.TextWrapped = UDim2.fromOffset(if selling then 226 else 442, footerHeight), selling
 	self.sellAll.Visible = selling
 end
+local function revealRow(list, row)
+	local top = row.Position.Y.Offset
+	local bottom = top + row.Size.Y.Offset
+	local viewHeight = list.Size.Y.Offset
+	list.CanvasPosition = Vector2.new(0, math.clamp(list.CanvasPosition.Y, math.max(0, bottom + 3 - viewHeight), top))
+end
 function Menu:layout(width, height, touch)
 	local designHeight = if touch and width > height then math.clamp(height - 14, 270, 408) else 408
+	local resized = self.designHeight ~= designHeight
 	self.scale.Scale = math.clamp(math.min((width - 18) / 480, (height - 14) / designHeight), 0.3, 1.38)
 	self.modal.Size = UDim2.fromOffset(480, designHeight)
 	local closeSize = if touch then math.clamp(math.ceil(44 / self.scale.Scale), 48, 72) else 48
@@ -142,6 +153,10 @@ function Menu:layout(width, height, touch)
 	self.closeButton.Position = UDim2.fromOffset(462 - closeSize, (73 - closeSize) / 2)
 	self.designHeight = designHeight
 	self:sizeListings()
+	local guided = self.guideButton.button
+	if resized and self.page == "Gear" and guided and guided.Parent.Parent == self.mainList then
+		revealRow(self.mainList, guided.Parent)
+	end
 end
 function Menu:row(i, name, icon, color)
 	local row = W.frame(self.list, name, 1, 1 + (i - 1) * 69, 447, 62, W.card, 10)
@@ -191,6 +206,7 @@ local function twoLines(detail)
 end
 function Menu:gear()
 	local owned = Skills.read(self.player)
+	self.gearButtons = {}
 	local function describe(key, level)
 		if key == "Capacity" then
 			return W.number(Skills.capacity(Upgrades.items.Capacity.values[level], owned)) .. " ore"
@@ -203,6 +219,7 @@ function Menu:gear()
 	for i, key in Upgrades.order do
 		local item = Upgrades.items[key]
 		local title, detail, b = self:row(i, item.label or key, key, item.color)
+		self.gearButtons[key] = b
 		detail.Name, detail.RichText = "Requirements", true
 		W.outlineText(detail, 1)
 		local benefit = W.text(title.Parent, "", 247, 1, 188, 17, 13, W.aqua)
@@ -619,6 +636,8 @@ function Menu:open(key)
 	if switchingTabs and self.page == key then
 		return
 	end
+	self.guideButton:point(nil)
+	self.gearButtons = nil
 	self.updates, self.seenRows = {}, {}
 	if self.motion and not switchingTabs then
 		self.motion:Cancel()
@@ -698,6 +717,7 @@ function Menu:close()
 	if not self.overlay.Visible or self.closing then
 		return
 	end
+	self.guideButton:point(nil)
 	if self.motion then
 		self.motion:Cancel()
 	end
@@ -718,6 +738,56 @@ function Menu:close()
 			self.closing = false
 		end
 	end)
+end
+function Menu:guideTrade()
+	local step = self.player:GetAttribute("ExpeditionStep")
+	local gold = self.player:GetAttribute("Gold") or 0
+	local key, price = Upgrades.onboardingPick(gold)
+	local item = if key == "Capacity" then "Backpack" else "Speed"
+	local target, hint
+	if self.page == "Sell" then
+		local used = self.player:GetAttribute("Used") or 0
+		local full = used >= (self.player:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1])
+		local wantsSale = step == "Ore" or step == "Sell" or (step == "Upgrade" and (full or gold < price))
+			or ((step == "Dig" or step == "Return") and full)
+		if wantsSale and self.sellAll.Interactable then
+			target = self.sellAll
+			local value = (self.player:GetAttribute("BagValue") or 0) * (if self.player:GetAttribute("DoubleGold") then 2 else 1)
+			hint = "Sell all for " .. W.goldAmount(value) .. " G"
+		elseif step == "Upgrade" then
+			target = self.closeButton
+			hint = if gold >= price then "Visit the Upgrades stall" else "Mine for " .. W.goldAmount(price - gold) .. " more G"
+		elseif step == "Sell" then
+			target, hint = self.closeButton, "Your pack is empty. Mine a new haul"
+		elseif step == "Return" or step == "Ore" or step == "Dig" then
+			target, hint = self.closeButton, "Follow the marker back to the mine"
+		end
+	elseif self.page == "Gear" then
+		if step == "Upgrade" then
+			local purchase = self.gearButtons[key]
+			if gold >= price and purchase.Interactable then
+				target = purchase
+				hint = if key == "Capacity" then "Buy Backpack to carry more" else "Buy Speed to mine faster"
+				if self.guideButton.button ~= purchase then
+					-- On short landscape phones the backpack row can start below the fold.
+					revealRow(self.mainList, purchase.Parent)
+				end
+			elseif gold < price then
+				target = self.closeButton
+				hint = "Earn " .. W.goldAmount(price - gold) .. " more G for " .. item
+			end
+		elseif step == "Return" then
+			target = self.closeButton
+			hint = "Gear equipped! Try it in the mine"
+		elseif step == "Sell" then
+			target, hint = self.closeButton, "Take your first haul to Sell"
+		end
+	end
+	if hint then self.sub.Text = W.goldAmount(gold) .. " G   ·   " .. hint end
+	if target and target ~= self.guideButton.button and Input.PreferredInput == Enum.PreferredInput.Gamepad then
+		Gui.SelectedObject = target
+	end
+	self.guideButton:point(target, self.preferences.values.MenuMotion)
 end
 function Menu:refresh()
 	if not self.overlay.Visible then
@@ -767,9 +837,6 @@ function Menu:refresh()
 		self.sub.Text = string.format("%d / %d slots   ·   %s G", p:GetAttribute("Used") or 0, cap, W.number(value))
 	elseif self.page == "Gear" then
 		self.sub.Text = W.goldAmount(p:GetAttribute("Gold") or 0) .. " gold available"
-		if p:GetAttribute("ExpeditionStep") == "Upgrade" then
-			self.sub.Text ..= "  ·  Speed shortens every swing"
-		end
 	elseif self.page == "Jobs" then
 		self.sub.Text = (p:GetAttribute("Jobs") or 0) .. " / " .. #Expeditions.jobs .. " jobs collected"
 	elseif self.page == "Settings" then
@@ -787,6 +854,9 @@ function Menu:refresh()
 	end
 	for _, update in self.updates do
 		update()
+	end
+	if not self.closing and (self.page == "Gear" or self.page == "Sell") then
+		self:guideTrade()
 	end
 end
 return Menu

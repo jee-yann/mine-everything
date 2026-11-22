@@ -30,7 +30,7 @@
     "StarterGui": {
       "$ignoreUnknownInstances": true,
       "$properties": {
-        "ScreenOrientation": "Sensor"
+        "ScreenOrientation": "LandscapeSensor"
       }
     },
     "StarterPlayer": {

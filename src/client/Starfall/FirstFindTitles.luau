@@ -26,7 +26,7 @@ local cues = {
 	{
 		first = cuts.lode + 13,
 		last = cuts.challenge - 2,
-		lead = "MYTHICAL ORE",
+		lead = "THE RAREST ORE",
 		headline = "STARFALL",
 		x = 0.040,
 		y = 0.62,
@@ -43,7 +43,7 @@ local cues = {
 		first = cuts.portrait + 7,
 		last = cuts.commission - 2,
 		player = true,
-		headline = "FAULT READER",
+		headline = "GEM HUNTER",
 		x = 0.05,
 		y = 0.65,
 		w = 0.43,
@@ -58,8 +58,8 @@ local cues = {
 	{
 		first = cuts.challenge + 2,
 		last = cuts.handoff + 22,
-		lead = "BE FIRST TO",
-		headline = "REACH STARFALL.",
+		lead = "WILL YOU FIND",
+		headline = "STARFALL FIRST?",
 		x = 0.043,
 		y = 0.58,
 		w = 0.52,
@@ -99,7 +99,7 @@ end
 
 function Titles.new(safe, screen)
 	local viewer = game:GetService("Players").LocalPlayer
-	local name = if viewer then viewer.DisplayName else "Prospector"
+	local name = if viewer then viewer.DisplayName else "Miner"
 	local dusk = Instance.new("Frame")
 	dusk.Name, dusk.BackgroundColor3, dusk.BorderSizePixel = "Chapter exposure", Color3.fromHex("131D33"), 0
 	dusk.Size, dusk.ZIndex, dusk.Visible, dusk.Parent = UDim2.fromScale(1, 1), 5, false, screen

@@ -25,10 +25,10 @@ local function notice(wall, name)
 		text.Font, text.TextColor3 = font, Color3.fromHex(ink)
 		text.Text, text.Parent = words, gui
 	end
-	line("GUILD'S CHOICE", 0.29, 0.16, "7A382B", Enum.Font.GothamBold, 0.81)
+	line("THE MINERS PICKED", 0.29, 0.16, "7A382B", Enum.Font.GothamBold, 0.81)
 	line(name, 0.51, 0.26, "182E32", Enum.Font.BuilderSansExtraBold, 0.84)
-	line("MASTER PROSPECTOR", 0.75, 0.12, "704126", Enum.Font.GothamBold, 0.82)
-	line("CITRINE COVE   /   EXPEDITION LEAD", 0.89, 0.073, "6C5844", Enum.Font.RobotoMono, 0.92)
+	line("TO FIND STARFALL", 0.75, 0.12, "704126", Enum.Font.GothamBold, 0.82)
+	line("CITRINE COVE", 0.89, 0.073, "6C5844", Enum.Font.RobotoMono, 0.92)
 end
 
 local function badge(model, center)

@@ -61,8 +61,10 @@ function Profile.expeditionStep(p)
 	local trip = p.firstTrip
 	if trip.skipped then return "Skipped" end
 	if p.mined == 0 then return "Dig" end
-	if p.xp == 0 then return "Ore" end
-	if not trip.sold then return "Sell" end
+	if not trip.sold then
+		if p.xp == 0 and Profile.used(p) < Profile.stat(p, "Capacity") then return "Ore" end
+		return "Sell"
+	end
 	if not ownsUpgrade(p) then return "Upgrade" end
 	return if trip.tried then "Done" else "Return"
 end
@@ -230,8 +232,11 @@ function Profile.valid(p)
 			end
 		end
 	end
+	-- An earlier starter bag held 36 before skill bonuses. Its ore remains
+	-- sellable across rejoins. MiningService checks today's capacity on each cut.
+	local storedCapacity = if p.levels.Capacity == 1 then Skills.capacity(36, p.skills) else Profile.stat(p, "Capacity")
 	return (p.temper == nil or integer(p.temper, Materials.temperCharges + Skills.bonus(p.skills, "charges")))
-		and Profile.used(p) <= Profile.stat(p, "Capacity")
+		and Profile.used(p) <= storedCapacity
 end
 
 function Profile.upgradeSave(p)
