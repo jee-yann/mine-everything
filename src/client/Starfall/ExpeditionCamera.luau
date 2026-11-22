@@ -55,38 +55,55 @@ function Camera.frame(actor, _, motion)
 			V(1.48 - 0.46 * n + sweep, -0.74 + 0.19 * n - 0.50 * sweep, -5.35 + 0.22 * n)
 				* u * actor.portraitDistance * roomForPick)
 		lens, roll = 42 + 3 * sweep, -4.2 + 1.1 * n - 2 * sweep
-	elseif frame < cut.beacon then
-		local n = phase(cut.commission, cut.beacon)
-		local paper = marker.invitation.WorldCFrame
-		aim = paper * V(0, 0.03 * u, 0)
-		eye = paper * (V(-0.42 + 0.63 * n, 0.13, if portrait then 4.5 else 3.88 - 0.25 * n) * u)
-		lens, roll = 35.5, -2.8 + 1.5 * n
 	elseif age < -2 then
-		-- Both the character and the target remain visible whilst the viewer
-		-- chooses when to swing. The camera never tracks the jitter of a hand.
 		local n = phase(cut.beacon, cut.autoStrike + 8)
 		aim = face:Lerp(surface, 0.57)
 		eye = aim
 			+ route:VectorToWorldSpace(V(4.83 - 0.35 * n, 0.95 + 0.1 * n, 4.97 - 0.45 * n) * u * actor.portraitDistance)
 		lens, roll = 47, 1.2 - 1.0 * n
-	elseif age < 6 then
-		local kick = if motion then S.ease(age, 0, 1) * (1 - S.ease(age, 1, 6)) else 0
-		aim = surface + route.RightVector * 0.08 * u
-		eye = surface + route:VectorToWorldSpace(V(3.36 + 0.19 * kick, 0.92, 0.86) * u)
-		lens, roll = 40 + kick, -5.2 + 3.5 * kick
+		if frame < cut.beacon + 8 then
+			-- Start tight enough to read the dispatch. Pull back past the seal
+			-- to reveal the named miner working beside that same board.
+			local read = phase(cut.commission, cut.beacon)
+			local reveal = if motion then S.ease(frame, cut.beacon - 24, cut.beacon + 8)
+				elseif frame < cut.beacon then 0 else 1
+			local paper = marker.invitation.WorldCFrame
+			local closeAim = paper * V(0, 0.03 * u, 0)
+			local closeEye = paper * (V(-0.42 + 0.63 * read, 0.13, if portrait then 4.5 else 3.88 - 0.25 * read) * u)
+			eye, aim = closeEye:Lerp(eye, reveal), closeAim:Lerp(aim, reveal)
+			lens = 35.5 + (lens - 35.5) * reveal
+			local letterRoll = -2.8 + 1.5 * read
+			roll = letterRoll + (roll - letterRoll) * reveal
+		elseif motion and age >= -8 then
+			-- The player picks the onset. Tighten with the lift, keeping the
+			-- point of contact registered as the close-up takes over.
+			local lift = S.ease(age, -8, -2)
+			eye = eye:Lerp(surface + route:VectorToWorldSpace(V(3.36, 0.92, 0.86) * u), 0.24 * lift)
+			aim = aim:Lerp(surface, 0.48 * lift)
+			lens -= 2.8 * lift
+			roll -= 2.1 * lift
+		end
 	elseif age < 26 then
-		-- The inlays run out under the lens. Follow their bearing low enough
-		-- for the next arrow to silhouette against the yellow sand.
+		-- Hold on the steel for contact. Descend on the open side of the
+		-- station with the discharge, then follow the lit metal across sand.
 		local n = phase(contact + 6, contact + 26)
-		eye, aim = GalleryRun.waymarks(actor, n)
-		lens, roll = 49, -4.8 + 3.7 * n
+		local follow = if motion then S.ease(age, 2, 17) elseif age < 6 then 0 else 1
+		local kick = if motion then S.ease(age, 0, 1) * (1 - S.ease(age, 1, 6)) else 0
+		local closeEye = surface + route:VectorToWorldSpace(V(3.36 + 0.19 * kick, 0.92, 0.86) * u)
+		local closeAim = surface + route.RightVector * 0.08 * u
+		local lowEye, lowAim = GalleryRun.waymarks(actor, n)
+		eye, aim = closeEye:Lerp(lowEye, follow), closeAim:Lerp(lowAim, follow)
+		lens = 40 + kick + (9 - kick) * follow
+		roll = (-5.2 + 3.5 * kick) * (1 - follow) + (-4.8 + 3.7 * n) * follow
 	elseif frame < cut.lode then
 		eye, aim, lens, roll = GalleryRun.gallery(actor, frame, contact + 26, motion)
 	else
-		local n = phase(cut.challenge, cut.endBlend)
-		eye = route * (V(-3.62 + 0.63 * n, 1.67 + 0.35 * n, 6.65 + 0.54 * n) * u)
-		aim = route * V(0.32 * u, 1.27 * u, -18 - 1.9 * n)
-		lens, roll = 51, -1.3 * (1 - n)
+		-- Replace the tip of the lode with the miner's silhouette at the
+		-- same screen position. Keep retreating into the playable camera.
+		local reveal = if motion then 1 - math.exp(-math.max(0, frame - cut.challenge) / 21) else 0.7
+		eye = route * (V(-1.92 - 1.16 * reveal, 1.53 + 0.47 * reveal, 5.58 + 1.72 * reveal) * u)
+		aim = route * (V(0.20 + 0.12 * reveal, 1.39 - 0.12 * reveal, -13 - 6.9 * reveal) * u)
+		lens, roll = 48.5 + 2.5 * reveal, -1.8 * (1 - reveal)
 	end
 	actor.lens.FocusDistance = (aim - eye).Magnitude
 	return eye, aim, lens, if motion then math.rad(roll) else 0

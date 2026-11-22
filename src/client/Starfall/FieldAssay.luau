@@ -33,6 +33,49 @@ local function copyPick(character, u)
 	return pick, V(-0.54, 0.64, 0) * u, nil
 end
 
+-- Trace the moving steel from the beak's actual photographed positions. The
+-- arc stays registered to the equipped tool on long arms and on dropped frames.
+local function bladeStreak(tool, unit)
+	local steel = tool:FindFirstChildWhichIsA("BasePart")
+	local knots, strokes, history = {}, {}, {}
+	for i = 1, 5 do
+		local knot = Instance.new("Attachment")
+		knot.Name, knot.Parent = "Beak exposure", steel
+		knots[i] = knot
+		if i > 1 then
+			local stroke = Instance.new("Beam")
+			stroke.Name, stroke.Attachment0, stroke.Attachment1 = "Steel afterimage", knots[i - 1], knot
+			stroke.FaceCamera, stroke.LightEmission, stroke.LightInfluence = true, 0.82, 0
+			stroke.Color = ColorSequence.new(Color3.fromRGB(138, 194, 241), Color3.fromRGB(237, 255, 255))
+			stroke.Transparency = NumberSequence.new(0.22 + 0.55 * (i - 2) / 3)
+			stroke.Width0, stroke.Width1 = unit * (6 - i) * 0.063, unit * (5 - i) * 0.063
+			stroke.Segments, stroke.Enabled, stroke.Parent = 1, false, steel
+			strokes[i - 1] = stroke
+		end
+	end
+	return function(frame, tip)
+		if tip then
+			if history[1] and frame <= history[1].frame then
+				table.clear(history)
+			end
+			table.insert(history, 1, { frame = frame, point = tip })
+			while frame - history[#history].frame > 4 do
+				table.remove(history)
+			end
+		elseif #history == 0 then
+			return
+		else
+			table.clear(history)
+		end
+		for i, sample in history do
+			knots[i].WorldPosition = sample.point
+		end
+		for i, stroke in strokes do
+			stroke.Enabled = i < #history
+		end
+	end
+end
+
 function FieldAssay.new(arrival)
 	local char = arrival.root.Parent
 	local tool, tip, equipped = copyPick(char, arrival.unit)
@@ -61,6 +104,7 @@ function FieldAssay.new(arrival)
 	return setmetatable({
 		tool = tool,
 		tip = tip,
+		streak = bladeStreak(tool, arrival.unit),
 		alignment = CFrame.lookAt(Vector3.zero, tip, Vector3.zAxis):Inverse(),
 		equipped = equipped,
 		hand = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm"),
@@ -99,6 +143,7 @@ function FieldAssay:draw(a, frame, contact)
 	self:show(active)
 	self.tool.Parent = if active then a.stage else nil
 	if not active then
+		self.streak(frame, nil)
 		self.chips.Parent = nil
 		return
 	end
@@ -152,7 +197,10 @@ function FieldAssay:draw(a, frame, contact)
 	local endGrip = core - sweep * self.tip.Magnitude
 	local register = S.ease(age, if trial then -1 else -3, 0) * (1 - S.ease(age, 1, 7))
 	grip = grip:Lerp(endGrip, register)
-	self.tool:PivotTo(CFrame.lookAt(grip, grip + sweep, rest) * self.alignment)
+	local pose = CFrame.lookAt(grip, grip + sweep, rest) * self.alignment
+	self.tool:PivotTo(pose)
+	local tracing = a.motion and age >= apex - 1 and age <= 3
+	self.streak(frame, if tracing then pose * self.tip else nil)
 	if age >= 0 and age < (if trial then 28 else 17) then
 		self.chips.Parent = a.stage
 		local seconds = age / 24

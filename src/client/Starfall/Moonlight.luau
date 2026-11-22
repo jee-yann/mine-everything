@@ -1,9 +1,35 @@
 -- The lunar key is at grazing incidence. Sample its parallel rays at the
 -- terraces so the distant offshore camera can read individual cliff faces.
 local S = require(script.Parent.Scenery)
+local frames = require(script.Parent.ExposureSheet).frames
 local V, CF, hex = Vector3.new, CFrame.new, Color3.fromHex
 local Moonlight = {}
 Moonlight.__index = Moonlight
+
+-- Moonlit stone and foliage retain separate local values under a saturated
+-- blue key. Only the prehistoric models are exposed to this stock.
+local pigments = {
+	["Sandstone shoulder"] = "778AA3",
+	["Weathered sandstone"] = "9CA6B7",
+	["Mesa face"] = "898D9C",
+	["Coastal escarpment"] = "71819C",
+	["Turf lip"] = "668B89",
+	["Meadow cap"] = "668982",
+	["Ridgeline turf"] = "7D9890",
+	["Turf on the rim"] = "6D928A",
+	["Headland turf"] = "75958B",
+	["Grass shelf"] = "698D85",
+	["Sea-grape crown"] = "6B9090",
+	["Salt-pruned crown"] = "789698",
+	["Fir boughs"] = "67898D",
+	["Mountain flank"] = "77889D",
+	["Far slope"] = "7C8AA2",
+	["Summit facet"] = "98A8BC",
+	["Weathered beds"] = "638786",
+	["Mineral bedding"] = "7F8193",
+	["Fractured stone"] = "808899",
+	["Split face"] = "8591A5",
+}
 
 local shelves = {
 	V(-69, 62, -77),
@@ -39,7 +65,7 @@ local function nightSky()
 		local panel = S.part(model, "Sky panel", surface, size, "FFFFFF")
 		panel.Transparency, panel.CastShadow = 1, false
 		local gui = Instance.new("SurfaceGui")
-		gui.Face, gui.LightInfluence, gui.Brightness = Enum.NormalId.Front, 0, 1
+		gui.Face, gui.LightInfluence, gui.Brightness, gui.MaxDistance = Enum.NormalId.Front, 0, 1, 3600
 		gui.SizingMode, gui.CanvasSize, gui.Parent = Enum.SurfaceGuiSizingMode.FixedSize, Vector2.new(640, 960), panel
 		local face = Instance.new("Frame")
 		face.Size, face.BorderSizePixel, face.BackgroundColor3, face.Parent =
@@ -50,9 +76,9 @@ local function nightSky()
 			gradient.Color = ColorSequence.new({
 				ColorSequenceKeypoint.new(0, hex("141F38")),
 				ColorSequenceKeypoint.new(0.62, hex("182942")),
-				ColorSequenceKeypoint.new(0.73, hex("2B3F5B")),
-				ColorSequenceKeypoint.new(0.79, hex("495873")),
-				ColorSequenceKeypoint.new(0.82, hex("2F4262")),
+				ColorSequenceKeypoint.new(0.73, hex("25374D")),
+				ColorSequenceKeypoint.new(0.79, hex("314056")),
+				ColorSequenceKeypoint.new(0.82, hex("27364B")),
 				ColorSequenceKeypoint.new(1, hex("253955")),
 			})
 			gradient.Parent = face
@@ -77,7 +103,7 @@ function Moonlight.new(stage)
 		mount.Transparency, mount.CastShadow = 1, false
 		local key = Instance.new("SpotLight")
 		key.Name, key.Face, key.Angle, key.Range = "Light along the ledge", Enum.NormalId.Front, 103, 60
-		key.Color = hex(if i < 4 then "BEDAFF" else "92BDF8")
+		key.Color = hex(if i < 4 then "CBDFFF" else "A4CDFF")
 		key.Shadows = true
 		key.Parent = mount
 		table.insert(beams, { mount = mount, light = key, target = target })
@@ -98,10 +124,125 @@ function Moonlight.new(stage)
 		part.CastShadow = false
 		table.insert(ripples, { part = part, n = n, side = rand:NextNumber(-1, 1), phase = rand:NextNumber(0, 6.28) })
 	end
-	return setmetatable({ stage = stage, root = root, sky = nightSky(), beams = beams, ripples = ripples }, Moonlight)
+	local relief = script.Parent.MoonlitShelves:Clone()
+	local ink = relief:GetChildren()
+	for _, facet in ink do
+		if facet.Name == "Umbra" then
+			facet.Color = hex("202B45")
+		else
+			facet.Material = Enum.Material.Neon
+			facet.Color = hex(if facet.Name == "LunarGrass" then "668783" else "889EAE")
+		end
+	end
+	-- Paint atmospheric perspective beyond the island but inside the
+	-- low-quality far clip. The lower edge dissolves over the offshore water.
+	local aprons = S.group("Distant nocturnal strait")
+	local horizon = V(-223, 87, -90)
+	local haze = S.part(
+		aprons,
+		"Marine horizon",
+		CFrame.lookAt(horizon, horizon + V(0.88, 0, 0.46)),
+		V(1500, 130, 0.06),
+		"FFFFFF"
+	)
+	haze.Transparency, haze.CastShadow = 1, false
+	local board = Instance.new("SurfaceGui")
+	board.Face, board.LightInfluence, board.Brightness, board.MaxDistance = Enum.NormalId.Front, 0, 1, 3600
+	board.SizingMode, board.CanvasSize, board.Parent = Enum.SurfaceGuiSizingMode.FixedSize, Vector2.new(40, 512), haze
+	local wash = Instance.new("Frame")
+	wash.Size, wash.BorderSizePixel, wash.BackgroundColor3, wash.Parent =
+		UDim2.fromScale(1, 1), 0, Color3.new(1, 1, 1), board
+	local fade = Instance.new("UIGradient")
+	fade.Rotation = 90
+	fade.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, hex("192941")),
+		ColorSequenceKeypoint.new(0.35, hex("425571")),
+		ColorSequenceKeypoint.new(0.44, hex("607183")),
+		ColorSequenceKeypoint.new(0.53, hex("465976")),
+		ColorSequenceKeypoint.new(0.67, hex("263650")),
+		ColorSequenceKeypoint.new(0.82, hex("111B31")),
+		ColorSequenceKeypoint.new(1, hex("0A1023")),
+	})
+	fade.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.16, 1),
+		NumberSequenceKeypoint.new(0.39, 0),
+		NumberSequenceKeypoint.new(0.80, 0),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	fade.Parent = wash
+	local chaseHorizon = haze:Clone()
+	chaseHorizon.Name = "Aerial sea haze"
+	chaseHorizon.Size = V(1350, 152, 0.06)
+	return setmetatable({
+		stage = stage,
+		root = root,
+		sky = nightSky(),
+		beams = beams,
+		ripples = ripples,
+		relief = relief,
+		ink = ink,
+		aprons = aprons,
+		hazeSurface = board,
+		hazeWash = wash,
+		chaseHorizon = chaseHorizon,
+		tint = {},
+	}, Moonlight)
 end
 
-function Moonlight:draw(base, direction, observer, frame, level, night)
+function Moonlight:relight(base, frame)
+	local strength = 1 - S.ease(frame, 237, 249)
+	if self.strength == strength and self.island then
+		return
+	end
+	local island = self.stage:FindFirstChild("Citrine Cove through the ages")
+	if island and not self.island and frame < 240 then
+		for _, piece in island:GetDescendants() do
+			local swatch = pigments[piece.Name]
+			if swatch and piece:IsA("BasePart") then
+				local moon = piece.Color:Lerp(hex(swatch), 0.73)
+				if piece:IsA("WedgePart") and piece.Size.X < 0.20 then
+					local n = piece.CFrame.RightVector
+					if n.Y < 0 then
+						n = -n
+					end
+					local incidence = n:Dot(base:VectorToWorldSpace(V(-0.959, 0.218, 0.181).Unit))
+					moon = hex("3D536F"):Lerp(moon:Lerp(hex("D4E0DE"), 0.43), math.clamp(0.40 + incidence * 0.80, 0, 1))
+				end
+				table.insert(self.tint, { part = piece, day = piece.Color, moon = moon })
+			end
+		end
+		self.island = island
+	end
+	self.relief.Parent = if strength > 0 then self.stage else nil
+	if not self.placed then
+		self.relief:PivotTo(base)
+		self.aprons:PivotTo(base)
+		self.placed = true
+	end
+	for _, facet in self.ink do
+		local amount = if facet.Name == "Umbra" then 0.30 else 0.49
+		facet.Transparency = 1 - strength * amount
+	end
+	local tinted = frame < 240
+	if self.island and self.tinted ~= tinted then
+		for _, swatch in self.tint do
+			swatch.part.Color = if tinted then swatch.moon else swatch.day
+		end
+		self.tinted = tinted
+	end
+	self.strength = strength
+end
+
+function Moonlight:draw(base, direction, observer, frame, level, night, heat, ash)
+	self.frame = frame
+	self:relight(base, frame)
+	self.aprons.Parent = if frame >= frames.coast and frame < frames.aftermath then self.stage else nil
+	if self.aprons.Parent then
+		self.hazeWash.BackgroundColor3 =
+			Color3.new(1, 1, 1):Lerp(hex("F2D5BF"), 0.60 * ash):Lerp(hex("FFD3AC"), 0.65 * heat)
+		self.hazeSurface.Brightness = 1 + 0.20 * ash + 0.48 * heat
+	end
 	self.sky.Parent = if night then self.stage else nil
 	if night and self.sky:GetPivot() ~= base then
 		self.sky:PivotTo(base)
@@ -114,12 +255,12 @@ function Moonlight:draw(base, direction, observer, frame, level, night)
 	-- stable while the camera photographs light moving through the trees.
 	if self.direction ~= direction or self.base ~= base then
 		for _, v in self.beams do
-			v.mount.CFrame = base * CFrame.lookAt(v.target + direction * 39, v.target)
+			v.mount.CFrame = base * CFrame.lookAt(v.target + direction * 31, v.target)
 		end
 		self.direction, self.base = direction, base
 	end
 	for _, v in self.beams do
-		v.light.Brightness = 3.8 * level
+		v.light.Brightness = 8.3 * level
 	end
 	local axis = V(direction.X, 0, direction.Z).Unit
 	local across = axis:Cross(Vector3.yAxis)
@@ -134,7 +275,31 @@ function Moonlight:draw(base, direction, observer, frame, level, night)
 	end
 end
 
+-- The orbit sweeps through nearly a half turn above the finite ocean. Keep
+-- the aerial haze on the true level horizon as the photographic roll changes.
+function Moonlight:focus(camera, base)
+	local bank = self.chaseHorizon
+	if self.frame < frames.flyby - 5 or self.frame >= frames.coast then
+		bank.Parent = nil
+		return
+	end
+	local eye = base:PointToObjectSpace(camera.CFrame.Position)
+	local view = base:VectorToObjectSpace(camera.CFrame.LookVector)
+	local bearing = V(view.X, 0, view.Z)
+	if bearing.Magnitude < 0.001 then
+		bank.Parent = nil
+		return
+	end
+	bearing = bearing.Unit
+	local centre = V(eye.X, eye.Y - (eye.Y - 20.3) * 0.36, eye.Z) + bearing * 410
+	bank.CFrame = base * CFrame.lookAt(centre, centre - bearing)
+	bank.Parent = self.stage
+end
+
 function Moonlight:Destroy()
+	self.chaseHorizon:Destroy()
+	self.relief:Destroy()
+	self.aprons:Destroy()
 	self.sky:Destroy()
 	self.root:Destroy()
 end

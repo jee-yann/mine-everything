@@ -1,4 +1,5 @@
 local S = require(script.Parent.Scenery)
+local BeaconSignal = require(script.Parent.BeaconSignal)
 local V, CF = Vector3.new, CFrame.new
 local F = require(script.Parent.ExposureSheet).frames
 local metal = Enum.Material.Metal
@@ -209,6 +210,14 @@ function ExpeditionMarker.new(name)
 	badge(model, seal + V(0, 0, 0.041))
 	local arms = {}
 	bezel(model, arms)
+	local faces = {}
+	for _, p in model:GetDescendants() do
+		if p.Name == "Quartz window" or p.Name == "Octagonal table" or p.Name == "Violet cabochon" then
+			local color = if p.Name == "Octagonal table" then "EAFEFF"
+				elseif p.Name == "Quartz window" then "B1ACFF" else "8954D0"
+			table.insert(faces, { part = p, base = p.Color, lit = Color3.fromHex(color), material = p.Material })
+		end
+	end
 	local veins = {
 		lanternLine(model, "Sapphire thread", {
 			V(-0.27, -0.17, 0.362),
@@ -241,6 +250,8 @@ function ExpeditionMarker.new(name)
 		seal = anchor(base, "Twin-pick crest", seal),
 		route = route,
 		runnels = lamps,
+		faces = faces,
+		signal = BeaconSignal.new(),
 	}, ExpeditionMarker)
 end
 
@@ -304,6 +315,7 @@ function ExpeditionMarker:place(a)
 		lamp.fade = nil
 	end
 	self.exit = self.runnels[#self.runnels].at
+	self.signal:place(self, a)
 	self.model.Parent, self.route.Parent = a.stage, a.stage
 end
 
@@ -315,11 +327,21 @@ local function energized(parts, strength)
 	end
 end
 function ExpeditionMarker:draw(a, frame, contact)
-	if frame < F.commission or frame >= F.lode + 4 then
+	if frame < F.commission or frame >= F.lode + 22 then
 		self:hide()
 		return
 	end
 	local age = frame - contact
+	self.signalPosition = self.signal:draw(a.stage, frame, contact, a.motion)
+	local heat = if age < 0 then 0 elseif a.motion then 0.26 + 0.74 * (1 - S.ease(age, 2, 15))
+		else 0.64 * S.ease(age, 0, 5)
+	if self.heat ~= heat then
+		for _, face in self.faces do
+			face.part.Color = face.base:Lerp(face.lit, heat)
+			face.part.Material = if heat > 0.035 then Enum.Material.Neon else face.material
+		end
+		self.heat = heat
+	end
 	local unlock = S.ease(age, 0, 4)
 	for _, arm in self.arms do
 		arm.jaw:PivotTo(self.site * CF(arm.hinge * self.unit) * CFrame.Angles(0, 0, arm.swing * unlock * 0.64))
@@ -330,7 +352,7 @@ function ExpeditionMarker:draw(a, frame, contact)
 		energized(strand, S.ease(age, i - 2, i + 2) * (1 - S.ease(frame, F.lode - 7, F.lode)))
 	end
 	for i, lamp in self.runnels do
-		local first = 1 + (i - 1) * 2.9
+		local first = 3 + (i - 1) * 3
 		local rise = S.ease(age, first, first + 2)
 		local burst = rise * (1 - S.ease(age, first + 2, first + 7))
 		local fade = S.ease(frame, F.lode - 12 + (#self.runnels - i) * 1.8, F.lode - 6 + (#self.runnels - i) * 1.8)
@@ -358,15 +380,18 @@ function ExpeditionMarker:draw(a, frame, contact)
 	end
 	local onStage = if frame >= F.commission and age < 26 and frame < F.lode then a.stage else nil
 	self.model.Parent, self.foundation.Parent = onStage, onStage
-	self.route.Parent = if frame >= F.beacon and frame < F.lode + 4 then a.stage else nil
+	self.route.Parent = if frame >= F.beacon - 24 and frame < F.lode + 4 then a.stage else nil
 end
 function ExpeditionMarker:hide()
+	self.signalPosition = nil
+	self.signal:hide()
 	if self.foundation then
 		self.foundation.Parent = nil
 	end
 	self.model.Parent, self.route.Parent = nil, nil
 end
 function ExpeditionMarker:Destroy()
+	self.signal:Destroy()
 	if self.foundation then
 		self.foundation:Destroy()
 	end

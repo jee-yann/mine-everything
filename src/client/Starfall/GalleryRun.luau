@@ -50,9 +50,9 @@ local eyeRail = {
 	{ Run.shaft * matchEye, Run.shaft:VectorToWorldSpace(velocity), cut.lode },
 }
 local lookRail = {
-	{ V(-0.5, 6.65, -1.7), V(-0.01, 0.04, -0.75), cut.mineRun - 12 },
-	{ V(-2.5, 5.60, -15), V(-0.29, -0.11, -1.23), cut.mineRun },
-	{ V(-9.35, 1.64, -39.2), V(-0.15, -0.15, -0.61), cut.mineRun + 18 },
+	{ V(-0.5, 5.10, -1.7), V(-0.01, 0.02, -0.75), cut.mineRun - 12 },
+	{ V(-2.5, 3.75, -15), V(-0.29, -0.11, -1.23), cut.mineRun },
+	{ V(-9.35, 1.24, -39.2), V(-0.15, -0.13, -0.61), cut.mineRun + 18 },
 	{ V(-9.4, -0.60, -39.62), V(0.018, -0.40, 0.015), cut.lode - 10 },
 	{ Run.shaft * matchLook, Run.shaft:VectorToWorldSpace(V(0.045, 0, -0.62)), cut.lode },
 }
@@ -60,7 +60,8 @@ local deepEye = {
 	{ matchEye, velocity, cut.lode },
 	{ V(-0.40, 0.93, 10.35), V(-0.09, 0.059, -0.56), cut.lode + 14 },
 	{ V(-1.58, 0.72, 7.28), V(0.016, 0.009, -0.031), cut.lode + 32 },
-	{ V(-0.58, 0.96, 6.40), V(0, 0, -0.006), cut.challenge - 1 },
+	{ V(-0.76, 0.93, 6.45), V(0.023, 0.002, 0), cut.challenge - 17 },
+	{ V(-0.43, 1.04, 7.03), V(0.018, 0.008, 0.075), cut.challenge - 1 },
 }
 local deepLook = {
 	{ matchLook, V(0.045, 0, -0.62), cut.lode },
@@ -75,7 +76,7 @@ function Run.waymarks(actor, n)
 	local start = V(route.X, exit.Y, route.Z)
 	local line = start:Lerp(exit, 0.08 + 0.65 * n)
 	local aim = line + route.LookVector * (4.6 * u) + V(0, (0.25 + 0.82 * n) * u, 0)
-	local eye = line + route:VectorToWorldSpace(V(-2.3 + 1.05 * n, 2.12 - 0.63 * n, 2.8) * u)
+	local eye = line + route:VectorToWorldSpace(V(2.55 - 1.22 * n, 2.12 - 0.63 * n, 2.8) * u)
 	return eye, aim
 end
 

@@ -114,6 +114,8 @@ local function check(motion, live, remote)
 			"the island must be ahead of the chase camera"
 		)
 	end
+	film:expose(sheet.frames.coast - 1, false)
+	assert(film.daylight.lunar.chaseHorizon.Parent == stage, "missing far water in the aerial chase")
 	for picture = sheet.frames.coast, sheet.frames.terminal - 1 do
 		film:expose(picture, false)
 		assert(
@@ -125,6 +127,20 @@ local function check(motion, live, remote)
 	assert(film.daylight.moon.board.Enabled and film.daylight.lunar.root.Parent == stage, "moonlit coast")
 	assert(lighting.Ambient.B > lighting.Ambient.R and lighting.ShadowSoftness < 0.25)
 	assert(film.daylight.lunar.beams[1].light.Shadows and lighting.Ambient.R < 0.2, "crisp shadows in the wide")
+	local lunar = film.daylight.lunar
+	local sunward = lunar.relief:FindFirstChild("LunarGrass")
+	local shade = lunar.relief:FindFirstChild("Umbra")
+	assert(
+		lunar.relief.Parent == stage and lunar.aprons.Parent == stage and not lunar.chaseHorizon.Parent,
+		"offshore lens lost the moonlit land or the matched horizon"
+	)
+	assert(sunward and shade and sunward.Transparency < 0.7 and shade.Transparency < 0.8, "lost terrain cast shadows")
+	local disc = cam.CFrame:PointToObjectSpace(film.daylight.moon.part.Position)
+	local halfHeight = -disc.Z * math.tan(math.rad(cam.FieldOfView / 2))
+	local discTop = 0.5 - (disc.Y + film.daylight.moon.board.Size.Y.Scale / 2) / (2 * halfHeight)
+	assert(disc.Z < 0 and discTop > 0.085 and discTop < 0.6, "offshore moon clipped by the upper matte")
+	local moonlitStone = lunar.tint[1]
+	assert(moonlitStone and moonlitStone.part.Color ~= moonlitStone.day, "missing private night palette")
 	local previousHeat = cold
 	local phone = { camera = { ViewportSize = Vector2.new(390, 844) }, motion = motion }
 	function film:frame(...)
@@ -160,6 +176,7 @@ local function check(motion, live, remote)
 	assert(water and water.part.Color ~= water.base, "the surrounding sea must catch the trail")
 	film:expose(sheet.frames.contact, false)
 	assert(not film.impact.shell.Parent and not film.impact.entry.root.Parent, "meteor survived contact")
+	assert(moonlitStone.part.Color == moonlitStone.day and lunar.aprons.Parent == stage, "contact broke the held horizon")
 	local sites = film.island.faults.sites
 	local near, far = sites[1], sites[1]
 	for _, v in sites do
@@ -178,6 +195,7 @@ local function check(motion, live, remote)
 	assert(outerSlab.where == "in flight" and far.bed.Parent, "outer ledge must separate from its footing")
 	film:draw(10.5, false)
 	assert(water.part.Color == water.night, "water must return to moonlight when the fire reflection passes")
+	assert(not lunar.relief.Parent and not lunar.aprons.Parent, "offshore lighting survived the cut to the crater")
 	assert(
 		outerSlab.where == "landed" and (outerSlab.rest.Position - outerSlab.target).Magnitude > 12,
 		"missing lasting displacement"
@@ -416,9 +434,12 @@ local function check(motion, live, remote)
 	assert(not station.invitation:IsDescendantOf(stage), "the commission must follow the trial")
 	local gem = proof.gem.WorldPosition
 	local shut = proof.left.CFrame
-	film:expose(cuts.proofStrike, live)
+	for picture = cuts.proofStrike - 4, cuts.proofStrike do film:expose(picture, live) end
+	local glint = tool.tool:FindFirstChild("Steel afterimage", true)
+	assert(glint and glint.Enabled == motion, "only the moving pick draws an arc")
 	assert(((tool.tool:GetPivot() * tool.tip) - proof.seam.WorldPosition).Magnitude < 0.04, "pick missed the natural seam")
 	film:expose(cuts.revealGem + 6, live)
+	assert(not glint.Enabled, "steel afterimage still covering the emerald")
 	assert((proof.left.Position - shut.Position).Magnitude > 0.35, "the fracture must open")
 	assert((proof.gem.WorldPosition - gem).Magnitude < 0.001, "extract the crystal intact")
 	film:expose(cuts.portrait + 12, live)
@@ -426,6 +447,24 @@ local function check(motion, live, remote)
 	assert(film.portrait.root.Visible and film.portrait.subject.world:FindFirstChild(film.arrival.root.Parent.Name),
 		"identity card must show this miner")
 	assert(film.portrait.subject.world:FindFirstChild(tool.tool.Name), "portrait lost the shouldered pick")
+	if motion then
+		local function checkTracking(picture, label)
+			film:expose(picture - 1, live)
+			local before = cam.CFrame
+			film:expose(picture, live)
+			local at = cam.CFrame
+			film:expose(picture + 1, live)
+			local after = cam.CFrame
+			local incoming, outgoing = at.Position - before.Position, after.Position - at.Position
+			assert(incoming:Dot(outgoing) > 0, label .. " must keep moving through the edit")
+			assert(math.max(incoming.Magnitude, outgoing.Magnitude) < 0.8 * film.arrival.unit,
+				label .. " jumped between adjacent exposures")
+			assert(before.LookVector:Dot(at.LookVector) > 0.94 and at.LookVector:Dot(after.LookVector) > 0.94,
+				label .. " lost its sightline")
+		end
+		checkTracking(cuts.beacon, "dispatch pullback")
+		checkTracking(cuts.autoStrike + 8 + 6, "camera following the beacon discharge")
+	end
 	film:expose(cuts.commission, live)
 	assert(not proof.model.Parent and not film.portrait.root.Visible and station.invitation:IsDescendantOf(stage))
 	local dispatch = station.model["Signed field dispatch"]["Guild commission"]
@@ -433,12 +472,23 @@ local function check(motion, live, remote)
 	assert(not film.arrival:requestStrike(cuts.prompt - 1))
 	local offered = cuts.prompt + 14
 	film:expose(offered, live)
+	assert(not station.signalPosition and not station.signal.root.Parent and station.route.Parent == stage,
+		"the vanes must be physically present and cold until the pick lands")
 	assert(film.arrival:requestStrike(offered) and not film.arrival:requestStrike(offered + 1), "one strike per expedition")
 	film:expose(offered + 8, live)
 	assert(film.arrival.contactFrame == offered + 8 and tool.chips.Parent == stage)
 	assert(((tool.tool:GetPivot() * tool.tip) - station.core.WorldPosition).Magnitude < 0.035, "pick must hit the route seal")
+	assert((station.signalPosition - station.core.WorldPosition).Magnitude < 0.035, "the live contact must start the signal at the struck facet")
+	assert(station.signal.sparks[1].ray.Enabled == motion, "reduced motion must suppress flying strike sparks")
 	film:expose(offered + 27, live)
 	assert(station.runnels[6].strokes[1].Material == Enum.Material.Neon, "the strike lights the far end of the route")
+	assert((station.signalPosition - station.runnels[6].at.WorldPosition).Magnitude < 0.34,
+		"nineteen pictures after a player-timed strike the pulse reaches the sixth vane")
+	assert(station.signal.trail[2].wire.Enabled == motion, "reduced motion must retain only the calm ground trace")
+	film:expose(cuts.mineRun, live)
+	local bearer = require(source.GalleryRun).origin(film.arrival)
+	assert((station.signalPosition - bearer - Vector3.new(0.14, 1.29, -0.42)).Magnitude < 0.035,
+		"the energy head must cross the actual mine sill on the approach")
 	local run = require(source.GalleryRun)
 	local origin = run.origin(film.arrival)
 	local mouth = origin + run.mouth
@@ -479,6 +529,8 @@ local function check(motion, live, remote)
 	local approach = lip:ToObjectSpace(cam.CFrame)
 	film:expose(cuts.lode, live)
 	local chamber = film.lode.model:GetPivot():ToObjectSpace(cam.CFrame)
+	local deepSignal = film.lode.at:PointToObjectSpace(station.signalPosition)
+	assert((deepSignal - Vector3.new(0.30, 2.88, 16.11)).Magnitude < 0.035, "the flame must continue down the same wall of the shaft")
 	for item, original in photographed do
 		assert(item.LocalTransparencyModifier == original, "transition must restore each floor brick")
 	end

@@ -180,7 +180,8 @@ function Opening.play(player, net, hud)
 		end
 		local mix = Audio.origins(screen)
 		local function sound(elapsed)
-			mix(elapsed, film.arrival and film.arrival.contactFrame)
+			local arrival = film.arrival
+			mix(elapsed, arrival and arrival.contactFrame, arrival and arrival.marker.signalPosition)
 		end
 		local function continueSetup()
 			Run.PreRender:Wait()

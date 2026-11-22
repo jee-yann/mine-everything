@@ -6,7 +6,9 @@ local sheet = require(script.Parent.ExposureSheet)
 local terminal = require(script.Parent.TerminalLight)
 local Moonlight = require(script.Parent.Moonlight)
 local V, CF, hex = Vector3.new, CFrame.new, Color3.fromHex
-local offshoreMoon = V(-0.933, 0.309, 0.183).Unit
+-- This bearing is shared by the photographed disc, real shadow lights and
+-- the native receiver mesh baked from the cove by bake_moonlight.py.
+local offshoreMoon = V(-0.959, 0.218, 0.181).Unit
 local ancientHour = 2.65
 local Daylight = {}
 Daylight.__index = Daylight
@@ -223,7 +225,9 @@ function Daylight:draw(t, motion, base, masterFrame)
 		clock.breakerEye,
 		frame,
 		ancient * (1 - 0.88 * hot) * (1 - 0.71 * ash),
-		moonKey
+		moonKey,
+		hot,
+		ash
 	)
 	if self.air then
 		self.air.Color = self.airColor:Lerp(
@@ -305,6 +309,7 @@ end
 -- Focus through the ash onto the near bank, then allow the violet fissure to
 -- resolve. Optical distances follow the actual camera, including a phone's framing.
 function Daylight:focus(camera, base, t, motion)
+	self.lunar:focus(camera, base)
 	local depth = self.depth
 	depth.Enabled = t >= clock.aftermath and t < 12.56
 	if not depth.Enabled then

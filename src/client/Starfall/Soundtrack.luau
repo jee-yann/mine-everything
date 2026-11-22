@@ -218,7 +218,10 @@ local function arrange()
 	note("prism", (frame.revealGem + 14) / fps, 90, 0.52, 0.35, "right")
 	play("lift", (frame.portrait + 2) / fps, 0.14, 1.18, 0.95)
 	play("paper", frame.commission / fps, 0.15, 0.91, 0.88)
+	note("prism", (frame.mineRun - 15) / fps, 86, 0.43, 0.42, "signal")
 	play("tunnel", frame.mineRun / fps, (frame.lode - frame.mineRun + 3) / fps, 0.75, 1.05, 1.88, "inbound")
+	-- The buried fault answers the struck beacon one octave lower.
+	note("ring", (frame.lode - 5) / fps, 67, 0.94, 0.62, "signal")
 	play("drift", (frame.lode - 2) / fps, 1.39, 0.62, 0.70, 0.48)
 	note("prism", (frame.lode + 4) / fps, 69, 0.88, 0.51, "left")
 	note("prism", (frame.lode + 32) / fps, 88, 0.63, 0.90, "right")
@@ -248,7 +251,7 @@ local function arrange()
 	play("chip", (automaticContact + 5) / fps, 0.10, 1.83, 0.53, 1.24, "left")
 	note("prism", (automaticContact + 6) / fps, 74, 0.24, 0.55, "left")
 	note("prism", (automaticContact + 11) / fps, 81, 0.39, 0.65)
-	note("prism", (automaticContact + 15) / fps, 88, 0.49, 0.50, "right")
+	note("prism", (automaticContact + 19) / fps, 88, 0.49, 0.50, "signal")
 	for i = hitIndex, #cues do
 		cues[i].strike = true
 	end
@@ -333,7 +336,7 @@ return function(parent, musicGroup, effectsGroup)
 	local rig = Instance.new("Folder")
 	rig.Name, rig.Parent = "Cinematic sound sources", workspace.CurrentCamera
 	local anchors = {}
-	for _, side in { "left", "right", "outbound", "inbound" } do
+	for _, side in { "left", "right", "outbound", "inbound", "signal" } do
 		local point = Instance.new("Part")
 		point.Name, point.Anchored, point.Transparency = side, true, 1
 		point.CanQuery, point.CanTouch, point.CanCollide, point.CastShadow = false, false, false, false
@@ -411,7 +414,7 @@ return function(parent, musicGroup, effectsGroup)
 	local function duck(t, reach)
 		return math.clamp(math.min((t - reach + 0.09) / 0.09, (reach + 0.30 - t) / 0.26), 0, 1)
 	end
-	return function(t, strikeFrame)
+	return function(t, strikeFrame, signalPosition)
 		if not strikeAt and (strikeFrame ~= nil or t >= (automaticContact - backswing) / fps) then
 			strikeAt = (strikeFrame or automaticContact) / fps
 			for _, event in strikes do
@@ -454,6 +457,9 @@ return function(parent, musicGroup, effectsGroup)
 		local camera = workspace.CurrentCamera
 		if camera then
 			local view = camera.CFrame
+			if signalPosition then
+				anchors.signal.Position = signalPosition
+			end
 			anchors.left.Position = view * Vector3.new(-9, 0, -13)
 			anchors.right.Position = view * Vector3.new(10, 0, -12)
 			if t >= passStart and t <= passEnd then
