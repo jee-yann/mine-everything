@@ -187,7 +187,24 @@ function Opening.play(player, net, hud)
 			Run.PreRender:Wait()
 			return not skipped and player.Character == char and root.Parent and camera == workspace.CurrentCamera
 		end
-		film = Film.new(stage, screen, camera, h, motion, continueSetup)
+		local nightLook
+		local previewFrame = if Run:IsStudio() then workspace:GetAttribute("StarfallPreviewFrame") else nil
+		if typeof(previewFrame) == "number" and previewFrame >= 0 then
+			nightLook = require(script.StudioPreview)(previewFrame, continueSetup, function(picture, look)
+				if film then
+					film:Destroy()
+					film = nil
+				end
+				film = Film.new(stage, screen, camera, h, motion, nil, look)
+				local black = film:expose(picture, liveCove() ~= nil)
+				titles(film.sceneTime, black, picture, motion, film.arrival.contactFrame)
+			end)
+			if film then
+				film:Destroy()
+				film = nil
+			end
+		end
+		film = Film.new(stage, screen, camera, h, motion, continueSetup, nightLook)
 		if film.impact then
 			film:expose(0, false)
 			titles(0, 0)

@@ -16,7 +16,8 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 from shapely import constrained_delaunay_triangles
-from shapely.geometry import MultiPoint
+from shapely.affinity import translate
+from shapely.geometry import MultiPoint, Point
 from shapely.ops import unary_union
 
 
@@ -65,8 +66,9 @@ def survey(place):
     parcels = [p for p in source.findall("Item") if name(p).startswith("0000_")]
     grove = next(p for p in source.findall("Item") if name(p) == "Wind trees")
     parcels.extend(p for p in grove.findall("Item") if name(p).startswith("0.00_"))
-    casters, surfaces = [], defaultdict(list)
+    casters, surfaces, crowns = [], defaultdict(list), []
     for parcel in parcels:
+        leaf_faces = []
         for part in parcel.findall("Item"):
             label = name(part)
             if label not in CASTERS and label not in RECEIVERS:
@@ -80,12 +82,17 @@ def survey(place):
                 continue
             if label in CASTERS:
                 casters.append((height, points))
+            if label in {"Sea-grape crown", "Salt-pruned crown"}:
+                top_face = points[BOX[:, 1] > 0][[0, 1, 3, 2]]
+                leaf_faces.append((height, top_face, points))
             if label in RECEIVERS:
                 top = points[abs(points[:, 1] - height) < 0.014][:, [0, 2]]
                 face = MultiPoint(top).convex_hull
                 if face.area > 1:
                     surfaces[round(height, 2), label].append(face)
-    return casters, surfaces
+        if leaf_faces:
+            crowns.append(max(leaf_faces, key=lambda face: face[0]))
+    return casters, surfaces, crowns
 
 
 def footprint(corners, height, bounds):
@@ -129,8 +136,35 @@ def triangulate(shape, height):
     return faces
 
 
+def canopy_light(crowns, casters):
+    # Each tree presents a single photographed crown to the distant source.
+    # Reject turned-away and occluded faces; keep the actual tilt of its leaves.
+    lit = []
+    for _, face, owner in crowns:
+        normal = np.cross(face[1] - face[0], face[2] - face[0])
+        normal /= np.linalg.norm(normal)
+        if normal[1] < 0:
+            normal *= -1
+        if normal @ BEARING < 0.21:
+            continue
+        center = face.mean(axis=0)
+        probe = Point(center[[0, 2]])
+        shaded = False
+        for highest, corners in casters:
+            if corners is owner or highest <= center[1] + 0.12:
+                continue
+            mask = footprint(corners, center[1], probe.bounds)
+            if mask is not None and mask.covers(probe):
+                shaded = True
+                break
+        if not shaded:
+            skin = np.round(face + normal * 0.06, 3)
+            lit.extend((skin[[0, 1, 2]].tolist(), skin[[0, 2, 3]].tolist()))
+    return lit
+
+
 def cast(place):
-    casters, surfaces = survey(place)
+    casters, surfaces, crowns = survey(place)
     regions = []
     for (height, label), parts in surfaces.items():
         ledge = unary_union(parts).simplify(0.08)
@@ -144,10 +178,17 @@ def cast(place):
             continue
         shadow = unary_union(casts)
         lit = "LunarShingle" if label in SHINGLE else "LunarGrass"
-        for role, shape in (("Umbra", ledge.intersection(shadow)), (lit, ledge.difference(shadow))):
+        # Parallel light catches only the windward lip of a terrace. Moving
+        # its footprint down-light leaves a narrow contour on the source side.
+        inner = translate(ledge, xoff=-BEARING[0] * 1.25, yoff=-BEARING[2] * 1.25)
+        rim = ledge.difference(inner).difference(shadow)
+        for role, shape in (("Umbra", ledge.intersection(shadow)), (lit, rim)):
             triangles = triangulate(shape, height)
             if triangles:
                 regions.append((role, triangles))
+    crowns = canopy_light(crowns, casters)
+    if crowns:
+        regions.append(("Canopy", crowns))
     return regions
 
 

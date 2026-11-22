@@ -1,4 +1,4 @@
--- Studio-only cooker for the matched capstones and their exposed bedrock.
+-- Embed the surveyed tree shadows and narrow, moon-facing shelf lips.
 local data = game:GetService("HttpService"):JSONDecode(RELIEF_FACETS)
 local geom = game:GetService("GeometryService")
 local options = {
@@ -39,7 +39,7 @@ local function triangle(list, a, b, c)
 end
 
 -- CSG is cooked offline; all clients get the same native mesh at any quality.
-local colors = { Umbra = "152035", LunarGrass = "87B7D3", LunarShingle = "A0B6CF" }
+local colors = { Umbra = "152035", LunarGrass = "87B7D3", LunarShingle = "A0B6CF", Canopy = "758392" }
 for _, region in data do
 	local role, facets = region[1], region[2]
 	for start = 1, #facets, 65 do

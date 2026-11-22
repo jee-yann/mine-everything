@@ -13,7 +13,7 @@ Citrine Cove is a multiplayer Roblox mining simulator. Aim at a cave wall or flo
 
 The place uses each player’s equipped Roblox avatar. If Studio Output reports an authentication error for a missing head or clothing texture, refresh the Studio sign-in and start another play session.
 
-A violet meteor crosses the moonlit headland in three frames. Its broken corona marks ignition, then a thin expanding half-circle marks the shockwave reaching the camera. Generations later, a winding tower brings up slivers of the old seam. The centered **PRESENT DAY** card introduces the player's own field test. The score builds from the crater fires to the final challenge with drums and brass. The music and effects sliders control the film mix. Disabling menu motion or enabling Roblox's Reduce Motion setting suppresses the impact flashes, camera recoil and blur, and limits peak light. [Shot-by-shot storyboard](art/starfall/Storyboard.md)
+A violet meteor crosses the moonlit headland in three frames. Its broken corona marks ignition, then a thin expanding half-circle marks the shockwave reaching the camera. Generations later, a winding tower brings up slivers of the old seam. The centered **PRESENT DAY** card introduces the player's own field test. The score builds from the crater fires to the final challenge with drums and brass. The music and effects sliders control the film mix. Disabling menu motion or enabling Roblox's Reduce Motion setting suppresses the impact flashes, camera recoil and blur, and limits peak light. [Shot-by-shot storyboard](art/starfall/Storyboard.md) · [Tune the opening in Studio](art/starfall/Storyboard.md#tune-the-opening-in-studio)
 
 ![Music, sound effects and menu motion in Settings](map/Settings-preview.jpg)
 

@@ -4,6 +4,7 @@ local Film = require(source.Film)
 local clock = require(source.Timeline)
 local sheet = require(source.ExposureSheet)
 local edit = require(source.ImpactEdit)
+local nightLook = require(source.NightLook)
 local lighting = game.Lighting
 local landing = workspace.CitrineCove["Sand path and bridge"].Landing.Position + Vector3.yAxis * 4
 local mapSize = #workspace.CitrineCove:GetDescendants()
@@ -12,6 +13,7 @@ local hour, exposure, color, haze =
 local saved = {}
 local originalSky = lighting:FindFirstChildOfClass("Sky")
 local bodies = originalSky and originalSky.CelestialBodiesShown
+local moonSize = originalSky and originalSky.MoonAngularSize
 for _, obj in { lighting, lighting.SeaAir } do
 	local properties = if obj == lighting
 		then {
@@ -84,6 +86,26 @@ local function check(motion, live, remote)
 	film:draw(1.4, false)
 	assert((film.tide.glint:GetPivot().Position - star).Magnitude > 60, "shooting star must travel")
 	assert(film.tide.root.Parent == stage and film.island.set.Parent == stage)
+	assert(not film.tide.glint:FindFirstChildWhichIsA("LayerCollector", true)
+		and not film.tide.glint:FindFirstChildWhichIsA("Decal", true), "distant meteor must have a volumetric head")
+	local previousWidth, dipped, sawChip = nil, false, false
+	local firstPose, lastPose
+	for _, picture in { 0, 5, 12, 18, 27, 38, 45, 53 } do
+		film:expose(picture, false)
+		local tide = film.tide
+		local pose = tide.glint:GetPivot()
+		firstPose, lastPose = firstPose or pose, pose
+		local nodes = tide.strands[1]
+		assert((nodes[1].at.WorldPosition - pose.Position).Magnitude < 0.02
+			and (pose.Position - nodes[#nodes].at.WorldPosition):Dot(pose.RightVector) > 12,
+			"the bright train must stay attached to the falling body and trail its direction of travel")
+		local width = tide.core.Size.Y
+		dipped = dipped or (previousWidth ~= nil and width < previousWidth - 0.015)
+		previousWidth = width
+		for _, chip in tide.flakes do sawChip = sawChip or chip.Transparency < 0.9 end
+	end
+	assert(dipped == motion and sawChip == motion, "reduced motion must keep a steady approach without flicker or shedding")
+	assert(firstPose.UpVector:Dot(lastPose.UpVector) < 0.92, "the mineral must rotate through the approach")
 	film:draw(2.39, false)
 	assert(not film.tide.root.Parent)
 	local track = film.impact.position
@@ -124,7 +146,11 @@ local function check(motion, live, remote)
 		)
 	end
 	local cold = lighting.ExposureCompensation
-	assert(film.daylight.moon.board.Enabled and film.daylight.lunar.root.Parent == stage, "moonlit coast")
+	assert(
+		not film.daylight.root:FindFirstChild("Moon", true) and film.daylight.sky.MoonAngularSize == 0,
+		"the offshore light must remain outside the picture"
+	)
+	assert(film.daylight.lunar.root.Parent == stage and not film.daylight.sun.board.Enabled, "midnight coast")
 	assert(lighting.Ambient.B > lighting.Ambient.R and lighting.ShadowSoftness < 0.25)
 	assert(film.daylight.lunar.beams[1].light.Shadows and lighting.Ambient.R < 0.2, "crisp shadows in the wide")
 	local lunar = film.daylight.lunar
@@ -134,11 +160,13 @@ local function check(motion, live, remote)
 		lunar.relief.Parent == stage and lunar.aprons.Parent == stage and not lunar.chaseHorizon.Parent,
 		"offshore lens lost the moonlit land or the matched horizon"
 	)
-	assert(sunward and shade and sunward.Transparency < 0.7 and shade.Transparency < 0.8, "lost terrain cast shadows")
-	local disc = cam.CFrame:PointToObjectSpace(film.daylight.moon.part.Position)
-	local halfHeight = -disc.Z * math.tan(math.rad(cam.FieldOfView / 2))
-	local discTop = 0.5 - (disc.Y + film.daylight.moon.board.Size.Y.Scale / 2) / (2 * halfHeight)
-	assert(disc.Z < 0 and discTop > 0.085 and discTop < 0.6, "offshore moon clipped by the upper matte")
+	assert(sunward and shade and math.abs(sunward.Transparency - (1 - 0.70 * nightLook.RimStrength)) < 0.01,
+		"ledge edges must follow the artist's rim strength")
+	assert(shade.Transparency < 0.65 and math.abs(lighting.OutdoorAmbient.R - nightLook.ShadowFill.R) < 0.01,
+		"the shadowed ground must take its open-sky fill from NightLook")
+	assert(math.abs(lunar.beams[1].light.Brightness - 8.3 * nightLook.RimStrength) < 0.01)
+	local fall = film.island.set:FindFirstChild("Falling water", true)
+	assert(fall and fall.Color.B - fall.Color.R < 0.22, "the moonlit cascade should not glow cyan")
 	local moonlitStone = lunar.tint[1]
 	assert(moonlitStone and moonlitStone.part.Color ~= moonlitStone.day, "missing private night palette")
 	local previousHeat = cold
@@ -381,10 +409,11 @@ local function check(motion, live, remote)
 	assert(film.daylight.depth.Enabled and film.daylight.depth.FocusDistance > 4, "crater focus")
 	film:draw(15.9, false)
 	assert(hot > lighting.SeaAir.Haze + 0.9, "ash remains after wave and dissipates through regrowth")
-	local sawMoon, sawSun, states = false, false, {}
+	local sawSun, states = false, {}
 	for i = 0, 75 do
 		film:draw(clock.recovery + i * 0.21, false)
-		sawMoon = sawMoon or film.daylight.moon.board.Enabled
+		assert(film.daylight.sky.MoonAngularSize == 0 and not film.daylight.root:FindFirstChild("Moon", true),
+			"the time-lapse brought the lunar disc back onscreen")
 		sawSun = sawSun or film.daylight.sun.board.Enabled
 		states[#film.island.set:GetChildren()] = true
 	end
@@ -392,7 +421,7 @@ local function check(motion, live, remote)
 	for _ in states do
 		exposures += 1
 	end
-	assert(exposures >= 7 and sawSun and (not motion or sawMoon), "settlement and sky exposures")
+	assert(exposures >= 7 and sawSun, "settlement and sky exposures")
 	assert(water.part.Color == water.base and water.part.Material == water.material, "daylight water not restored")
 	for _, picture in { sheet.frames.settlement, 753, 754, sheet.frames.match - 1 } do
 		film:expose(picture, false)
@@ -588,6 +617,7 @@ local function check(motion, live, remote)
 	)
 	if originalSky then
 		assert(originalSky.CelestialBodiesShown == bodies)
+		assert(originalSky.MoonAngularSize == moonSize, "native moon was not restored on exit")
 	end
 	assert(
 		math.abs(lighting.ClockTime - hour) < 0.001

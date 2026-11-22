@@ -35,7 +35,7 @@ function Film.caption(t)
 	return "", 0
 end
 
-function Film.new(stage, screen, camera, handoff, motion, continueSetup)
+function Film.new(stage, screen, camera, handoff, motion, continueSetup, nightLook)
 	local live = CF(handoff.landing - V(0, 28.96, 93))
 	local base = live + V(0, 1850, -1250)
 
@@ -49,8 +49,8 @@ function Film.new(stage, screen, camera, handoff, motion, continueSetup)
 	}, Film)
 	-- Cleanup also covers a failed import during construction.
 	local ok, reason = xpcall(function()
-		self.tide = Tide.new(stage, base)
-		self.daylight = Daylight.new(stage)
+		self.tide = Tide.new(stage, base, nightLook, motion)
+		self.daylight = Daylight.new(stage, nightLook)
 		self:frame(base, Tide.camera(0, motion))
 		self.tide:draw(0)
 		self.daylight:draw(0, motion, base, 0)

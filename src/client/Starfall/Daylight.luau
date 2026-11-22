@@ -48,29 +48,20 @@ local function cloudbanks(root)
 	return flecks
 end
 
-local function disc(root, name, color, texture)
-	local anchor = S.part(root, name, CF(), Vector3.one, color)
+local function sun(root)
+	local anchor = S.part(root, "Sun", CF(), Vector3.one, "FFE9B5")
 	anchor.Transparency, anchor.CastShadow = 1, false
 	local board = Instance.new("BillboardGui")
 	board.LightInfluence, board.Size, board.Parent = 0, UDim2.fromScale(32, 32), anchor
-	if texture then
-		local image = Instance.new("ImageLabel")
-		image.BackgroundTransparency, image.Image, image.Size, image.Parent = 1, texture, UDim2.fromScale(1, 1), board
-		-- The bundled lunar albedo is a square photograph with a black edge.
-		-- Keep its illuminated face inside a circular crop against the twilight.
-		local mask = Instance.new("UICorner")
-		mask.CornerRadius, mask.Parent = UDim.new(1, 0), image
-		image.ImageRectOffset, image.ImageRectSize = Vector2.new(11, 10), Vector2.new(105, 105)
-	else
-		local sun = Instance.new("Frame")
-		sun.BackgroundColor3, sun.BorderSizePixel, sun.Size, sun.Parent = hex(color), 0, UDim2.fromScale(1, 1), board
-		local edge = Instance.new("UICorner")
-		edge.CornerRadius, edge.Parent = UDim.new(1, 0), sun
-	end
-	return { part = anchor, board = board }
+	local face = Instance.new("Frame")
+	face.BackgroundColor3, face.BorderSizePixel, face.Size, face.Parent = hex("FFE9B5"), 0, UDim2.fromScale(1, 1), board
+	local edge = Instance.new("UICorner")
+	edge.CornerRadius, edge.Parent = UDim.new(1, 0), face
+	return { part = anchor, board = board, face = face }
 end
 
-function Daylight.new(stage)
+function Daylight.new(stage, nightLook)
+	nightLook = nightLook or require(script.Parent.NightLook)
 	local root = S.group("Sky over the cove")
 	root.Parent = stage
 	local grade = Instance.new("ColorCorrectionEffect")
@@ -98,6 +89,8 @@ function Daylight.new(stage)
 		sky = sky,
 		own = own,
 		bodies = sky.CelestialBodiesShown,
+		moonSize = sky.MoonAngularSize,
+		nightLook = nightLook,
 		air = air,
 		ownAir = ownAir,
 		glare = air.Glare,
@@ -122,11 +115,11 @@ function Daylight.new(stage)
 		specular = Lighting.EnvironmentSpecularScale,
 		brightness = Lighting.Brightness,
 		weather = cloudbanks(root),
-		lunar = Moonlight.new(stage),
-		sun = disc(root, "Sun", "FFE9B5"),
-		moon = disc(root, "Moon", "D4E0FF", "rbxasset://sky/moon.jpg"),
+		lunar = Moonlight.new(stage, nightLook),
+		sun = sun(root),
 	}, Daylight)
 	sky.CelestialBodiesShown = false
+	sky.MoonAngularSize = 0
 	return self
 end
 
@@ -185,6 +178,7 @@ function Daylight:draw(t, motion, base, masterFrame)
 		heat = (1 - S.ease(t, sheet.sceneTime(sheet.frames.ignition), 5.58)) ^ 2
 	end
 	local hot = heat * (if motion then 1 else 0.52)
+	local quiet = 1 - S.ease(frame, sheet.frames.contact, sheet.frames.ignition + 9)
 	local veil = S.ease(t, 7.46, 7.62) * (1 - S.ease(t, 7.77, 8.59))
 	local hero = S.ease(frame, sheet.frames.entry - 2, sheet.frames.entry + 7)
 		* (1 - S.ease(frame, sheet.frames.coast - 3, sheet.frames.coast))
@@ -193,7 +187,7 @@ function Daylight:draw(t, motion, base, masterFrame)
 		local stock = hex("FFF0D9"):Lerp(hex("C6D7FF"), night):Lerp(hex("B7CFFF"), ancient)
 		self.grade.TintColor = Color3.new(1, 1, 1)
 			:Lerp(stock:Lerp(hex("F9CEBF"), ash * 0.50):Lerp(arrivalColor, hot * 0.69), look)
-		self.grade.Contrast = (0.07 + 0.035 * ancient - 0.055 * ash - 0.06 * veil) * look
+		self.grade.Contrast = (0.07 + 0.035 * ancient - 0.065 * quiet - 0.055 * ash - 0.06 * veil) * look
 		self.grade.Saturation = (-0.055 - 0.17 * ancient + 0.10 * ash + 0.13 * hero) * look
 	end
 	-- A true night sky must remain behind the painted horizon when a lower
@@ -205,19 +199,20 @@ function Daylight:draw(t, motion, base, masterFrame)
 	Lighting.ColorShift_Top = self.top:Lerp(top:Lerp(hex("D99F8C"), ash * 0.40):Lerp(arrivalColor, hot), look)
 	Lighting.ColorShift_Bottom = self.bottom:Lerp(hex("3D394D"):Lerp(hex("252F48"), night), look * 0.70)
 	Lighting.ShadowSoftness = self.softness + (0.09 + 0.18 * ash - self.softness) * look
-	Lighting.EnvironmentDiffuseScale = self.diffuse + (0.30 + 0.14 * (1 - ancient) - self.diffuse) * look
+	Lighting.EnvironmentDiffuseScale = self.diffuse + (0.30 - 0.13 * quiet + 0.14 * (1 - ancient) - self.diffuse) * look
 	Lighting.EnvironmentSpecularScale = self.specular + (0.83 - 0.60 * ancient - self.specular) * look
 	Lighting.ExposureCompensation = self.exposure
 		+ (0.06 - 0.13 * ancient + 0.32 * basin - 0.04 * ash) * look
 		+ hot * 1.83
-	Lighting.Brightness = self.brightness + (2.25 - ancient * 0.55 + night * 0.15 - self.brightness) * look + hot * 2.45
-	local skyFill = hex("716B78"):Lerp(hex("414F72"), night):Lerp(hex("788BB0"), ancient)
+		+ self.nightLook.Exposure * quiet * (1 - 0.7 * hero)
+	Lighting.Brightness = self.brightness + (2.25 - ancient * 0.55 - 0.22 * quiet + night * 0.15 - self.brightness) * look + hot * 2.45
+	local skyFill = hex("716B78"):Lerp(hex("414F72"), night):Lerp(hex("788BB0"), ancient):Lerp(self.nightLook.ShadowFill, quiet)
 	Lighting.OutdoorAmbient =
 		self.outdoor:Lerp(skyFill:Lerp(hex("615169"), ash * 0.63):Lerp(arrivalColor, hot * 0.65), look)
 	local shadow = hex("493B47"):Lerp(hex("273048"), night):Lerp(hex("27364D"), ancient)
+		:Lerp(Color3.new():Lerp(self.nightLook.ShadowFill, 0.30), quiet)
 	Lighting.Ambient = self.ambient:Lerp(shadow:Lerp(hex("50333B"), ash * 0.56):Lerp(arrivalColor, hot * 0.50), look)
-	-- The visible low moon, its reflected path and the local cliff lights
-	-- occupy the same bearing throughout the ancient offshore shot.
+	-- The offshore source is inferred from the cliff edges and cast shadows.
 	local moonDirection = if moonKey then offshoreMoon else Lighting:GetMoonDirection()
 	self.lunar:draw(
 		base,
@@ -233,6 +228,7 @@ function Daylight:draw(t, motion, base, masterFrame)
 		self.air.Color = self.airColor:Lerp(
 			hex("A7C9F2")
 				:Lerp(hex("718CAF"), ancient)
+				:Lerp(self.nightLook.SkyColor:Lerp(hex("596075"), 0.55), quiet)
 				:Lerp(hex("D1BBCB"), dawn * (1 - ancient))
 				:Lerp(arrivalColor, hot)
 				:Lerp(hex("CE917D"), ash)
@@ -285,25 +281,12 @@ function Daylight:draw(t, motion, base, masterFrame)
 			end
 		end
 	end
-	for i, body in { self.sun, self.moon } do
-		local angle = phase + (i - 1) * math.pi
-		local h = math.sin(angle)
-		body.board.Enabled = (i == 2 and t >= clock.entry or t >= clock.recovery) and t < 26.8 and h > -0.05
-		if body.board.Enabled then
-			local skyPosition = V(-160 + 370 * math.cos(angle), 66 + 166 * h, -415)
-			if i == 2 then
-				skyPosition = skyPosition:Lerp(V(0, 21, 0) + moonDirection * 515, ancient)
-				local face = body.board:FindFirstChildOfClass("ImageLabel")
-				face.ImageTransparency = 0.07 + 0.74 * ash + 0.15 * hot
-				face.ImageColor3 = hex("D2E1FF")
-			end
-			body.part.Position = base * skyPosition
-			if i == 1 then
-				local discFace = body.board:FindFirstChildOfClass("Frame")
-				discFace.BackgroundColor3 = hex("FFEBBB"):Lerp(hex("DE9979"), ash)
-				discFace.BackgroundTransparency = ash * 0.26
-			end
-		end
+	local h = math.sin(phase)
+	self.sun.board.Enabled = t >= clock.recovery and t < 26.8 and h > -0.05
+	if self.sun.board.Enabled then
+		self.sun.part.Position = base * V(-160 + 370 * math.cos(phase), 66 + 166 * h, -415)
+		self.sun.face.BackgroundColor3 = hex("FFEBBB"):Lerp(hex("DE9979"), ash)
+		self.sun.face.BackgroundTransparency = ash * 0.26
 	end
 end
 -- Focus through the ash onto the near bank, then allow the violet fissure to
@@ -346,6 +329,7 @@ function Daylight:Destroy()
 		self.sky:Destroy()
 	else
 		self.sky.CelestialBodiesShown = self.bodies
+		self.sky.MoonAngularSize = self.moonSize
 	end
 	self.lunar:Destroy()
 	self.root:Destroy()

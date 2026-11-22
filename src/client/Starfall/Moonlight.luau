@@ -31,6 +31,7 @@ local pigments = {
 	["Split face"] = "8591A5",
 }
 
+local cascade = { ["Falls crest"] = true, ["Falling water"] = true, ["Whitewater"] = true, ["Current"] = true }
 local shelves = {
 	V(-69, 62, -77),
 	V(-16, 65, -87),
@@ -45,7 +46,7 @@ local shelves = {
 
 -- A fixed night cyclorama lets the terrain use the engine's directional
 -- shadow maps. Bands follow the real horizon even when the camera rolls.
-local function nightSky()
+local function nightSky(skyColor)
 	local model = S.group("Night across the strait")
 	-- Enclose the outermost flight camera (-600, 440, 370), the cloud
 	-- banks, and the island within a much shorter native draw distance.
@@ -69,17 +70,14 @@ local function nightSky()
 		gui.SizingMode, gui.CanvasSize, gui.Parent = Enum.SurfaceGuiSizingMode.FixedSize, Vector2.new(640, 960), panel
 		local face = Instance.new("Frame")
 		face.Size, face.BorderSizePixel, face.BackgroundColor3, face.Parent =
-			UDim2.fromScale(1, 1), 0, hex(if roof then "141F38" else "FFFFFF"), gui
+			UDim2.fromScale(1, 1), 0, if roof then Color3.new():Lerp(skyColor, 0.54) else Color3.new(1, 1, 1), gui
 		if not roof then
 			local gradient = Instance.new("UIGradient")
 			gradient.Rotation = 90
 			gradient.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, hex("141F38")),
-				ColorSequenceKeypoint.new(0.62, hex("182942")),
-				ColorSequenceKeypoint.new(0.73, hex("25374D")),
-				ColorSequenceKeypoint.new(0.79, hex("314056")),
-				ColorSequenceKeypoint.new(0.82, hex("27364B")),
-				ColorSequenceKeypoint.new(1, hex("253955")),
+				ColorSequenceKeypoint.new(0, Color3.new():Lerp(skyColor, 0.54)),
+				ColorSequenceKeypoint.new(0.77, skyColor),
+				ColorSequenceKeypoint.new(1, Color3.new():Lerp(skyColor, 0.84)),
 			})
 			gradient.Parent = face
 			for _ = 1, 17 do
@@ -95,7 +93,8 @@ local function nightSky()
 	return model
 end
 
-function Moonlight.new(stage)
+function Moonlight.new(stage, nightLook)
+	nightLook = nightLook or require(script.Parent.NightLook)
 	local root = S.group("Moonlight on Citrine Cove")
 	local beams = {}
 	for i, target in shelves do
@@ -103,7 +102,7 @@ function Moonlight.new(stage)
 		mount.Transparency, mount.CastShadow = 1, false
 		local key = Instance.new("SpotLight")
 		key.Name, key.Face, key.Angle, key.Range = "Light along the ledge", Enum.NormalId.Front, 103, 60
-		key.Color = hex(if i < 4 then "CBDFFF" else "A4CDFF")
+		key.Color = nightLook.RimColor
 		key.Shadows = true
 		key.Parent = mount
 		table.insert(beams, { mount = mount, light = key, target = target })
@@ -115,7 +114,7 @@ function Moonlight.new(stage)
 		local n = (i - 0.5) / 64
 		local part = S.part(
 			root,
-			"Silver water",
+			"Light along a swell",
 			CF(),
 			V(rand:NextNumber(2.0, 12) * (0.6 + n), 0.035, rand:NextNumber(0.27, 0.81)),
 			"B5D0EE",
@@ -128,10 +127,10 @@ function Moonlight.new(stage)
 	local ink = relief:GetChildren()
 	for _, facet in ink do
 		if facet.Name == "Umbra" then
-			facet.Color = hex("202B45")
+			facet.Color = Color3.new():Lerp(nightLook.ShadowFill, 0.34)
 		else
 			facet.Material = Enum.Material.Neon
-			facet.Color = hex(if facet.Name == "LunarGrass" then "668783" else "889EAE")
+			facet.Color = Color3.new():Lerp(nightLook.RimColor, if facet.Name == "LunarGrass" then 0.75 else 0.86)
 		end
 	end
 	-- Paint atmospheric perspective beyond the island but inside the
@@ -142,7 +141,7 @@ function Moonlight.new(stage)
 		aprons,
 		"Marine horizon",
 		CFrame.lookAt(horizon, horizon + V(0.88, 0, 0.46)),
-		V(1500, 130, 0.06),
+		V(1500, 1000, 0.06),
 		"FFFFFF"
 	)
 	haze.Transparency, haze.CastShadow = 1, false
@@ -155,29 +154,27 @@ function Moonlight.new(stage)
 	local fade = Instance.new("UIGradient")
 	fade.Rotation = 90
 	fade.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, hex("192941")),
-		ColorSequenceKeypoint.new(0.35, hex("425571")),
-		ColorSequenceKeypoint.new(0.44, hex("607183")),
-		ColorSequenceKeypoint.new(0.53, hex("465976")),
-		ColorSequenceKeypoint.new(0.67, hex("263650")),
-		ColorSequenceKeypoint.new(0.82, hex("111B31")),
-		ColorSequenceKeypoint.new(1, hex("0A1023")),
+		ColorSequenceKeypoint.new(0, Color3.new():Lerp(nightLook.SkyColor, 0.44)),
+		ColorSequenceKeypoint.new(0.46, nightLook.SkyColor),
+		ColorSequenceKeypoint.new(0.54, Color3.new():Lerp(nightLook.SkyColor, 0.88)),
+		ColorSequenceKeypoint.new(0.61, Color3.new():Lerp(nightLook.SkyColor, 0.60)),
+		ColorSequenceKeypoint.new(1, Color3.new():Lerp(nightLook.SkyColor, 0.60)),
 	})
 	fade.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.16, 1),
-		NumberSequenceKeypoint.new(0.39, 0),
-		NumberSequenceKeypoint.new(0.80, 0),
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.53, 0),
+		NumberSequenceKeypoint.new(0.60, 1),
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	fade.Parent = wash
 	local chaseHorizon = haze:Clone()
 	chaseHorizon.Name = "Aerial sea haze"
-	chaseHorizon.Size = V(1350, 152, 0.06)
+	chaseHorizon.Size = V(1350, 1000, 0.06)
 	return setmetatable({
 		stage = stage,
 		root = root,
-		sky = nightSky(),
+		sky = nightSky(nightLook.SkyColor),
+		nightLook = nightLook,
 		beams = beams,
 		ripples = ripples,
 		relief = relief,
@@ -199,15 +196,16 @@ function Moonlight:relight(base, frame)
 	if island and not self.island and frame < 240 then
 		for _, piece in island:GetDescendants() do
 			local swatch = pigments[piece.Name]
-			if swatch and piece:IsA("BasePart") then
-				local moon = piece.Color:Lerp(hex(swatch), 0.73)
+			if (swatch or cascade[piece.Name]) and piece:IsA("BasePart") then
+				local moon = if swatch then piece.Color:Lerp(hex(swatch):Lerp(self.nightLook.ShadowFill, 0.46), 0.72)
+					else self.nightLook.ShadowFill:Lerp(self.nightLook.RimColor, if piece.Name == "Whitewater" then 0.38 else 0.15)
 				if piece:IsA("WedgePart") and piece.Size.X < 0.20 then
 					local n = piece.CFrame.RightVector
 					if n.Y < 0 then
 						n = -n
 					end
 					local incidence = n:Dot(base:VectorToWorldSpace(V(-0.959, 0.218, 0.181).Unit))
-					moon = hex("3D536F"):Lerp(moon:Lerp(hex("D4E0DE"), 0.43), math.clamp(0.40 + incidence * 0.80, 0, 1))
+					moon = self.nightLook.ShadowFill:Lerp(moon:Lerp(self.nightLook.RimColor, 0.35), math.clamp(0.40 + incidence * 0.80, 0, 1))
 				end
 				table.insert(self.tint, { part = piece, day = piece.Color, moon = moon })
 			end
@@ -221,7 +219,8 @@ function Moonlight:relight(base, frame)
 		self.placed = true
 	end
 	for _, facet in self.ink do
-		local amount = if facet.Name == "Umbra" then 0.30 else 0.49
+		local amount = if facet.Name == "Umbra" then 0.41 elseif facet.Name == "Canopy"
+			then 0.50 * self.nightLook.RimStrength else 0.70 * self.nightLook.RimStrength
 		facet.Transparency = 1 - strength * amount
 	end
 	local tinted = frame < 240
@@ -260,7 +259,7 @@ function Moonlight:draw(base, direction, observer, frame, level, night, heat, as
 		self.direction, self.base = direction, base
 	end
 	for _, v in self.beams do
-		v.light.Brightness = 8.3 * level
+		v.light.Brightness = 8.3 * self.nightLook.RimStrength * level
 	end
 	local axis = V(direction.X, 0, direction.Z).Unit
 	local across = axis:Cross(Vector3.yAxis)
@@ -270,7 +269,7 @@ function Moonlight:draw(base, direction, observer, frame, level, night, heat, as
 		local scatter = 1 - math.abs(2 * r.n - 1)
 		local pt = glint + axis * ((r.n - 0.5) * 225) + across * (r.side * (5 + 18 * scatter))
 		local shimmer = 0.73 + 0.27 * math.sin(frame * 0.094 + r.phase)
-		r.part.Transparency = 1 - level * (0.23 + 0.61 * scatter) * (1 - 0.67 * math.abs(r.side)) * shimmer
+		r.part.Transparency = 1 - 0.30 * self.nightLook.RimStrength * level * (0.23 + 0.61 * scatter) * (1 - 0.67 * math.abs(r.side)) * shimmer
 		r.part.CFrame = base * CFrame.lookAt(pt, pt + axis)
 	end
 end
