@@ -466,7 +466,13 @@ local function test()
 		end
 	end
 	local originalSize = safe.Size
-	for _, size in { Vector2.new(760, 323), Vector2.new(320, 615), Vector2.new(568, 250) } do
+	assert(game.StarterGui.ScreenOrientation == Enum.ScreenOrientation.LandscapeSensor
+		and p.PlayerGui.ScreenOrientation == Enum.ScreenOrientation.LandscapeSensor, "mobile play stays in landscape")
+	local sizes = { Vector2.new(760, 323), Vector2.new(615, 320), Vector2.new(568, 250) }
+	if game.UserInputService.PreferredInput == Enum.PreferredInput.KeyboardAndMouse then
+		table.insert(sizes, Vector2.new(320, 615))
+	end
+	for _, size in sizes do
 		safe.Size = UDim2.fromOffset(size.X, size.Y)
 		game:GetService("RunService").PreRender:Wait()
 		waitFor(function()

@@ -391,6 +391,13 @@ function Hud.new(player, net, mobile)
 				walletTop = math.min(walletTop, height - margin - rosterHeight - walletHeight - 6)
 			end
 			local walletLeft = if walletTop + 52 > height - 100 then leftEdge + 92 else leftEdge
+			if narrow and walletLeft < titleX + titleHalf and walletLeft + walletWidth > titleX - titleHalf then
+				local regionBottom = math.max(locationY + loc.Size.Y.Offset, depthY + 21)
+				if self.surface.Visible then regionBottom = math.max(regionBottom, surfaceY + 44) end
+				if walletTop < regionBottom + 4 and walletTop + 52 > locationY then
+					walletTop = belowChat(walletLeft, regionBottom + 4, walletWidth, 52)
+				end
+			end
 			W.anchor(wallet, 0, 0, UDim2.fromOffset(walletLeft, math.min(walletTop, height - 56)))
 			shortcuts.Size = UDim2.fromOffset(pairWidth, 48)
 			shortcuts.Position = UDim2.fromOffset(right - pairWidth, rowY)

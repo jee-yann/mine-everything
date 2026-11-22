@@ -27,9 +27,12 @@ end
 function Celebration:present(kind, name)
 	local root = self.hud.root
 	local isTitle = kind == "titleUnlocked"
-	local isAura = kind == "aura"
+	if kind == "aura" then
+		require(script.Parent.FirstLightCase)(self.hud, name)
+		return
+	end
 	local ore = if kind == "discovery" then Ores.byName[name] else nil
-	local tint = if ore then ore.color:Lerp(W.white, 0.35) elseif isTitle then W.violet elseif isAura then W.aqua else W.gold
+	local tint = if ore then ore.color:Lerp(W.white, 0.35) elseif isTitle then W.violet else W.gold
 	local motion = self.hud.player:GetAttribute("MenuMotion") ~= false and not game:GetService("GuiService").ReducedMotionEnabled
 	local group = W.fadeGroup(root, "Unlock celebration", 368, 124)
 	group.ZIndex = 35
@@ -44,14 +47,14 @@ function Celebration:present(kind, name)
 	local badge = W.frame(body, "Medal", 16, 24, 50, 50, tint, 14)
 	W.stroke(badge, tint:Lerp(W.white, 0.65), 2)
 	Icons.draw(badge, if ore then "Crystal" elseif isTitle then "Titles" else "Achievements", 5, 5, 40, tint)
-	W.text(body, if ore then "NEW ORE DISCOVERED" elseif isAura then "LEGENDARY PICK AURA" elseif isTitle then "TITLE UNLOCKED" else "ACHIEVEMENT UNLOCKED", 83, 8, 260, 18, 14, tint, true)
+	W.text(body, if ore then "NEW ORE DISCOVERED" elseif isTitle then "TITLE UNLOCKED" else "ACHIEVEMENT UNLOCKED", 83, 8, 260, 18, 14, tint, true)
 	local headline = W.title(body, name, 82, 27, 262, 42, 27, W.white, true)
 	headline.TextScaled = true
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MinTextSize, limit.MaxTextSize, limit.Parent = 13, 27, headline
 	W.text(
 		body,
-		if ore then "Added to your Ore Index" elseif isAura then "On your pick! Change it in Supplies." elseif isTitle then "Equip in Inventory → Titles" else "Saved to Achievements",
+		if ore then "Added to your Ore Index" elseif isTitle then "Equip in Inventory → Titles" else "Saved to Achievements",
 		83,
 		70,
 		260,

@@ -119,6 +119,20 @@ function Pages.achievements(menu)
 	return #Guide.achievements
 end
 
+local function layerOdds(chances, player)
+	local entries, total = {}, 0
+	for _, ore in Ores.list do
+		local chance = chances[ore.name]
+		if chance then
+			total += chance
+			local hidden = player and ore.secret and not player:GetAttribute("Found" .. ore.name)
+			table.insert(entries, string.format("%s %g%%", if hidden then "???" else ore.name, chance))
+		end
+	end
+	table.insert(entries, 1, string.format("Stone %g%%", 100 - total))
+	return table.concat(entries, "   ")
+end
+
 function Pages.index(menu)
 	W.title(menu.list, "Collection", 6, 0, 208, 25, 19, W.gold, true)
 	W.title(menu.list, "Depth & ore odds", 228, 0, 213, 25, 19, W.aqua, true)
@@ -148,7 +162,10 @@ function Pages.index(menu)
 	end
 	local y = 30
 	for i, layer in Config.Layers do
-		local card = W.frame(menu.list, layer.name, 225, y, 222, 124, W.card, 8)
+		local bounds = game:GetService("TextService"):GetTextSize(layerOdds(layer.oreChances), 14,
+			Enum.Font.BuilderSansBold, Vector2.new(199, 10000))
+		local oddsHeight = math.max(36, bounds.Y + 7)
+		local card = W.frame(menu.list, layer.name, 225, y, 222, 47 + oddsHeight, W.card, 8)
 		W.title(card, layer.name, 8, 4, 206, 21, 16, W.white, true)
 		local following = Config.Layers[i + 1]
 		local start = math.max(Config.DirtLayers, layer.depthBlocks)
@@ -157,25 +174,13 @@ function Pages.index(menu)
 			else string.format("%d+ blocks", start)
 		local d = W.text(card, depth, 8, 25, 202, 17, 13, W.aqua, true)
 		d.Name = "Depth"
-		local odds = W.text(card, "", 8, 42, 207, 78, 14, W.muted, true)
+		local odds = W.text(card, "", 8, 42, 207, oddsHeight, 14, W.muted, true)
 		odds.TextWrapped = true
 		odds.TextYAlignment = Enum.TextYAlignment.Top
 		table.insert(menu.updates, function()
-			local entries, total = {}, 0
-			for _, ore in Ores.list do
-				local chance = layer.oreChances[ore.name]
-				if chance then
-					total += chance
-					local label = if ore.secret and not menu.player:GetAttribute("Found" .. ore.name)
-						then "???"
-						else ore.name
-					table.insert(entries, string.format("%s %g%%", label, chance))
-				end
-			end
-			table.insert(entries, 1, string.format("Stone %g%%", 100 - total))
-			odds.Text = table.concat(entries, "   ")
+			odds.Text = layerOdds(layer.oreChances, menu.player)
 		end)
-		y += 131
+		y += card.Size.Y.Offset + 7
 	end
 	local card = W.frame(menu.list, "Rock hardness", 225, y, 222, 165, W.card, 8)
 	W.title(card, "Stone grades", 8, 3, 203, 23, 16, W.white, true)

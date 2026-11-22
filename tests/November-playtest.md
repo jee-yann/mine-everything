@@ -11,7 +11,7 @@ Open `build/Mine-Everything.rbxlx` in Roblox Studio and press **F5**. Use **Skip
 | 21:30–29:50 | Inspect the small calcite pocket on exposed rock. Dig through one dirt layer, compare stone textures by depth, and keep the first 8 gold for a 16-slot pack. Try Fortune for a chance at a second mineral, or Fair Trade for a higher mineral sale price. |
 | 30:00–36:40 | Watch for the first-find achievement. Preview a pet, craft its ore compass and equip the pet in a mine with an exposed seam. Aim at another miner to see their name. Fill your pack, then sell it to compare the full-pack cue, sale receipt and wallet balance. |
 | 36:40–40:20 | Compare named ores with undiscovered secrets. Enter a shop in first person and return to mining. Craft a cave pulse, then use it beside some exposed stone. The pulse leaves the ore and the ground beneath players intact. The owner can use **Shift+C** or the clear button in the X-ray panel. |
-| 40:50–end | Listen for the pressure wave after ignition and the score coming in over the crater. Make a first Workshop upgrade for the First Light pick aura. On a touch device, open Server miners from Menu, then switch input to check the button prompts. |
+| 40:50–end | Listen for the pressure wave after ignition and the score coming in over the crater. Make a first Workshop upgrade, open the gift case and swing your pick to see the First Light aura. On a touch device, open Server miners from Menu, then switch input to check the button prompts. |
 
 ## Compare two ore samples
 
