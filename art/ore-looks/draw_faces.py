@@ -70,38 +70,21 @@ class Style:
 STYLE = Style()
 
 
-def ribbon(path, widths):
-    path = np.asarray(path, float)
-    left, right = [], []
-    for i, p in enumerate(path):
-        a = path[max(i - 1, 0)]
-        b = path[min(i + 1, len(path) - 1)]
-        d = b - a
-        nrm = np.array([-d[1], d[0]]) / (np.linalg.norm(d) + 1e-9)
-        left.append(p + nrm * widths[i])
-        right.append(p - nrm * widths[i])
-    return left + right[::-1], left, right
-
-
-def vein(t, ore, rng, style):
-    """A thick winding vein with nodules and a crust along its banks (Copper, Silver)."""
-    pal = ore["pal"]
-    path = [(0.06, 0.74), (0.24, 0.62), (0.4, 0.66), (0.55, 0.48), (0.7, 0.42), (0.82, 0.24), (0.95, 0.2)]
-    path = [(x + rng.uniform(-0.02, 0.02), y + rng.uniform(-0.03, 0.03)) for x, y in path]
-    widths = [0.065, 0.095, 0.085, 0.115, 0.095, 0.08, 0.06]
-    poly, left, right = ribbon(path, widths)
-    style.flat(t, poly, pal_at(pal, 0.45))
-    t.line([(x + LIGHT[0] * 0.02, y + LIGHT[1] * 0.02) for x, y in path[1:-1]], pal_at(pal, 0.92), 0.016)
-    t.line([(x - LIGHT[0] * 0.024, y - LIGHT[1] * 0.024) for x, y in path[1:-1]], pal_at(pal, 0.12), 0.012)
-    if "extra" in ore:
-        crust = ore["extra"]
-        for i, side in ((1, left), (2, right), (4, left), (5, right)):
-            c = side[i]
-            style.flat(t, blob(c, 0.075, 8, rng, 0.3), pal_at(crust, 0.45), edge=False)
-            t.ellipse((c[0] - 0.012, c[1] - 0.014), 0.018, pal_at(crust, 1.0))
-    for (cx, cy), r in ((path[3], 0.17), (path[1], 0.11), (path[5], 0.1)):
-        style.dome(t, blob((cx, cy), r, 8, rng, 0.16), pal, rng, lift=0.45)
-    style.spark(t, (path[3][0] - 0.05, path[3][1] - 0.07), 0.05, ore)
+def malachite(t, ore, rng, style):
+    """Copper nuggets sitting in cradles of banded green malachite, the rock copper is found in."""
+    pal, green = ore["pal"], ore["extra"]
+    for cx, cy, r in [(0.43, 0.45, 0.2), (0.76, 0.74, 0.11), (0.75, 0.25, 0.085), (0.2, 0.78, 0.08)]:
+        # the cradle sits a little toward the shadow side, so it shows as a crescent
+        oc = np.array([cx - LIGHT[0] * r * 0.28, cy - LIGHT[1] * r * 0.28])
+        outer = blob(tuple(oc), r * 1.32, 12, rng, 0.08)
+        t.poly(outer, pal_at(green, 0.15))
+        for scale, tone in ((1.18, 0.55), (1.06, 0.3), (0.95, 0.8)):
+            band = [tuple(oc + (np.asarray(p) - oc) * (scale / 1.32) + rng.uniform(-0.006, 0.006, 2)) for p in outer]
+            t.poly(band, pal_at(green, tone))
+        t.d.polygon(t.P(outer), outline=to255(INK), width=style.ow(t))
+        style.dome(t, blob((cx, cy), r, 10, rng, 0.13), pal, rng, lift=0.5)
+        hc = (cx + LIGHT[0] * r * 0.42, cy + LIGHT[1] * r * 0.42)
+        t.poly(blob(hc, r * 0.2, 7, rng, 0.25, aspect=1.4), pal_at(pal, 1.0))
 
 
 def nugget(t, ore, rng, style):
@@ -216,15 +199,16 @@ def hexes(t, ore, rng, style):
     style.spark(t, (0.31, 0.3), 0.055, ore)
 
 
-DRAWN = {"hex": hexes, "chunks": chunks, "dirt": dirt, "stone": stone, "vein": vein, "nugget": nugget}
+DRAWN = {"hex": hexes, "chunks": chunks, "dirt": dirt, "stone": stone, "malachite": malachite, "nugget": nugget}
 
-# Warm, ore-coloured rock like the Storybook Ink concept. Stone is drawn light and neutral:
+# Warm, ore-coloured rock like the Storybook Ink concept (Copper sits in cool grey-green rock so it
+# stands apart from Dirt and Gold). Stone is drawn light and neutral:
 # the game tints it with the stone grade's colour.
 FACES = [
     dict(name="Dirt", rarity="Common", host="9A6440", shape="dirt", pal=["5E544B", "8E8174", "BEB2A2", "ECE4D8"], variants=5, tones=[1.0, 0.96, 1.03, 0.98, 1.02]),
     dict(name="Stone", rarity="Common", host="E6E7EA", shape="stone", pal=["8C8E96", "B4B6BD", "D8D9DE", "FFFFFF"], variants=3),
     dict(name="Coal", rarity="Common", host="A3A6B0", shape="lumps", pal=["15161C", "2C2E37", "4C4F5A", "A9ADB8"]),
-    dict(name="Copper", rarity="Uncommon", host="A9785B", shape="vein", pal=["6A2F14", "C2652F", "F0A266", "FFE1C2"], extra=["1F7A66", "48B496", "9BE6CC"]),
+    dict(name="Copper", rarity="Uncommon", host="7D8C89", shape="malachite", pal=["5A1E10", "B5502E", "EA8862", "FFDCCB"], extra=["0B4A33", "1F7A52", "3FAE74", "8FE3AE"]),
     dict(name="Iron", rarity="Uncommon", host="A79F96", shape="chunks", pal=["39414D", "6C7A8C", "AFBCCB", "F2F6FA"], rust=["A2501F", "D27C35"]),
     dict(name="Gold", rarity="Rare", host="8A6A45", shape="nugget", pal=["7A3F02", "D8921A", "FFD45A", "FFF7D6"]),
     dict(name="Diamond", rarity="Epic", host="7898A8", shape="octa", pal=["3A86A6", "8DE2F2", "D6FCFF", "FFFFFF"], glow="9FF3FF"),

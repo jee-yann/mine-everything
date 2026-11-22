@@ -15,7 +15,7 @@
 export type Look = {
 	relief: string, -- a ReliefKit.recipes entry, drawn flush on every open face
 	palette: { string }, -- four colours, dark to light
-	accent: { string }?, -- a second material, such as copper patina or iron rust
+	accent: { string }?, -- a second material, such as copper's malachite or iron rust
 	crown: string?, -- a ReliefKit.crowns entry: crystals that break out of the face
 	glow: string?, -- light colour for gems that glow near the player
 	sparkle: boolean?, -- white glints on the relief
@@ -67,9 +67,9 @@ Looks.rock = {
 Looks.ores = {
 	Coal = { relief = "lumps", palette = { "1A1C22", "363841", "5C5F6A", "B6BAC6" } },
 	Copper = {
-		relief = "vein",
-		palette = { "6A2F14", "C2652F", "F0A266", "FFE1C2" },
-		accent = { "1F7A66", "48B496", "9BE6CC" },
+		relief = "malachite",
+		palette = { "5A1E10", "B5502E", "EA8862", "FFDCCB" },
+		accent = { "0B4A33", "1F7A52", "3FAE74", "8FE3AE" },
 	},
 	Iron = {
 		relief = "chunks",

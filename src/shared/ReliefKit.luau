@@ -92,11 +92,16 @@ function Kit.dome(
 	return rim
 end
 
--- A thin ink disc under a piece, so round shapes read as outlined at any distance.
-function Kit.rim(m: Model, x: number, y: number, r: number, ink: Color3)
-	local p = piece(m, "Part", V(0.04, r * 2, r * 2), CFrame.new(x, y, 0.035) * CFrame.Angles(0, math.pi / 2, 0), ink)
+-- A thin flat disc lying on the face at height z.
+function Kit.disc(m: Model, x: number, y: number, r: number, z: number, color: Color3)
+	local p = piece(m, "Part", V(0.04, r * 2, r * 2), CFrame.new(x, y, z) * CFrame.Angles(0, math.pi / 2, 0), color)
 	p.Shape = Enum.PartType.Cylinder
 	p.Size = V(0.04, r * 2, r * 2)
+end
+
+-- A thin ink disc under a piece, so round shapes read as outlined at any distance.
+function Kit.rim(m: Model, x: number, y: number, r: number, ink: Color3)
+	Kit.disc(m, x, y, r, 0.035, ink)
 end
 
 -- A flattened ellipsoid: pebbles, patina, rust and highlights.
@@ -241,12 +246,6 @@ function Kit.octahedron(
 	end
 end
 
--- Points along a path, each pushed sideways by the matching offset.
-local function bank(path: { Vector2 }, i: number, offset: number): Vector2
-	local d = path[math.min(i + 1, #path)] - path[math.max(i - 1, 1)]
-	return path[i] + Vector2.new(-d.Y, d.X).Unit * offset
-end
-
 -- ---------- flush recipes (OreLooks `relief` and Rock `decor`) ----------
 local recipes: { [string]: (Model, Look, Random) -> () } = {}
 Kit.recipes = recipes
@@ -260,37 +259,21 @@ function recipes.lumps(m: Model, look: Look, rng: Random)
 	Kit.blob(m, -1.25, 0.85, 0.32, 0.2, 30, 0.42, p[4])
 end
 
--- A thick winding vein with nodules and a crust along its banks (copper).
-function recipes.vein(m: Model, look: Look, rng: Random)
-	local p, crust = look.palette, look.accent or look.palette
-	local path = {
-		Vector2.new(-2.65, -1.45),
-		Vector2.new(-1.55, -0.72),
-		Vector2.new(-0.6, -0.95),
-		Vector2.new(0.3, 0.12),
-		Vector2.new(1.2, 0.5),
-		Vector2.new(1.95, 1.55),
-		Vector2.new(2.7, 1.8),
-	}
-	local widths = { 0.78, 1.1, 1.0, 1.35, 1.1, 0.95, 0.72 }
-	for i = 1, #path - 1 do
-		Kit.bar(
-			m,
-			path[i],
-			path[i + 1],
-			(widths[i] + widths[i + 1]) / 2,
-			0.1,
-			shade(p, if i % 2 == 0 then 0.42 else 0.5)
-		)
-	end
-	for k, i in { 2, 3, 5, 6 } do
-		local at = bank(path, i, widths[i] * 0.55 * (if k % 2 == 0 then -1 else 1))
-		Kit.blob(m, at.X, at.Y, 0.62, 0.44, rng:NextNumber(-40, 40), 0.18, shade(crust, 0.55))
-	end
-	for _, s in { { 4, 1.0, 6 }, { 2, 0.66, 5 }, { 6, 0.6, 5 } } do
-		local at = path[s[1]]
-		Kit.rim(m, at.X, at.Y, s[2] * 1.1, look.ink)
-		Kit.dome(m, at.X, at.Y, s[2], s[3], s[2] * 0.45, p, rng, { base = 0.16 })
+-- Copper nuggets sitting in cradles of banded green malachite (copper).
+function recipes.malachite(m: Model, look: Look, rng: Random)
+	local p, green = look.palette, look.accent or look.palette
+	for i, s in { { -0.42, 0.3, 1.2, 7 }, { 1.56, -1.44, 0.66, 5 }, { 1.5, 1.5, 0.52, 5 } } do
+		local x, y, r = s[1], s[2], s[3]
+		-- the cradle sits a little toward the shadow side, so it shows as a crescent
+		local cx, cy = x - LIGHT.X * r * 0.28, y - LIGHT.Y * r * 0.28
+		Kit.rim(m, cx, cy, r * 1.42, look.ink)
+		Kit.disc(m, cx, cy, r * 1.32, 0.055, shade(green, 0.15))
+		if i == 1 then
+			Kit.disc(m, cx, cy, r * 1.18, 0.075, shade(green, 0.55))
+		end
+		Kit.disc(m, cx, cy, r * 1.06, 0.095, shade(green, 0.8))
+		Kit.rim(m, x, y, r * 1.08, look.ink)
+		Kit.dome(m, x, y, r, s[4], r * 0.45, p, rng, { base = 0.14 })
 	end
 end
 
