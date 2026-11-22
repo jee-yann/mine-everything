@@ -36,6 +36,8 @@ The opening is a live scene on each player's device. `ExposureSheet` counts 24 f
 3. Adjust **Exposure** for overall brightness. **ShadowFill** sets the color in the unlit ground and **RimStrength** controls how much light catches the edges. **RimColor** tints that light and **SkyColor** changes the sky. Start with the rim strength if the ledges stand out too much. Check the sky and the island on the same frame as you work.
 4. Check **PrintSettings** and copy the block starting with `return table.freeze({` from Studio’s **Output** window. Set **Frame** to **-1** to watch the film from the beginning with these settings and sound, or use **Skip** to enter gameplay.
 
+![The shooting star, chase, and offshore hold before and after the night lighting edit](Night-lighting-comparison.jpg)
+
 ### Save the look
 
 The permanent settings are in **StarterPlayer → StarterPlayerScripts → Client → Starfall → NightLook**. After stopping Play, paste the exported block into that ModuleScript in the place you want to save. For this Rojo project, paste it into `src/client/Starfall/NightLook.luau` on disk and let Rojo sync it, or rebuild the place. In a standalone Studio place, save the place after editing the ModuleScript. Play again to check the saved result. To return a regular Studio place to its usual Play behavior, run `workspace:SetAttribute("StarfallPreviewFrame", nil)` in Edit mode.
@@ -103,7 +105,7 @@ The small sparks above the secondary fires and the dust along the meteor use the
 
 ## Studio recording
 
-Studio Play supplied the 1920 × 1080 picture and stereo sound for this recording. The film runs for 1,562 exposures at 24 fps (65.08 s), followed by half a second of gameplay. The trial blow lands at 42.83 s. In this take the player presses Space and strikes the route beacon at 54.125 s. The pulse reaches the mine threshold at 57.67 s and flares on the shaft wall at 58.96 s. [Watch the film](Where-the-Stars-Took-Root-The-Fault-Reader.mp4)
+Studio supplied one 1920 × 1080 picture for each exposure. The stereo track comes from a real-time Play session with the interactive strike on the same frame. The film runs for 1,562 exposures at 24 fps (65.08 s), followed by half a second of gameplay. The trial blow lands at 42.83 s. In this take the player presses Space and strikes the route beacon at 54.125 s. The pulse reaches the mine threshold at 57.67 s and flares on the shaft wall at 58.96 s. [Watch the film](Where-the-Stars-Took-Root-The-Fault-Reader.mp4)
 
 Frames 237–239 carry the terminal descent. Contact is frame 240 at 10.000 s. Frame 241 returns to ordinary moonlight and frame 242 tightens down to a pin. The main eruption opens on frame 243 at 10.125 s. The broken circle surrounds ignition on frame 246. Frame 247 goes white and the following exposures reverse and change the ray shapes. In the second sequence, frame 323 gives one ordinary view of the oncoming water. The original torn white crest crosses the full-color eruption on frames 324 and 325. Frame 326 goes black. The final printed exposure is frame 328, two frames earlier than the previous edit. [Frames from the Studio recording](The-Fault-Reader-frames.jpg)
 
