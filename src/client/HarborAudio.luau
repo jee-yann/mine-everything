@@ -1,5 +1,6 @@
 local SoundService = game:GetService("SoundService")
 local Input = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local Audio = {}
 local bus = Instance.new("Folder")
@@ -10,9 +11,15 @@ local function channel(name)
 	return group
 end
 local musicChannel, sfxChannel = channel("Harbor music"), channel("Harbor effects")
+local filmEffects = channel("Starfall effects")
+local filmOwner, harborFade, harborRequested
 function Audio.volume(key, percent)
-	local group = if key == "MusicVolume" then musicChannel else sfxChannel
-	group.Volume = percent / 100
+	if key == "MusicVolume" then
+		musicChannel.Volume = percent / 100
+	else
+		filmEffects.Volume = percent / 100
+		sfxChannel.Volume = if filmOwner and filmOwner.Parent then 0 else filmEffects.Volume
+	end
 end
 local function sound(name, asset, volume, pitch, parent)
 	local s = Instance.new("Sound")
@@ -24,12 +31,16 @@ end
 -- Anthony Mawer, Prima Bossa Nova, from APM's Roblox Creator Store catalog.
 local music = sound("Prima Bossa Nova", "rbxassetid://1837070127", 0.095, 1)
 music.SoundGroup, music.Looped = musicChannel, true
--- The harbor track enters after the first-visit scene, at the player's own mix level.
 function Audio.startHarborMusic()
-	if music.IsPlaying or (game:GetService("RunService"):IsStudio() and game.ReplicatedStorage:GetAttribute("MuteTestMusic")) then return end
+	if (filmOwner and filmOwner.Parent) or harborRequested
+		or (game:GetService("RunService"):IsStudio() and game.ReplicatedStorage:GetAttribute("MuteTestMusic")) then
+		return
+	end
+	harborRequested = true
 	music.Volume = 0
 	music:Play()
-	game:GetService("TweenService"):Create(music, TweenInfo.new(1.4), { Volume = 0.095 }):Play()
+	harborFade = TweenService:Create(music, TweenInfo.new(1.4), { Volume = 0.095 })
+	harborFade:Play()
 end
 
 local pop = "rbxassetid://15675055424" -- Roblox UI Cute Pop
@@ -146,11 +157,21 @@ for i = 1, 5 do
 	notes[i] = voice
 end
 function Audio.origins(parent)
-	if music.IsPlaying then
-		music:Stop()
+	filmOwner, harborRequested = parent, false
+	sfxChannel.Volume = 0
+	if harborFade then
+		harborFade:Cancel()
+		harborFade = nil
 	end
-	local soundtrack = require(script.Parent.MineOrigins.Soundtrack)
-	return soundtrack(parent, musicChannel, sfxChannel)
+	music:Stop()
+	parent.Destroying:Once(function()
+		if filmOwner == parent then
+			filmOwner = nil
+			sfxChannel.Volume = filmEffects.Volume
+		end
+	end)
+	local soundtrack = require(script.Parent.Starfall.Soundtrack)
+	return soundtrack(parent, musicChannel, filmEffects)
 end
 local unlockNotes = {}
 for i = 1, 4 do

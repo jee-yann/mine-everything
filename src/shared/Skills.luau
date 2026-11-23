@@ -339,7 +339,9 @@ function Skills.bonus(owned, effect)
 end
 
 function Skills.capacity(base, owned)
-	return base + math.floor(base * Skills.bonus(owned, "pack") / 100) + Skills.bonus(owned, "slots")
+	-- A 10% Pack Stitch grants at least one usable slot on the starter bag.
+	local stitchSlots = math.floor(math.max(base, 10) * Skills.bonus(owned, "pack") / 100)
+	return base + stitchSlots + Skills.bonus(owned, "slots")
 end
 
 function Skills.isGem(ore)

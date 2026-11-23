@@ -2,6 +2,23 @@ local rep = game:GetService("ReplicatedStorage")
 local config = require(rep.Shared.GameConfig)
 local test = game:GetService("StudioTestService")
 local mode = rep:GetAttribute("MiningTestMode")
+if mode == "Multiplayer" then
+	local server = game:GetService("ServerStorage").Server
+	local data = require(server.DataService)
+	local open = data.open
+	function data.open(player)
+		local session = open(player)
+		assert(session.practice and not session.writable, "expected a disposable local profile")
+		if player.UserId % 2 == 0 then
+			-- This miner watched the film on a previous visit and left before mining.
+			local saved = data.snapshot(session.profile)
+			saved.introSeen = true
+			session.profile = data.claim({ profile = saved }, session.token, os.time()).profile
+		end
+		return session
+	end
+	server.Parent = game.ServerScriptService
+end
 local completed = false
 local function finish(result)
 	if not completed then
@@ -22,7 +39,9 @@ report.Parent = rep
 local done = {}
 report.OnServerEvent:Connect(function(player, stage, detail)
 	local n = rep.EndlessMiningNet
-	if stage == "gateApproach" then
+	if (inputTest and stage == "respawnOpening") or (mode == "Multiplayer" and stage == "respawnAfterOpening") then
+		player:LoadCharacterAsync()
+	elseif stage == "gateApproach" then
 		local char = player.Character
 		char.HumanoidRootPart.Anchored = false
 		char:PivotTo(CFrame.new(n:GetAttribute("Origin") + Vector3.new(0, 3, 2)))
@@ -71,10 +90,12 @@ report.OnServerEvent:Connect(function(player, stage, detail)
 			Gear = island["Shore market"].Upgrades["Service mat"],
 			Store = island["Harbor Plaza"].Store.Counter,
 			Book = island["Harbor Plaza"].Book.Counter,
+			Samples = island["Field sample bench"]["Catalogue plate"],
 			Supplies = island["Harbor Plaza"].Supplies.Counter,
 		}
 		if positions[detail] then
-			player.Character:PivotTo(CFrame.new(positions[detail].Position + Vector3.yAxis * 3))
+			local approach = if detail == "Samples" then Vector3.new(0, 1, 3) else Vector3.yAxis * 3
+			player.Character:PivotTo(CFrame.new(positions[detail].Position + approach))
 			player.Character.HumanoidRootPart.Anchored = true
 		end
 	elseif stage == "closePage" then

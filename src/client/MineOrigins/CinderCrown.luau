@@ -3,6 +3,7 @@
 -- volume. Rock, pressure vapor and turbulent ash pass through the drawing.
 local P = require(script.Parent.Props)
 local Plume = require(script.Parent.Plume)
+local Cloud = require(script.Parent.FireCloud)
 local Art = require(script.Parent.CinderDrawings)
 local Crater = require(script.Parent.Crater)
 
@@ -71,15 +72,15 @@ local function compileDrawing(cast)
 end
 
 local drawings = {}
-local capacity = 0
-local function prepareDrawings()
-	if capacity > 0 then
-		return
-	end
-	for i, pose in Art.poses do
-		drawings[i] = compileDrawing(pose[2])
+local function prepareDrawings(lastPose)
+	local capacity = 0
+	for i = 1, lastPose do
+		if not drawings[i] then
+			drawings[i] = compileDrawing(Art.poses[i][2])
+		end
 		capacity = math.max(capacity, #drawings[i])
 	end
+	return capacity
 end
 
 local function pressureArc(parent, first, life, tilt, offset, width, cold)
@@ -146,15 +147,16 @@ function Crown:reserve(count)
 end
 
 function Crown:prepare(t)
-	self:reserve(math.ceil(math.clamp(t / 5, 0, 1) * capacity))
+	self:reserve(math.ceil(math.clamp(t / 5, 0, 1) * self.capacity))
 end
 
 function Crown.new(parent, parked)
-	prepareDrawings()
 	local self = setmetatable({ root = P.model(parent, "Fire and pressure"), parked = parked }, Crown)
 	self.paint = P.model(self.root, "Cut fire")
 	self.planes, self.moving, self.frames = {}, {}, {}
 	self.rolls = {}
+	self.cloud = Cloud.new(self.root)
+	self.capacity = prepareDrawings(if self.cloud then 5 else #Art.poses)
 	-- Distant cinders cut in front of the back bank, then soft ash carries
 	-- through the last held drawing into the reverse shot on the fissure.
 	for i, spec in
@@ -192,7 +194,8 @@ end
 
 function Crown:pose(age, base)
 	local index = 0
-	if age < 1.29 then
+	if age < (if self.cloud then 0.49 else 1.29) then
+		index = 1
 		for i, pose in Art.poses do
 			if age < pose[1] then
 				break
@@ -201,8 +204,13 @@ function Crown:pose(age, base)
 		end
 	end
 	if index == self.index then
+		if index > 0 then
+			local elapsed = math.max(0, age - Art.poses[index][1])
+			self.paint:PivotTo(base * CF(4 * elapsed, 9 * elapsed, 0) * A(0, 0, -0.12 * elapsed))
+		end
 		return
 	end
+	self.paint.WorldPivot = base
 	self.index = index
 	local drawing = drawings[index] or {}
 	-- Draw the same pose at every render rate. Both the ash-bank heading
@@ -232,6 +240,7 @@ end
 
 function Crown:draw(age, datum, base, motion)
 	self:pose(age, datum)
+	Cloud.draw(self.cloud, age, datum)
 	local split = self.spectrum
 	local visible = age >= 0.345 and age < 0.90
 	for _, beam in split.beams do
@@ -249,11 +258,19 @@ function Crown:draw(age, datum, base, motion)
 	end
 	for i, roll in self.rolls do
 		local first, last, from, to, diameter, kind = table.unpack(roll.spec)
+		-- On the brush fallback, the three upper ash banks carry the far
+		-- silhouette after the colour drawings burn out.
+		local highAsh = not self.cloud and i >= 5 and i <= 7
+		if highAsh then
+			last = 2.9
+			to += V(8, 39, -4)
+			diameter *= 1.55
+		end
 		local s = age - first
 		local u = math.clamp(s / (last - first), 0, 1)
 		local swell = 1 - (1 - u) ^ 3
 		local at = from:Lerp(to, swell) + V(u * u * 4, u * 3, 0)
-		roll.source.Position = base * at
+		roll.source.Position = datum * (at + V(0, 0.62 * Crater.coverHeight * (1 - u) + 3 * u, 0))
 		local span = diameter * (0.20 + swell * 0.82 + 0.10 * u)
 		roll.gui.Size =
 			UDim2.fromScale(span * 1.17, span * (if i == 3 or i == 4 or i == 8 or i == 9 then 0.50 else 1.08))

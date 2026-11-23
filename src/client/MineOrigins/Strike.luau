@@ -2,6 +2,7 @@ local P = require(script.Parent.Props)
 local Plume = require(script.Parent.Plume)
 local Fault = require(script.Parent.SurfaceFault)
 local Crown = require(script.Parent.CinderCrown)
+local Wave = require(script.Parent.Shockwave)
 local Coast = require(script.Parent.LandfallCoast)
 local Descent = require(script.Parent.Descent)
 local Jets = require(script.Parent.EjectaJets)
@@ -14,15 +15,38 @@ local rgb, ease, tau = Color3.fromHex, P.ease, math.pi * 2
 local stone, neon = Enum.Material.Slate, Enum.Material.Neon
 local flightTime = require(script.Parent.Beats).impact
 local impact = V(0, Crater.coverHeight + 1.5, 0)
-local approach = V(-218, 186.5, -122)
+local approach = V(-407, 266, -238)
 Strike.impactTime = flightTime
 
--- Negative time extrapolates the entry trajectory so the wake already has a
--- history when the first shot opens. All three flight cameras track this body.
+-- Distance along one entry line, with a slow first sighting, a near pass
+-- and a last steep plunge. Tangents are fractions of the run per second.
+local flight = {
+	{ 0, 0, 0.048 },
+	{ 1.36, 0.115, 0.16 },
+	{ 2.46, 0.395, 0.31 },
+	{ 3.24, 0.575, 0.15 },
+	{ 4.28, 0.727, 0.16 },
+	{ 5.60, 0.856, 0.052 },
+	{ 6.23, 0.914, 0.18 },
+	{ flightTime, 1, 0.43 },
+}
 function Strike.position(t)
-	local u = math.min(t / flightTime, 1)
-	local distance = 0.52 * u + 0.48 * math.max(0, u) ^ 2.6
-	return impact + approach * (1 - distance) + V(9, 14, 6) * math.sin(distance * math.pi)
+	local s = math.min(t, 0) * flight[1][3]
+	if t >= flightTime then
+		s = 1
+	elseif t > 0 then
+		for i = 2, #flight do
+			local a, b = flight[i - 1], flight[i]
+			if t <= b[1] then
+				local span = b[1] - a[1]
+				local u = (t - a[1]) / span
+				local v = 1 - u
+				s = a[2] * v * v * (1 + 2 * u) + b[2] * u * u * (3 - 2 * u) + span * u * v * (a[3] * v - b[3] * u)
+				break
+			end
+		end
+	end
+	return impact + approach * (1 - s) + V(-9, 23, 6) * math.sin(math.pi * s)
 end
 
 local function between(p, base, a, b, width, height)
@@ -374,11 +398,12 @@ local function buildImpact(self, rng)
 		)
 		tail.LightEmission, tail.LightInfluence = 0.58, 0.12
 		if i == 4 then
-			v = V(-29, 18.5, 27)
+			v = V(-37, 31, 32)
 		elseif i == 12 then
-			v = V(14, 23, 32)
+			v = V(18, 40, 37)
 		end
-		self.ejecta[i] = { rock = rock, tail = tail, tip = tip, v = v, delay = 0.04 + (i % 5) * 0.045 }
+		self.ejecta[i] =
+			{ rock = rock, tail = tail, tip = tip, v = v, spin = 1.5 / math.sqrt(s), delay = 0.04 + (i % 5) * 0.045 }
 	end
 end
 
@@ -387,6 +412,7 @@ function Strike.new(shelf)
 	local self = setmetatable({ root = root, shelf = shelf }, Strike)
 	local rng = Random.new(58237)
 	self.shore = Coast.new(root)
+	self.wave = Wave.new(root, self.shore)
 	self.meteor, self.shard = buildMeteor(root)
 	buildWake(self)
 	buildImpact(self, rng)
@@ -402,20 +428,20 @@ local function drawBlast(self, t, base, motion)
 	self.impactLight.Color = rgb(if age < 0.28 then "FFF1B1" elseif age < 0.68 then "FFD394" else "F9B28D")
 	self.impactLight.Brightness = (if motion then 1.65 else 1.10) * (1 - ease(age, 0.63, 1.16))
 	self.underlight.Brightness = 0.43 * ease(age, 0.52, 0.78) * (1 - ease(age, 1.22, 1.60))
-	self.jets.origin.CFrame = vent
+	self.jets.origin.CFrame = base
 	self.jets:draw(age)
 	self.paint:draw(age, base, vent, motion)
 	for i, e in self.ejecta do
 		local s = age - e.delay
-		local birth = Crater.coverHeight * (1 - 0.26 * ease(e.delay, 0.04, 0.22))
+		local birth = Crater.contactHeight(e.delay)
 		local function point(h)
 			return e.v * h + V(0, birth - 21.4 * h * h, 0)
 		end
 		local p = point(math.max(0, s))
-		local visible = s >= 0 and p.Y > 0
+		local visible = s >= 0 and p.Y > -4
 		place(e.rock, if visible then self.crown else self.shelf)
 		if visible then
-			local spin = math.floor(s * 14 + (i % 3) * 0.25) / 14
+			local spin = s * e.spin
 			local cf = CF(p) * A(spin * (2.3 + i % 3), i + spin * 2.8, spin * 1.6)
 			e.rock:PivotTo(base * cf)
 			e.tip.Position = cf:PointToObjectSpace(point(math.max(0, s - 0.17)))
@@ -453,6 +479,7 @@ function Strike:draw(t, base, motion)
 	local flying = t < flightTime
 	local age = t - flightTime
 	self.bed:draw(age, base)
+	self.wave:draw(age, base)
 	for _, v in self.rimRocks do
 		local rise = ease(age, v.delay, v.delay + 0.43)
 		if rise ~= v.last then
@@ -483,7 +510,7 @@ function Strike:draw(t, base, motion)
 		self.shard:PivotTo(posed * sliverOffset)
 		drawWake(self, t, base)
 	end
-	local flame = age >= 0 and t < 8.63
+	local flame = age >= 0 and t < 9.40
 	place(self.crown, if flame then self.root else self.shelf)
 	if flame then
 		drawBlast(self, t, base, motion)

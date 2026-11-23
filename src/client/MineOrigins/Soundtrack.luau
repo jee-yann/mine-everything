@@ -51,11 +51,10 @@ return function(screen, musicGroup, sfxGroup)
 	local stage = Instance.new("Folder")
 	stage.Name, stage.Parent = "Cinematic sound sources", camera
 	local bridge, gallery = source(stage, "Survey hammer"), source(stage, "Sound beneath the gallery")
-	local left, right = source(stage, "Windward shore"), source(stage, "Lee shore")
-	local rake = source(stage, "Expanding flare")
+	local flyby = source(stage, "Passing iron")
 	local strings, violas = source(stage, "Bowed strings"), source(stage, "Short strings")
 	local sources = {
-		bridge = bridge, gallery = gallery, left = left, right = right, rake = rake, strings = strings, violas = violas,
+		bridge = bridge, gallery = gallery, flyby = flyby, strings = strings, violas = violas,
 	}
 	screen.Destroying:Once(function()
 		stage:Destroy()
@@ -86,13 +85,9 @@ return function(screen, musicGroup, sfxGroup)
 	local function update(t)
 		strings.Position = camera.CFrame:PointToWorldSpace(Vector3.new(-6, 0, -17))
 		violas.Position = camera.CFrame:PointToWorldSpace(Vector3.new(7, 0, -17))
-		if t < Beats.surface then
-			-- Near-field fragments pass the listener on opposite sides. These
-			-- points follow the shot even when the client is using a private set.
-			left.Position = camera.CFrame:PointToWorldSpace(Vector3.new(-16, 3, -13))
-			right.Position = camera.CFrame:PointToWorldSpace(Vector3.new(17, -2, -17))
-			local travel = math.clamp((t - Beats.impact - 0.13) / 0.24, 0, 1)
-			rake.Position = camera.CFrame:PointToWorldSpace(Vector3.new(-17 + 35 * travel, 1, -20 + 13 * travel))
+		if t >= 2.22 and t < 2.79 then
+			local travel = math.clamp((t - 2.34) / 0.40, 0, 1)
+			flyby.Position = camera.CFrame:PointToWorldSpace(Vector3.new(-14 + 32*travel, 3, -22 + 26*travel))
 		end
 		-- The late-streaming stand-in plays high above the island. Give its gallery
 		-- the same apparent direction/distance as the real one in the live harbor.

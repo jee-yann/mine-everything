@@ -5,7 +5,7 @@ local Beats = require(script.Parent.Beats)
 local ease, rgb, V = P.ease, Color3.fromHex, Vector3.new
 local Exposure = {}
 Exposure.__index = Exposure
-local black, paper, lilac = "101127", "FFF0C8", "BF99FF"
+local black, paper, lilac = "111222", "F2ECCF", "BF99FF"
 
 local function vertex(x, y, z)
 	return V(x, y, z)
@@ -44,193 +44,150 @@ local function facet(model, outline, tint, z)
 	end
 end
 
+-- Ink the horizon in strips so the negative spaces between the headlands
+-- and the torn wedges of rock survive on very wide and portrait displays.
+local function bank(model, ridge, color, z)
+	for i = 2, #ridge do
+		local a, b = ridge[i - 1], ridge[i]
+		facet(model, { a, b, { b[1], -48 }, { a[1], -48 } }, color, z)
+	end
+end
 local function drawContact(model)
-	local ice, red = "93E8FC", "E94454"
-	stroke(model, { { -25, 14, 0 }, { -8.5, 5.6, 0.32 }, { -2.6, 2.2, 0.57 }, { 0.23, 0, 0.27 } }, ice, 0.05)
-	facet(
-		model,
-		{ { -8.5, 8.8 }, { -3.77, 6.39 }, { -0.25, 2.0 }, { 0.27, 0.07 }, { -2.43, 0.96 }, { -6.18, 4.56 } },
-		"372E54",
-		0.1
-	)
-	facet(model, { { -4.7, 5.91 }, { -0.46, 2.08 }, { 0.27, 0.07 }, { -2.08, 1.58 } }, "E9B8E6", 0.13)
-	stroke(model, { { -14, 11, 0 }, { -6.2, 6.4, 0.19 }, { -2.65, 3.52, 0.30 }, { 0, 0, 0.12 } }, paper, 0.17)
-	stroke(
+	bank(
 		model,
 		{
-			{ -14, 0.12, 0 },
-			{ -5.3, 0.33, 0.06 },
-			{ -1.8, 0.18, 0.16 },
-			{ 0, 0.05, 0.21 },
-			{ 3.6, -0.25, 0.16 },
-			{
-				13,
-				-0.39,
-				0,
-			},
+			{ -45, -0.8 },
+			{ -15, 0.25 },
+			{ -9, 1.10 },
+			{ -7.0, 1.04 },
+			{ -4, 0.22 },
+			{ 0, -0.12 },
+			{ 4, 0.15 },
+			{ 8, 2.30 },
+			{ 10, 2.48 },
+			{ 12, 1.38 },
+			{ 17, 1.65 },
+			{ 45, 0.38 },
 		},
-		ice,
-		0.20
+		black,
+		0.08
 	)
+	-- Leave a sliver of paper between the iron and its contact shadow.
+	facet(model, { { -31, 19 }, { -5.4, 5.7 }, { -2.65, 4.70 }, { -1.46, 3.43 }, { -4.6, 4.30 } }, black, 0.10)
+	facet(
+		model,
+		{ { -4.5, 4.50 }, { -2.55, 4.53 }, { -0.62, 3.05 }, { -0.06, 1.24 }, { -0.30, 0.22 }, { -2.0, 0.67 }, {
+			-3.75,
+			2.02,
+		} },
+		black,
+		0.13
+	)
+	stroke(model, { { -4.24, 4.17, 0 }, { -2.62, 3.66, 0.14 }, { -1.68, 2.19, 0.15 }, { -0.30, 0.55, 0 } }, paper, 0.20)
+	stroke(model, { { -3.59, 2.55, 0 }, { -2.73, 2.42, 0.10 }, { -2.15, 1.73, 0.07 }, { -1.73, 1.51, 0 } }, paper, 0.20)
+	facet(model, { { -24, -5.7 }, { -8, -1.24 }, { -1, -0.32 }, { -5.6, -1.53 } }, "746D74", 0.21)
+	facet(model, { { 2, -0.33 }, { 20, -2.25 }, { 11, -1.76 }, { 4, -0.77 } }, "746D74", 0.21)
 	stroke(
 		model,
-		{ { -2.9, 0.64, 0 }, { -1.3, 0.46, 0.14 }, { 0.12, 0.00, 0.18 }, { 1.89, 0.35, 0.15 }, { 5.7, 0.50, 0 } },
+		{ { -0.1, -0.2, 0.10 }, { 0.72, -1.12, 0.1 }, { 0.08, -1.72, 0.07 }, { 1.05, -3.15, 0 } },
 		paper,
-		0.22
+		0.24
 	)
-	stroke(model, { { 0, 0.1, 0.16 }, { 0.38, -0.66, 0.13 }, { 0.13, -1.14, 0.06 }, { 0.69, -1.91, 0 } }, red, 0.24)
+	for i = 1, 10 do
+		local a = math.rad(16 + i * 14.3)
+		local x, y = math.cos(a), math.sin(a)
+		stroke(
+			model,
+			{ { x * 29, y * 19, 0.36 }, { x * 12, y * 9, 0.16 }, { x * (6 + i % 3), y * (4 + i % 3), 0 } },
+			black,
+			0.16
+		)
+	end
 end
 
 local function drawRelease(model)
-	local red, amber, ice = "F74645", "FFB52D", "77D7ED"
-	-- The broad near lip, thin far lip and the lifted wedge of basalt leave
-	-- a dark triangular pocket beneath the hottest part of the blast.
-	stroke(
+	bank(
 		model,
 		{
-			{ -27, -1.6, 0 },
-			{ -12, -0.54, 0.22 },
-			{ -3.1, -0.11, 0.51 },
-			{ 1.9, 0.21, 0.66 },
-			{ 8.6, 1.5, 0.4 },
-			{
-				23,
-				4.4,
-				0,
-			},
-		},
-		red,
-		0.04
-	)
-	stroke(
-		model,
-		{
-			{ -29, 1.7, 0 },
-			{ -9, 0.50, 0.16 },
-			{ -2.3, 0.15, 0.33 },
-			{ 2.6, 0.27, 0.47 },
-			{ 12, 1.55, 0.22 },
-			{
-				28,
-				4.2,
-				0,
-			},
+			{ -45, -2.9 },
+			{ -15, -1.85 },
+			{ -9, -1.05 },
+			{ -6, -0.78 },
+			{ -2, -0.33 },
+			{ 0, -0.08 },
+			{ 2, 0.47 },
+			{ 4, 0.75 },
+			{ 8, 1.62 },
+			{ 11, 1.82 },
+			{ 16, 1.93 },
+			{ 45, 2.2 },
 		},
 		paper,
-		0.07
+		0.08
 	)
+	-- Expose only the broken edge of the incoming shell. It occupies the
+	-- first drawing's diagonal while the crust bursts across it to the right.
 	stroke(
 		model,
-		{
-			{ -10, 0.1, 0 },
-			{ -3.6, 0.59, 0.39 },
-			{ 0, 0.51, 0.85 },
-			{ 3.7, 1.98, 1.23 },
-			{ 6.1, 4.25, 1.12 },
-			{
-				6.32,
-				6.15,
-				0.46,
-			},
-			{
-				5.32,
-				7.2,
-				0,
-			},
-		},
-		amber,
-		0.12
-	)
-	stroke(
-		model,
-		{
-			{ -3.6, 0.22, 0 },
-			{ 0, 0.73, 0.46 },
-			{ 3.57, 2.29, 0.77 },
-			{ 5.46, 4.42, 0.68 },
-			{ 5.6, 5.8, 0.16 },
-			{
-				5.19,
-				6.32,
-				0,
-			},
-		},
-		paper,
-		0.14
-	)
-	stroke(
-		model,
-		{ { 0.28, 0.18, 0.10 }, { 2.73, 0.91, 0.38 }, { 5.27, 2.38, 0.65 }, { 8.03, 5.54, 0.65 }, { 8.82, 8.28, 0 } },
-		red,
-		0.10
-	)
-	stroke(model, { { 1.03, 0.44, 0.06 }, { 4.05, 1.25, 0.18 }, { 7.40, 3.28, 0.29 }, { 10.2, 6.10, 0 } }, ice, 0.15)
-	facet(model, { { 0.4, -0.04 }, { 2.36, 0.41 }, { 5.65, 1.82 }, { 2.83, 0.08 }, { 1.48, -0.36 } }, black, 0.22)
-	stroke(model, { { -21, -3.45, 0 }, { -9.2, -2.68, 0.37 }, { -3.4, -0.85, 0.43 }, { -0.2, 0, 0 } }, amber, 0.14)
-	stroke(
-		model,
-		{ { -0.27, 0.09, 0.11 }, { 0.19, -0.95, 0.22 }, { -0.24, -1.88, 0.13 }, { 0.17, -3.16, 0 } },
-		lilac,
-		0.28
-	)
-	-- Splinters carry the force downwind. Leave the opposite upper quarter empty.
-	stroke(
-		model,
-		{
-			{ -8.6, -1.54, 0 },
-			{ -4.8, -1.14, 0.18 },
-			{ -1.71, -0.10, 0.22 },
-			{ 0.47, 1.06, 0.48 },
-			{ 0.68, 2.38, 0.32 },
-			{ 0.15, 3.14, 0.09 },
-			{ -0.53, 2.86, 0 },
-		},
-		red,
-		0.16
-	)
-	stroke(
-		model,
-		{ { -2.26, -0.15, 0 }, { -0.29, 0.56, 0.2 }, { 0.48, 1.64, 0.24 }, { 0.31, 2.49, 0.10 }, { -0.14, 2.85, 0 } },
-		paper,
-		0.19
-	)
-	stroke(
-		model,
-		{ { 1.09, 0.21, 0 }, { 3.1, 0.83, 0.25 }, { 5.83, 1.73, 0.41 }, { 8.21, 2.51, 0.30 }, { 10.67, 2.58, 0.13 }, {
-			11.6,
-			2.15,
+		{ { -22, 15, 0 }, { -6.0, 5.36, 0.21 }, { -3.7, 4.2, 0.25 }, { -2.6, 4.24, 0.20 }, { -0.63, 2.64, 0.14 }, {
+			-0.09,
+			0.2,
 			0,
 		} },
-		amber,
+		paper,
 		0.18
 	)
-	facet(model, { { -3.12, 0.63 }, { -2.01, 1.13 }, { -1.46, 0.95 }, { -2.61, 0.54 } }, black, 0.29)
-	facet(model, { { 2.44, 1.47 }, { 4.78, 3.23 }, { 4.49, 2.28 }, { 3.44, 1.58 } }, black, 0.29)
-	facet(model, { { 6.04, 4.64 }, { 6.54, 4.87 }, { 7.4, 6.02 }, { 6.72, 5.83 } }, black, 0.29)
-	local chips = {
-		{ -5, 1.44, 0.32 },
-		{ 1.36, 3.12, 0.48 },
-		{ 2.08, 5.14, 0.22 },
-		{ 4.4, 6.68, 0.31 },
-		{ 8.73, 2.80, 0.6 },
-		{ 10.4, 4.98, 0.32 },
-		{ -6.3, -1.06, 0.16 },
-		{ 11.9, 7.62, 0.63 },
-	}
-	for i, chip in chips do
-		local x, y, s = chip[1], chip[2], chip[3]
+	facet(model, { { -3.95, 3.94 }, { -2.65, 3.75 }, { -1.04, 1.85 }, { -2.62, 2.73 } }, paper, 0.19)
+	for i, wedge in
+		{
+			{ { -0.31, 0.12 }, { -4.7, 3.05 }, { -2.3, 2.23 }, { 0.1, 0.59 } },
+			{ { -0.10, 0.23 }, { -1.1, 5.65 }, { 0.48, 2.24 }, { 0.36, 0.55 } },
+			{ { 0.15, 0.11 }, { 2.18, 5.32 }, { 1.82, 2.55 }, { 0.7, 0.3 } },
+			{ { 0.42, 0.25 }, { 5.5, 4.83 }, { 3.09, 1.83 }, { 1.24, 0.48 } },
+			{ { 0.7, 0.14 }, { 8.33, 3.74 }, { 5.45, 2.21 }, { 1.63, 0.37 } },
+		}
+	do
+		facet(model, wedge, paper, 0.20 + i * 0.002)
+	end
+	-- Near slabs cut dark islands into the pale bank, with one light facet
+	-- left on each to carry the tumble into the first colour frame.
+	for _, chip in
+		{ { -6, -1.65, 1.56 }, { -3.6, -0.88, 0.81 }, { 4, -0.87, 1.18 }, { 7.7, 0.1, 0.78 }, { 9.5, 0.74, 0.48 } }
+	do
+		local x, y, k = table.unpack(chip)
 		facet(
 			model,
-			{
-				{ x - s, y },
-				{ x - 0.22 * s, y + 1.22 * s },
-				{ x + 1.95 * s, y + 2.16 * s },
-				{ x + 0.45 * s, y + 0.27 * s },
-			},
-			if i % 3 == 0 then ice else paper,
+			{ { x - k, y }, { x - 0.35 * k, y + 0.93 * k }, { x + 0.88 * k, y + 0.47 * k }, { x + 0.65 * k, y - 0.31 * k }, {
+				x - 0.62 * k,
+				y - 0.45 * k,
+			} },
+			black,
 			0.25
 		)
+		stroke(
+			model,
+			{ { x - 0.49 * k, y + 0.58 * k, 0 }, { x + 0.37 * k, y + 0.26 * k, 0.05 * k }, { x + 0.61 * k, y - 0.14 * k, 0 } },
+			paper,
+			0.28
+		)
 	end
+	for i = 1, 13 do
+		local a = math.rad(8 + i * 12.1)
+		local x, y = math.cos(a), math.sin(a)
+		local d = 3.3 + (i * 7 % 8) * 0.72
+		local cx, cy = x * d, y * d * 0.82
+		local w = 0.11 + (i % 4) * 0.10
+		facet(
+			model,
+			{ { cx - y * w, cy + x * w }, { cx + x * 1.45, cy + y * 1.45 }, { cx + y * w, cy - x * w }, {
+				cx - x * 0.48,
+				cy - y * 0.48,
+			} },
+			paper,
+			0.23
+		)
+	end
+	stroke(model, { { 0, 0, 0.19 }, { 0.78, -0.96, 0.19 }, { -0.04, -1.59, 0.12 }, { 1.07, -3.12, 0 } }, black, 0.29)
 end
 
 local function paint(model, draw)
@@ -289,8 +246,10 @@ end
 function Exposure:draw(t, film)
 	local motion, grade = film.motion, self.grade
 	local offset = t - Beats.impact
-	local passing = ease(t, 0.57, 0.79) * (1 - ease(t, 0.98, 1.09))
-	local chase = ease(t, 2.46, 2.72) * (1 - ease(t, 3.51, 3.97))
+	local interval = t - (self.previous or t)
+	self.previous = t
+	local passing = ease(t, 2.23, 2.43) * (1 - ease(t, 2.56, 2.76))
+	local chase = ease(t, 5.98, 6.31) * (1 - ease(t, 6.46, 6.50))
 	local shear = if motion then math.max(passing, 0.76 * chase) else 0
 	self.slip.Visible = shear > 0.01
 	if self.slip.Visible then
@@ -318,7 +277,7 @@ function Exposure:draw(t, film)
 	end
 	local silhouette = if motion and t >= 6.19 and t < 6.50 then (if t < 6.40 then 0.43 else 1) else 0
 	local release = if motion then ease(t, 6.59, 6.69) * (1 - ease(t, 6.76, 6.99)) else 0
-	local quiet = ease(t, 8.65, 9.12) * (1 - ease(t, 11.45, 12.56))
+	local quiet = ease(t, 9.39, 9.51) * (1 - ease(t, 11.45, 12.56))
 	local sky = ease(t, 13.05, 14.45) * (1 - ease(t, 27.9, 30.05))
 	local gradeOn = t < 30.6
 	grade.Enabled = gradeOn
@@ -334,7 +293,19 @@ function Exposure:draw(t, film)
 			:Lerp(rgb("FFE4BC"), 0.38 * release)
 	end
 	local plate = self.plate
-	plate.Visible = motion and offset >= 0 and offset < 0.126
+	-- The opening calls draw once per PreRender. Give each ink drawing one
+	-- submitted frame, including when a slow client crosses contact late.
+	if offset < 0 then
+		self.contactFrame = 0
+		if interval > 0 then
+			self.inkHold = if interval < 1 / 90 then 2 else 1
+		end
+	elseif offset < 0.48 then
+		self.contactFrame = math.min(5, (self.contactFrame or 0) + 1)
+	else
+		self.contactFrame = 5
+	end
+	plate.Visible = motion and offset >= 0 and self.contactFrame <= 2 * (self.inkHold or 1)
 	if plate.Visible then
 		local viewport = film.camera.ViewportSize
 		local hit = film.camera:WorldToViewportPoint(film.impactPoint)
@@ -343,11 +314,11 @@ function Exposure:draw(t, film)
 		local distance = h / math.tan(math.rad(21))
 		local u = math.clamp(hit.X / math.max(1, viewport.X), 0.04, 0.96)
 		local v = math.clamp(hit.Y / math.max(1, viewport.Y), 0.08, 0.92)
-		local releasing = offset >= 0.050
+		local releasing = self.contactFrame > (self.inkHold or 1)
 		local sheet = if releasing then cutSpacing else 0
 		self.lens.CFrame = CFrame.new(sheet + (1 - 2 * u) * h * aspect, (2 * v - 1) * h, distance)
-		plate.BackgroundColor3 = rgb(if releasing then "34213A" else "101127")
-		plate.BackgroundTransparency, plate.ImageTransparency = 0.025, 0
+		plate.BackgroundColor3 = rgb(if releasing then black else paper)
+		plate.BackgroundTransparency, plate.ImageTransparency = 0, 0
 	end
 end
 

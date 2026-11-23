@@ -1,5 +1,6 @@
 {
   "name": "EndlessMining",
+  "globIgnorePaths": ["**/MineOrigins"],
   "tree": {
     "$className": "DataModel",
     "$ignoreUnknownInstances": true,
@@ -29,7 +30,7 @@
     "StarterGui": {
       "$ignoreUnknownInstances": true,
       "$properties": {
-        "ScreenOrientation": "Sensor"
+        "ScreenOrientation": "LandscapeSensor"
       }
     },
     "StarterPlayer": {
@@ -42,7 +43,16 @@
         "$ignoreUnknownInstances": true,
         "Client": {
           "$ignoreUnknownInstances": true,
-          "$path": "src/client"
+          "$path": "src/client",
+          "CinematicActors": {
+            "$className": "Folder",
+            "RobloxRig": {
+              "$path": "src/client/MineOrigins/RobloxRig.luau"
+            },
+            "Props": {
+              "$path": "src/client/MineOrigins/Props.luau"
+            }
+          }
         }
       }
     },

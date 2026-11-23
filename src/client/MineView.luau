@@ -70,8 +70,19 @@ function View.start(player, origin, hud)
 		local char = player.Character
 		local root = char and char:FindFirstChild("HumanoidRootPart")
 		local camera = workspace.CurrentCamera
-		local watching = hud.inOpening and camera ~= nil
-		local pos = if watching then camera.CFrame.Position - origin elseif root then root.Position - origin else Vector3.zero
+		if hud.inOpening then
+			-- The film lights its own set on each exposure. Its camera can
+			-- cross the gameplay mine bounds during a cut or a replay.
+			if grade.Enabled then
+				grade.Enabled = false
+				previousEye, lastTarget = nil, nil
+			end
+			return
+		end
+		if not grade.Enabled then
+			grade.Enabled = true
+		end
+		local pos = if root then root.Position - origin else Vector3.zero
 		local inside = root ~= nil and Config.inMine(pos)
 		local target = if inside then math.clamp(.55 + math.max(0,-pos.Y)/85,.55,1)
 			elseif root and pos.Z >= Config.HallFront and math.abs(pos.X)<10 and pos.Y < 12
@@ -99,7 +110,7 @@ function View.start(player, origin, hud)
 			previousEye, previousChar = nil, char
 			bodyParts, nextScan = {}, 0
 		end
-		if watching or not root or not camera or not inside then
+		if not root or not camera or not inside then
 			previousEye = nil
 			return
 		end

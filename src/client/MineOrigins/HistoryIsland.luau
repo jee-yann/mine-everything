@@ -285,8 +285,8 @@ local function trees(land, shelf, register, spent)
 			end
 		end
 		trunk.WorldPivot = CFrame.identity
-		register(trunk, first, fell + 0.45, false)
-		table.insert(trees, { m = trunk, first = first, fall = fell, bed = bed, rot = seed:NextNumber(0, TAU), k = -1 })
+		register(trunk, first, fell, false)
+		table.insert(trees, { m = trunk, bed = bed, rot = seed:NextNumber(0, TAU) })
 		spent(5)
 	end
 	land.trees = trees
@@ -322,7 +322,7 @@ local function trail(land, shelf, register, spent)
 		V(-31, 0, 43),
 		V(-6, 0, 25),
 	}
-	local streaks = {}
+
 	for k = 2, #points do
 		local a, b = points[k - 1], points[k]
 		local segments = math.max(1, math.ceil((a - b).Magnitude / 6))
@@ -338,14 +338,12 @@ local function trail(land, shelf, register, spent)
 			local t = 6.12 + (k - 2 + (j - 1) / segments) * 0.22
 			if t < ends then
 				register(m, t, ends, true)
-				table.insert(streaks, { p = p, cf = cf, size = p.Size, time = t, done = ends })
 			else
 				m:Destroy()
 			end
 			spent(1)
 		end
 	end
-	land.trail = streaks
 end
 
 -- Restrict the per-render survey to the parcels actually exposed by this
@@ -471,37 +469,10 @@ function Island.expose(land, t, base, root)
 		workspace:BulkMoveTo(parts, cf, Enum.BulkMoveMode.FireCFrameChanged)
 	end
 	for _, tree in land.trees or {} do
-		if t >= tree.first - 0.05 and t < tree.fall + 0.49 then
+		if tree.m.Parent == root then
 			local bed = tree.bed
 			local point = bed.a.pos:Lerp(bed.b.pos, 0.22):Lerp(bed.c.pos, 0.32)
-			local spring = smooth((t - tree.first) / 0.77)
-			local fall = smooth((t - tree.fall) / 0.45)
-			local k = math.max(0.028, spring * (1 - fall * 0.86))
-			if math.abs(k - tree.k) > 0.006 or (k == 1 and tree.k ~= k) then
-				tree.m:ScaleTo(k)
-				tree.k = k
-			end
-			if
-				spring < 1
-				or fall > 0
-				or not tree.at
-				or (tree.at - point).Magnitude > 0.004
-				or not oldAge
-				or t < oldAge
-			then
-				tree.at = point
-				tree.m:PivotTo(base * CF(point - V(0, fall * 1.95, 0)) * A(0, tree.rot, fall * 1.40))
-			end
-		end
-	end
-	for _, trail in land.trail or {} do
-		if t >= trail.time - 0.05 and t < trail.done then
-			local u = math.max(0.01, smooth((t - trail.time) / 0.30))
-			if u ~= trail.u then
-				trail.u = u
-				trail.p.Size = V(trail.size.X, trail.size.Y, trail.size.Z * u)
-				trail.p.CFrame = base * trail.cf * CF(0, 0, (1 - u) * trail.size.Z / 2)
-			end
+			tree.m:PivotTo(base * CF(point) * A(0, tree.rot, 0))
 		end
 	end
 end

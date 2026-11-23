@@ -1,0 +1,15 @@
+return table.freeze({
+	entry = 1.55,
+	contact = 4.60,
+	waveLaunch = 5.10,
+	eruption = 5.22,
+	shore = 6.85,
+	breaker = 7.50,
+	breakerEye = Vector3.new(251, 131, 105),
+	aftermath = 8.60,
+	match = 27.50,
+	present = 28.25,
+	handoff = 36.40,
+	endBlend = 38.23,
+	duration = 38.40,
+})

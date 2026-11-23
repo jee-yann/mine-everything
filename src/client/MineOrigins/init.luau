@@ -104,7 +104,7 @@ local function compose(screen, safe)
 	card.TextXAlignment, card.TextStrokeColor3 = Enum.TextXAlignment.Left, rgb("151622")
 	textLimit(card, Enum.Font.BuilderSansExtraBold, 78)
 	local skip = Instance.new("TextButton")
-	skip.Name, skip.Text, skip.Font, skip.TextSize = "Skip", "Skip  ›", Enum.Font.BuilderSansMedium, 16
+	skip.Name, skip.Text, skip.Font, skip.TextSize = "Skip", "Skip  â€º", Enum.Font.BuilderSansMedium, 16
 	skip.AnchorPoint, skip.Position, skip.Size = Vector2.new(1, 0), UDim2.new(1, -12, 0, 6), UDim2.fromOffset(84, 44)
 	skip.TextColor3, skip.BackgroundColor3, skip.BackgroundTransparency = rgb("FFF3DF"), rgb("151622"), 0.32
 	skip.BorderSizePixel, skip.Parent = 0, safe
@@ -209,9 +209,18 @@ function Opening.play(player, net, hud)
 		film:draw(0, false)
 		Run.PreRender:Wait()
 		Run.PreRender:Wait()
+		local contactDelay, previous = 0, 0
 		local start = os.clock()
 		while not skipped and player.Character == char and root.Parent and workspace.CurrentCamera == camera do
 			local t = os.clock() - start
+			t -= contactDelay
+			if previous < Beats.impact and t >= Beats.impact then
+				-- Start the contact drawing and its untrimmed transient on the same
+				-- render callback even if a hitch consumes the expected timestamp.
+				contactDelay = t - Beats.impact
+				t = Beats.impact
+			end
+			previous = t
 			local island = workspace:FindFirstChild("CitrineCove")
 			local gallery = island and island:FindFirstChild("Working gallery")
 			local gateModel = island and island:FindFirstChild("Citrine Mine")

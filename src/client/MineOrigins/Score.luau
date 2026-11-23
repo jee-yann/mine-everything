@@ -25,22 +25,15 @@ local bank = {
 
 	wind = sample("Thin upper air", "action_falling.ogg", 0.56, 5.40, 3.0, 0.33, 0.27),
 	pass = sample("Wake crossing the lens", "action_falling.ogg", 1.95, 2.84, 4.65, 0.045, 0.19),
-	gale = sample("Trailing shear", "impact_water.mp3", 0.25, 0.82, 0.63, 0.036, 0.18),
 	hot = sample("Atmospheric friction", "impact_water.mp3", 0.54, 1.17, 0.36, 1.8, 0.10),
 	rumble = sample("Approach rumble", "impact_explosion_03.mp3", 0.47, 0.93, 0.16, 1.6, 0.09),
 	hit = sample("Landfall", "action_jump_land.mp3", 0.035, 0.18, 3.85, 0.003, 0.035),
-	snap = sample("Crust shear", "impact_water.mp3", 0.041, 0.16, 0.88, 0.003, 0.035),
 	wave = sample("Pressure front", "impact_explosion_03.mp3", 0.265, 1.43, 0.69, 0.018, 0.15),
-	rake = sample("Cinder lash", "action_falling.ogg", 1.92, 3.02, 3.25, 0.030, 0.10),
-	resin = instrument("Singing slag", "impact_water.mp3", 0.123175, 0.126122, 339.23, 0.44, 0.017, 0.083),
-	cinder = sample("Hot rock passing", "impact_water.mp3", 0.47, 0.71, 0.69, 0.006, 0.089),
 	slab = sample("Basalt slab", "action_jump_land.mp3", 0.047, 0.238, 3.42, 0.005, 0.088),
 	ash = sample("Ash over shore", "impact_water.mp3", 0.34, 1.36, 0.61, 0.21, 0.48),
-	scatter = sample("Loose stones", "action_footsteps_plastic.mp3", 0.036, 0.121, 1.65, 0.003, 0.042),
 	strata = sample("Settling rubble", "action_get_up.mp3", 0.10, 0.41, 1.70, 0.022, 0.20),
 	core = sample("Violet fault", "volume_slider.ogg", 0.028, 0.74, 1.34, 0.012, 0.31),
 	deep = instrument("Subsurface pressure", "action_jump_land.mp3", 0.079, 0.090, 1 / 0.011, 2.4, 0.13, 0.64),
-	slip = sample("Receding scree", "action_footsteps_plastic.mp3", 0.045, 0.20, 2.32, 0.011, 0.10),
 	surf = sample("Tide through crater", "action_swim.mp3", 0.25, 3.87, 2.2, 0.62, 0.75),
 	rain = sample("Rain in the canopy", "impact_water.mp3", 0.42, 1.17, 0.52, 0.60, 0.59),
 	bird = sample("Shore bird", "volume_slider.ogg", 0.045, 0.10, 0.18, 0.036, 0.054),
@@ -68,15 +61,11 @@ bank.stroke.decay, bank.drumHead.decay = 4.5, 4
 bank.stroke.chorus = true
 bank.horn.eq, bank.stroke.eq = { 1, 1, -8 }, { -4, 2, -8 }
 bank.drum.eq, bank.drumHead.eq = { 5, -5, -18 }, { 2, -2, -13 }
-bank.gale.eq, bank.pass.eq = { -9, -1, -3 }, { -8, 1, -2 }
-bank.rake.at, bank.cinder.at = "rake", "right"
-bank.rake.eq, bank.cinder.eq = { -11, 2, 1 }, { -4, 2, -5 }
-bank.slab.eq, bank.resin.eq = { 3, 2, -11 }, { -8, 0, -5 }
-bank.resin.music = false
+bank.pass.eq = { -8, 1, -2 }
+bank.slab.eq = { 3, 2, -11 }
 bank.horn.room, bank.stroke.room, bank.drum.room = { 0.7, -18 }, { 0.47, -19 }, { 0.59, -16 }
 bank.airString.at, bank.stroke.at = "strings", "violas"
-bank.pass.at, bank.gale.at = "left", "right"
-bank.scatter.at, bank.slip.at = "right", "left"
+bank.pass.at = "flyby"
 bank.bow.vibrato, bank.horn.vibrato, bank.reed.vibrato = 0.005, 0.003, 0.007
 for _, key in { "wind", "hot", "rumble", "surf", "rain", "bird", "cart", "chamber", "lead", "player", "vowel" } do
 	bank[key].loop = true
@@ -98,7 +87,7 @@ bank.lead.eq, bank.player.eq, bank.vowel.eq = { -8, 2, -8 }, { -8, 3, -7 }, { -5
 bank.tapMetal.at, bank.chamber.at = "bridge", "gallery"
 -- These strikes are cut from the first few milliseconds of the sample. Start
 -- at the strike on a late render frame as well, so the scrape cannot replace it.
-for _, key in { "tap", "tapMetal", "reply", "hit", "snap", "pick", "slab", "cinder", "scatter", "slip" } do
+for _, key in { "tap", "tapMetal", "reply", "hit", "pick", "slab" } do
 	bank[key].keepAttack = true
 end
 
@@ -119,65 +108,26 @@ function Score.compose(beats)
 		note("drumHead", t + 0.009, pitch, 0.34, weight, -3)
 	end
 
-	-- The lens waits in the flight path. Let the first harmonic decay into
-	-- open air before cutting across the listener on the near miss.
+	-- One air bed acquires a low harmonic, crosses the listener at the flyby
+	-- and breaks off before contact. The score yields the shore to the blast.
 	local hit = beats.impact
-	note("glass", 0.10, 81, 0.53, 0.45)
-	note("stroke", 0.13, 50, 0.27, 0.72)
-	cue("wind", 0.37, 0.54, 0.60, 0.55, 1.61)
-	cue("pass", 0.77, 0.30, 0.68, 1.40, 2.11)
-	cue("gale", 0.93, 0.32, 1.77, 1.00, 0.68)
-	drum(1.02, 0.80, 43)
-	cue("hot", 1.02, 0.60, 1.34, 0.84, 0.96)
-	note("horn", 1.68, 62, 0.47, 0.61)
-	note("bow", 1.73, 50, 0.55, 0.63)
-	cue("pass", 2.37, 0.34, 1.55, 1.04, 0.64)
-	cue("rumble", 2.45, 1.58, 0.46, 0.82, 0.86)
-	note("stroke", 2.45, 50, 0.25, 0.93)
-	note("stroke", 2.56, 57, 0.15, 0.55)
-	note("stroke", 3.18, 50, 0.20, 0.81)
-	note("stroke", 3.57, 60, 0.13, 0.65)
-	note("stroke", 3.73, 62, 0.24, 0.94)
-	cue("gale", 3.79, 0.31, 1.25, 0.92, 0.49)
-	drum(4.10, 0.95, 40)
-	note("bow", 4.20, 46, 0.63, 0.82)
-	note("horn", 4.62, 57, 0.50, 0.76, 2)
-	note("horn", 5.12, 65, 0.26, 0.89)
-	cue("scatter", 5.58, 0.13, 1.56, 0.30)
-	cue("slip", 5.82, 0.13, 1.76, 0.23)
+	note("bow", 0.06, 45, 2.07, 0.37)
+	cue("wind", 0.36, 2.14, 0.47, 0.48, 1.35)
+	cue("pass", 2.34, 0.40, 1.52, 1.21, 0.65)
+	cue("rumble", 2.72, 3.33, 0.36, 0.93, 0.91)
+	cue("hot", 3.04, 2.84, 0.65, 1.04, 1.38)
 
-	-- Five different attacks travel up and across the picture. The air runs
-	-- out just before the second lobe blows out on the right of the frame.
-	cue("hit", hit, 0.16, 0.84, 1.22)
-	cue("snap", hit, 0.11, 1.73, 1.11)
-	cue("rake", hit + 0.13, 0.24, 1.87, 0.95, 0.73)
-	drum(hit + 0.13, 1.06, 43)
-	note("resin", hit + 0.26, 69, 0.24, 0.86, 7)
-	cue("wave", hit + 0.28, 0.27, 0.78, 1.13, 0.50)
-	note("deep", hit + 0.43, 38, 0.12, 0.90)
-	cue("cinder", hit + 0.68, 0.27, 1.15, 1.15, 0.61)
-	cue("wave", hit + 0.69, 0.30, 0.47, 0.91, 0.37)
-	cue("ash", hit + 0.92, 0.28, 1.40, 0.79, 0.71)
-	cue("scatter", hit + 1.28, 0.17, 1.25, 0.89)
-	cue("slab", hit + 1.28, 0.14, 0.94, 0.58)
-	cue("slip", hit + 1.40, 0.11, 1.68, 0.52)
-	cue("scatter", hit + 1.48, 0.12, 1.46, 0.40)
-	cue("slab", hit + 1.83, 0.32, 0.54, 0.76)
-
-	-- Hear the crack cross the still shot. The high note dies away before
-	-- the second, lower reflection; then each settling bank gets its own weight.
-	cue("strata", 8.57, 0.16, 1.02, 0.37)
-	cue("slip", 8.79, 0.14, 1.22, 0.93)
-	cue("cinder", 8.94, 0.16, 1.42, 0.67)
-	cue("core", 9.04, 0.56, 1.35, 0.84, 1.10)
-	note("deep", 9.08, 57, 0.48, 0.54)
-	cue("core", 10.17, 0.38, 0.96, 0.85, 0.78)
-	note("deep", 10.18, 50, 0.41, 0.66)
-	cue("strata", 10.63, 0.22, 0.77, 0.87, 0.49)
-	cue("slip", 10.74, 0.12, 1.41, 0.46)
-	cue("slab", 11.08, 0.25, 0.49, 0.89)
-	cue("strata", 11.09, 0.26, 0.49, 0.62)
-	note("deep", 11.16, 38, 0.39, 0.57, -1)
+	cue("hit", hit, 0.18, 0.78, 1.24)
+	note("deep", hit + 0.035, 34, 1.43, 1.08, -4)
+	cue("wave", hit + 0.055, 1.39, 0.79, 1.08, 0.48)
+	cue("ash", hit + 1.09, 2.17, 0.59, 0.76, 1.12)
+	-- The perspective changes to the offshore listener. The sea-front
+	-- arrives late and recedes before cutting back inside the crater.
+	cue("wave", 8.77, 0.59, 0.47, 0.70, 0.38)
+	cue("strata", 9.42, 0.41, 0.57, 0.41)
+	cue("core", 9.60, 0.86, 0.89, 0.69, 0.73)
+	note("deep", 10.02, 50, 0.69, 0.36, -2)
+	cue("slab", 11.09, 0.27, 0.48, 0.47)
 
 	-- The island's orbit becomes the metre: two quiet voices at first, then
 	-- an off-beat string ostinato, drum skin, and the sounds of the shipyard.

@@ -15,7 +15,8 @@ local upgrades = {
 		color = rgb(255, 147, 100),
 	},
 	Capacity = {
-		values = { 36, 80, 170, 360, 760, 1600, 3400, 7200 },
+		values = { 8, 16, 24, 32, 40, 48, 56, 64 },
+		firstPrice = 8,
 		base = 24,
 		growth = 2.5,
 		icon = "▣",
@@ -32,8 +33,20 @@ function api.price(key, level)
 	if level >= #item.values then
 		return nil
 	end
+	if level == 1 and item.firstPrice then
+		return item.firstPrice
+	end
 	return math.floor(item.base * item.growth ^ (level - 1) + 0.5)
 end
+
+function api.onboardingPick(gold)
+	local speedPrice = api.price("Speed", 1)
+	if gold >= speedPrice then
+		return "Speed", speedPrice
+	end
+	return "Capacity", api.price("Capacity", 1)
+end
+
 function api.describe(key, level)
 	local v = upgrades[key].values[level]
 	if key == "Speed" then
