@@ -121,12 +121,12 @@ function Config.blockCenter(origin, position, normal)
 end
 -- Hardness increases for all materials, including ordinary stone.
 Config.StoneGrades = {
-	{ depth = 0, name = "Stone", material = Enum.Material.Plastic, color = Color3.fromRGB(160, 162, 169), face = Enum.SurfaceType.Studs },
-	{ depth = 27, name = "Hard Stone", material = Enum.Material.Slate, color = Color3.fromRGB(119, 139, 151), face = Enum.SurfaceType.Inlet },
-	{ depth = 60, name = "Dense Stone", material = Enum.Material.Basalt, color = Color3.fromRGB(100, 107, 125), face = Enum.SurfaceType.Studs },
-	{ depth = 90, name = "Rift Stone", material = Enum.Material.Sandstone, color = Color3.fromRGB(123, 109, 140), face = Enum.SurfaceType.Inlet },
-	{ depth = 140, name = "Tempered Stone", material = Enum.Material.Granite, color = Color3.fromRGB(87, 99, 111), face = Enum.SurfaceType.Studs },
-	{ depth = 185, name = "Midnight Stone", material = Enum.Material.Marble, color = Color3.fromRGB(69, 65, 91), face = Enum.SurfaceType.Inlet },
+	{ depth = 0, name = "Stone", material = Enum.Material.Plastic, color = Color3.fromRGB(160, 162, 169) },
+	{ depth = 27, name = "Hard Stone", material = Enum.Material.Slate, color = Color3.fromRGB(119, 139, 151) },
+	{ depth = 60, name = "Dense Stone", material = Enum.Material.Basalt, color = Color3.fromRGB(100, 107, 125) },
+	{ depth = 90, name = "Rift Stone", material = Enum.Material.Sandstone, color = Color3.fromRGB(123, 109, 140) },
+	{ depth = 140, name = "Tempered Stone", material = Enum.Material.Granite, color = Color3.fromRGB(87, 99, 111) },
+	{ depth = 185, name = "Midnight Stone", material = Enum.Material.Marble, color = Color3.fromRGB(69, 65, 91) },
 }
 function Config.strength(localY)
 	local depth = Config.depthInBlocks(Config.FloorY - localY)
