@@ -1,8 +1,10 @@
 -- Dresses every open mine block face in the Ink & Facet look. Each face shows its Storybook Ink
 -- drawing (DrawnFaces) and gem blocks grow 3D crystals out of one face. Without drawings, faces
 -- fall back to an ink frame plus 3D relief and decor. Calcite marks cave ceilings either way.
--- The nearest crystals and reliefs get ink outlines and the two nearest gems cast light.
+-- The nearest crystals and reliefs get ink outlines. Ores from Gold up (OreLooks `shine`) give off
+-- a soft, slowly breathing light: Gold barely, Starfall the most.
 local Tags = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Art, Looks = require(Shared.MineralRelief), require(Shared.OreLooks)
 local Config = require(Shared.GameConfig)
@@ -70,7 +72,7 @@ local function build(block, face, kind)
 end
 
 return function()
-	local folders, luminous, lights, reliefs = {}, {}, {}, {}
+	local folders, glowing, reliefs = {}, {}, {}
 	local ink = Color3.fromHex(Looks.ink)
 	local outlineFolder = Instance.new("Folder")
 	outlineFolder.Name = "Ink outlines"
@@ -85,9 +87,40 @@ return function()
 	end
 
 	local function removeArt(art)
-		luminous[art.model], lights[art.model], reliefs[art.model] = nil, nil, nil
+		reliefs[art.model] = nil
 		art.model:Destroy()
 	end
+
+	-- A small pool of lights that follow the nearest glowing ores.
+	local glow = Looks.glow
+	local slots = table.create(glow.lights)
+	for i = 1, glow.lights do
+		local at = Instance.new("Attachment")
+		at.Name = "Ore glow"
+		local light = Instance.new("PointLight")
+		light.Name, light.Enabled, light.Shadows = "Ore glow", false, false
+		light.Parent = at
+		at.Parent = workspace.Terrain
+		slots[i] = { attachment = at, light = light, block = nil, base = 0, speed = 1, phase = 0 }
+	end
+	local function release(block)
+		for _, slot in slots do
+			if slot.block == block then
+				slot.block, slot.light.Enabled = nil, false
+			end
+		end
+	end
+	local function lerp(pair, t)
+		return pair[1] + (pair[2] - pair[1]) * t
+	end
+	RunService.Heartbeat:Connect(function()
+		local t = os.clock()
+		for _, slot in slots do
+			if slot.block then
+				slot.light.Brightness = slot.base * (1 + glow.pulse * math.sin(t * slot.speed + slot.phase))
+			end
+		end
+	end)
 
 	local function watchFolder(folder)
 		if folders[folder] or not folder:IsDescendantOf(workspace) then
@@ -99,8 +132,9 @@ return function()
 				return
 			end
 			local arts, skins = {}, {}
-			local glow = Art.glow(block.Name)
+			local color, shine = Art.glow(block.Name), Art.shine(block.Name)
 			local cell = (block.Position / Config.Cell):Floor()
+			local phase = (cell.X * 1.7 + cell.Y * 2.3 + cell.Z * 0.9) % (2 * math.pi)
 			local function refresh()
 				local mask = block:GetAttribute("OpenFaces") or 0
 				local calcite = block:GetAttribute("CalciteFaces") or 0
@@ -130,10 +164,17 @@ return function()
 						arts[face] = { model = model, kind = kind }
 						if kind == "relief" or kind == "crown" or kind == "crystals" then
 							reliefs[model] = cf.Position
-							if glow then
-								luminous[model] = { position = cf.Position, color = glow }
-							end
 						end
+					end
+				end
+				if color and shine then
+					-- The light sits just off the face the crystals use, so it lights the ore itself.
+					local face = crownFace(mask)
+					if face then
+						local at = block.Position + Vector3.FromNormalId(face) * (block.Size.Y * 0.5 + glow.offset)
+						glowing[block] = { position = at, color = color, shine = shine, phase = phase }
+					else
+						glowing[block] = nil
 					end
 				end
 			end
@@ -142,6 +183,8 @@ return function()
 			blocks[block] = function()
 				exposed:Disconnect()
 				marked:Disconnect()
+				glowing[block] = nil
+				release(block)
 				for _, art in arts do
 					removeArt(art)
 				end
@@ -223,29 +266,43 @@ return function()
 			h.Adornee, h.Enabled = model, true
 		end
 
-		local first, second
-		local nearest, runnerUp = 20, 20
-		for model, gem in luminous do
-			local distance = (eye - gem.position).Magnitude
-			if distance < nearest then
-				second, runnerUp, first, nearest = first, nearest, model, distance
-			elseif distance < runnerUp then
-				second, runnerUp = model, distance
+		-- Light the nearest glowing ores. A light keeps its ore while that ore stays among the nearest.
+		local lit = {}
+		for block, g in glowing do
+			local distance = (eye - g.position).Magnitude
+			if distance < glow.range then
+				table.insert(lit, { block = block, distance = distance })
 			end
 		end
-		for model, light in lights do
-			if model ~= first and model ~= second then
-				light:Destroy()
-				lights[model] = nil
+		table.sort(lit, function(a, b)
+			return a.distance < b.distance
+		end)
+		local want = {}
+		for i = 1, math.min(#slots, #lit) do
+			want[lit[i].block] = true
+		end
+		local spare = {}
+		for _, slot in slots do
+			local g = slot.block and glowing[slot.block]
+			if g and want[slot.block] then
+				want[slot.block] = nil
+				slot.attachment.WorldPosition = g.position
+			else
+				slot.block, slot.light.Enabled = nil, false
+				table.insert(spare, slot)
 			end
 		end
-		for _, model in { first, second } do
-			if not lights[model] then
-				local light = Instance.new("PointLight")
-				light.Name, light.Color, light.Range, light.Brightness = "Mineral glow", luminous[model].color, 7, 0.33
-				light.Parent = model:FindFirstChildWhichIsA("BasePart")
-				lights[model] = light
+		for block in want do
+			local slot = table.remove(spare)
+			if not slot then
+				break
 			end
+			local g = glowing[block]
+			slot.block, slot.phase = block, g.phase
+			slot.base, slot.speed = lerp(glow.brightness, g.shine), 1.1 + g.shine * 0.9
+			slot.attachment.WorldPosition = g.position
+			slot.light.Color, slot.light.Range = g.color, lerp(glow.reach, g.shine)
+			slot.light.Brightness, slot.light.Enabled = slot.base, true
 		end
 	end
 end

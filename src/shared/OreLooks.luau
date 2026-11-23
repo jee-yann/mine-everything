@@ -17,7 +17,8 @@ export type Look = {
 	palette: { string }, -- four colours, dark to light
 	accent: { string }?, -- a second material, such as copper's malachite
 	crown: string?, -- a ReliefKit.crowns entry: crystals that break out of the face
-	glow: string?, -- light colour for gems that glow near the player
+	glow: string?, -- light colour for ores that glow (Gold and up)
+	shine: number?, -- how strongly it glows, 0 to 1: Gold barely, Starfall the most
 	sparkle: boolean?, -- white glints on the relief
 }
 
@@ -38,6 +39,19 @@ Looks.ink = "1A141F"
 -- is used instead of decoding the drawing; the PNGs are in art/ore-looks/faces. Without either,
 -- faces fall back to the ink frame and the 3D relief below.
 Looks.drawn = { enabled = true, uploaded = {} :: { [string]: string } }
+
+-- Ores with a `shine` give off a soft light just in front of one open face. It brightens the
+-- ore's own face and tints the rock around it, and it slowly breathes. Only the nearest few
+-- glowing ores near the camera light up at once. `brightness` and `reach` (light range in studs)
+-- run from shine 0 to shine 1.
+Looks.glow = {
+	lights = 8,
+	range = 80,
+	offset = 1.2,
+	brightness = { 0.22, 1.0 },
+	reach = { 5, 11 },
+	pulse = 0.12,
+}
 
 -- Every open face gets an ink frame. The client draws the image itself when the
 -- experience allows EditableImage. Otherwise it uses `image` (an uploaded asset id)
@@ -75,12 +89,19 @@ Looks.ores = {
 		relief = "chunks",
 		palette = { "343C47", "667487", "AAB8C8", "F2F6FA" },
 	},
-	Gold = { relief = "nugget", palette = { "7A3F02", "D08A16", "FFD050", "FFF7D6" }, sparkle = true },
+	Gold = {
+		relief = "nugget",
+		palette = { "7A3F02", "D08A16", "FFD050", "FFF7D6" },
+		sparkle = true,
+		glow = "FFD27A",
+		shine = 0.15,
+	},
 	Diamond = {
 		relief = "octahedra",
 		crown = "octahedron",
 		palette = { "3A86A6", "8DE2F2", "D6FCFF", "FFFFFF" },
 		glow = "9FF3FF",
+		shine = 0.35,
 		sparkle = true,
 	},
 	Emerald = {
@@ -88,6 +109,7 @@ Looks.ores = {
 		crown = "prisms",
 		palette = { "0D5434", "238553", "4CCE72", "C0FFB8" },
 		glow = "7DFF95",
+		shine = 0.45,
 		sparkle = true,
 	},
 	Amethyst = {
@@ -95,6 +117,7 @@ Looks.ores = {
 		crown = "cluster",
 		palette = { "43206F", "7943B4", "B37BE8", "F4DDFF" },
 		glow = "C98CFF",
+		shine = 0.55,
 		sparkle = true,
 	},
 	Sapphire = {
@@ -102,6 +125,7 @@ Looks.ores = {
 		crown = "spires",
 		palette = { "16287A", "3050B0", "6A9DFF", "D6E5FF" },
 		glow = "7FA8FF",
+		shine = 0.62,
 		sparkle = true,
 	},
 	Emberglass = {
@@ -109,6 +133,7 @@ Looks.ores = {
 		crown = "blades",
 		palette = { "140B10", "3A2434", "8A3A52", "FFB59A" },
 		glow = "FF6F5E",
+		shine = 0.72,
 	},
 	-- The last ore. Future ores go above this entry.
 	Starfall = {
@@ -116,6 +141,7 @@ Looks.ores = {
 		crown = "cluster",
 		palette = { "5A3FA0", "9577D4", "DDB4FF", "FFF7EC" },
 		glow = "EBCBFF",
+		shine = 1,
 		sparkle = true,
 	},
 } :: { [string]: Look }

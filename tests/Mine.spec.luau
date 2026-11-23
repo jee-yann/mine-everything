@@ -637,6 +637,22 @@ do
 		assert(not look or kit.recipes[look.relief], ore.name .. " uses an unknown relief recipe")
 		assert(not (look and look.crown) or kit.crowns[look.crown], ore.name .. " uses an unknown crown")
 	end
+	-- Glow: Gold and every ore worth more glow, each a little more than the one below; Starfall most.
+	local ranked = table.clone(Ores.list)
+	table.sort(ranked, function(a, b)
+		return a.value < b.value
+	end)
+	local lastShine = 0
+	for _, ore in ranked do
+		local shine = art.shine(ore.name)
+		if ore.value >= Ores.byName.Gold.value then
+			assert(shine and shine > lastShine and shine <= 1 and art.glow(ore.name), ore.name .. " glows a bit more")
+			lastShine = shine
+		else
+			assert(shine == nil, ore.name .. " does not glow")
+		end
+	end
+	assert(lastShine == art.shine("Starfall"), "Starfall glows the most")
 	for name, rock in looks.rock do
 		for variant = 1, 3 do
 			local decor = art.decor(name, CFrame.identity, variant)

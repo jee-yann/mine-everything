@@ -44,6 +44,12 @@ function Art.glow(name)
 	return entry and entry.glow and hex(entry.glow)
 end
 
+-- How strongly an ore glows (0 to 1), or nil if it doesn't.
+function Art.shine(name): number?
+	local entry = Looks.ores[name]
+	return if entry and entry.glow then entry.shine else nil
+end
+
 -- The rock colour of a block. `grade` is the stone colour at the block's depth.
 function Art.rockColor(name, grade)
 	local rock = Looks.rock[name]
