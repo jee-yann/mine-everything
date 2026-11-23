@@ -1,8 +1,8 @@
 -- Dresses every open mine block face in the Ink & Facet look. Each face shows its Storybook Ink
 -- drawing (DrawnFaces) and gem blocks grow 3D crystals out of one face. Without drawings, faces
 -- fall back to an ink frame plus 3D relief and decor. Calcite marks cave ceilings either way.
--- The nearest crystals and reliefs get ink outlines. Ores from Gold up (OreLooks `shine`) give off
--- a soft, slowly breathing light: Gold barely, Starfall the most.
+-- The nearest crystals and reliefs get ink outlines. Ores from Gold up (OreLooks `shine`) glow
+-- from their ore pieces: Gold barely, Starfall the most.
 local Tags = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage").Shared
@@ -91,33 +91,86 @@ return function()
 		art.model:Destroy()
 	end
 
-	-- A small pool of lights that follow the nearest glowing ores.
+	-- A small pool for the nearest glowing ores. Each slot owns a spotlight held a little off the
+	-- ore's face and aimed outward, so it lights the tunnel but not the ore's own rock or the wall
+	-- around it, and a self-lit overlay per face that shows the ore's glow image over its drawing.
 	local glow = Looks.glow
-	local slots = table.create(glow.lights)
-	for i = 1, glow.lights do
-		local at = Instance.new("Attachment")
-		at.Name = "Ore glow"
-		local light = Instance.new("PointLight")
-		light.Name, light.Enabled, light.Shadows = "Ore glow", false, false
-		light.Parent = at
-		at.Parent = workspace.Terrain
-		slots[i] = { attachment = at, light = light, block = nil, base = 0, speed = 1, phase = 0 }
+	local player = game:GetService("Players").LocalPlayer
+	local playerGui = player and player:WaitForChild("PlayerGui")
+	local sources = Instance.new("Folder")
+	sources.Name = "Ore glow"
+	sources.Parent = workspace
+	local slots = table.create(glow.ores)
+	for i = 1, glow.ores do
+		local source = Instance.new("Part")
+		source.Name, source.Anchored, source.Transparency, source.Size = "Ore glow", true, 1, Vector3.one * 0.2
+		source.CanCollide, source.CanQuery, source.CanTouch, source.CastShadow = false, false, false, false
+		local light = Instance.new("SpotLight")
+		light.Face, light.Angle, light.Shadows, light.Enabled = Enum.NormalId.Front, glow.light.angle, false, false
+		light.Parent = source
+		source.Parent = sources
+		local overlays = {}
+		for _, face in normals do
+			local gui = Instance.new("SurfaceGui")
+			gui.Name, gui.Face, gui.Enabled, gui.ResetOnSpawn = "Ore glow", face, false, false
+			gui.LightInfluence, gui.ZOffset = 0, 0.5
+			gui.SizingMode, gui.CanvasSize = Enum.SurfaceGuiSizingMode.FixedSize, Vector2.new(256, 256)
+			local image = Instance.new("ImageLabel")
+			image.Name, image.Size, image.BackgroundTransparency = "Glow", UDim2.fromScale(1, 1), 1
+			image.Parent = gui
+			gui.Parent = playerGui
+			overlays[face] = gui
+		end
+		slots[i] = { source = source, light = light, overlays = overlays, phase = 0, speed = 1, light0 = 0, piece0 = 1 }
+	end
+	local function lerp(pair, t)
+		return pair[1] + (pair[2] - pair[1]) * t
+	end
+	local function unlight(slot)
+		slot.block, slot.dressed, slot.light.Enabled = nil, nil, false
+		for _, gui in slot.overlays do
+			gui.Enabled, gui.Adornee = false, nil
+		end
 	end
 	local function release(block)
 		for _, slot in slots do
 			if slot.block == block then
-				slot.block, slot.light.Enabled = nil, false
+				unlight(slot)
 			end
 		end
 	end
-	local function lerp(pair, t)
-		return pair[1] + (pair[2] - pair[1]) * t
+	-- Moves a slot's light onto the ore's face and shows its glow image on every drawn open face.
+	local function dress(slot, block, g)
+		local normal = Vector3.FromNormalId(g.face)
+		local at = block.Position + normal * (block.Size.Y * 0.5 + glow.light.offset)
+		local up = if math.abs(normal.Y) > 0.9 then Vector3.zAxis else Vector3.yAxis
+		slot.source.CFrame = CFrame.lookAt(at, at + normal, up)
+		local image = Drawn.glow(block.Name)
+		for face, gui in slot.overlays do
+			local on = image ~= nil and g.faces[face] == true
+			if on then
+				local label = gui:FindFirstChild("Glow") :: ImageLabel
+				label.ImageContent = image
+				label.ImageTransparency = lerp(glow.pieces.transparency, g.shine)
+				gui.Adornee, gui.Brightness = block, slot.piece0
+			else
+				gui.Adornee = nil
+			end
+			gui.Enabled = on
+		end
+		slot.dressed = g
 	end
 	RunService.Heartbeat:Connect(function()
 		local t = os.clock()
 		for _, slot in slots do
 			if slot.block then
-				slot.light.Brightness = slot.base * (1 + glow.pulse * math.sin(t * slot.speed + slot.phase))
+				local k = 1 + glow.pulse * math.sin(t * slot.speed + slot.phase)
+				slot.light.Brightness = slot.light0 * k
+				for _, gui in slot.overlays do
+					if gui.Enabled then
+						gui.Brightness = slot.piece0 * k
+					end
+				end
 			end
 		end
 	end)
@@ -168,11 +221,21 @@ return function()
 					end
 				end
 				if color and shine then
-					-- The light sits just off the face the crystals use, so it lights the ore itself.
+					-- Light shines out of the face the crystals use. Every drawn face can show the glow.
 					local face = crownFace(mask)
 					if face then
-						local at = block.Position + Vector3.FromNormalId(face) * (block.Size.Y * 0.5 + glow.offset)
-						glowing[block] = { position = at, color = color, shine = shine, phase = phase }
+						local drawn = {}
+						for f, skin in skins do
+							drawn[f] = skin.drawn
+						end
+						glowing[block] = {
+							position = block.Position + Vector3.FromNormalId(face) * block.Size.Y * 0.5,
+							face = face,
+							faces = drawn,
+							color = color,
+							shine = shine,
+							phase = phase,
+						}
 					else
 						glowing[block] = nil
 					end
@@ -286,9 +349,11 @@ return function()
 			local g = slot.block and glowing[slot.block]
 			if g and want[slot.block] then
 				want[slot.block] = nil
-				slot.attachment.WorldPosition = g.position
+				if slot.dressed ~= g then
+					dress(slot, slot.block, g)
+				end
 			else
-				slot.block, slot.light.Enabled = nil, false
+				unlight(slot)
 				table.insert(spare, slot)
 			end
 		end
@@ -298,11 +363,11 @@ return function()
 				break
 			end
 			local g = glowing[block]
-			slot.block, slot.phase = block, g.phase
-			slot.base, slot.speed = lerp(glow.brightness, g.shine), 1.1 + g.shine * 0.9
-			slot.attachment.WorldPosition = g.position
-			slot.light.Color, slot.light.Range = g.color, lerp(glow.reach, g.shine)
-			slot.light.Brightness, slot.light.Enabled = slot.base, true
+			slot.block, slot.phase, slot.speed = block, g.phase, 1.1 + g.shine * 0.9
+			slot.light0, slot.piece0 = lerp(glow.light.brightness, g.shine), lerp(glow.pieces.brightness, g.shine)
+			slot.light.Color, slot.light.Range = g.color, lerp(glow.light.reach, g.shine)
+			slot.light.Brightness, slot.light.Enabled = slot.light0, true
+			dress(slot, block, g)
 		end
 	end
 end

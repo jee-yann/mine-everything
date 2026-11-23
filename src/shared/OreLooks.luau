@@ -40,17 +40,17 @@ Looks.ink = "1A141F"
 -- faces fall back to the ink frame and the 3D relief below.
 Looks.drawn = { enabled = true, uploaded = {} :: { [string]: string } }
 
--- Ores with a `shine` give off a soft light just in front of one open face. It brightens the
--- ore's own face and tints the rock around it, and it slowly breathes. Only the nearest few
--- glowing ores near the camera light up at once. `brightness` and `reach` (light range in studs)
--- run from shine 0 to shine 1.
+-- Ores with a `shine` glow from their ore pieces, not the rock around them. On the nearest few
+-- glowing ores, each drawn face shows its glow image (DrawnFaces: the ore pieces and a soft halo)
+-- self-lit over the drawing, and a spotlight just off one face throws soft light outward onto the
+-- tunnel (never back onto the ore's own rock). Both slowly breathe. Each pair runs from shine 0
+-- to shine 1.
 Looks.glow = {
-	lights = 8,
-	range = 80,
-	offset = 1.2,
-	brightness = { 0.22, 1.0 },
-	reach = { 5, 11 },
+	ores = 8, -- how many of the nearest glowing ores light up at once
+	range = 80, -- studs from the camera
 	pulse = 0.12,
+	pieces = { brightness = { 1, 1.7 }, transparency = { 0.7, 0.05 } }, -- the self-lit ore pieces
+	light = { brightness = { 0.2, 1 }, reach = { 5, 12 }, angle = 120, offset = 0.4 }, -- light thrown outward
 }
 
 -- Every open face gets an ink frame. The client draws the image itself when the
