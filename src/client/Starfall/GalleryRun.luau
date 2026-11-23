@@ -8,6 +8,7 @@ local Run = {}
 Run.mouth = V(-9, 0, -39)
 Run.depth = 22
 Run.shaft = CFrame.new(Run.mouth - V(0, Run.depth, 0)) * CFrame.Angles(-math.pi / 2, 0, 0)
+Run.gemFrame = cut.lode + 24
 
 function Run.origin(actor)
 	local h = actor.handoff
@@ -41,7 +42,7 @@ end
 -- At the match the shaft's local Y points towards the gallery back wall and
 -- its local -Z points straight down. Both views photograph one lens trajectory.
 local matchEye, velocity = V(-0.20, 0.05, 21.25), V(0.045, 0.045, -1.05)
-local matchLook = V(-0.20, 0.91, 14.85)
+local matchLook = V(0.30, 1.02, 16.11)
 local deepEye = {
 	{ matchEye, velocity, cut.lode },
 	{ V(-0.40, 0.93, 10.35), V(-0.09, 0.059, -0.56), cut.lode + 14 },
@@ -66,12 +67,12 @@ local function buildApproach(actor)
 	local start = foot + forward * (3.4 * u)
 	local eyes = {
 		start + bearing:VectorToWorldSpace(V(2.55, 2.12, 2.8) * u),
-		V(-1.70, 3.4, 44), V(-2.05, 4.12, 12), V(-6.5, 5.05, -19.3),
+		V(-1.70, 3.4, 44), V(-2.05, 4.12, 14), V(-2.7, 4.3, 8), V(-6.5, 5.05, -19.3),
 		V(-9.25, 4.68, -32.5), V(-9.43, 2.92, -38.35), Run.shaft * matchEye,
 	}
 	local aims = {
 		start + forward * (4.6 * u) + V(0, 0.67 * u, 0),
-		V(0.4, 1.75, 27), V(-2.5, 3.75, -15), V(-9.35, 1.24, -39.2),
+		V(0.4, 1.75, 27), V(-0.3, 1.6, 0), V(-1.2, 1.5, -8), V(-9.35, 1.24, -39.2),
 		V(-9.4, -0.6, -39.62), V(-9.36, -3.2, -39.8), Run.shaft * matchLook,
 	}
 	actor.galleryEye = Curve.new(eyes, Run.shaft:VectorToWorldSpace(velocity))
@@ -81,25 +82,54 @@ end
 function Run.gallery(actor, frame, launch, motion)
 	local origin = Run.origin(actor)
 	if not actor.galleryEye then buildApproach(actor) end
-	local curve = actor.galleryEye
+	local curve, signal = actor.galleryEye, actor.marker.signal
+	local contact = launch - 4
+	local gate = signal:time(signal.sill, contact)
 	if not motion then
-		local at = if frame < cut.mineRun then 2 else 4
-		return origin + curve.points[at], origin + actor.galleryLook.points[at], 54, 0
+		local at = if frame < gate then 1 elseif frame < signal:time(signal.sill + 2, contact) then 3 else 5
+		return origin + curve.points[at], origin + actor.galleryLook.points[at], 63, 0
 	end
-	local span = math.max(1, cut.lode - launch)
-	local elapsed = math.clamp(frame - launch, 0, span)
-	-- Distance is linear over the whole approach. In the last twelve pictures
-	-- match the speed of the lens already travelling inside the shaft.
-	local blend = math.min(12, span)
-	local speed = (curve.length - velocity.Magnitude * blend / 2) / (span - blend / 2)
-	local tail = math.max(0, elapsed - (span - blend))
-	local distance = speed * elapsed + (velocity.Magnitude - speed) * tail * tail / (2 * blend)
-	local eye, segment, t = curve:sample(distance)
-	local aim = actor.galleryLook:position(segment, t)
-	return origin + eye, origin + aim, 54, 0
+	if actor.galleryLaunch ~= launch then
+		-- Brake outside the entrance while the head slips under the arch.
+		-- Pick it up on the far side and tip over the timber collar after it.
+		actor.galleryLaunch = launch
+		actor.galleryPace = {
+			{ 0, math.min(1.05, curve.stops[3] / (gate - 9 - launch)), launch },
+			{ curve.stops[3], 0.61, gate - 9 },
+			{ curve.stops[4], 0.32, gate + 4 },
+			{ curve.stops[7], 0.72, cut.lode - 5 },
+			{ curve.length - 2 * velocity.Magnitude, velocity.Magnitude, cut.lode - 2 },
+			{ curve.length, velocity.Magnitude, cut.lode },
+		}
+	end
+	local eye, segment, t = curve:sample(sample(actor.galleryPace, frame))
+	local aim = signal:sample(frame, contact)
+	if frame <= gate + 4 then
+		-- The guide winds down the marker before it runs straight. On a late
+		-- press the bridge rail can otherwise pass it on the inside of a bend.
+		local gap = aim.Z + math.clamp((frame - contact - 8) * 0.42, 0, 6) - eye.Z
+		local behind = if gap >= 1 then gap elseif gap > -1 then (gap + 1) ^ 2 * 0.25 else 0
+		eye += V(0, 0, behind)
+	end
+	local intoShaft = math.clamp((frame - cut.lode + 6) / 5, 0, 1)
+	if intoShaft > 0 then
+		aim = aim:Lerp(actor.galleryLook:position(segment, t), intoShaft * intoShaft * (3 - 2 * intoShaft))
+	end
+	local bank = 0
+	if frame > cut.lode - 12 then
+		-- The gallery camera uses sky-up. The underground camera uses the
+		-- back wall as up. Roll into its orientation before crossing the lip.
+		local localUp = CFrame.lookAt(eye, aim):VectorToObjectSpace(Run.shaft.UpVector)
+		local t = math.clamp((frame - cut.lode + 12) / 11, 0, 1)
+		bank = math.deg(math.atan2(-localUp.X, localUp.Y)) * t * t * (3 - 2 * t)
+	end
+	return origin + eye, origin + aim, 54, bank
 end
 
 function Run.chamber(frame, motion, portrait)
+	if not motion and frame < cut.lode + 18 then
+		return V(-0.2, 0.25, 22.65), V(0.45, 1.1, 8), 60, 0
+	end
 	local f = if motion then frame else cut.lode + 37
 	local t = math.clamp((f - cut.lode) / 32, 0, 1)
 	local blend = t * t * (3 - 2 * t)

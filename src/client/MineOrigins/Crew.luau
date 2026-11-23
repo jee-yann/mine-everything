@@ -1,5 +1,6 @@
 local P = require(script.Parent.Props)
 local Beats = require(script.Parent.Beats)
+local Acting = require(script.Parent.CrewActing)
 local Rig = require(script.Parent.RobloxRig)
 local Crew = {}
 Crew.__index = Crew
@@ -52,15 +53,30 @@ end
 
 local function pickaxe(parent)
 	local root = P.model(parent, "Harbor pick")
-	P.rod(root, "Hickory shaft", V(0, -0.52, 0), V(0, 1.94, 0), 0.17, rgb("C48954"))
+	P.rod(root, "Hickory shaft", V(0, -0.52, 0), V(0, 1.94, 0), 0.21, rgb("DA9A5D"))
 	P.box(root, "Wrapped grip", V(0, 0.02, 0), V(0.23, 0.66, 0.22), "35485B")
 	for i = 1, 3 do
 		P.box(root, "Grip band", V(0, -0.30 + i * 0.15, 0), V(0.24, 0.04, 0.23), "657B80")
 	end
 	P.box(root, "Brass socket", V(0, 1.84, 0), V(0.39, 0.45, 0.40), "F2B950")
 	for _, s in { -1, 1 } do
-		P.rod(root, "Forged shoulder", V(s * 0.1, 1.94, 0), V(s * 0.64, 1.89, 0), 0.245, rgb("B6D0D1"))
-		P.rod(root, "Tapered beak", V(s * 0.64, 1.89, 0), V(s * 1.02, 1.57, 0), 0.148, rgb("E4F4ED"))
+		-- A dark forged spine and a bright bevel leave a readable cutting
+		-- silhouette against the sky and the lantern-lit canvas stalls.
+		local heel = V(s * 0.12, 2.06, 0)
+		local shoulder = V(s * 0.61, 2.12, 0)
+		local edge = V(s * 0.66, 1.78, 0)
+		local heelLow = V(s * 0.12, 1.73, 0)
+		local point = V(s * 1.02, 1.57, 0)
+		for _, side in { -1, 1 } do
+			local ridge = V(s * 0.55, 1.99, side * 0.185)
+			local cheek = V(s * 0.12, 1.96, side * 0.18)
+			P.face(root, heel, shoulder, ridge, rgb("425E6D"))
+			P.face(root, heel, ridge, cheek, rgb("567382"))
+			P.face(root, cheek, ridge, heelLow, rgb("718E9C"))
+			P.face(root, ridge, edge, heelLow, rgb("E2F2ED"))
+			P.face(root, shoulder, point, ridge, rgb("536E7D"))
+			P.face(root, point, edge, ridge, rgb("E2F2ED"))
+		end
 	end
 	return root
 end
@@ -149,6 +165,28 @@ function Crew.new(shelf, character)
 	return self
 end
 
+-- Three different needle excursions travel across the receiver. Its line
+-- sits on zero in the quiet before the reply.
+local traces = {
+	{ 0, -0.18, 0.94, -0.72, 0.18, 0 },
+	{ 0, 0.24, -0.56, 1.00, -0.88, 0.32, 0 },
+	{ 0, -0.29, 1.00, -0.68, 0.60, -0.38, 0.19, 0 },
+}
+local function needle(x, age, signal)
+	if not signal or age < 0 or age >= 0.40 then
+		return 0
+	end
+	local advance = math.min(math.floor(age * 20) / 20, 0.27)
+	local u = (x - (0.50 + advance * 1.40)) / 0.78 + 0.5
+	if u <= 0 or u >= 1 then
+		return 0
+	end
+	local at = u * (#signal - 1)
+	local index = math.floor(at) + 1
+	return (signal[index] + (signal[index + 1] - signal[index]) * (at % 1))
+		* 0.20 * (1 - ease(age, 0.16, 0.40))
+end
+
 local function stick(part, start, finish, width)
 	local length = (finish - start).Magnitude
 	part.CFrame = CFrame.lookAt((start + finish) * 0.5, finish)
@@ -165,37 +203,31 @@ function Crew:scan(t, base, motion)
 		end
 	end
 	local speaking = speechAccent(t, "SURVEY LEAD")
-	local notice = ease(t, 33.4, 34.97)
-	local point = ease(t, 37.1, 38.38)
-	local duck = ease(t, 41.69, 41.99) * (1 - ease(t, 42.05, 43.05))
-	local relax = ease(t, 43.85, 46.05)
-	local shake = if motion then pulse * math.sin(t * 22) else 0
-	local receiverAt = V(-3.16, 3.21, 6.77):Lerp(V(-3.12, 3.76, 6.91), notice) - V(0.12, 0.34, 0.11) * point
-	local device = base * CF(receiverAt) * A(-0.21 + 0.10 * notice, 0.075 + 0.11 * point, -0.07 + 0.045 * shake)
+	local pose = Acting.read(Acting.lead, t)
+	local contact = if motion and pulse > 0.45 then math.rad(2.3) * pulse else 0
+	local degree = math.pi / 180
+	local meterTurn = pose.tilt * degree
+	local device = base * CF(pose.meter) * A(meterTurn.X, meterTurn.Y, meterTurn.Z + contact)
 	self.receiver:PivotTo(device)
-	local left = (device * CF(-0.04, -0.40, -0.13)).Position
-	local gesture = V(-5.00, 2.40, 5.80):Lerp(V(-4.75, 4.05, 6.29), notice)
-	gesture += V(0, 0.12 * speaking, -0.06 * speaking)
-	gesture = gesture:Lerp(V(-3.24, 2.0, 6.65), point):Lerp(V(-4.66, 3.74, 6.65), duck)
-	self.operator:pose(base * CF(-3.90, 0, 5.40) * A(0, math.pi + 0.55 - 0.88 * point, 0), {
-		bob = 0.035 * math.sin(t * 2.4) - 0.27 * duck,
-		RootJoint = A(-0.06 + 0.18 * duck, -0.07 * point, 0.04 * shake),
-		Neck = A(
-			-0.36 * notice + 0.29 * point + 0.27 * duck + 0.077 * speaking,
-			-0.28 + 0.71 * point - 0.35 * relax,
-			-0.11 * notice + 0.16 * point
-		),
-		LeftTarget = left,
-		RightTarget = base:PointToWorldSpace(gesture),
+	local palm = (device * CF(-0.04, -0.40, -0.13)).Position
+	local body, eyes = pose.body * degree, pose.gaze * degree
+	local stance = pose.stance
+	self.operator:pose(base * CF(-3.90 + stance.X, 0, 5.40) * A(0, math.pi + math.rad(stance.Z), 0), {
+		bob = stance.Y,
+		RootJoint = A(body.X, body.Y, body.Z),
+		Neck = A(eyes.X + 0.059 * speaking, eyes.Y, eyes.Z),
+		LeftTarget = palm,
+		RightTarget = base * (pose.hand + V(0, 0.075 * speaking, -0.035 * speaking)),
 		LeftHip = A(-0.055, 0, 0.07),
 		RightHip = A(0.055, 0, -0.07),
 	})
 	local previous
+	local signal = traces[answerCount]
+	local age = if signal then t - Beats.returned[answerCount] else 0
 	for i = 0, #self.trace do
 		local x = i / #self.trace
-		local quiet = math.sin(x * 11 + t * 5) * 0.016
-		local high = pulse * 0.17 * math.sin(x * 20 - t * 17) * math.sin(math.pi * x)
-		local at = (device * CF(-0.478 + 0.797 * x, 0.060 + quiet + high, 0.292)).Position
+		local high = needle(x, age, signal)
+		local at = (device * CF(-0.478 + 0.797 * x, 0.060 + high, 0.292)).Position
 		if previous then
 			local mark = self.trace[i]
 			stick(mark, previous, at, 0.019)
@@ -223,69 +255,56 @@ local function pickFrame(grip, aim, facing)
 end
 
 function Crew:mine(t, base)
+	local drawing = Acting.read(Acting.miner, t)
 	local speaking = speechAccent(t, "YOU")
-	local alert = ease(t, 33.65, 35.15)
-	local gather = ease(t, 38.65, 39.73)
-	local windup = ease(t, 39.69, 41.17)
-	local chop = ease(t, 41.21, breaksAt)
-	local recoil = ease(t, breaksAt, 42.17)
-	local listen = ease(t, 42.41, 43.21)
-	local reply = ease(t, 43.23, 43.59)
-	local run = ease(t, 44.4, 49.3)
-	local settle = ease(t, 43.91, 44.88)
-	local gait = math.sin((t - 44.6) * 10.5) * ease(t, 44.55, 45.35)
-	local x = 2 - 0.68 * chop + 0.32 * recoil - 1.68 * run
-	local z = 6.25 - 0.44 * chop + 0.21 * recoil - 12.2 * run
-	local yaw = 0.83 * (1 - settle) + 0.08
-	local foot = base * CF(x, 0, z) * A(0, yaw, 0)
-	local grip = V(2.91, 2.34, 5.81):Lerp(V(2.68, 3.39, 5.77), gather):Lerp(V(2.51, 5.27, 6.52), windup)
-	grip = grip:Lerp(V(1.47, 2.61, 5.12), chop):Lerp(V(1.85, 2.86, 5.59), recoil)
-	grip = grip:Lerp(V(2.15, 2.43, 5.52), listen):Lerp(V(2.42, 3.15, 5.78), reply)
-	local runningGrip = (foot * CF(0.98, 2.81 - 0.32 * gait, -0.35 + 0.66 * gait)).Position
-	local palmAim = base:PointToWorldSpace(grip):Lerp(runningGrip, settle)
-	local other = V(1.15, 2.32, 6.71):Lerp(V(0.98, 3.36, 5.77), gather):Lerp(V(0.87, 3.96, 6.14), windup)
-	other = other:Lerp(V(0.53, 2.86, 5.5), chop):Lerp(V(0.67, 3.33, 5.39), reply)
-	local strideArm = (foot * CF(-1.13, 2.83 + 0.2 * gait, -0.42 - 0.76 * gait)).Position
-	local lean = 0.18 * windup - 0.45 * chop + 0.26 * recoil - 0.10 * settle
-	local turn = -0.20 * windup + 0.42 * chop - 0.20 * recoil
+	local degree = math.pi / 180
+	local stride = ease(t, 44.55, 45.12)
+	local run = ease(t, 44.55, 49.30)
+	local gait = math.sin((t - 44.6) * 10.5) * stride
+	local stance = drawing.foot
+	local foot = base * CF(stance.X - 1.68 * run, 0, stance.Z - 12.2 * run)
+		* A(0, math.rad(drawing.yaw) * (1 - stride) + 0.08 * stride, 0)
+	local back, eyes = drawing.torso * degree, drawing.gaze * degree
+	local toRun = 1 - stride
 	self.player:pose(foot, {
-		bob = -0.20 * gather + 0.17 * windup - 0.35 * chop + 0.25 * recoil + 0.145 * math.abs(gait),
-		RootJoint = A(lean, turn, 0),
-		Root = A(lean * 0.6, turn * 0.55, 0),
-		Waist = A(lean * 0.4, turn * 0.45, 0),
-		Neck = A(
-			-0.23 * alert + 0.32 * windup - 0.40 * chop + 0.14 * reply + 0.18 * settle + 0.085 * speaking,
-			-0.3 * alert + 0.37 * gather,
-			0
-		),
-		LeftHip = A(0.58 * gait - 0.12 * (chop - recoil), 0, -0.02),
-		RightHip = A(-0.58 * gait + 0.12 * (chop - recoil), 0, 0.02),
-		LeftKnee = A(-0.60 * math.max(gait, 0), 0, 0),
+		bob = stance.Y * toRun + 0.145 * math.abs(gait),
+		RootJoint = A(back.X * toRun, back.Y * toRun, back.Z * toRun),
+		Root = A(back.X * 0.58 * toRun, back.Y * 0.52 * toRun, back.Z * 0.63 * toRun),
+		Waist = A(back.X * 0.42 * toRun, back.Y * 0.48 * toRun, back.Z * 0.37 * toRun),
+		Neck = A(eyes.X * toRun + 0.077 * speaking, eyes.Y * toRun, eyes.Z * toRun),
+		LeftHip = A(0.58 * gait - 0.18 * drawing.bite, 0, -0.04),
+		RightHip = A(-0.58 * gait + 0.15 * drawing.bite, 0, 0.05),
+		LeftKnee = A(-0.60 * math.max(gait, 0) - 0.25 * drawing.bite, 0, 0),
 		RightKnee = A(-0.60 * math.max(-gait, 0), 0, 0),
-		RightTarget = palmAim,
-		LeftTarget = base:PointToWorldSpace(other):Lerp(strideArm, settle),
+		RightTarget = (base * drawing.grip):Lerp(foot * V(0.98, 2.81 - 0.32 * gait, -0.35 + 0.66 * gait), stride),
+		LeftTarget = (base * drawing.freeHand):Lerp(foot * V(-1.13, 2.83 + 0.20 * gait, -0.42 - 0.76 * gait), stride),
 	})
 	local palm = self.player:palm("Right")
-	local aim = V(3.31, 3.85, 4.55):Lerp(V(2.85, 5.12, 5.53), gather):Lerp(V(2.58, 6.72, 7.85), windup)
-	aim = aim:Lerp(V(0.18, 1.55, 4.80), chop):Lerp(V(0.48, 2.09, 4.8), recoil):Lerp(V(3.03, 4.62, 5.91), reply)
-	local aimWorld = base:PointToWorldSpace(aim)
-		:Lerp(palm + foot:VectorToWorldSpace(V(0.38, 1.8, 0.35 + 0.25 * gait)), settle)
-	local tool = pickFrame(palm, aimWorld, foot.LookVector)
+	local tip = base * V(0.17, 1.81, 4.79)
+	local direction = base:VectorToWorldSpace(drawing.beak):Lerp(foot:VectorToWorldSpace(V(0.38, 1.8, 0.35 + 0.25 * gait)), stride)
+	local aim = (palm + direction):Lerp(tip, drawing.bite)
+	local tool = pickFrame(palm, aim, foot.LookVector)
+	-- Different avatar proportions change the natural spot on the wrap where
+	-- the fingers close. Slide the haft through the hand to seat its steel tip.
+	tool += (tip - tool * bit) * drawing.bite
 	self.pick:PivotTo(tool)
 	self.playerAim = self.player.head.Position + Vector3.yAxis * (self.player.headroom * 0.30)
 	self.pickTip = (tool * CF(bit)).Position
 end
 
 function Crew:fracture(t, base)
-	local open = ease(t, breaksAt, 42.39)
 	local age = math.max(0, t - breaksAt)
 	local answerAge = t - answersAt
 	local echo = if answerAge >= 0 then math.exp(-answerAge * 4.25) else 0
 	for i, half in self.halves do
 		local side = if i == 1 then -1 else 1
-		local bounce = math.abs(math.sin(age * 11)) * math.exp(-age * 3.6)
-		local at = stoneAt + V(side * (0.54 + 0.10 * i) * open, 0.22 * bounce - 0.16 * open, (i - 0.9) * 0.19 * open)
-		half:PivotTo(base * CF(at) * A(0.12 * open, side * 0.26 * open, -side * 0.31 * open))
+		-- The first half breaks at the tip. The second catches on its
+		-- neighbor, slips free a little later, and rocks once on its heel.
+		local slip = if i == 1 then 0 else 0.13
+		local open = 0.72 * ease(age, slip, slip + 0.055) + 0.28 * ease(age, slip + 0.14, slip + 0.23)
+		local heel = ease(age, slip, slip + 0.06) * (1 - ease(age, slip + 0.12, slip + 0.21))
+		local at = stoneAt + V(side * (0.54 + 0.10 * i) * open, 0.16 * heel - 0.16 * open, (i - 0.9) * 0.19 * open)
+		half:PivotTo(base * CF(at) * A(0.12 * open, side * 0.26 * open, -side * (0.31 * open + 0.13 * heel)))
 	end
 	local footing = base * CF(stoneAt.X, 0.105, stoneAt.Z)
 	self.bed:PivotTo(footing)

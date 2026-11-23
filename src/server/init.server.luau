@@ -4,7 +4,10 @@ local Config, Upgrades = require(Rep.Shared.GameConfig), require(Rep.Shared.Upgr
 local World, MineSite = require(script.MineWorld), require(script.MineSite)
 local E, Guide = require(Rep.Shared.Expeditions), require(Rep.Shared.FieldGuide)
 local Ores = require(Rep.Shared.Ores)
+local Purity = require(Rep.Shared.OrePurity)
 local Materials = require(Rep.Shared.Materials)
+local Field = require(Rep.Shared.FieldRewards)
+local Pulse = require(script.MinePulse)
 local Skills = require(Rep.Shared.Skills)
 local Flare = require(script.SurveyFlare)
 local Preferences = require(Rep.Shared.Preferences)
@@ -39,6 +42,15 @@ net.Parent = Rep
 
 local sessions, loading, closing, nextAction = {}, {}, {}, {}
 local shuttingDown = false
+local function updateShift(player, session, now)
+	Field.trackShift(session, now)
+	local p = session.profile
+	local index = p.shiftClaims + 1
+	local prize = Field.shiftRewards[index]
+	local due = if not prize then nil elseif p.shiftSeconds >= prize.seconds then 0 else now + prize.seconds - p.shiftSeconds
+	if player:GetAttribute("ShiftPrize") ~= index then player:SetAttribute("ShiftPrize", index) end
+	if player:GetAttribute("ShiftReadyAt") ~= due then player:SetAttribute("ShiftReadyAt", due) end
+end
 local function applySkills(player, p)
 	local char = player.Character
 	if not char then
@@ -68,12 +80,21 @@ local function sync(player, p, awardName)
 	player:SetAttribute("SkillPoints", Guide.points(p.xp, p.skills))
 	player.leaderstats.Level.Value = E.level(p.xp)
 	player:SetAttribute("Gold", p.gold)
+	player:SetAttribute("Gems", p.gems)
+	player:SetAttribute("StampDay", p.stampDay)
+	player:SetAttribute("StampCount", p.stampCount)
+	player:SetAttribute("HasteCuts", p.hasteCuts)
+	player:SetAttribute("StoneChips", p.stoneChips)
+	player:SetAttribute("CavePulses", p.pulses)
+	player:SetAttribute("OreCompass", p.oreCompass == true)
+	player:SetAttribute("AuraUnlocked", Profile.hasUpgrade(p))
+	player:SetAttribute("FirstLight", Profile.hasUpgrade(p) and not p.auraOff)
 	player:SetAttribute("Used", Profile.used(p))
 	player:SetAttribute("PackSlots", Profile.stat(p, "Capacity"))
 	if p.skills.PackMule or p.skills.Rockhound then
 		applySkills(player, p)
 	end
-	player:SetAttribute("BagValue", Profile.value(p.bag))
+	player:SetAttribute("BagValue", Profile.value(p.bag, p.grades, p.skills.Broker))
 	player:SetAttribute("Flares", p.flares)
 	player:SetAttribute("TemperCharges", p.temper)
 	player:SetAttribute("DailyClaim", p.dailyClaim)
@@ -88,6 +109,10 @@ local function sync(player, p, awardName)
 	for _, ore in Ores.list do
 		player:SetAttribute("Lifetime" .. ore.name, p.counts[ore.name] or 0)
 		player:SetAttribute("Held" .. ore.name, p.bag[ore.name] or 0)
+		if not ore.host then
+			player:SetAttribute("Grades" .. ore.name, Purity.encode(p.grades[ore.name]))
+			player:SetAttribute("BestPurity" .. ore.name, p.bestPurity[ore.name] or 0)
+		end
 		player:SetAttribute("Found" .. ore.name, p.discoveries[ore.name] == true)
 	end
 	for _, key in Upgrades.order do
@@ -183,6 +208,7 @@ local function join(player)
 	end
 	board.Parent = player
 	sessions[player], loading[player] = session, nil
+	updateShift(player, session, os.time())
 	for key, value in session.profile.preferences do
 		player:SetAttribute(key, value)
 	end
@@ -314,6 +340,7 @@ local function action(player, key, option, value)
 				moveCharacter(char, CFrame.new(landing))
 			end
 			s.climb, s.lavaUntil = nil, nil
+			updateShift(player, s, os.time())
 			sync(player, s.profile)
 			applySkills(player, s.profile)
 		end
@@ -373,6 +400,11 @@ local function action(player, key, option, value)
 		and key ~= "Supply"
 		and key ~= "Flare"
 		and key ~= "Deliver"
+		and key ~= "Stamp"
+		and key ~= "ShiftPrize"
+		and key ~= "Aura"
+		and key ~= "Pulse"
+		and key ~= "OwnerClear"
 		and key ~= "PreviewPass"
 		and key ~= "Title"
 		and key ~= "Skill"
@@ -404,7 +436,38 @@ local function action(player, key, option, value)
 		return
 	end
 	local p = s.profile
-	if key == "Supply" and type(option) == "string" then
+	if key == "Stamp" then
+		local day, gems = Field.claim(p, math.floor(os.time() / 86400))
+		if day then
+			sync(player, p)
+			net.Feedback:FireClient(player, "hint", string.format("Day %d stamped! +%d gems", day, gems))
+		end
+	elseif key == "ShiftPrize" then
+		local at = os.time()
+		local gems = Field.claimShift(s, at, option)
+		updateShift(player, s, at)
+		if gems then
+			sync(player, p)
+			net.Feedback:FireClient(player, "hint", string.format("Shift reward! +%d %s", gems, if gems == 1 then "gem" else "gems"))
+		end
+	elseif key == "Aura" and type(option) == "boolean" and Profile.hasUpgrade(p) then
+		p.auraOff = not option
+		sync(player, p)
+	elseif key == "OwnerClear" or key == "Pulse" then
+		local owner = key == "OwnerClear"
+		if s.travel or (owner and player.UserId ~= PIXELII_USER_ID) or (not owner and p.pulses < 1) then return end
+		times[actionKey] = now + 2
+		local count = Pulse.clear(world, player.Character, Profile.stat(p, "Power"), owner)
+		if count > 0 then
+			if not owner then p.pulses -= 1 end
+			sync(player, p)
+			net.Feedback:FireClient(player, "close")
+			net.Feedback:FireClient(player, "pulse", player.Character.HumanoidRootPart.Position, Config.Cell * (if owner then 3.25 else 2.25))
+			net.Feedback:FireClient(player, "hint", string.format("Cleared %d stone. The ore is yours to mine!", count))
+		else
+			net.Feedback:FireClient(player, "hint", "Stand near exposed stone underground.")
+		end
+	elseif key == "Supply" and type(option) == "string" then
 		local ok, message = Profile.buySupply(p, option)
 		if ok then
 			sync(player, p)
@@ -418,7 +481,7 @@ local function action(player, key, option, value)
 			net.Feedback:FireClient(
 				player,
 				"job",
-				order.name .. (if p.skills.SupplyRunner then " (+2 survey flares)" else " (+1 survey flare)"),
+				order.name .. (if p.skills.SupplyRunner then " (+2 gems, 2 flares)" else " (+2 gems, 1 flare)"),
 				order.gold
 			)
 		end
@@ -511,9 +574,11 @@ local function action(player, key, option, value)
 		end
 		net.Feedback:FireClient(player, "sale", gold, quantity, p.gold, option)
 	elseif key == "Buy" and type(option) == "string" and Upgrades.items[option] then
+		local hadAura = Profile.hasUpgrade(p)
 		local ok, msg, award = Profile.buy(p, option)
 		sync(player, p, award)
 		net.Feedback:FireClient(player, if ok then "upgrade" else "hint", msg, option, p.levels[option])
+		if ok and not hadAura then net.Feedback:FireClient(player, "aura", "First Light") end
 	elseif key == "Job" then
 		local job, award = Profile.claimJob(p, option)
 		if job then
@@ -527,6 +592,9 @@ local function action(player, key, option, value)
 	end
 end
 net.Action.OnServerEvent:Connect(action)
+site.samples.Triggered:Connect(function(player)
+	if atCounter(player, site.samples) then net.Feedback:FireClient(player, "page", "Book") end
+end)
 for name, prompt in site.stations do
 	if name == "Sell" or name == "Shop" or name == "Store" or name == "Supplies" then
 		net:SetAttribute(name .. "Position", prompt.Parent.Position)
@@ -591,7 +659,8 @@ task.spawn(function()
 end)
 task.spawn(function()
 	while task.wait(0.5) do
-		local day = math.floor(os.time() / 86400)
+		local at = os.time()
+		local day = math.floor(at / 86400)
 		if net:GetAttribute("OrderDay") ~= day then
 			net:SetAttribute("OrderDay", day)
 		end
@@ -599,6 +668,7 @@ task.spawn(function()
 			if s.resetting then
 				continue
 			end
+			updateShift(player, s, at)
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			if not root then
 				s.climb = nil

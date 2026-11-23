@@ -106,7 +106,11 @@ local function selectOres(nextMask)
 	display:selection(mask)
 	restart()
 end
-display = Display.new(location, toggle, selectOres)
+local function clearStone()
+	if not location.Visible then return end
+	net.Action:FireServer("OwnerClear")
+end
+display = Display.new(location, toggle, selectOres, clearStone)
 display:selection(mask)
 display:enable(false)
 player.CharacterRemoving:Connect(clear)
@@ -116,6 +120,10 @@ net:GetAttributeChangedSignal("Ready"):Connect(function()
 	end
 end)
 Input.InputBegan:Connect(function(key, processed)
+	if not processed and not Input:GetFocusedTextBox() and key.KeyCode == Enum.KeyCode.C
+		and (Input:IsKeyDown(Enum.KeyCode.LeftShift) or Input:IsKeyDown(Enum.KeyCode.RightShift)) then
+		clearStone()
+	end
 	if not processed and key.KeyCode == Enum.KeyCode.X and not Input:GetFocusedTextBox() then
 		if Input:IsKeyDown(Enum.KeyCode.LeftShift) or Input:IsKeyDown(Enum.KeyCode.RightShift) then
 			display.panel.Visible = not display.panel.Visible

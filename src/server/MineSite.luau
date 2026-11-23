@@ -33,6 +33,10 @@ function MineSite.bind(map, world)
 	map:PivotTo(CFrame.new(world.origin))
 	local market = map["Shore market"]
 	local harbor = map["Harbor Plaza"]
+	local landing = map["Sand path and bridge"].Landing
+	local bench = require(game.ReplicatedStorage.Shared.FieldBench)
+	local samples = bench.build(bench.location(landing.Position + Vector3.yAxis * 4))
+	samples.Parent = map
 	local stations = {
 		Sell = market.Sell["Service mat"].Service,
 		Shop = market.Upgrades["Service mat"].Service,
@@ -43,12 +47,13 @@ function MineSite.bind(map, world)
 	local sell = stations.Sell
 	sell:AddTag("OreSellPrompt")
 	sell.ActionText, sell.ObjectText = "Tap to choose ores", "Hold to sell whole pack"
-	sell.HoldDuration, sell.ClickablePrompt = 0.85, true
+	sell.HoldDuration, sell.ClickablePrompt = 0.65, true
 	for key, prompt in stations do
 		markCounter(prompt.Parent, counterStyles[key])
 	end
 	return {
 		spawn = map["Sand path and bridge"].Landing,
+		samples = samples:FindFirstChild("Consult samples", true),
 		stations = stations,
 		court = harbor["Miners Court"],
 	}

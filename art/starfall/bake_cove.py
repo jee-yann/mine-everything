@@ -15,7 +15,6 @@ from pathlib import Path
 import numpy as np
 from landforms import build as build_landforms
 from ancestral_cove import CoveKit
-from settlement import build as build_settlement
 
 ROOT = Path(__file__).resolve().parents[2]
 DEST = ROOT / "src/client/Starfall"
@@ -28,7 +27,7 @@ IDENTITY = np.identity(3)
 TAU = math.tau
 SEA = 20.30
 HIT = np.array([0.0, -32.0])
-END = 28.25
+END = 99.99  # The exposed ancient terrain stays in place until the era cut.
 rand = random.Random(407)
 timeline = (DEST / "Timeline.luau").read_text()
 wave_start = float(re.search(r"\bwaveLaunch\s*=\s*([\d.]+)", timeline).group(1))
@@ -76,6 +75,10 @@ def item(parent, cl, label):
 
 
 model = item(document, "Model", "CoveChronicle")
+replay_document = ET.Element("roblox", version="4")
+replay = item(replay_document, "Model", "CoveReplay")
+replay_site = item(replay, "Model", "Present-day cove")
+replay_floor = item(replay, "Model", "Present_EditFace")
 
 
 def group(a, b, label):
@@ -197,59 +200,45 @@ def coast(angle):
     raise RuntimeError(angle)
 
 
+BASIN_RINGS = (9, 19, 28, 34, 43)
+
+
 def crater_height(radius, a, age):
-    lip = 31.25 + 1.4 * math.sin(3 * a + 0.4) + 0.75 * math.sin(7 * a)
+    # The impact heaves a continuous rim around the original seam. The low
+    # seaward saddle keeps the seam in sight and becomes the miners' entrance.
+    seaward = max(0, 0.45 * math.cos(a) + 0.89 * math.sin(a)) ** 3
+    crest = 41 + 2.1 * math.sin(3 * a + 0.4) + 1.25 * math.sin(7 * a) - 6.5 * seaward
     if age == "intact":
-        return np.interp(radius, [0, 7, 14, 23, 32], [26, 26.06, 26.45, 27.1, 28.1])
-    if age == "struck":
-        return np.interp(radius, [0, 7, 14, 23, 32], [25.27, 25.34, 26.08, lip, 28.1])
-    return np.interp(
-        radius, [0, 7, 14, 23, 32], [26.1, 26.45, 26.98, lip * 0.44 + 15.7, 28.1]
-    )
+        heights = (26, 26.14, 26.5, 27.15, 27.6, 26.4)
+    elif age == "struck":
+        heights = (25.27, 25.5, 27.1, 30.4 + 0.24 * (crest - 34), crest, 26.4)
+    else:
+        heights = (25.65, 25.8, 27.4, 30.5, crest - 2.4, 26.4)
+    return np.interp(radius, (0, *BASIN_RINGS), heights)
 
 
 def terrain_height(x, z, a, age):
     dx, dz = x, z + 32
     elliptical = math.hypot(dx, dz * 1.1)
-    if elliptical < 32:
+    if elliptical <= BASIN_RINGS[-1] + 0.001:
         return crater_height(elliptical, a, age)
 
     # The actual map is built on broad, flat island slabs. The open meadow
     # meets the edge of the ancestral impact basin without a seam.
-    return 24.70 + 3.40 * (1 - ramp(elliptical, 32, 47))
+    return 24.70 + 1.70 * (1 - ramp(elliptical, BASIN_RINGS[-1], 55))
 
 
-def clearing(x, z):
-    # The pit and western right-of-way are cut before the level valley lots.
-    if -136 < x < -35 and 27 < z < 116:
-        return 18.88 if x < -74 else 19.45
-    if x < -70:
-        return 19.82
-    # The working valley is one cut-and-fill district. Its front hill and
-    # houses share a continuous grade when the quarry opens behind them.
-    return 20.02
-
-
-def developed(t):
-    # Trade ordering of the native parts is rescheduled onto the valley,
-    # village and tramway exposures, after each district is ready to receive it.
-    return float(
-        np.interp(
-            t,
-            [0, 18.8, 19.6, 20.5, 21.9, 22.65, 23.55, 24.93, 27],
-            [0, 20.0, 21.54, 23.34, 24.08, 24.62, 25.46, 26.90, END],
-        )
-    )
-
-
-# The virtual set shares its coastal cliff blocks, capped mesas and garden tree
-# templates with the walkable map. Only the quarry history needs an extra shelf kit.
 kit = CoveKit(source, name, prop, xyz, part, field, group)
 
 
 def headlands():
-    kit.build_shelves(clearing, front_exposure)
-    kit.build_shore(shore, developed)
+    kit.build_shelves(END, front_exposure)
+    kit.build_shore(shore, END)
+
+    spit = group(0, END, "Shingle landing")
+    kit.pad(spit, "Landing beach", -136.3, 118.9, 28, 32, 19.5, 21.80, -5, 5.0, "EBAD6A")
+    kit.pad(spit, "Golden shingle", -135.6, 118.3, 23, 27, 21.65, 23.37, -5, 4.3, "F3CF96")
+    kit.pad(spit, "Landing crest", -135.5, 118.6, 16.7, 21.4, 23.30, 24.43, -5, 3.1, "F6D99F")
 
     # The eastern ledge overhangs the narrow rim at water level. These
     # chamfered rock courses join its split boulder to the map's bedrock.
@@ -268,16 +257,16 @@ def headlands():
 def make_terrain():
     N = 40
     rows = []
-    for j in range(9):
+    for j in range(len(BASIN_RINGS) + 5):
         ring = []
         for k in range(N):
             a = (k + 0.12 * math.sin(k * 1.7 + j * 0.35)) * TAU / N
             scale = math.hypot(math.cos(a), 1.1 * math.sin(a))
             edge = coast(a)[0]
             r = (
-                [7 / scale, 14 / scale, 23 / scale, 32 / scale]
+                [r / scale for r in BASIN_RINGS]
                 + [
-                    32 / scale + (edge - 32 / scale) * f
+                    BASIN_RINGS[-1] / scale + (edge - BASIN_RINGS[-1] / scale) * f
                     for f in (0.18, 0.40, 0.64, 0.86, 1.015)
                 ]
             )[j]
@@ -287,21 +276,12 @@ def make_terrain():
     def render_tri(row, k, triangle):
         points = np.array(triangle)
         x, z = points.mean(axis=0)
-        remove = clearing(x, z)
         radius = math.hypot(x, z + 32)
         hit = 4.60 if row <= 1 else round((front_exposure(radius) - 0.09) * 10) / 10
-        # The compact scorch front outruns the sea swell; patches of the old
-        # surface survive on the outer capes. Recover in sweeps across the basin.
+        # The outer capes take an ash wash while the inner basin fractures.
         hard_hit = radius < 83 + 13 * math.sin(math.atan2(z + 32, x) * 3 + 0.3)
-        first_green = 12.90 + 0.26 * round(ramp(z - x * 0.35, -65, 137) * 7)
-        states = [
-            (0, hit, "intact"),
-            (hit, first_green, "struck" if hard_hit else "ash"),
-            (first_green, first_green + 0.91, "aged"),
-            (first_green + 0.91, remove, "green"),
-            (remove, remove + 0.62, "bench"),
-            (remove + 0.62, remove + 1.49, "fill"),
-        ]
+        basin = row < len(BASIN_RINGS)
+        states = [(0, hit, "intact"), (hit, END, "struck" if hard_hit else "ash")]
         pine = (
             ("85CC60",) * 6
             if row > 3
@@ -310,27 +290,17 @@ def make_terrain():
         dust = ("4E4249", "664F53", "453D48", "78605D", "56484E")
         index = (k + 3 * row) % 6
         for start, end, state in states:
-            grp = group(start, end, "Basin" if row <= 3 else "Headland")
+            grp = group(start, end, "Impact basin" if basin else "Headland")
             polygon = []
             for xx, zz in triangle:
                 yy = terrain_height(xx, zz, math.atan2(zz + 32, xx), state)
-                if state == "bench":
-                    yy = 24.64 + (yy - 24.64) * 0.19
-                elif state == "fill":
-                    yy = 24.47 + 0.63 * math.sin(xx * 0.031 + zz * 0.027)
                 polygon.append((xx, yy, zz))
-            if state in ("green", "intact"):
+            if state == "intact":
                 ink = pine[index]
             elif state == "struck":
                 ink = dust[index % len(dust)]
-            elif state == "ash":
+            else:
                 ink = ("796F6E", "88776C", "675F63")[index % 3]
-            elif state == "bench":
-                ink = ("CE925F", "CF9564", "CB8F5D")[index % 3]
-            elif state == "fill":
-                ink = ("E9BC80", "E6B982", "E7B97F")[index % 3]
-            else:  # a meadow in its first season after the fire
-                ink = ("A7AA75", "AAA674", "99AA76")[index % 3]
             face(
                 grp,
                 "Weathered beds",
@@ -338,8 +308,8 @@ def make_terrain():
                 ink,
                 272,
             )
-            if state == "green" or (row <= 3 and state == "struck"):
-                facets.append((state, np.array(polygon)))
+            if state == "intact":
+                facets.append(np.array(polygon))
 
     for j, row in enumerate(rows):
         for k, p in enumerate(row):
@@ -356,15 +326,12 @@ survey_grid = {}
 
 
 def index_surface():
-    for state, triangle in facets:
-        if state != "green":
-            continue
+    for triangle in facets:
         heights = triangle[:, 1]
         a, b, c = triangle[:, [0, 2]]
         u, v = b - a, c - a
         det = u[0] * v[1] - u[1] * v[0]
-        grade = clearing(*triangle.mean(axis=0)[[0, 2]])
-        record = (a, u, v, det, heights, grade)
+        record = (a, u, v, det, heights)
         corners = np.array((a, b, c)) / 16
         low, high = np.floor(corners.min(axis=0)).astype(int), np.floor(
             corners.max(axis=0)
@@ -375,9 +342,9 @@ def index_surface():
 
 
 @lru_cache(maxsize=32768)
-def parcel(x, z):
-    """Return the surveyed surface elevation and first grading date at a point."""
-    for a, u, v, det, heights, grade in survey_grid.get(
+def sample(x, z):
+    """Return the surveyed pre-impact ground elevation."""
+    for a, u, v, det, heights in survey_grid.get(
         (math.floor(x / 16), math.floor(z / 16)), ()
     ):
         dx, dz = x - a[0], z - a[1]
@@ -389,148 +356,30 @@ def parcel(x, z):
                 + s * (heights[1] - heights[0])
                 + t * (heights[2] - heights[0])
             )
-            return kit.top(x, z, y), grade
-    return kit.top(x, z, SEA), math.inf
+            return kit.top(x, z, y)
+    return kit.top(x, z, SEA)
 
 
-def sample(x, z):
-    return parcel(x, z)[0]
-
-
-def ground(x, z, year):
-    """Sample the photographic parcel under an actor or foundation."""
-    y, cut = parcel(x, z)
-    if year < cut:
-        return y
-    if year < cut + 0.62:
-        return 24.64 + (y - 24.64) * 0.19
-    if year < cut + 1.49:
-        return 24.47 + 0.63 * math.sin(x * 0.031 + z * 0.027)
-    return 24.12
-
-
-def map_time(path, k, x, y, z):
+def prehistoric(path, label):
     top, site = (path + ["", ""])[:2]
-    low = k.lower()
-    if k in ("SiteOrigin", "Landing"):
-        return None
-    if top == "EditFace":
-        return 20.28
-    if top == "Island and lagoon":
-        return None if k in ("Lagoon", "Water glint", "Shallow water") else 0
-    if top == "Coastal grove":
-        return 22.35
-    if site == "Rock rim":
-        return 0
+    if top in ("Island and lagoon", "Honey bluffs", "Spring falls"):
+        return True
+    if site in ("Rock rim", "Turquoise cascade"):
+        return True
     if site == "Cableway ridge":
-        # These bluffs and foothills are features of this island, already in
-        # place when the meteor arrives. The cableway and quartz marks come later.
-        return 24.83 if "Quartz" in k else 0
+        return "Quartz" not in label
     if site == "Outer meadows":
-        if k in ("Headland turf", "Tidal shallows"):
-            return 0
-        return (
-            19.45
-            if k == "Bridge pile"
-            else 20.18 if k in ("Timber deck", "Footboard") else 23.72
-        )
-    if top == "Honey bluffs" or site == "Turquoise cascade" or top == "Spring falls":
-        return 0
-    if site == "Cableway trail" and k in (
-        "Ridgeline turf",
-        "Wild stone",
-        "Dressed stone",
-    ):
-        return 0
-    if site == "Cableway trail" and k in ("Mine roof slope", "Rear roof slope"):
-        return 0
-    if top == "Wildflowers":
-        return 20.62
-    if top == "Citrine Mine":
-        if k in (
-            "Cave jamb",
-            "Cave shoulder",
-            "Capstone",
-            "Amber keystone bed",
-            "Crystal facet",
-            "Crystal point",
-        ):
-            return 20.28 if "Crystal" not in k else 22.72
-        if k in ("Portal footing", "Cut basalt pier", "Arch voussoir"):
-            return 22.64 + round(ramp(y, 24, 40) * 4) * 0.19
-        return 24.15 if k == "Mine sign" else 24.55
-    if top == "Working gallery":
-        if any(w in low for w in ("lamp", "lantern")):
-            return 24.73
-        return (
-            19.24
-            if any(w in low for w in ("foundation", "turf"))
-            else 20.28 if "wall" in low else 22.64
-        )
-    if site == "Ore siding":
-        if k == "Sleeper":
-            return 20.80 + 0.09 * int(ramp(z, 6, 86) * 10)
-        if k == "Rail":
-            return 21.75 if x < -91 else 21.86
-        offset = round(ramp(z, 22, 47) * 2) * 0.065
-        return offset + (
-            21.96
-            if "wheel" in low
-            else 22.08 if "bed" in low else 22.20 if "wagon" in low else 22.35
-        )
-    if top == "Sand path and bridge":
-        if k == "Bridge bearer" or k == "Bridge post":
-            return 19.53
-        if k == "Bridge plank":
-            return 19.67 + round(ramp(z, 30, 41) * 5) * 0.08
-        return 20.24 if k in ("Bridge decking", "Handrail", "Post cap") else 19.45
-    if site == "Loading dock":
-        return (
-            18.85
-            if "piling" in low
-            else 19.32 if "deck" in low else 23.69 if "upright" in low else 23.94
-        )
-    if site == "Arrival court" or site == "Miners Court":
-        return (
-            20.06
-            if any(w in low for w in ("foundation", "concourse", "paving"))
-            else 24.18 + round(ramp(y, 24, 49) * 3) * 0.13
-        )
-    if top == "Shore market" or site in ("Jobs", "Store", "Book", "Supplies"):
-        offset = 0.32 * ramp(x, -45, 45)
-        if any(w in low for w in ("deck", "floor", "mat", "pad")):
-            return 19.87 + offset
-        if any(w in low for w in ("post", "frame", "foot", "stand", "wall")):
-            return 22.67 + offset
-        if any(w in low for w in ("canvas", "canopy", "valance", "hem")):
-            return 23.54 + offset + round((x % 12) / 4) * 0.09
-        return 23.21 + offset if "counter" in low else 24.35 + offset
+        return label in ("Headland turf", "Tidal shallows")
     if site == "Beacon Point":
-        return 0 if "island" in low else 23.92 + round(ramp(y, 24, 64) * 4) * 0.12
-    if site in ("Moving cabins", "Ridge tramway", "Cableway trail"):
-        return (
-            24.86
-            if site == "Moving cabins"
-            else 23.71 + round(ramp(y, 24, 84) * 5) * 0.14
-        )
-    if site == "Compass gardens":
-        return 24.62 if "lamp" in low else 23.91
-    return 24.8
-
-
-# The original cove's outer bluffs are already rock before the strike. Near
-# the impact, the crater, ejecta and regrowth need their open basin. Sediment
-# beds build these inner shoulders during geological time, before the landing.
-infill = item(model, "Model", "Basin infill")
-burial = {
-    "west": item(infill, "Model", "12.68_14.75"),
-    "east": item(infill, "Model", "12.94_15.03"),
-    "strata": item(infill, "Model", "13.57_15.43"),
-}
+        return "island" in label.lower()
+    return label in (
+        "Ridgeline turf", "Wild stone", "Dressed stone", "Sloping bluff foundation",
+        "Rear bluff foundation", "Ridge footing",
+    )
 
 
 def extract(parent, path):
-    bluff_district, previous = None, None
+    inner_bluff, previous = False, None
     for p in parent.findall("Item"):
         cl, k = p.get("class"), name(p)
         if cl in ("Model", "Folder"):
@@ -538,10 +387,22 @@ def extract(parent, path):
         if cl not in ("Part", "WedgePart", "SpawnLocation"):
             continue
         x, y, z = xyz(p, "CFrame")
-        when = map_time(path, k, x, y, z)
-        if when is None:
+        if k in ("SiteOrigin", "Landing", "Outer cliff boundary", "Lagoon", "Water glint", "Shallow water"):
             continue
         q = copy.deepcopy(p)
+        if k in ("Far slope", "Mountain flank", "Summit facet", "Tidal shallows"):
+            field(q, "CastShadow", "bool", "false")
+        for child in list(q.findall("Item")):
+            if child.get("class") not in ("PointLight", "SurfaceLight", "SurfaceGui"):
+                q.remove(child)
+        for key in ("CanCollide", "CanTouch", "CanQuery"):
+            field(q, key, "bool", "false")
+        # A deep replay can be outside map streaming range. Store the finished
+        # playable architecture in a single timeless replica, complete with signage.
+        target = replay_floor if path[0] == "EditFace" else replay_site
+        target.append(copy.deepcopy(q))
+        if not prehistoric(path, k):
+            continue
         if k == "Ridgeline turf" and x > 101 and z > -26:
             # The walking map's tilted turf slab projects beyond the rock rim.
             # From out on the tide its original underside is entirely visible.
@@ -563,34 +424,19 @@ def extract(parent, path):
                 272,
                 mat,
             )
-        if k in ("Far slope", "Mountain flank", "Summit facet", "Tidal shallows"):
-            field(q, "CastShadow", "bool", "false")
-        for child in list(q.findall("Item")):
-            if child.get("class") not in ("PointLight", "SurfaceLight", "SurfaceGui"):
-                q.remove(child)
-        for key in ("CanCollide", "CanTouch", "CanQuery"):
-            field(q, key, "bool", "false")
-        district = None
-        if path and path[0] == "Honey bluffs":
-            # The first sandstone in each native cap is the centre of the
-            # complete formation. Its corner wedges share the same geology.
+        # The bluff enclosing the mine and the man-made gallery roof exist
+        # only on the finished island. Outer bluffs remain in the ancient coast.
+        if path[0] == "Honey bluffs":
             if k == "Weathered sandstone" and previous != k:
-                bluff_district = ("west" if x < 0 else "east") if abs(x) < 59 else None
-            district, previous = bluff_district, k
-        elif k in ("Mine roof slope", "Rear roof slope"):
-            district = "strata"
-        elif k in (
-            "Sloping bluff foundation",
-            "Rear bluff foundation",
-            "Ridge footing",
+                inner_bluff = abs(x) < 59
+            previous = k
+            if inner_bluff:
+                continue
+        if path[0] == "Spring falls" or k in (
+            "Ridge sandstone", "Ridge meadow", "Gully shoulder", "Gully bed",
         ):
-            # These are the underlying rocks, not the mine's built portal.
-            when = 0
-        elif path and path[0] == "Spring falls":
-            district = "east"
-        if district:
-            burial[district].append(q)
-        if when == 0 and k in (
+            continue
+        if k in (
             "Meadow cap",
             "Turf on the rim",
             "Slate crown",
@@ -607,14 +453,9 @@ def extract(parent, path):
                 xyz(p, "size"),
                 matrix,
                 cl,
-                buried=district is not None,
             )
-        if district:
-            continue
         if (
-            when == 0
-            and k
-            in (
+            k in (
                 "Meadow cap",
                 "Turf on the rim",
                 "Fir boughs",
@@ -624,9 +465,8 @@ def extract(parent, path):
             and math.hypot(x, z + 32) < 148
         ):
             # Keep the cliffs' actual scaled parts and positions throughout the
-            # blast. The new plants re-use the same kit and grow at their roots.
+            # blast. The scorched caps stay exposed for the aftermath.
             hit = round(front_exposure(math.hypot(x, z + 32)) * 8) / 8
-            green = 13.70 + 0.22 * round(ramp(z - x * 0.3, -100, 130) * 6)
             group(0, hit, path[-1]).append(copy.deepcopy(q))
             ash = copy.deepcopy(q)
             field(
@@ -639,10 +479,9 @@ def extract(parent, path):
                     )
                 ),
             )
-            group(hit, green, path[-1]).append(ash)
-            group(green, END, path[-1]).append(q)
+            group(hit, END, path[-1]).append(ash)
         else:
-            group(developed(when), END, path[-1]).append(q)
+            group(0, END, path[-1]).append(q)
 
 
 def sea():
@@ -713,8 +552,8 @@ def sea():
 
 
 def vegetation():
-    # Each tree has a root at the measured terrain height. Botanical silhouettes
-    # stay readable against the dust front; older, taller groves appear in saltation.
+    # Sample the same grove footprints used by the baked moon shadows.
+    # Every standing tree is present before the meteor reaches the island.
     groves = item(model, "Model", "Wind trees")
     trees = []
     grovesites = [
@@ -741,59 +580,29 @@ def vegetation():
             a = math.atan2(z + 32, x)
             r = math.hypot(x, z + 32)
         if (
-            r < 31
+            math.hypot(x, (z + 32) * 1.1) < BASIN_RINGS[-1] + 2
             or r > coast(a)[0] * 0.948
             or any(math.hypot(x - xx, z - zz) < 3.5 for xx, zz in trees)
         ):
             continue
-        y = sample(x, z)
-        age = 0 if i < 31 or i % 4 == 0 else 13.40 + (i % 10) * 0.27
-        if age > 0:
-            recovered = kit.mature_top(x, z, y)
-            if recovered > y + 0.03:
-                y = recovered
-                age = max(age, 15.11 + i % 4 * 0.12)
-        if x < -89 and 67 < z < 104 and age > 0:
-            age = 14.85 + (i % 3) * 0.18
-        damaged = age == 0 and (r < 116 or i % 3 != 0)
-        reach = front_exposure(r)
-        clear = parcel(x, z)[1]
-        if x > -12 and z > 58:
-            clear = min(clear, 18.76 + round(ramp(z - x * 0.4, 45, 125) * 4) * 0.10)
-        closes = reach + 0.48 if damaged else clear
-        tree = item(groves, "Model", f"{age:.2f}_{closes:.2f}")
+        trees.append((x, z))
         h = rand.uniform(7.2, 16.7) * (1.08 if x < 0 else 0.94)
+        spin = rand.random() * TAU
+        if i >= 31 and i % 4 != 0:
+            continue
+        y = sample(x, z)
+        damaged = r < 116 or i % 3 != 0
+        closes = front_exposure(r) + 0.48 if damaged else END
+        tree = item(groves, "Model", f"0.00_{closes:.2f}")
         root = part(tree, "Root", (x, y, z), (0.1, 0.1, 0.1), "6D604F")
         root.set("referent", f"Tree{i}")
         field(root, "Transparency", "float", "1")
         field(tree, "PrimaryPart", "Ref", f"Tree{i}")
-        spin = rand.random() * TAU
         kit.native_tree(tree, i, x, y, z, h, spin, i % 3 == 0)
-        if not damaged and clear + 0.25 < parcel(x, z)[1]:
-            harvest = group(
-                clear, min(clear + 1.20, parcel(x, z)[1]), "Felled trees and cut stumps"
-            )
-            part(
-                harvest,
-                "Stump",
-                (x, y + 0.32, z),
-                (0.11 * h, 0.64, 0.11 * h),
-                "916C4E",
-                512,
-            )
-            endx, endz = x + 0.58 * h * math.cos(spin), z + 0.58 * h * math.sin(spin)
-            spar(
-                harvest,
-                "Felled bole",
-                (x, y + 0.38, z),
-                (endx, sample(endx, endz) + 0.4, endz),
-                0.092 * h,
-                "907757",
-            )
         if damaged:
             # At this exposure the crown tears away. Blackened forks and a
             # broken crown lie along the same bearing as the passing wave.
-            snag = group(closes, 13.64 + round((i % 11) * 0.21, 2), "Burned windfall")
+            snag = group(closes, END, "Burned windfall")
             direction = np.array((x / r, 0, (z + 32) / r))
             foot = np.array((x, y, z))
             is_down = i % 3 != 0
@@ -818,8 +627,7 @@ def vegetation():
                     )
                 )
                 spar(snag, "Splintered limb", waist, fork, h * 0.054, "71615A")
-        trees.append((x, z))
-    return trees
+    return groves.findall("Item")
 
 
 def spar(parent, label, a, b, width, ink):
@@ -838,180 +646,6 @@ def spar(parent, label, a, b, width, ink):
     )
 
 
-def survey_tent(camp, x, z, spin, scale):
-    y = sample(x, z)
-
-    def at(h, v, d):
-        h, v, d = h * scale, v * scale, d * scale
-        return (
-            x + h * math.cos(spin) - d * math.sin(spin),
-            y + v,
-            z + d * math.cos(spin) + h * math.sin(spin),
-        )
-
-    for side, ink in ((-1, "D8AE80"), (1, "EAC89D")):
-        a, b, c, d = (
-            at(side * 3, 0, -3.5),
-            at(side * 3, 0, 3.5),
-            at(0, 4.3, -3.5),
-            at(0, 4.3, 3.5),
-        )
-        face(camp, "Waxed fly", a, b, c, ink)
-        face(camp, "Waxed fly", b, d, c, ink)
-    spar(camp, "Ridgepole", at(0, 4.3, -4.1), at(0, 4.3, 4.1), 0.18, "775940")
-    for dz in (-3.4, 3.4):
-        spar(camp, "Tent upright", at(0, -0.2, dz), at(0, 4.3, dz), 0.21, "795D4B")
-
-
-def first_landing():
-    # A small shingle spit extends the natural shelf out into shallow water,
-    # beyond the foot of the cliff. Its level crown receives the landing party.
-    spit = group(0, 22.32, "Shingle landing")
-    kit.pad(
-        spit, "Landing beach", -136.3, 118.9, 28, 32, 19.5, 21.80, -5, 5.0, "EBAD6A"
-    )
-    kit.pad(
-        spit, "Golden shingle", -135.6, 118.3, 23, 27, 21.65, 23.37, -5, 4.3, "F3CF96"
-    )
-    kit.pad(
-        spit,
-        "Landing crest",
-        -135.5,
-        118.6,
-        16.7,
-        21.4,
-        23.30,
-        24.43,
-        -5,
-        3.1,
-        "F6D99F",
-    )
-    jetty = group(18.27, 22.32, "Landing gangplank")
-    for k in range(4):
-        dx = (k - 1.5) * 0.66
-        spar(
-            jetty,
-            "Landing plank",
-            (-142.0 + dx, 23.32, 104.6),
-            (-136.8 + dx, 24.53, 114.8),
-            0.66,
-            "B18A5C" if k % 2 else "C19B67",
-        )
-    for k in range(5):
-        t = (k + 1) / 6
-        cx, cy, cz = -142.0 + 5.2 * t, 23.75 + 1.21 * t, 104.6 + 10.2 * t
-        spar(
-            jetty,
-            "Foot cleat",
-            (cx - 1.2, cy, cz + 0.45),
-            (cx + 1.2, cy, cz - 0.45),
-            0.16,
-            "856647",
-        )
-    cargo = group(18.39, 21.82, "First survey supplies")
-    for i, (x, z) in enumerate(((-131.5, 120.7), (-133.3, 122.8), (-133.0, 120.1))):
-        w = 1.5 if i < 2 else 1.8
-        part(
-            cargo,
-            "Canvas-bound provisions",
-            (x, 24.42 + w * 0.48, z),
-            (w, w * 0.96, 2.15),
-            "AE754B" if i == 0 else "CAA477",
-            512,
-        )
-        for dz in (-0.57, 0.57):
-            part(
-                cargo,
-                "Crate band",
-                (x, 24.42 + w * 0.48, z + dz),
-                (w + 0.04, w + 0.025, 0.13),
-                "655446",
-            )
-    # A clinker-built survey boat. Three hull strakes follow the raised sheer.
-    cutter = item(model, "Model", "Cutter")
-    for side in (-1, 1):
-        rows = []
-        for z, w, h in [
-            (-13, 0.16, 3.72),
-            (-8.8, 2.30, 2.77),
-            (-3.8, 3.63, 2.47),
-            (3.5, 3.86, 2.41),
-            (9, 2.97, 2.78),
-            (11.3, 0.75, 3.06),
-        ]:
-            rows.append(
-                [
-                    (side * w * 0.25, -0.34, z * 0.89),
-                    (side * w * 0.65, 0.48, z * 0.955),
-                    (side * w * 0.95, h - 0.55, z),
-                    (side * w, h, z),
-                ]
-            )
-        for i, row in enumerate(rows[:-1]):
-            nxt = rows[i + 1]
-            for j, ink in enumerate(("503E47", "885D4B", "DCA869")):
-                face(cutter, "Carvel plank", row[j], row[j + 1], nxt[j], ink)
-                face(cutter, "Carvel plank", nxt[j], row[j + 1], nxt[j + 1], ink)
-            a, b, c, d = (
-                row[3],
-                nxt[3],
-                (0, row[3][1] - 0.32, row[3][2]),
-                (0, nxt[3][1] - 0.32, nxt[3][2]),
-            )
-            face(cutter, "Oiled deck", a, b, c, "C39261")
-            face(cutter, "Oiled deck", b, c, d, "B68B60")
-    spar(cutter, "Spruce mast", (0, 2, -3), (0, 22, -2.3), 0.43, "926D50")
-    spar(cutter, "Lateen yard", (2.1, 8, -9.7), (-3.83, 22.45, 6.48), 0.36, "795745")
-    # Bias-cut canvas bows out from the line of its yard. Color fields follow
-    # sewn panels and visibly repeat the ochre of the original island's stalls.
-    peak = np.array((-3.78, 22.3, 6.42))
-    tack = np.array((2.1, 8.1, -9.7))
-    clew = np.array((-2.1, 4.55, 7.87))
-    for band, ink in enumerate(("DF8756", "FFE2AF", "F4C688", "DA794E", "FFE6B9")):
-        u, v = band / 5, (band + 1) / 5
-        left = tack + (peak - tack) * u
-        right = tack + (peak - tack) * v
-        a = (clew + left) * 0.5 + np.array((1.32, 0, 0))
-        b = (clew + right) * 0.5 + np.array((1.32, 0, 0))
-        face(cutter, "Gore", left, right, a, ink)
-        face(cutter, "Gore", a, right, b, ink)
-        face(cutter, "Gore", a, b, clew, ink)
-    for a, b in [
-        ((0, 21.6, -2.3), (0, 3.55, -12)),
-        ((0, 21.6, -2.3), (-2.8, 2.64, 7)),
-        (clew, (3.1, 2.6, 7.6)),
-    ]:
-        spar(cutter, "Standing rigging", a, b, 0.075, "735F50")
-    for born, x, z, spin, scale in [
-        (18.32, -104, 85, 0.22, 1.10),
-        (18.53, -113, 88, -0.54, 1.22),
-        (18.85, -52, 34, -0.46, 1.80),
-        (19.13, -31, 49, 0.39, 1.62),
-        (19.24, -16, 70, -0.55, 1.94),
-        (19.48, 12, 87, 0.26, 1.63),
-        (19.67, 25, 64, 0.31, 1.64),
-    ]:
-        retired = parcel(x, z)[1]
-        if retired > born:
-            survey_tent(group(born, retired, "Prospectors camp"), x, z, spin, scale)
-    # Contemporary foundations take over from the first timbered mouth.
-    for i, z in enumerate((7, -1, -9)):
-        post = group(21.05 + i * 0.12, 24.95, "Pit props")
-        for x in (-7.2, 7.2):
-            spar(post, "Rough post", (x, 23.7, z), (x * 0.93, 33.4, z), 0.82, "966B47")
-        header = group(21.25 + i * 0.17, 24.95, "First adit")
-        spar(header, "Brow", (-8.1, 33.17, z), (8.1, 33.17, z), 1.07, "AA7F57")
-        for side in (-1, 1):
-            spar(
-                header,
-                "Knee",
-                (side * 6.8, 30.6, z),
-                (side * 4.7, 32.92, z),
-                0.42,
-                "B48E66",
-            )
-
-
 def main():
     survey()
     extract(source, [])
@@ -1021,31 +655,20 @@ def main():
     headlands()
     trees = vegetation()
     build_landforms(shore, coast, sample, front_exposure, group, part, face, spar, DEST)
-    first_landing()
-    build_settlement(group, part, face, spar, ground, DEST)
-    # The pivot remains at the source map origin even as groups go in/out of frame.
-    root = part(model, "Survey origin", (0, 0, 0), (0.1, 0.1, 0.1), "FFFFFF")
-    root.set("referent", "FilmOrigin")
-    field(root, "Transparency", "float", "1")
-    field(model, "PrimaryPart", "Ref", "FilmOrigin")
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp = Path(tmp)
-        ET.ElementTree(document).write(tmp / "CoveChronicle.rbxmx", encoding="utf-8")
-        (tmp / "bake.project.json").write_text(
-            json.dumps(
-                {"name": "CoveChronicle", "tree": {"$path": "CoveChronicle.rbxmx"}}
-            )
-        )
-        subprocess.run(
-            [
-                "rojo",
-                "build",
-                tmp / "bake.project.json",
-                "-o",
-                DEST / "CoveChronicle.rbxm",
-            ],
-            check=True,
-        )
+    # Keep the editable map origin even when ancient parcels detach or a replay
+    # is placed above a player's distant, underground character.
+    for root_model, data in ((model, document), (replay, replay_document)):
+        label = name(root_model)
+        root = part(root_model, "Survey origin", (0, 0, 0), (0.1, 0.1, 0.1), "FFFFFF")
+        root.set("referent", "FilmOrigin")
+        field(root, "Transparency", "float", "1")
+        field(root_model, "PrimaryPart", "Ref", "FilmOrigin")
+        with tempfile.TemporaryDirectory() as folder:
+            tmp = Path(folder)
+            ET.ElementTree(data).write(tmp / "model.rbxmx", encoding="utf-8")
+            project = tmp / "bake.project.json"
+            project.write_text(json.dumps({"name": label, "tree": {"$path": "model.rbxmx"}}))
+            subprocess.run(["rojo", "build", project, "-o", DEST / f"{label}.rbxm"], check=True)
     # Sample the travelling wave against this exact pre-impact surface, including
     # the cliffs. Each row records radius and height from the crater to open water.
     heights = []

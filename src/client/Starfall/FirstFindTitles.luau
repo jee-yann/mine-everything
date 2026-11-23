@@ -6,8 +6,6 @@ local condensed = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWei
 -- Size the two lines as one piece of type. Each composition has a bottom
 -- margin inside the exposed image, measured after the letterbox and UI insets.
 local cues = {
-	{ first = 906, last = 938, lead = "CITRINE COVE", headline = "PRESENT DAY", centered = true,
-		width = 535, leadSize = 87, mainSize = 87, leading = 82, widthFraction = 0.57, heightFraction = 0.34 },
 	{ first = cuts.portrait + 7, last = cuts.commission - 2, player = true, headline = "GEM HUNTER",
 		width = 505, leadSize = 42, mainSize = 89, leading = 36, widthFraction = 0.43, heightFraction = 0.25 },
 	{ first = cuts.lode + 13, last = cuts.challenge - 2, lead = "THE RAREST ORE", headline = "STARFALL",
@@ -31,22 +29,19 @@ local function lettering(group, name, color)
 	return label, shadow
 end
 
-local function setLine(label, shadow, text, size, width, top, centered)
+local function setLine(label, shadow, text, size, width, top)
 	for _, item in { label, shadow } do
 		local offset = if item == shadow then Vector2.new(2, 3) else Vector2.zero
 		item.Text, item.TextSize = text, size
-		item.TextXAlignment = if centered then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
+		item.TextXAlignment = Enum.TextXAlignment.Left
 		item.Size = UDim2.fromOffset(width, size * 1.18)
 		item.Position = UDim2.fromOffset(offset.X, top + offset.Y)
 	end
 end
 
-function Titles.new(safe, screen)
+function Titles.new(safe)
 	local viewer = game:GetService("Players").LocalPlayer
 	local name = if viewer then viewer.DisplayName else "Miner"
-	local dusk = Instance.new("Frame")
-	dusk.Name, dusk.BackgroundColor3, dusk.BorderSizePixel = "Chapter exposure", Color3.fromHex("131D33"), 0
-	dusk.Size, dusk.ZIndex, dusk.Visible, dusk.Parent = UDim2.fromScale(1, 1), 5, false, screen
 	local group = Instance.new("Frame")
 	group.Name, group.BackgroundTransparency, group.Visible = "Expedition title", 1, false
 	group.ZIndex, group.Parent = 8, safe
@@ -66,19 +61,14 @@ function Titles.new(safe, screen)
 			end
 		end
 		group.Visible = cue ~= nil
-		dusk.Visible = cue ~= nil and cue.centered == true
-		if dusk.Visible then
-			local edge = math.clamp(math.min(frame - 904, 940 - frame) / 4, 0, 1)
-			dusk.BackgroundTransparency = 1 - 0.64 * edge
-		end
 		if not cue then
 			active = nil
 			return
 		end
 		local height = cue.leading + cue.mainSize * 1.18
 		if active ~= cue then
-			lead.TextColor3 = if cue.centered then ochre else cream
-			main.TextColor3 = if cue.centered then cream else ochre
+			lead.TextColor3 = cream
+			main.TextColor3 = ochre
 			local leadSize = cue.leadSize
 			if cue.player then
 				-- Reserve the same baseline for long Roblox display names.
@@ -86,8 +76,8 @@ function Titles.new(safe, screen)
 				leadSize = math.min(leadSize, math.floor(leadSize * cue.width / math.max(1, measured * 1.22)))
 			end
 			setLine(lead, leadShadow, if cue.player then name else cue.lead, leadSize, cue.width,
-				(cue.leadSize - leadSize) * 1.18, cue.centered)
-			setLine(main, mainShadow, cue.headline, cue.mainSize, cue.width, cue.leading, cue.centered)
+				(cue.leadSize - leadSize) * 1.18)
+			setLine(main, mainShadow, cue.headline, cue.mainSize, cue.width, cue.leading)
 			typeArea.Size = UDim2.fromOffset(cue.width, height)
 			active = cue
 		end
@@ -97,17 +87,12 @@ function Titles.new(safe, screen)
 		local fraction = if size.X < pictureHeight then 0.81 else cue.widthFraction
 		local fit = math.min(size.X * fraction / cue.width, pictureHeight * cue.heightFraction / height)
 		local age = frame - cue.first
-		local stamp = if motion and not cue.centered then math.max(0, 1 - age / 4) ^ 2 else 0
+		local stamp = if motion then math.max(0, 1 - age / 4) ^ 2 else 0
 		scale.Scale = math.max(0.01, fit * (1 + 0.035 * stamp))
 		group.Size = UDim2.fromOffset(cue.width * scale.Scale, height * scale.Scale)
-		if cue.centered then
-			group.AnchorPoint = Vector2.new(0.5, 0.5)
-			group.Position = UDim2.new(0.5, 0, 0, top + pictureHeight * 0.5)
-		else
-			group.AnchorPoint = Vector2.new(0, 1)
-			group.Position = UDim2.new(0.065 - 0.008 * stamp, 0, 0, bottom - pictureHeight * 0.095)
-		end
-		group.Rotation = if cue.centered then 0 else -2 - stamp
+		group.AnchorPoint = Vector2.new(0, 1)
+		group.Position = UDim2.new(0.065 - 0.008 * stamp, 0, 0, bottom - pictureHeight * 0.095)
+		group.Rotation = -2 - stamp
 		main.Visible, mainShadow.Visible = true, true
 	end
 end

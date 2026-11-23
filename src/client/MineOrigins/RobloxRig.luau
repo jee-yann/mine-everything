@@ -32,10 +32,10 @@ local r15 = {
 	{ "RightAnkle", "RightLowerLeg", "RightFoot" },
 }
 
-local function classic(name, playerStandIn)
+local function classic(name, playerStandIn, workwear)
 	local model = P.model(nil, name)
-	local coat = if playerStandIn then "2188A2" else "FF7740"
-	local skin = if playerStandIn then "EDB87D" else "FABE61"
+	local coat = if workwear then workwear.shirt elseif playerStandIn then "2188A2" else "FF7740"
+	local skin = if workwear then workwear.skin elseif playerStandIn then "EDB87D" else "FABE61"
 	local root = P.box(model, "HumanoidRootPart", Vector3.zero, V(2, 2, 1), coat)
 	root.Transparency = 1
 	local torso = P.box(model, "Torso", Vector3.zero, V(2, 2, 1), coat)
@@ -67,7 +67,9 @@ local function classic(name, playerStandIn)
 	end
 	trim(torso, P.box(model, "Utility vest", V(0, 0, -0.02), V(2.05, 1.88, 1.04), coat))
 	for _, s in { -1, 1 } do
-		trim(torso, P.box(model, "Reflective strap", V(s * 0.55, 0.12, -0.56), V(0.19, 1.51, 0.055), "F9E7AC"))
+		if not workwear then
+			trim(torso, P.box(model, "Reflective strap", V(s * 0.55, 0.12, -0.56), V(0.19, 1.51, 0.055), "F9E7AC"))
+		end
 		trim(torso, P.box(model, "Vest pocket", V(s * 0.54, -0.50, -0.58), V(0.48, 0.41, 0.13), "334955"))
 		trim(
 			model[if s == -1 then "Left Arm" else "Right Arm"],
@@ -78,14 +80,20 @@ local function classic(name, playerStandIn)
 			P.box(model, "Work boot", V(s * 0.5, -2.75, -0.10), V(1.035, 0.50, 1.2), "253343")
 		)
 	end
-	trim(torso, P.box(model, "Reflective belt", V(0, -0.13, -0.02), V(2.10, 0.14, 1.09), "EACD79"))
-	local hat = if playerStandIn then "57DDD0" else "FFD151"
-	trim(head, P.sphere(model, "Hard hat shell", V(0, 2.00, 0), V(1.63, 0.85, 1.33), hat))
-	trim(head, P.box(model, "Hard hat brim", V(0, 1.85, -0.075), V(1.80, 0.11, 1.52), hat))
-	trim(head, P.box(model, "Lamp housing", V(0, 2.02, -0.61), V(0.48, 0.32, 0.20), "233949"))
-	local lens =
-		trim(head, P.box(model, "Headlamp", V(0, 2.03, -0.73), V(0.32, 0.22, 0.07), "FFF1B4", nil, Enum.Material.Neon))
-	P.light(lens, "FFDA9A", 5, 0.42)
+	local hat = if workwear then workwear.cap elseif playerStandIn then "57DDD0" else "FFD151"
+	trim(head, P.sphere(model, if workwear then "Cap crown" else "Hard hat shell", V(0, 2, 0), V(1.63, 0.85, 1.33), hat))
+	trim(head, P.box(model, if workwear then "Cap brim" else "Hard hat brim", V(0, 1.85, -0.075), V(1.80, 0.11, 1.52), hat))
+	if workwear then
+		trim(torso, P.box(model, "Canvas belt", V(0, -0.76, 0), V(2.09, 0.17, 1.08), "674E40"))
+		trim(torso, P.box(model, "Neckerchief", V(0, 0.89, -0.06), V(1.05, 0.28, 1.04), hat))
+	else
+		trim(torso, P.box(model, "Reflective belt", V(0, -0.13, -0.02), V(2.10, 0.14, 1.09), "EACD79"))
+	end
+	if not workwear or workwear.lamp then
+		trim(head, P.box(model, "Lamp housing", V(0, 2.02, -0.61), V(0.48, 0.32, 0.20), "233949"))
+		local lens = trim(head, P.box(model, "Headlamp", V(0, 2.03, -0.73), V(0.32, 0.22, 0.07), "FFF1B4", nil, Enum.Material.Neon))
+		if not workwear then P.light(lens, "FFDA9A", 5, 0.42) end
+	end
 	local human = Instance.new("Humanoid")
 	human.RigType = Enum.HumanoidRigType.R6
 	human.RequiresNeck, human.EvaluateStateMachine, human.DisplayDistanceType =
@@ -215,8 +223,8 @@ local function wardrobe(model, body)
 	return dress
 end
 
-function Rig.new(parent, name, character, playerStandIn)
-	local model = duplicate(character) or classic(name, playerStandIn)
+function Rig.new(parent, name, character, playerStandIn, workwear)
+	local model = duplicate(character) or classic(name, playerStandIn, workwear)
 	model.Name = name
 	local root = model.HumanoidRootPart
 	model.PrimaryPart = root

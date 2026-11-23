@@ -11,7 +11,8 @@ local TouchActions = require(script.Parent.TouchActions)
 local Celebration = require(script.Parent.UnlockCelebration)
 local Hud = {}
 Hud.__index = Hud
-local cursorOffset = Vector2.new(12, 10)
+local Input = game:GetService("UserInputService")
+local fullRed = Color3.fromRGB(255, 113, 109)
 local hotbar = {
 	{ page = "Inventory", code = Enum.KeyCode.B },
 	{ page = "Skills", code = Enum.KeyCode.K },
@@ -33,7 +34,7 @@ local function clearFrame(parent, name, x, y, width, height)
 	return frame
 end
 function Hud.new(player, net, mobile)
-	local self = setmetatable({ player = player, net = net, mobile = mobile }, Hud)
+	local self = setmetatable({ player = player, net = net, mobile = mobile, sawTouch = mobile }, Hud)
 	local gui = Instance.new("ScreenGui")
 	gui.Name, gui.ResetOnSpawn, gui.ScreenInsets, gui.ZIndexBehavior =
 		"MiningHUD", false, Enum.ScreenInsets.CoreUISafeInsets, Enum.ZIndexBehavior.Sibling
@@ -55,11 +56,11 @@ function Hud.new(player, net, mobile)
 	local wallet = clearFrame(root, "Wallet", 0, 0, 220, 52)
 	self.wallet = wallet
 	Icons.draw(wallet, "Coins", 0, 1, 47)
-	self.gold = W.title(wallet, "0", 50, -1, 170, 52, 46, W.gold, true)
+	self.gold = W.title(wallet, "0", 50, -1, 170, 52, 52, W.gold, true)
 	self.gold.Size = UDim2.new(1, -50, 0, 52)
 	self.gold.TextScaled = true
 	local goldSize = Instance.new("UITextSizeConstraint")
-	goldSize.MinTextSize, goldSize.MaxTextSize, goldSize.Parent = 17, 46, self.gold
+	goldSize.MinTextSize, goldSize.MaxTextSize, goldSize.Parent = 17, 52, self.gold
 	W.outlineText(self.gold, 3)
 	local tools = clearFrame(root, "Equipment and level", 0, 0, 200, 46)
 	self.levelRing = LevelRing.new(tools, function()
@@ -69,10 +70,11 @@ function Hud.new(player, net, mobile)
 	W.outlineText(self.status, 1.5)
 	local haul = clearFrame(root, "Haul", 0, 0, 215, 79)
 	self.haul, self.rows = haul, {}
-	W.title(haul, "Your haul", 10, 4, 99, 24, 20, W.white, true)
+	self.haulTitle = W.title(haul, "Your haul", 10, 4, 99, 24, 20, W.white, true)
 	self.pack = W.title(haul, "", 100, 4, 105, 24, 17, W.white)
 	local track = W.frame(haul, "Capacity", 10, 30, 195, 5, W.ink, 3)
 	self.fill = W.frame(track, "Ore", 0, 0, 0, 5, W.green, 3)
+	self.haulPulse = W.scale(self.haulTitle)
 	self.haulValue = W.text(haul, "", 10, 58, 195, 18, 13, W.gold, true)
 	for _, ore in Ores.list do
 		local row = W.frame(haul, ore.name, 10, 38, 195, 20, W.panel)
@@ -179,6 +181,7 @@ function Hud.new(player, net, mobile)
 	self.edgeCount = W.text(packButton, "", 36, 25, 48, 17, 13, W.white, true)
 	W.outlineText(self.edgeCount, 1.4)
 	self.edgeCount.TextScaled = true
+	self.edgeCountPulse = W.scale(self.edgeCount)
 	local countSize = Instance.new("UITextSizeConstraint")
 	countSize.MinTextSize, countSize.MaxTextSize, countSize.Parent = 9, 12, self.edgeCount
 	local menuButton = shortcut("Menu", W.aqua, "Menu")
@@ -215,6 +218,7 @@ function Hud.new(player, net, mobile)
 	W.stroke(self.reticle, W.ink, 1.6)
 	self.reticle.Visible = false
 	local badge = W.frame(aimGui, "Mining cursor", 0, 0, 28, 28, W.ink, 14)
+	badge.AnchorPoint = Vector2.new(0.5, 0.5)
 	self.cursor, self.cursorEdge = badge, W.stroke(badge, W.aqua, 2.3)
 	self.cursorPick = Icons.draw(badge, "Power", 2, 2, 24, W.gold)
 	self.denied = W.frame(badge, "No entry", 4, 12, 20, 4, Color3.fromRGB(255, 100, 108), 2)
@@ -249,6 +253,7 @@ function Hud.new(player, net, mobile)
 	self.overlay = self.menu.overlay
 	self.overlay:GetPropertyChangedSignal("Visible"):Connect(function()
 		backdrop.Enabled = self.overlay.Visible
+		if self.overlay.Visible then self:aimAt(nil) end
 		self.speech.Visible = false
 		if self.layout then
 			self.layout()
@@ -266,13 +271,16 @@ function Hud.new(player, net, mobile)
 		if width < 90 or height < 90 then
 			return
 		end
-		local edge = self.mobile or width < 850 or height < 470
+		-- A keyboard connected to a phone changes its controls, not its HUD footprint.
+		local rosterOnDemand = self.sawTouch or Input.TouchEnabled
+		local touchLayout = self.mobile or (rosterOnDemand and math.min(width, height) < 640)
+		local edge = touchLayout or width < 850 or height < 470
 		self.edgeMode = edge
 		local playing = not self.overlay.Visible
 		local typing = chatInput and chatInput.IsFocused
 		local s = if edge then 1 else math.clamp(math.min(width / 1150, height / 750), 0.90, 1.32)
 		local margin = if edge then 4 else 10
-		self.menu:layout(width, height, self.mobile)
+		self.menu:layout(width, height, touchLayout)
 		walletScale.Scale, taskScale.Scale, haulScale.Scale, speechScale.Scale = s, s, s, s
 		toolScale.Scale = s
 		locScale.Scale = s
@@ -286,7 +294,11 @@ function Hud.new(player, net, mobile)
 		-- These rectangles all use the core-safe origin, including negative top/left offsets.
 		local leftEdge = math.max(margin, device.Min.X + 3)
 		local outerRight = math.max(width - margin, width + full.Max.X - core.Max.X - 12)
-		local freeLeft = math.max(0, bar.Min.X) + 5
+		local narrow = width < 515
+		local minimumWallet = 96
+		-- The native bar can start at X=0 while chat pushes both corners onto
+		-- the same row. Reserve the wallet's minimum width in that case.
+		local freeLeft = math.max(math.max(0, bar.Min.X) + 5, if narrow then leftEdge + minimumWallet + 6 else 0)
 		local freeRight = if bar.Max.X >= core.Max.X - 1 then outerRight else width + bar.Max.X - core.Max.X - 5
 		local top = math.max(full.Min.Y + 11, device.Min.Y + 8)
 		local pairWidth = 172
@@ -302,15 +314,14 @@ function Hud.new(player, net, mobile)
 		self.layer.Size = UDim2.fromOffset(locWidth, 39)
 		self.depth.Size = UDim2.fromOffset(locWidth, 21)
 		W.anchor(loc, 0.5, 0, UDim2.fromOffset(titleX, if inTopbar then top else 7))
-		local narrow = width < 515
 		-- Leave a left column for the wallet when the region and shortcuts
 		-- share its row on a compact screen. The gold amount scales to fit.
 		local walletWidth = if narrow then math.clamp(math.min(titleX - titleHalf,
-			width - margin - pairWidth) - leftEdge - 6, 96, 220) else 220
+			width - margin - pairWidth) - leftEdge - 6, minimumWallet, 220) else 220
 		wallet.Size = UDim2.fromOffset(walletWidth, 52)
 		local rosterRoom = if edge then height * 0.45 else height - 18 - self.haul.Size.Y.Offset * s
-		local rosterHeight, browsing = self.roster:layout(s, margin, edge, rosterRoom, self.mobile)
-		self.roster.panel.Visible = playing and (not self.mobile or browsing)
+		local rosterHeight, browsing = self.roster:layout(s, margin, edge, rosterRoom, rosterOnDemand)
+		self.roster.panel.Visible = playing and (not rosterOnDemand or browsing)
 		shortcuts.Visible = playing and edge and not typing and not (browsing and narrow)
 		dock.Visible = playing and not edge
 		taskCard.Visible = playing and not edge and not browsing
@@ -354,6 +365,11 @@ function Hud.new(player, net, mobile)
 			self.surface.Position = UDim2.new(0.5, 0, 0, surfaceY - locationY)
 			local right = if topActions then freeRight else width - margin
 			local rowY = if topActions then top elseif inTopbar then 4 else math.max(73, depthY + 26)
+			rowY = belowChat(right - pairWidth, rowY, pairWidth, 48)
+			if right > titleX - titleHalf and right - pairWidth < titleX + titleHalf
+				and rowY + 48 > locationY and rowY < depthY + 21 then
+				rowY = depthY + 26
+			end
 			if
 				self.surface.Visible
 				and titleX + 56 > right - pairWidth
@@ -376,13 +392,20 @@ function Hud.new(player, net, mobile)
 			if narrow and leftEdge + walletWidth > right - 46 and walletTop < toolsBottom and walletTop + 52 > levelY then
 				walletTop = toolsBottom + 4
 			end
-			if not self.mobile then
+			if not rosterOnDemand then
 				-- Small keyboard windows have room for the roster in the thumbstick corner.
 				W.anchor(self.roster.panel, 0, 1, UDim2.new(0, leftEdge, 1, -margin))
 				local walletHeight = if self.status.Text == "" then 52 else 70
 				walletTop = math.min(walletTop, height - margin - rosterHeight - walletHeight - 6)
 			end
 			local walletLeft = if walletTop + 52 > height - 100 then leftEdge + 92 else leftEdge
+			if narrow and walletLeft < titleX + titleHalf and walletLeft + walletWidth > titleX - titleHalf then
+				local regionBottom = math.max(locationY + loc.Size.Y.Offset, depthY + 21)
+				if self.surface.Visible then regionBottom = math.max(regionBottom, surfaceY + 44) end
+				if walletTop < regionBottom + 4 and walletTop + 52 > locationY then
+					walletTop = belowChat(walletLeft, regionBottom + 4, walletWidth, 52)
+				end
+			end
 			W.anchor(wallet, 0, 0, UDim2.fromOffset(walletLeft, math.min(walletTop, height - 56)))
 			shortcuts.Size = UDim2.fromOffset(pairWidth, 48)
 			shortcuts.Position = UDim2.fromOffset(right - pairWidth, rowY)
@@ -423,7 +446,7 @@ function Hud.new(player, net, mobile)
 		self.detail.Size = UDim2.fromOffset(speechWidth - 10, 18)
 		meter.Size = UDim2.new(1, -20, 0, 7)
 		self.meterHeadroom = -meter.Position.Y.Offset * speechScale.Scale
-		local footer = if self.mobile and width < height then 136 else margin
+		local footer = if touchLayout and width < height then 136 else margin
 		local speechBottom = if edge then footer else margin + 82 * navScale + 8
 		local speechSize = Vector2.new(speechWidth, speech.Size.Y.Offset)
 		W.anchor(
@@ -499,7 +522,9 @@ function Hud.new(player, net, mobile)
 end
 function Hud:placePanels(touch)
 	self.mobile = touch
+	self.sawTouch = self.sawTouch or touch
 	self.layout()
+	self:refresh()
 end
 function Hud:openPage(key)
 	self.menu:open(key)
@@ -534,11 +559,22 @@ function Hud:refresh()
 	end
 	self.pack.Text = W.number(used) .. " / " .. W.number(cap)
 	self.edgeCount.Text = W.number(used) .. "/" .. W.number(cap)
-	self.edgeCount.TextColor3 = if used >= cap then W.gold else W.white
-	self.fill.BackgroundColor3 = if used >= cap then W.gold else W.green
-	self.surface.Text = if used >= cap then "↑ Surface · Full" else "↑ Surface"
+	local full = used >= cap
+	self.haulTitle.Text = if full then "Bag full!" else "Your haul"
+	self.haulTitle.TextColor3 = if full then fullRed else W.white
+	self.pack.TextColor3 = if full then fullRed else W.white
+	self.edgeCount.TextColor3 = if full then fullRed else W.white
+	self.fill.BackgroundColor3 = if full then fullRed else W.green
+	local control = Input.PreferredInput
+	local shortcut = if self.mobile then "↑" elseif control == Enum.PreferredInput.Gamepad then Input:GetStringForKeyCode(Enum.KeyCode.ButtonY) else "R"
+	shortcut = shortcut:gsub("^Button", "")
+	self.surface.Text = shortcut .. " · Surface" .. (if full then "\nBag full!" else "")
 	if used >= cap and (self.lastUsed or 0) < cap and self.player:GetAttribute("MenuMotion") ~= false
 		and not GuiService.ReducedMotionEnabled then
+		for _, pulse in { self.haulPulse, self.edgeCountPulse } do
+			pulse.Scale = 1.15
+			W.tween(pulse, 0.38, { Scale = 1 })
+		end
 		self.surface.BackgroundColor3 = W.white
 		W.tween(self.surface, 0.7, { BackgroundColor3 = W.gold })
 	end
@@ -623,11 +659,15 @@ function Hud:pickup(ore, amount, point)
 		W.tween(
 			quantity,
 			0.32,
-			{ TextColor3 = if self.edgeMode and self.lastUsed >= self.lastCap then W.gold else W.white }
+			{ TextColor3 = if self.edgeMode and self.lastUsed >= self.lastCap then fullRed else W.white }
 		)
 	end
 	local camera = workspace.CurrentCamera
-	if not camera or self.player:GetAttribute("MenuMotion") == false then
+	if not camera or self.player:GetAttribute("MenuMotion") == false or GuiService.ReducedMotionEnabled then
+		return
+	end
+	if ore.host then
+		pulse()
 		return
 	end
 	local projected, visible = camera:WorldToViewportPoint(point)
@@ -639,13 +679,13 @@ function Hud:pickup(ore, amount, point)
 	task.defer(function()
 		local destination = quantity.AbsolutePosition + quantity.AbsoluteSize * 0.5 - self.root.AbsolutePosition
 		local start = Vector2.new(projected.X, projected.Y) + self.viewportOffset
-		local size = if ore.host then 13 else 19
+		local size = 19
 		local crumb = W.frame(self.root, "Collected " .. ore.name, start.X, start.Y, size, size, ore.color, 3)
 		crumb.AnchorPoint, crumb.ZIndex, crumb.Rotation = Vector2.new(0.5, 0.5), 12, -16
 		W.stroke(crumb, W.ink, 1.5)
 		local count = W.title(crumb, "+" .. amount, size + 1, -3, 30, size + 6, size, W.white, true)
 		W.outlineText(count, 1.5)
-		W.tween(crumb, if ore.host then 0.32 else 0.46, {
+		W.tween(crumb, 0.46, {
 			Position = UDim2.fromOffset(destination.X, destination.Y),
 			Rotation = 12,
 		}).Completed
@@ -655,14 +695,23 @@ function Hud:pickup(ore, amount, point)
 			end)
 	end)
 end
+function Hud:pointerOnControl(screen)
+	if GuiService.MenuIsOpen or Input:GetFocusedTextBox() or (self.chatInput and self.chatInput.IsFocused) then return true end
+	for _, item in self.player.PlayerGui:GetGuiObjectsAtPosition(screen.X, screen.Y) do
+		if item:IsA("GuiButton") or item:IsA("TextBox") then return true end
+	end
+	return false
+end
+
 function Hud:aimAt(screen, valid, blocked)
+	if not screen then self.reticle.Visible = false end
 	if self.speechHome then
 		local showingNotice = os.clock() < (self.untilTime or 0)
 		if screen and (valid or blocked) and (self.meter.Visible or not showingNotice) then
 			local at = screen + self.viewportOffset
 			local bounds, size = self.root.AbsoluteSize, self.speech.AbsoluteSize
 			local x = math.clamp(at.X, size.X / 2, math.max(size.X / 2, bounds.X - size.X / 2))
-			local cursorBottom = at.Y + cursorOffset.Y + self.cursor.AbsoluteSize.Y
+			local cursorBottom = at.Y + self.cursor.AbsoluteSize.Y / 2
 			local bottom = cursorBottom + 8 + self.meterHeadroom + size.Y
 			self.speech.Position =
 				UDim2.fromOffset(x, if bottom <= bounds.Y then bottom else math.max(size.Y + self.meterHeadroom, at.Y - 20))
@@ -671,10 +720,17 @@ function Hud:aimAt(screen, valid, blocked)
 		end
 	end
 	self.cursor.Visible = screen ~= nil and (valid or blocked) and not self.overlay.Visible
+	local replaceMouse = self.cursor.Visible and Input.PreferredInput == Enum.PreferredInput.KeyboardAndMouse
+	if replaceMouse then
+		if self.originalMouseIcon == nil then self.originalMouseIcon = Input.MouseIconEnabled end
+		Input.MouseIconEnabled = false
+	elseif self.originalMouseIcon ~= nil then
+		Input.MouseIconEnabled, self.originalMouseIcon = self.originalMouseIcon, nil
+	end
 	if not self.cursor.Visible then
 		return
 	end
-	self.cursor.Position = UDim2.fromOffset(screen.X + cursorOffset.X, screen.Y + cursorOffset.Y)
+	self.cursor.Position = UDim2.fromOffset(screen.X, screen.Y)
 	self.cursorPick.Visible, self.denied.Visible = valid, not valid
 	self.cursorEdge.Color = if valid then W.aqua else self.denied.BackgroundColor3
 	if not self.meter.Visible then

@@ -476,11 +476,14 @@ function recipes.cracks(m: Model, look: Look, rng: Random)
 end
 
 -- Rock decor: small calcite points on cave ceilings.
+-- A small chalky pocket with a broken edge, set into the host rock (cave ceilings).
 function recipes.calcite(m: Model, look: Look, rng: Random)
-	for i = 1, 3 do
-		local lean = Vector2.new(rng:NextNumber(-0.25, 0.25), rng:NextNumber(-0.25, 0.25))
-		Kit.spike(m, i * 0.9 - 1.8, rng:NextNumber(-1.2, 1.2), rng:NextNumber(0.8, 1.25), 0.3, lean, look.palette)
-	end
+	local p = look.palette
+	local turn = rng:NextNumber(-12, 12)
+	Kit.blob(m, -0.16, 0.06, 1.55, 0.84, -14 + turn, 0.04, shade(p, 0))
+	Kit.spike(m, -0.34, 0.08, 0.62, 0.38, Vector2.new(-0.15, 0.1), p)
+	Kit.spike(m, 0.36, -0.11, 0.5, 0.29, Vector2.new(0.2, -0.05), p)
+	Kit.blob(m, 0.72, -0.39, 0.28, 0.16, -36 + turn, 0.06, shade(p, 0.55))
 end
 
 -- ---------- crowns: crystals that break out of the face ----------

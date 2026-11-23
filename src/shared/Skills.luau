@@ -1,4 +1,5 @@
 local Ores = require(script.Parent.Ores)
+local FieldRewards = require(script.Parent.FieldRewards)
 local Skills = { nodes = {}, byId = {} }
 local byEffect = {}
 
@@ -258,6 +259,8 @@ hauling(
 	"Jobs"
 )
 
+hauling("Broker", "Fair Trade", "Earn 10% more on each piece of ore you sell, rounded to the nearest gold.", -780, 305, { "PackIII" }, nil, nil, "Coins")
+
 local geology = branch("Geology", "Crystal")
 geology("Notes", "Field Notes I", "Earn +1 XP from every ore you mine.", 185, 85, {}, "oreXP", 1)
 geology("NotesII", "Field Notes II", "Earn another +1 XP from every ore.", 365, 175, { "Notes" }, "oreXP", 1)
@@ -306,6 +309,8 @@ geology(
 	nil,
 	"Boot"
 )
+
+geology("Fortune", "Fortune", "One cut in ten gives you two pieces of ore if your pack has room.", 615, 565, { "RareStudy" }, nil, nil, "Crystal")
 
 function Skills.ready(node, owned)
 	for _, id in node.requires do
@@ -377,7 +382,7 @@ function Skills.oreXP(ore, owned, first, depth)
 	return xp + (if owned.RareStudy and Skills.isGem(ore) then 4 else 0)
 end
 
-function Skills.cutTime(base, ore, strength, charges, owned)
+function Skills.cutTime(base, ore, strength, charges, owned, hasteCuts, stoneChips)
 	local duration, tempered = Ores.cutTime(base, ore, strength, charges, if owned.HotSteel then 0.7 else nil)
 	duration *= (100 - Skills.bonus(owned, "cut")) / 100
 	if owned.StoneSplit and ore.name == "Stone" then
@@ -385,7 +390,8 @@ function Skills.cutTime(base, ore, strength, charges, owned)
 	elseif owned.GemCutter and Skills.isGem(ore) then
 		duration *= 0.8
 	end
-	return duration, tempered
+	local useChip = ore.name == "Stone" and (stoneChips or 0) > 0
+	return FieldRewards.cutTime(duration, ore, hasteCuts, stoneChips), tempered and not useChip
 end
 
 return Skills

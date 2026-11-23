@@ -61,7 +61,7 @@ Looks.rock = {
 	},
 	Stone = { decor = "cracks", palette = { "6E7079", "999BA4", "C4C6CC", "EEEFF2" }, every = 4, tint = true },
 	-- Cave ceilings the server marks with CalciteFaces.
-	Calcite = { decor = "calcite", palette = { "4F8584", "7FB0AE", "AED2CA", "E4F6F2" } },
+	Calcite = { decor = "calcite", palette = { "71777C", "AAA99F", "D0CDBB", "EDEBE2" } },
 } :: { [string]: Rock }
 
 Looks.ores = {

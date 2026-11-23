@@ -41,6 +41,16 @@ Guide.achievements = {
 	{ id = "Ice", name = "Ice in My Pockets", ore = "Diamond", goal = 10 },
 	{ id = "Envy", name = "Green With Envy", ore = "Emerald", goal = 5 },
 }
+-- Coal has Pocket Change already. The other first finds use the lifetime
+-- cut counts, which also recognizes a find made before the achievement existed.
+for _, ore in Ores.list do
+	if not ore.host and ore.name ~= "Coal" then
+		table.insert(Guide.achievements, {
+			id = "First" .. ore.name, name = "First " .. ore.name, ore = ore.name, goal = 1,
+			detail = "Mine your first " .. ore.name .. ".",
+		})
+	end
+end
 Guide.awardsById = {}
 -- Keep previously awarded, retired badges readable in existing saves.
 Guide.storedAwards = { Sandwich = true, Pressure = true, Penny = true, Traffic = true, Variety = true }
@@ -63,7 +73,7 @@ function Guide.awardText(award, player)
 				else string.format("Mine %d %s.", award.goal, award.ore)
 		)
 	local function mask(word)
-		if Ores.byName[word] and not player:GetAttribute("Found" .. word) then
+		if Ores.byName[word] and Ores.byName[word].secret and not player:GetAttribute("Found" .. word) then
 			return "???"
 		end
 		return word

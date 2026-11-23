@@ -33,7 +33,10 @@ local pigments = {
 	["Split face"] = "8591A5",
 }
 
-local cascade = { ["Falls crest"] = true, ["Falling water"] = true, ["Whitewater"] = true, ["Current"] = true }
+local cascade = {
+	["Falls crest"] = true, ["Falling water"] = true, ["Whitewater"] = true, ["Current"] = true,
+	["Spring run"] = true, ["Bedrock spring"] = true, ["Lower plunge pool"] = true,
+}
 -- A little sea mist hangs in the two gaps below the western canopy. Stretch
 -- the soft particles along the incident light. Terrain occludes each ribbon.
 local function lightThroughMist(look)
@@ -238,7 +241,7 @@ function Moonlight:relight(base, frame)
 	if self.strength == strength and self.tinted == tinted and self.island then
 		return
 	end
-	local island = self.stage:FindFirstChild("Citrine Cove through the ages")
+	local island = self.stage:FindFirstChild("Ancient Citrine Cove")
 	if island and not self.island and tinted then
 		for _, piece in island:GetDescendants() do
 			local swatch = pigments[piece.Name]

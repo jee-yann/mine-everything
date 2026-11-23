@@ -111,78 +111,72 @@ end
 local presentCuts = { 31.66, 33.34, 35.13, 37.26, 39.21, 41.86, 44.32 }
 local bridgeEye, bridgeLook = V(5.4, 5.55, 15.8), V(-1.15, 3.1, -2)
 
-local function recoil(t, beat)
-	local dt = t - beat
-	return if dt >= 0 and dt < 0.46 then math.sin(22 * dt) * math.exp(-9 * dt) else 0
+local function strikeKick(t, at)
+	local age = t - at
+	if age < 0 or age >= 0.15 then
+		return 0
+	end
+	return if age < 0.045 then 1 elseif age < 0.09 then -0.28 else 0.12
 end
 
 function Film:present(t, shot)
 	local base = self.modernBase
-	local function travel(a, b)
-		return if self.motion then ease(t, a, b) else 0.55
-	end
-	local function localAt(point)
-		return base:PointToObjectSpace(point)
-	end
-	local rock = localAt(self.crew.seamAim)
+	local rock = base:PointToObjectSpace(self.crew.seamAim)
 	if shot == 1 then
-		local u = if self.motion then ease(t, Beats.present, presentCuts[1]) else 0
-		self:frame(base, V(-32 + 16 * u, 29 - 9 * u, 66 - 13 * u), V(5, 8, 1), 57, -0.035 + 0.026 * u)
+		-- The constructed gate and the working gate have the same silhouette.
+		self:frame(base, V(-32, 29, 66), V(5, 8, 1), 57, -0.035)
 	elseif shot == 2 then
-		local u = travel(31.66, 33.34)
+		-- Read the first two strokes as a performance. Cut closer on the
+		-- longer wind-up for the third, keeping the lever on the same side.
+		local insert = t >= 32.65
+		local eye = if insert then V(-2.9, 2.23, 4.62) else V(-4.45, 3.09, 7.72)
+		local look = if insert then V(-0.47, 2.21, 0.15) else V(-0.85, 2.25, 0)
 		local kick = 0
 		if self.motion then
 			for _, beat in Beats.outbound do
-				kick += recoil(t, beat)
+				kick += strikeKick(t, beat)
 			end
 		end
 		self:frame(
 			base,
-			Survey.pad + V(-4.2 + 1.29 * u, 2.92 - 0.38 * u + 0.12 * kick, 7.4 - 1.2 * u + 0.30 * kick),
-			Survey.pad + V(-0.82, 2.12, 0),
-			48 - 2.3 * u + 2.2 * kick,
-			-0.028 * (1 - u) + 0.016 * kick
+			Survey.pad + eye + V(0, 0.09 * kick, 0.16 * kick),
+			Survey.pad + look,
+			if insert then 44 else 48,
+			-0.025 + 0.011 * kick
 		)
 	elseif shot == 3 then
-		-- Skim the bridge after the outgoing signal, straight through the market toward the arch.
-		local u = travel(33.34, 35.13)
-		self:frame(
-			base,
-			V(0.4 - 1.6 * u, 1.04 + 1.4 * u, 24.8 - 13 * u),
-			V(-2.7, 1.1 + 1.6 * u, 7.5 - 3 * u),
-			61 - 0.8 * u,
-			-0.035 * (1 - u)
-		)
+		-- A single fast move follows the sound along the cable. The empty
+		-- mouth holds perfectly still while we wait for anything to answer.
+		local u = if self.motion then math.clamp((t - 33.42) / 0.49, 0, 1) else 1
+		local eye = V(0.05, 1.05, 24.8):Lerp(V(-1.85, 1.85, 12.4), u)
+		self:frame(base, eye, V(-2.2, 2.98, 6.8), 60, -0.032 * (1 - u))
 	elseif shot == 4 then
-		local at = localAt(self.crew.receiverAim)
-		-- Sit still through the silence. Push in on the *answer* to the three taps.
-		local u = travel(Beats.returned[1], Beats.returned[3] + 0.32)
-		self:frame(base, at + V(1.65 - 0.62 * u, 0.75 - 0.07 * u, 3.52 - 0.42 * u), at + V(0, 0.03, 0), 40 - 4.2 * u)
+		-- The meter, listening hand and eyes share one frame. It only
+		-- becomes an instrument close-up when its third lamp registers.
+		if t < Beats.returned[3] or not self.motion then
+			self:frame(base, V(-3.44, 4.28, 11.42), V(-3.75, 3.85, 5.93), 39)
+		else
+			self:frame(base, V(-2.16, 4.10, 9.38), V(-3.18, 3.57, 6.15), 42, -0.03)
+		end
 	elseif shot == 5 then
-		local u = travel(37.26, 39.21)
-		self:frame(base, V(-2.8 + 1.1 * u, 4.15, 13.6 - 0.7 * u), V(-0.85, 3.35, 5.5), 48)
+		self:frame(base, V(-2.1, 4.10, 13.5), V(-0.90, 3.35, 5.5), 47)
 	elseif shot == 6 then
-		local u = travel(39.21, 41.86)
-		-- Leave room for the pick's overhead arc and keep its point and the stone in frame at contact.
-		self:frame(
-			base,
-			V(-2.90 - 0.38 * u, 3.32 + 0.28 * u, 1.40 + 0.22 * u),
-			V(1.22, 3.22 - 0.82 * ease(t, 41.29, Beats.pick), 5.58),
-			55
-		)
+		-- Face the outside shoulder. Both the free hand and the steel tip
+		-- must clear the avatar's hair during the long overhead anticipation.
+		local kick = if self.motion then strikeKick(t, Beats.pick) else 0
+		local size = self.camera.ViewportSize
+		local tight = math.clamp((1.10 - size.X / math.max(1, size.Y)) / 0.64, 0, 1)
+		local eye = V(-3.4, 3.12, 9.6):Lerp(V(-4.73, 2.98, 10.54), tight)
+		local look = V(1.72, 3.65, 5.99):Lerp(V(1.98, 3.65, 6.08), tight)
+		self:frame(base, eye + V(0, 0.10 * kick, 0.14 * kick), look, 65, 0.012 * kick)
 	elseif shot == 7 then
-		local u = travel(41.86, Beats.answer - 0.20)
-		local kick = if self.motion then recoil(t, Beats.answer) else 0
-		self:frame(
-			base,
-			rock + V(-1.22 + 0.64 * u, 3.24 - 0.60 * u + 0.16 * kick, -2.80 + 0.46 * u),
-			rock,
-			45 - 4.3 * u + 2.5 * kick,
-			0.024 * (1 - u)
-		)
+		-- A graphic match to the ancient vein. The answering note motivates
+		-- the cut into the stone, after a full beat of looking at inert rock.
+		local answered = t >= Beats.answer and self.motion
+		local eye = if answered then V(-0.70, 2.93, -1.34) else V(-1.22, 3.48, -2.65)
+		self:frame(base, rock + eye, rock, if answered then 40 else 48, if answered then 0.071 else 0)
 	else
-		-- See both witnesses turn toward the gallery before backing out over the bridge.
-		local u = travel(44.32, Beats.arrival)
+		local u = if self.motion then ease(t, 44.65, Beats.arrival) else 1
 		self:frame(base, V(6.9, 5.8, 12.8):Lerp(bridgeEye, u), V(-0.85, 1.92, 3.3):Lerp(bridgeLook, u), 54)
 	end
 end
@@ -227,7 +221,7 @@ end
 
 function Film:draw(t, liveReady)
 	if t < Beats.surface then
-		Lighting.ClockTime = 6.55 + 1.45 * ease(t, 0.7, Beats.impact)
+		Lighting.ClockTime = 7.34 + 1.86 * ease(t, 0.7, Beats.impact)
 		local frameTime = t - (self.previousFlightFrame or t)
 		self.history:prepare(math.clamp(math.ceil(650 * frameTime), 12, 68), t >= 10.10)
 		self.previousFlightFrame = t

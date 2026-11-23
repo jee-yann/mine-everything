@@ -7,8 +7,9 @@ local Debris = game:GetService("Debris")
 local Effects = {}
 Effects.__index = Effects
 local rng = Random.new()
+local idleRim, workingRim = 1.25, 0.85
 function Effects.new()
-	local self = setmetatable({ activeChips = 0, lastBurst = 0, markers = {} }, Effects)
+	local self = setmetatable({ activeChips = 0, lastBurst = 0, markers = {}, oreLabels = {} }, Effects)
 	local preview = Instance.new("Folder")
 	preview.Name, preview.Parent = "MiningSelection", workspace
 	self.preview = preview
@@ -25,7 +26,7 @@ end
 function Effects:chime(pitch)
 	Audio.reward(pitch)
 end
-local function newMarker()
+local function newMarker(brightness)
 	local marker = Instance.new("Part")
 	marker.Name, marker.Anchored, marker.Transparency = "Selected block", true, 1
 	marker.CanCollide, marker.CanTouch, marker.CanQuery, marker.CastShadow = false, false, false, false
@@ -49,7 +50,7 @@ local function newMarker()
 				local edge = Instance.new("Beam")
 				edge.Name, edge.Attachment0, edge.Attachment1 = "Rim", corner, neighbor
 				edge.FaceCamera, edge.Segments, edge.LightInfluence = true, 1, 0
-				edge.LightEmission, edge.Brightness = 0.8, 1.9
+				edge.LightEmission, edge.Brightness = 0.65, brightness
 				edge.Color = ColorSequence.new(Color3.fromRGB(94, 238, 205))
 				edge.Width0, edge.Width1 = 0.085, 0.085
 				edge.Transparency = NumberSequence.new(0.04)
@@ -95,6 +96,15 @@ function Effects:clearOreLights()
 end
 
 function Effects:setMiningLight(facePoint, range, tint)
+	local active = facePoint ~= nil
+	if active ~= (self.faceLamp ~= nil and self.faceLamp.Enabled) then
+		-- Keep the edge readable without a cyan bloom over the lantern's pool.
+		for _, marker in self.markers do
+			for _, edge in marker:GetChildren() do
+				if edge:IsA("Beam") then edge.Brightness = if active then workingRim else idleRim end
+			end
+		end
+	end
 	if facePoint then
 		if not self.faceLamp then
 			self.faceMount, self.faceLamp = surveyLight("Face lantern")
@@ -116,7 +126,7 @@ function Effects:aim(cells)
 		for i, center in cells do
 			local marker = self.markers[i]
 			if not marker then
-				marker = newMarker()
+				marker = newMarker(if self.faceLamp and self.faceLamp.Enabled then workingRim else idleRim)
 				self.markers[i] = marker
 			end
 			if marker.Position ~= center then
@@ -289,6 +299,7 @@ function Effects:labels(finds, loot, normal, distant)
 		local outline = Instance.new("UIStroke")
 		outline.Color, outline.Thickness, outline.Parent = Color3.fromRGB(38, 49, 76), 2, label
 		label.Parent = gui
+		if not distant then self.oreLabels[name] = gui end
 		Tween:Create(
 			gui,
 			TweenInfo.new(1.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -300,6 +311,34 @@ function Effects:labels(finds, loot, normal, distant)
 		Debris:AddItem(anchor, 1.08)
 	end
 end
+function Effects:assay(name, grade, quantity, newBest)
+	local popup = self.oreLabels[name]
+	if not popup or not popup.Parent then return end
+	self.oreLabels[name] = nil
+	local detail = Instance.new("TextLabel")
+	detail.Name, detail.BackgroundTransparency = "Purity", 1
+	detail.Position, detail.Size = UDim2.fromScale(-0.15, 0.9), UDim2.fromScale(1.3, 0.73)
+	detail.Font, detail.TextScaled = Enum.Font.BuilderSansBold, true
+	detail.TextColor3 = if newBest then Color3.fromRGB(255, 220, 120) else Color3.fromRGB(190, 245, 255)
+	detail.TextStrokeTransparency, detail.TextStrokeColor3 = 0.12, Color3.fromRGB(26, 31, 52)
+	detail.Text = grade .. "% pure" .. (if newBest then " · Personal best!" else "") .. (if quantity > 1 then " · Bonus ore!" else "")
+	detail.Parent = popup
+	Tween:Create(detail, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.58),
+		{ TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+end
+
+function Effects:pulse(point, radius)
+	local shell = Instance.new("Part")
+	shell.Name, shell.Shape, shell.Material = "Cave pulse", Enum.PartType.Ball, Enum.Material.ForceField
+	shell.Color, shell.Transparency = Color3.fromRGB(98, 217, 230), 0.65
+	shell.Size, shell.Position = Vector3.one * 1.5, point
+	shell.Anchored, shell.CanCollide, shell.CanTouch, shell.CanQuery, shell.CastShadow = true, false, false, false, false
+	shell.Parent = workspace
+	Tween:Create(shell, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Size = Vector3.one * (radius * 2), Transparency = 1 }):Play()
+	Debris:AddItem(shell, 0.4)
+end
+
 function Effects:burst(point, spread, ore, quiet)
 	local now = os.clock()
 	if now - self.lastBurst < 0.085 then

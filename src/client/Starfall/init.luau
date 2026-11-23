@@ -64,15 +64,25 @@ local function compose(screen, safe)
 	W.round(skip, 7)
 	skip.ZIndex = 12
 	local strike, drawPrompt = BeaconPrompt(safe)
-	local title = FirstFindTitles.new(safe, screen)
+	local heldInput, releaseFrame
+	local function drawStrike(frame, motion, contact, topEdge, bottomEdge)
+		if heldInput and (heldInput.UserInputState == Enum.UserInputState.End or heldInput.UserInputState == Enum.UserInputState.Cancel) then
+			heldInput, releaseFrame = nil, frame
+		end
+		drawPrompt(frame, motion, contact, topEdge, bottomEdge, if heldInput then math.huge else releaseFrame)
+	end
+	local title = FirstFindTitles.new(safe)
 	return skip,
 		function(t, black, picture, motion, contact)
 			local frame = picture or 0
 			local pictureTop, pictureBottom = fitMatte(frame)
 			local pictureHeight = math.max(1, pictureBottom - pictureTop)
-			caption.Position = UDim2.new(0.5, 0, 0, pictureBottom - math.max(8, pictureHeight * 0.047))
-			caption.Size = UDim2.new(0.86, 0, 0, math.clamp(pictureHeight * 0.068, 27, 63))
-			drawPrompt(frame, motion, contact, pictureTop, pictureBottom)
+			-- Leave the near shoulder clear on the wide. The player's clothing can carry lettering of its own.
+			local overShoulder = frame >= sheet.frames.establish and frame < sheet.frames.present
+				and safe.AbsoluteSize.X > 1.25 * safe.AbsoluteSize.Y
+			caption.Position = UDim2.new(if overShoulder then 0.64 else 0.5, 0, 0, pictureBottom - math.max(8, pictureHeight * 0.047))
+			caption.Size = UDim2.new(if overShoulder then 0.65 else 0.86, 0, 0, math.clamp(pictureHeight * 0.068, 27, 63))
+			drawStrike(frame, motion, contact, pictureTop, pictureBottom)
 			local text, opacity = Film.caption(t)
 			caption.Text, caption.TextTransparency, caption.TextStrokeTransparency =
 				text, 1 - opacity, 1 - 0.62 * opacity
@@ -81,7 +91,11 @@ local function compose(screen, safe)
 			title(frame, motion, pictureTop, pictureBottom)
 		end,
 		fade,
-		strike
+		strike,
+		function(frame, motion, contact, input)
+			heldInput, releaseFrame = input, nil
+			drawStrike(frame, motion, contact, fitMatte(frame))
+		end
 end
 
 local function liveCove()
@@ -126,17 +140,23 @@ function Opening.play(player, net, hud)
 	hud.inOpening, hud.root.Visible, reticle.Enabled, Prompts.Enabled = true, false, false, false
 	local function run()
 		showOtherMiners = hideOtherMiners(player)
-		local skip, titles, curtain, strike = compose(screen, safe)
-		local function tap()
+		local motion = player:GetAttribute("MenuMotion") ~= false and not Gui.ReducedMotionEnabled
+		local skip, titles, curtain, strike, confirmStrike = compose(screen, safe)
+		local function tap(input)
 			if film and film.arrival and film.pictureFrame and film.arrival:requestStrike(film.pictureFrame) then
-				strike.Visible = false
+				confirmStrike(film.pictureFrame, motion, film.arrival.contactFrame, input)
 				return true
 			end
 			return false
 		end
+		strike.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+				tap(input)
+			end
+		end)
 		strike.Activated:Connect(tap)
-		Actions:BindActionAtPriority("Light expedition route", function(_, state)
-			if state == Enum.UserInputState.Begin and tap() then
+		Actions:BindActionAtPriority("Light expedition route", function(_, state, input)
+			if state == Enum.UserInputState.Begin and tap(input) then
 				return Enum.ContextActionResult.Sink
 			end
 			return Enum.ContextActionResult.Pass
@@ -165,7 +185,6 @@ function Opening.play(player, net, hud)
 			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
 		end
 		camera.CameraType = Enum.CameraType.Scriptable
-		local motion = player:GetAttribute("MenuMotion") ~= false and not Gui.ReducedMotionEnabled
 		if workspace.StreamingEnabled then
 			task.spawn(function()
 				pcall(player.RequestStreamAroundAsync, player, net:GetAttribute("Entrance") or landing, 4)
@@ -273,7 +292,9 @@ function Opening.play(player, net, hud)
 	stage:Destroy()
 	local remote = finished and (root.Position - landing).Magnitude >= 38
 	if workspace.CurrentCamera == camera then
-		if player.Character == char and (not finished or remote) then
+		if player.Character == char and h.playable and finished and not remote then
+			camera.CFrame, camera.Focus = h.playable.view, h.playable.focus
+		elseif player.Character == char and (not finished or remote) then
 			camera.CFrame, camera.Focus = h.view, h.focus
 		end
 		local subject = camera.CameraSubject
