@@ -79,7 +79,9 @@ function Mining.start(world, net, sessions, sync)
 			ore,
 			Config.strength(point.Y - world.origin.Y),
 			p.temper,
-			p.skills
+			p.skills,
+			p.hasteCuts,
+			p.stoneChips
 		)
 		strokes[player] = {
 			profile = p,
@@ -87,6 +89,8 @@ function Mining.start(world, net, sessions, sync)
 			normal = normal,
 			due = now + duration,
 			tempered = tempered,
+			speedSupply = if ore.name == "Stone" and (p.stoneChips or 0) > 0 then "stoneChips"
+				elseif (p.hasteCuts or 0) > 0 then "hasteCuts" else nil,
 			character = character,
 			generation = world.generation,
 		}
@@ -167,13 +171,20 @@ function Mining.start(world, net, sessions, sync)
 		local ore = Ores.byName[name]
 		local discovery = not ore.host and not profile.discoveries[name]
 		local oldLevel = Expeditions.level(profile.xp)
-		local awards = Profile.recordCut(profile, name, Config.depthInBlocks(Config.FloorY + world.origin.Y - center.Y))
+		local awards, purity, units, record = Profile.recordCut(profile, name, Config.depthInBlocks(Config.FloorY + world.origin.Y - center.Y))
+		loot[name] = units
+		if request.speedSupply then
+			profile[request.speedSupply] = math.max(0, profile[request.speedSupply] - 1)
+		end
 		if request.tempered then
 			profile.temper = math.max(0, profile.temper - 1)
 		end
 		sync(player, profile)
 		for _, award in awards do
-			net.Feedback:FireClient(player, "achievement", award)
+			-- The first-find card announces this same unlock with the ore's name.
+			if not (discovery and (award == "First " .. name or award == "Pocket Change")) then
+				net.Feedback:FireClient(player, "achievement", award)
+			end
 		end
 		local level = Expeditions.level(profile.xp)
 		for _, rank in Expeditions.ranks do
@@ -182,6 +193,7 @@ function Mining.start(world, net, sessions, sync)
 			end
 		end
 		net.Feedback:FireClient(player, "loot", loot, center, spread, finds, request.normal)
+		if purity then net.Feedback:FireClient(player, "assay", name, purity, units, record) end
 		if discovery then
 			net.Feedback:FireClient(player, "milestone", "ORE DISCOVERED", ore.name, ore.color)
 		end

@@ -154,7 +154,9 @@ local function crystal(model, base, height, radius)
 			Enum.Material.Neon
 		)
 	end
-	return collar[2], tip
+	-- A barycentric point on the triangle facing the incoming guide.
+	local contact = foot[3] * 0.19 + collar[3] * 0.38 + collar[2] * 0.43
+	return collar[2], tip, contact
 end
 
 local function opticalStar(parent, position)
@@ -171,7 +173,7 @@ local function opticalStar(parent, position)
 		arm.ZOffset = 0.24
 		arm.Color = ColorSequence.new(Color3.fromHex("FFF1FF"), Color3.fromHex("B3DCFF"))
 		arm.Transparency = NumberSequence.new(0.05, 0.93)
-		arm.Width1, arm.Parent = 0, pin
+		arm.Enabled, arm.Width1, arm.Parent = false, 0, pin
 		table.insert(arms, arm)
 	end
 	return arms
@@ -204,15 +206,31 @@ function Lode.new(stage, at, island)
 			S.facet(model, "Quartz in the bedding", bed + V(0, 0.012, 0), endOfVein, middle + (q - p) * 0.045, "9F97C4")
 		end
 	end
-	local edge, tip = crystal(model, base * CFrame.Angles(-0.06, 0.13, -0.16), 5.28, 0.91)
-	crystal(model, base * CF(-0.51, 0.03, 0.10) * CFrame.Angles(0.17, -0.8, 0.57), 3.15, 0.54)
-	crystal(model, base * CF(0.49, 0.09, -0.07) * CFrame.Angles(-0.19, 0.58, -0.79), 3.48, 0.56)
-	crystal(model, base * CF(0.26, 0.12, 0.31) * CFrame.Angles(0.62, -0.26, -0.41), 1.67, 0.32)
+	local cluster = S.group("Starfall crystals")
+	cluster.Parent = model
+	local edge, tip, contact = crystal(cluster, base * CFrame.Angles(-0.06, 0.13, -0.16), 5.28, 0.91)
+	crystal(cluster, base * CF(-0.51, 0.03, 0.10) * CFrame.Angles(0.17, -0.8, 0.57), 3.15, 0.54)
+	crystal(cluster, base * CF(0.49, 0.09, -0.07) * CFrame.Angles(-0.19, 0.58, -0.79), 3.48, 0.56)
+	crystal(cluster, base * CF(0.26, 0.12, 0.31) * CFrame.Angles(0.62, -0.26, -0.41), 1.67, 0.32)
 	-- The arms of the stellar twin grow out of the main prism. Catch their
 	-- crossing on a real facet at the end of the dive into the gallery.
 	local twin = CF(1.01, 0.64, -1.12)
-	crystal(model, twin * CFrame.Angles(0.23, -0.12, 1.11), 2.05, 0.31)
-	crystal(model, twin * CFrame.Angles(0.16, -0.35, -0.92), 1.81, 0.30)
+	crystal(cluster, twin * CFrame.Angles(0.23, -0.12, 1.11), 2.05, 0.31)
+	crystal(cluster, twin * CFrame.Angles(0.16, -0.35, -0.92), 1.81, 0.30)
+	local planes = {}
+	for _, part in cluster:GetChildren() do
+		-- Light travels through the nearest facets into the smaller twins.
+		local rest = part.Color:Lerp(Color3.fromHex("231F47"), 0.28)
+		local lit = if part.Name == "Buried fire" then Color3.fromHex("F3E1FF")
+			elseif part.Name == "Cleavage plane" then Color3.fromHex("A7E3FF") else Color3.fromHex("AE8AF8")
+		local delay = (part.Position - contact).Magnitude * 2.35
+		table.insert(planes, { part = part, rest = rest, lit = lit, delay = delay })
+		part.Material, part.Color = Enum.Material.SmoothPlastic, rest
+	end
+	local pin = S.part(model, "Reflected light at impact", CF(contact + V(0, 0, 0.11)), V(0.08, 0.08, 0.08), "C8B8FF")
+	pin.Transparency, pin.CastShadow = 1, false
+	local spill = S.light(pin, "A296FF", 13, 0)
+	spill.Enabled = false
 	local rays = opticalStar(model, edge:Lerp(tip, 0.15) + V(0, 0.01, 0.23))
 	for _, light in
 		{
@@ -229,7 +247,10 @@ function Lode.new(stage, at, island)
 	-- below the dig floor and moves into the isolated geological cutaway.
 	at *= Run.shaft.Rotation
 	model:PivotTo(at)
-	return setmetatable({ model = model, stage = stage, at = at, arms = rays, island = island, hidden = {} }, Lode)
+	return setmetatable({
+		model = model, stage = stage, at = at, arms = rays, island = island, hidden = {},
+		contactPoint = contact, planes = planes, spill = spill,
+	}, Lode)
 end
 
 -- The server keeps simulating its ordinary dig cells. The one photographed
@@ -332,10 +353,24 @@ function Lode:expose(frame, motion, actor)
 		self.model.Parent = parent
 	end
 	if visible then
-		local age = frame - cut.lode
-		local light = if motion then 0.14 + 0.86 * S.ease(age, 17, 32) * (1 - S.ease(age, 32, 67)) else 0.45
+		local age = math.clamp(frame - Run.gemFrame, -1, 36)
+		if self.impactAge == age then return end
+		self.impactAge = age
+		local rise = if motion then S.ease(age, -1, 3) else S.ease(age, -1, 13)
+		local light = rise * (1 - 0.87 * S.ease(age, 8, 27))
+		self.spill.Enabled = age >= 0
+		self.spill.Brightness = (if motion then 3.7 else 2.3) * light
+		self.spill.Range = 7 + 7 * S.ease(age, 0, 10)
+		for _, plane in self.planes do
+			local travel = age - plane.delay
+			local strength = S.ease(travel, -1, if motion then 3 else 9)
+				* (1 - 0.55 * S.ease(travel, 6, 20))
+			plane.part.Color = plane.rest:Lerp(plane.lit, strength)
+			plane.part.Material = if strength > 0.64 or (strength > 0 and plane.part.Name == "Buried fire")
+				then Enum.Material.Neon else Enum.Material.SmoothPlastic
+		end
 		for _, arm in self.arms do
-			arm.Width0, arm.Enabled = 0.17 * light, light > 0.02
+			arm.Width0, arm.Enabled = (if motion then 0.24 else 0.10) * light, light > 0.02
 		end
 	end
 end

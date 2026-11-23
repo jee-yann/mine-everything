@@ -1,6 +1,6 @@
--- Cues are cut on motion. All cameras see the same physical trajectory.
-local P = require(script.Parent.Props)
-local V, ease = Vector3.new, P.ease
+-- The flight is continuous in world space. A locked intercept, a passing lens
+-- and two tracking mounts give that single path very different screen speeds.
+local V = Vector3.new
 local Shot = {}
 local cover = require(script.Parent.Crater).coverHeight
 local vent = V(0, -0.205, -37.25)
@@ -8,70 +8,92 @@ local finishEye, finishLook = V(-28, 31, 41), V(0, -2, 0)
 
 function Shot.frame(t, motion, path)
 	local at = path(t)
-	if t < 1.05 then
-		-- Put the lens just off the flight path. The speck swells and passes
-		-- beneath the right side of frame before cutting out on its wake.
-		local aim = path(0.88)
-		local eye = aim + V(16.5, -5.8, 12.4)
-		local follow = at:Lerp(aim + V(-3, 1, 0), if motion then 0.24 else 0.10)
-		return eye, follow, 49 - (if motion then 5 * ease(t, 0.1, 0.89) else 0), if motion then -0.095 else 0
-	elseif t < 2.45 then
-		local u = if motion then ease(t, 1.05, 2.45) else 0.38
-		return at + V(9 + 12 * u, 3 + 6 * u, 21 + 15 * u),
-			at + V(-4 - 4 * u, 2.1 + u, -0.3),
-			49 + 7 * u,
-			if motion then -0.19 + 0.12 * u else 0
-	elseif t < 4.03 then
-		local d = (path(t + 0.015) - at).Unit
-		local u = if motion then ease(t, 2.45, 4.03) else 0.55
-		local eye = at - d * (24 + 11 * u) + V(13 + 8 * u, 12 + 5 * u, 5)
-		return eye, at + d * (18 + 22 * u) + V(2, -5 - u * 2, 0), 66 + 5 * u, if motion then 0.18 - 0.17 * u else 0
-	elseif t < 5.54 then
-		local u = ease(t, 4.03, 5.54)
-		local eye = V(40, 30, 65) + V(-5.5, 2, -7) * (if motion then u else 0)
-		return eye, at:Lerp(V(0, 5, 0), 0.28 + 0.25 * u), 60 - 9 * u, if motion then -0.065 * (1 - u) else 0
-	elseif t < 6.50 then
-		-- At ground level grit lifts into the long arriving shadow; blank sky
-		-- no longer occupies the center while sound winds down to the hit.
-		local u = if motion then ease(t, 5.54, 6.27) else 0.45
-		return V(3.1 - u * 0.8, cover + 1.65 + u * 0.18, 5.0 - u * 0.75),
-			V(0.18, cover + 1.05 + 0.62 * u, -0.07),
-			48 - 7 * u,
-			if motion then -0.055 else 0
-	elseif t < 8.56 then
-		local s = t - 6.50
-		local pull = if motion then ease(s, 0.12, 0.62) else 0.65
-		local lead = ease(s, 0.10, 1.13)
-		local roll = 0
-		local kick = V(0, 0, 0)
-		if motion then
-			local q = math.max(0, s - 0.27)
-			local amplitude = if s >= 0.27 then math.exp(-5.1 * q) else 0
-			kick = V(math.sin(q * 40) * 1.58, math.sin(q * 57) * 0.94, math.sin(q * 32) * 1.35) * amplitude
-			roll = 0.043 * math.sin(q * 43) * amplitude - 0.026
+	if not motion and t < 6.50 then
+		-- Retain the entry direction, with longer lenses and a much smaller
+		-- pan for players who turned camera motion down.
+		if t < 2.22 then
+			return path(-1.1) + V(-14, 38, 62), path(1.55), 66, 0
+		elseif t < 4.28 then
+			local eye = at + V(-19, 12, 46)
+			return eye, at + V(1, -2, 0), 57, 0
+		elseif t < 5.60 then
+			return V(-72, 61, 62), path(5.05), 59, 0
 		end
-		local elevated = (cover - 17.8) * (1 - ease(s, 0.13, 0.91))
-		return V(-13 - pull * 7, 23.5 + pull * 15 + elevated, 42 + pull * 11) + kick,
-			V(3.5 + lead * 3, 18.5 + lead * 7 + elevated, 0),
-			59 + pull * 8,
-			roll
-	else
-		local drift = if motion then ease(t, 8.56, 10.24) else 0.65
-		local exit = ease(t, 10.96, 12.12)
-		local eye = V(-9.7 - 2.2 * drift, 14.3 + 1.6 * drift, 15.1 - 2 * drift):Lerp(finishEye, exit)
-		local target = V(1.1 - 0.7 * drift, -3.25, 0.33):Lerp(finishLook, exit)
-		return eye, target, 49 + 3 * exit, if motion then -0.08 * (1 - exit) else 0
+		return V(-15, cover + 7, 34), V(-1.6, cover + 4, 0), 59, 0
 	end
+	local side = V(-0.51, 0, 0.86)
+	if t < 1.36 then
+		-- Sight down the incoming diagonal. The cove gives the eye a fixed
+		-- destination as the camera closes the gap to the incandescent tail.
+		local drift = if motion then t / 1.36 else 0.45
+		local eye = path(-1.52) + side * (43 - 16 * drift) + V(0, 33 - 9 * drift, 0)
+		return eye, at:Lerp(path(5.9), 0.16), 49 - 3 * drift, -0.04
+	elseif t < 2.22 then
+		-- The body overtakes a slower parallel camera, crossing the frame.
+		local u = (t - 1.36) / 0.86
+		local mount = path(1.36 + 0.68 * u)
+		local eye = mount + side * (15 - 4 * u) + V(1, 6, 3)
+		return eye, at:Lerp(mount, 0.25), 62 - 9 * u, -0.16 + 0.11 * u
+	elseif t < 2.77 then
+		-- A low lens waits on the inside of the line. Its pan starts late,
+		-- then overshoots into the wake after the iron has cleared the lens.
+		local cross = path(2.46)
+		local chase = if motion then math.clamp((t - 2.41) / 0.34, 0, 1) else 0.4
+		return cross + side * 7 - V(0, 4, 0), path(2.35 + 0.41 * chase), 74, 0.11 - chase * 0.18
+	elseif t < 4.28 then
+		local lead = (path(t + 0.04) - at).Unit
+		local u = (t - 2.77) / 1.51
+		local eye = at - lead * (17 + 14 * u) + side * (8 - 13 * u) + V(0, 8 + 7 * u, 0)
+		return eye, at + lead * (26 + 17 * u), 68 + 6 * u, 0.12 - 0.19 * u
+	elseif t < 5.60 then
+		local u = (t - 4.28) / 1.32
+		local eye = V(-68 + 13 * u, 60 - 7 * u, 55)
+		return eye, path(4.62 + 0.65 * u), 50 - 4 * u, -0.08
+	elseif t < 6.23 then
+		local u = (t - 5.60) / 0.63
+		return V(3.5 - 0.9 * u, cover + 1.79, 5.8 - u), V(0.1, cover + 1.1, 0), 48, -0.05
+	elseif t < 6.50 then
+		return V(-9, cover + 3.2, 24), V(-1.6, cover + 5.2, -0.8), 57, -0.075
+	elseif t < 7.15 then
+		local age = t - 6.50
+		local kick = if motion then math.sin(age * 23) * math.exp(-age * 8) else 0
+		return V(-17 - 17 * age, 44 + 16 * age + 2.6 * kick, 61 + 27 * age),
+			V(0, 33 + 5 * age, 0),
+			59 + 6 * age,
+			-0.045 + 0.075 * kick
+	elseif t < 9.40 then
+		-- Hold both coasts inside the aperture. Track gently against the
+		-- approaching whitewater until the crest runs underneath this lens.
+		local u = (t - 7.15) / 2.25
+		local drift = if motion then u else 0.5
+		return V(-168 + 41 * drift, 302 + 18 * drift, 327 + 17 * drift),
+			V(0, 8 + 3 * drift, 51),
+			51 + 2 * drift,
+			-0.012 + 0.012 * drift
+	elseif t < 9.96 then
+		local drift = if motion then (t - 9.4) * 1.6 else 0
+		return V(-7.5 + drift, 8.8, 10.5 - drift), V(0.3, -3.4, 0.3), 43, -0.08
+	elseif t < 10.59 then
+		-- Straight across the two rock lips: catch only the light slipping
+		-- between them. The player's strike repeats this insert in the present.
+		return V(3.5, 11.8, 5.6), V(1.32, -3.9, 0.27), 38, 0.068
+	elseif t < 11.49 then
+		local knock = motion and ((t >= 10.68 and t < 10.76) or (t >= 11.12 and t < 11.19))
+		return V(-16, 18.5, 21.7) + (if knock then V(-0.52, 0.65, 0) else Vector3.zero),
+			V(0.7, -3.4, 0),
+			49,
+			if knock then -0.032 else 0
+	end
+	return finishEye, finishLook, 52, 0
 end
 
 function Shot.surface(t, motion, eye, look, fov, roll)
-	local u = ease(t, 12.12, 13.60)
-	if not motion then
-		return eye, look, fov, roll
+	-- Cut out a full lens size on the sealed crater. Its surrounding cliffs
+	-- register the location across the cut to the weathered geological set.
+	if t < 13.04 then
+		return vent + V(-62, 72, 102), vent + V(0, 7, 6), 54, 0
 	end
-	return (vent + finishEye):Lerp(eye, u) + V(0, 7 * math.sin(math.pi * u), 0),
-		(vent + finishLook):Lerp(look, u),
-		52 + (fov - 52) * u,
-		(roll or 0) * u
+	return eye, look, fov, roll
 end
+
 return Shot

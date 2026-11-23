@@ -49,18 +49,6 @@ local function cloudbanks(root)
 	return flecks
 end
 
-local function sun(root)
-	local anchor = S.part(root, "Sun", CF(), Vector3.one, "FFE9B5")
-	anchor.Transparency, anchor.CastShadow = 1, false
-	local board = Instance.new("BillboardGui")
-	board.LightInfluence, board.Size, board.Parent = 0, UDim2.fromScale(32, 32), anchor
-	local face = Instance.new("Frame")
-	face.BackgroundColor3, face.BorderSizePixel, face.Size, face.Parent = hex("FFE9B5"), 0, UDim2.fromScale(1, 1), board
-	local edge = Instance.new("UICorner")
-	edge.CornerRadius, edge.Parent = UDim.new(1, 0), face
-	return { part = anchor, board = board, face = face }
-end
-
 function Daylight.new(stage, nightLook)
 	nightLook = nightLook or require(script.Parent.NightLook)
 	local root = S.group("Sky over the cove")
@@ -117,57 +105,25 @@ function Daylight.new(stage, nightLook)
 		brightness = Lighting.Brightness,
 		weather = cloudbanks(root),
 		lunar = Moonlight.new(stage, nightLook),
-		sun = sun(root),
 	}, Daylight)
 	sky.CelestialBodiesShown = false
 	sky.MoonAngularSize = 0
 	return self
 end
 
-local solar = {
-	{ clock.recovery, ancientHour },
-	{ 14.7, 15.2 },
-	{ 16.70, 32.6 },
-	{ 19.30, 37.4 },
-	{ 20.12, 40.3 },
-	{ 20.77, 53.1 },
-	{ 21.90, 60.8 },
-	{ 22.47, 64.55 },
-	{ 22.98, 77.3 },
-	{ 23.25, 80.55 },
-	{ 24.50, 84.4 },
-	{ 26.80, 85.0 },
-	{ clock.match, 88.0 },
-}
-local function hourAt(t, motion, finish)
-	if t < clock.recovery then
-		return ancientHour
-	end
-	if not motion then
-		return ancientHour + (finish - ancientHour) * S.ease(t, clock.recovery, clock.match)
-	end
-	for i = 2, #solar do
-		local a, b = solar[i - 1], solar[i]
-		if t < b[1] then
-			local h = if i == #solar then 72 + finish else b[2]
-			return a[2] + (h - a[2]) * (t - a[1]) / (b[1] - a[1])
-		end
-	end
-	return finish
-end
-
 function Daylight:draw(t, motion, base, masterFrame)
 	local frame = masterFrame or math.floor(sheet.frameForScene(t) + 0.5)
 	local approach, arrivalColor = terminal(frame)
 	local basin = S.ease(t, 7.94, 8.63) * (1 - S.ease(t, 11.63, 13.56))
-	local hour = hourAt(t, motion, self.hour) % 24
+	local historical = frame < sheet.frames.match
+	local hour = if historical then ancientHour else self.hour
 	local phase = (hour - 6) * math.pi / 12
 	local night = 1 - S.ease(math.sin(phase), -0.38, 0.20)
 	local dawn = 1 - S.ease(math.abs(math.sin(phase)), 0.015, 0.56)
-	local history = 1 - S.ease(t, 26.80, clock.match)
+	local history = if historical then 1 else 0
 	local look = 1 - S.ease(frame, sheet.frames.handoff, sheet.frames.endBlend)
-	local ancient = 1 - S.ease(t, clock.recovery, 13.76)
-	local ash = S.ease(t, clock.contact + 0.17, 6.35) * (1 - S.ease(t, clock.recovery + 0.30, 15.83))
+	local ancient = history
+	local ash = history * S.ease(t, clock.contact + 0.17, 6.35)
 	local heat
 	if frame < sheet.frames.contact then
 		-- The streak illuminates the cove locally. A smaller exposure lift
@@ -192,10 +148,7 @@ function Daylight:draw(t, motion, base, masterFrame)
 		self.grade.Contrast = (0.07 + 0.035 * ancient - 0.04 * quiet - (0.055 - 0.025 * offshore) * ash - 0.06 * veil) * look
 		self.grade.Saturation = (-0.055 - 0.17 * ancient + 0.10 * ash + 0.13 * hero) * look
 	end
-	-- The clock driving the story, sky and time-lapse remains on its own
-	-- timeline. The flying camera can see past the set on lower settings.
-	-- Switch to the stronger key on the cut to the enclosed offshore view.
-	local moonKey = frame < 570 and hour < 6.15
+	local moonKey = historical
 	local shadowKey = frame >= sheet.frames.coast and frame < sheet.frames.seam
 	Lighting.ClockTime = if shadowKey then lunarShadowHour else hour
 	Lighting.GeographicLatitude = if shadowKey then 33.9 else self.latitude + (34 - self.latitude) * history
@@ -272,7 +225,8 @@ function Daylight:draw(t, motion, base, masterFrame)
 	local whip = S.ease(t, 3.29, 3.40) * (1 - S.ease(t, 3.44, 3.56))
 	self.blur.Enabled = motion and (veil > 0.005 or whip > 0.005)
 	self.blur.Size = 3.8 * whip + 5.6 * veil
-	self.sky.CelestialBodiesShown = if t >= clock.match then self.bodies else false
+	self.sky.CelestialBodiesShown = not historical and self.bodies
+	self.sky.MoonAngularSize = if historical then 0 else self.moonSize
 	local clouds = t >= 3.20 and t < 16.45
 	if clouds ~= self.cloudsOn or (clouds and self.cloudTime ~= t) then
 		self.cloudsOn, self.cloudTime = clouds, t
@@ -288,35 +242,22 @@ function Daylight:draw(t, motion, base, masterFrame)
 			end
 		end
 	end
-	local h = math.sin(phase)
-	self.sun.board.Enabled = t >= clock.recovery and t < 26.8 and h > -0.05
-	if self.sun.board.Enabled then
-		self.sun.part.Position = base * V(-160 + 370 * math.cos(phase), 66 + 166 * h, -415)
-		self.sun.face.BackgroundColor3 = hex("FFEBBB"):Lerp(hex("DE9979"), ash)
-		self.sun.face.BackgroundTransparency = ash * 0.26
-	end
 end
--- Focus through the ash onto the near bank, then allow the violet fissure to
--- resolve. Optical distances follow the actual camera, including a phone's framing.
-function Daylight:focus(camera, base, t, motion)
+
+function Daylight:focus(camera, base, frame, motion)
 	self.lunar:focus(camera, base)
 	local depth = self.depth
-	depth.Enabled = t >= clock.aftermath and t < 12.56
-	if not depth.Enabled then
-		return
-	end
-	local toSeam = base * V(0, 26.7, -32) - camera.CFrame.Position
-	local distance = math.max(1, toSeam:Dot(camera.CFrame.LookVector))
-	local rack = S.ease(t, 8.95, 9.73)
-	local close = t >= 10.02
-	local melt = (1 - S.ease(t, clock.recovery, 12.56)) * (if motion then 1 else 0.62)
-	depth.FocusDistance = if close
-		then distance - 0.9 * (1 - S.ease(t, 10.02, 10.65))
-		else distance * (0.51 + 0.47 * rack)
-	depth.InFocusRadius = if close then 3.7 else 7.8 + 3 * rack
-	depth.FarIntensity = (if close then 0.39 else 0.32) * melt
-	depth.NearIntensity = (if close then 0.54 else 0.48) * melt
+	depth.Enabled = frame >= sheet.frames.aftermath and frame < sheet.frames.establish
+	if not depth.Enabled then return end
+	local close = frame >= sheet.frames.seam
+	local distance = (camera.Focus.Position - camera.CFrame.Position).Magnitude
+	local rack = if close or not motion then 1 else S.ease(frame, sheet.frames.aftermath, sheet.frames.seam - 8)
+	depth.FocusDistance = distance * (0.76 + 0.24 * rack)
+	depth.InFocusRadius = if close then 2.7 else 11
+	depth.FarIntensity = if close then 0.38 else 0.24
+	depth.NearIntensity = if close then 0.25 else 0.36
 end
+
 function Daylight:Destroy()
 	Lighting.ClockTime, Lighting.GeographicLatitude = self.hour, self.latitude
 	Lighting.ExposureCompensation, Lighting.Brightness, Lighting.ColorShift_Top =

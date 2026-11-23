@@ -61,7 +61,14 @@ function Waypoint.new(root)
 		edge.Name, edge.AnchorPoint, edge.Visible = "Expedition direction", Vector2.one * 0.5, false
 		W.outlineText(edge, 2.4)
 	end
-	return setmetatable({ anchor = anchor, pin = pin, label = label, tip = tip, glow = glow, edge = edge }, Waypoint)
+	local self = setmetatable({ anchor = anchor, pin = pin, label = label, tip = tip, glow = glow, edge = edge }, Waypoint)
+	anchor.Destroying:Once(function()
+		if self.addedCrossing then
+			self.addedCrossing:Disconnect()
+			self.removedCrossing:Disconnect()
+		end
+	end)
+	return self
 end
 
 function Waypoint:clear()
@@ -73,6 +80,7 @@ function Waypoint:clear()
 end
 
 function Waypoint:show(position, text, tint, surface, part)
+	self.destination, self.destinationLabel = position, text
 	self.anchor.WorldPosition = position
 	self.label.Text, self.label.TextColor3, self.tip.TextColor3 = text, tint, tint
 	self.pin.AlwaysOnTop, self.pin.Enabled = surface, true
@@ -88,7 +96,8 @@ function Waypoint:placeMark(mark, flat, forward, eyeY, strength, now)
 		or (not mark.hit and now >= mark.retry) then
 		mark.sample, mark.eyeY, mark.retry = flat, eyeY, now + 0.25
 		local hit = workspace:Raycast(flat + V(0, eyeY + 1, 0), -Vector3.yAxis * 15, self.ground)
-		if hit and hit.Normal.Y > 0.77 and hit.Position.Y < eyeY - 1 then
+		if hit and hit.Normal.Y > 0.77 and hit.Position.Y < eyeY - 1
+			and (hit.Position.Y >= self.waterFloor or hit.Instance.Name == "Canal step" or hit.Instance.Name == "Canal landing") then
 			mark.hit, mark.normal = hit.Position, hit.Normal
 		else
 			mark.hit = nil
@@ -111,6 +120,63 @@ end
 
 -- Lay a short section of the route on fixed ground intervals. Walking toward
 -- a chevron passes it naturally, even between updates of the tutorial objective.
+local function flat(position)
+	return V(position.X, 0, position.Z)
+end
+
+local function shortestCrossing(decks, start, target)
+	local best, nearest, farthest = math.huge, nil, nil
+	for _, deck in decks do
+		local center = flat(deck.Position)
+		local half = deck.Size.Z / 2
+		local sign = if target.Z < center.Z then 1 else -1
+		if (target.Z - center.Z) * sign >= -half or (start.Z - center.Z) * sign <= -half then continue end
+		local nearEnd = center + Vector3.zAxis * (half * sign)
+		local farEnd = center - Vector3.zAxis * (half * sign)
+		local onDeck = math.abs(start.X - center.X) <= deck.Size.X / 2 and math.abs(start.Z - center.Z) <= half
+		local distance = if onDeck then (start - farEnd).Magnitude else (start - nearEnd).Magnitude + half * 2
+		distance += (farEnd - target).Magnitude
+		if distance < best then
+			best, nearest, farthest = distance, if onDeck then nil else nearEnd, farEnd
+		end
+	end
+	return nearest, farthest
+end
+
+-- A side bridge or stair can stream in after the main deck (and leave again).
+-- Track only the route pieces that are present on this client.
+function Waypoint:watchCrossings(island, paths, bridge)
+	if self.addedCrossing then
+		self.addedCrossing:Disconnect()
+		self.removedCrossing:Disconnect()
+	end
+	self.bridge, self.decks, self.exits = bridge, { bridge }, {}
+	self.waterFloor = bridge.Position.Y - 1.7
+	local function listFor(part)
+		if part.Name == "Timber deck" and part.Parent and part.Parent.Name == "Creek crossing" then
+			return self.decks
+		elseif part.Name == "Canal landing" and part.Parent == paths then
+			return self.exits
+		end
+	end
+	local function attach(part)
+		local list = listFor(part)
+		if list and not table.find(list, part) then table.insert(list, part) end
+	end
+	self.addedCrossing = island.DescendantAdded:Connect(attach)
+	self.removedCrossing = island.DescendantRemoving:Connect(function(part)
+		local list = if part.Name == "Timber deck" then self.decks elseif part.Name == "Canal landing" then self.exits else nil
+		local i = list and table.find(list, part)
+		if i then table.remove(list, i) end
+	end)
+	local highlands = island:FindFirstChild("Citrine Highlands")
+	local meadows = highlands and highlands:FindFirstChild("Outer meadows")
+	if meadows then
+		for _, part in meadows:GetDescendants() do attach(part) end
+	end
+	for _, part in paths:GetChildren() do attach(part) end
+end
+
 function Waypoint:trail(head, now, motion)
 	local island = workspace:FindFirstChild("CitrineCove")
 	local paths = island and island:FindFirstChild("Sand path and bridge")
@@ -131,18 +197,36 @@ function Waypoint:trail(head, now, motion)
 		for _, mark in self.marks do mark.sample = nil end
 	end
 	local root = head.AssemblyRootPart or head
-	local start = V(root.Position.X, 0, root.Position.Z)
-	local goal = self.anchor.WorldPosition
-	local target = V(goal.X, 0, goal.Z)
-	local b = V(bridge.Position.X, 0, bridge.Position.Z)
-	local half, sign = bridge.Size.Z / 2, if target.Z < b.Z then 1 else -1
-	local side = (start.Z - b.Z) * sign
-	table.clear(self.path)
-	if (target.Z - b.Z) * sign < -half and side > -half then
-		if side > half then table.insert(self.path, b + Vector3.zAxis * (sign * half)) end
-		table.insert(self.path, b - Vector3.zAxis * (sign * half))
+	local start, target = flat(root.Position), flat(self.destination)
+	if self.bridge ~= bridge then
+		self:watchCrossings(island, paths, bridge)
 	end
-	table.insert(self.path, target)
+	table.clear(self.path)
+	local exit
+	if root.Position.Y < bridge.Position.Y + 1.35
+		and math.abs(start.Z - bridge.Position.Z) < 11 and math.abs(start.X - bridge.Position.X) < 63 then
+		local best = math.huge
+		for _, landing in self.exits do
+			local distance = (start - flat(landing.Position)).Magnitude
+			if distance < best then best, exit = distance, landing end
+		end
+	end
+	if exit then
+		local foot = flat(exit.Position)
+		local up = if math.abs(foot.X - bridge.Position.X) > 22 then 1 else -1
+		local top = foot + Vector3.zAxis * (9.4 * up)
+		local onStairs = math.abs(start.X - foot.X) < exit.Size.X / 2 and (start.Z - foot.Z) * up > -1.1
+		if not onStairs then table.insert(self.path, foot) end
+		table.insert(self.path, top)
+		self.anchor.WorldPosition = top + Vector3.yAxis * (bridge.Position.Y + 2)
+		self.label.Text = "Climb the steps"
+	else
+		self.anchor.WorldPosition, self.label.Text = self.destination, self.destinationLabel
+		local entry, far = shortestCrossing(self.decks, start, target)
+		if entry then table.insert(self.path, entry) end
+		if far then table.insert(self.path, far) end
+		table.insert(self.path, target)
+	end
 
 	local length, previous = 0, start
 	for _, point in self.path do

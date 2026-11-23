@@ -1,5 +1,6 @@
 -- Mineral jets describe complete, differently timed ballistic arcs. Each
 -- cubic is the exact segment of its parabola between the two moving endpoints.
+local Crater = require(script.Parent.Crater)
 local P = require(script.Parent.Props)
 local V, CF, rgb, ease = Vector3.new, CFrame.new, Color3.fromHex, P.ease
 
@@ -36,22 +37,20 @@ function Jets.new(parent)
 			local h = fan[3] * rng:NextNumber(0.71, 1.18)
 			local v = V(math.cos(theta) * h, fan[4] * rng:NextNumber(0.77, 1.14), math.sin(theta) * h)
 			local a, b = Instance.new("Attachment", origin), Instance.new("Attachment", origin)
+			local delay = 0.04 + group * 0.018 + i * 0.018
 			local dust = makeBeam(origin, a, b, "Entrained fine dust", true)
 			local hot = makeBeam(origin, a, b, "Melt filament", false)
-			table.insert(
-				self.paths,
-				{
-					a = a,
-					b = b,
-					dust = dust,
-					hot = hot,
-					v = v,
-					delay = 0.04 + group * 0.018 + i * 0.018,
-					width = rng:NextNumber(0.43, 1.1),
-					duration = rng:NextNumber(0.82, 1.34),
-					seed = V(math.cos(theta) * 1.9, 0.22, math.sin(theta) * 1.9),
-				}
-			)
+			table.insert(self.paths, {
+				a = a,
+				b = b,
+				dust = dust,
+				hot = hot,
+				v = v,
+				delay = delay,
+				width = rng:NextNumber(0.43, 1.1),
+				duration = rng:NextNumber(0.82, 1.34),
+				seed = V(math.cos(theta) * 1.9, Crater.contactHeight(delay) + 0.22, math.sin(theta) * 1.9),
+			})
 		end
 	end
 	return self

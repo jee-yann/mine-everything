@@ -104,7 +104,7 @@ local function compose(screen, safe)
 	card.TextXAlignment, card.TextStrokeColor3 = Enum.TextXAlignment.Left, rgb("151622")
 	textLimit(card, Enum.Font.BuilderSansExtraBold, 78)
 	local skip = Instance.new("TextButton")
-	skip.Name, skip.Text, skip.Font, skip.TextSize = "Skip", "Skip  ›", Enum.Font.BuilderSansMedium, 16
+	skip.Name, skip.Text, skip.Font, skip.TextSize = "Skip", "Skip  â€º", Enum.Font.BuilderSansMedium, 16
 	skip.AnchorPoint, skip.Position, skip.Size = Vector2.new(1, 0), UDim2.new(1, -12, 0, 6), UDim2.fromOffset(84, 44)
 	skip.TextColor3, skip.BackgroundColor3, skip.BackgroundTransparency = rgb("FFF3DF"), rgb("151622"), 0.32
 	skip.BorderSizePixel, skip.Parent = 0, safe
@@ -113,7 +113,7 @@ local function compose(screen, safe)
 	local function aperture(t, motion)
 		local size = bars.AbsoluteSize
 		local portrait = size.X < size.Y
-		local action = (1 - ease(t, 6.53, 6.86)) + 0.43 * ease(t, 8.46, 9.14) * (1 - ease(t, 11.62, 13.63))
+		local action = if t < 6.63 then 1 elseif t < 6.76 then 0.52 elseif t >= 8.56 and t < 12.12 then 0.43 else 0
 		local listen = ease(t, 30.54, 31.42) * (1 - ease(t, 44.98, 48.81))
 		local base = if portrait then 0.026 else 0.036
 		local opening = if portrait then 0.036 else 0.068
@@ -209,9 +209,18 @@ function Opening.play(player, net, hud)
 		film:draw(0, false)
 		Run.PreRender:Wait()
 		Run.PreRender:Wait()
+		local contactDelay, previous = 0, 0
 		local start = os.clock()
 		while not skipped and player.Character == char and root.Parent and workspace.CurrentCamera == camera do
 			local t = os.clock() - start
+			t -= contactDelay
+			if previous < Beats.impact and t >= Beats.impact then
+				-- Start the contact drawing and its untrimmed transient on the same
+				-- render callback even if a hitch consumes the expected timestamp.
+				contactDelay = t - Beats.impact
+				t = Beats.impact
+			end
+			previous = t
 			local island = workspace:FindFirstChild("CitrineCove")
 			local gallery = island and island:FindFirstChild("Working gallery")
 			local gateModel = island and island:FindFirstChild("Citrine Mine")

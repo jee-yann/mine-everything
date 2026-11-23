@@ -50,14 +50,9 @@ function PrecisionCut.new()
 	local model = script.Parent.ProspectorProof:Clone()
 	model.Name = "Prospector's precision cut"
 	local root = model.PrimaryPart
-	local phase = math.pi * 4 / 14
-	local seam = V(
-		0.073 * math.sin(3 * phase + 0.4) + 0.031 * math.cos(5 * phase),
-		math.sin(phase) * (0.87 + 0.06 * math.sin(3 * phase + 0.4)) - 0.04,
-		math.cos(phase) * (0.89 + 0.09 * math.cos(2 * phase - 0.2)) + 0.08 * math.sin(2 * phase)
-	)
-	local crystal = locator(root, "Emerald body", V(-0.042, 0.025, 0.070))
-	local tip = locator(root, "Emerald crown", V(-0.085, 0.427, 0.125))
+	local seam = root:GetAttribute("ReadingNotch")
+	local crystal = locator(root, "Emerald table", root:GetAttribute("EmeraldTable"))
+	local tip = locator(root, "Emerald crown", root:GetAttribute("EmeraldCrown"))
 	local light = S.light(tip, "A1FFB8", 2.3, 0)
 	light.Enabled, light.Shadows = false, false
 	bench(model)
@@ -72,13 +67,13 @@ function PrecisionCut.new()
 		end
 		table.insert(
 			halves,
-			{ rock = rock, side = side, rest = model:GetPivot():ToObjectSpace(rock.CFrame), sole = sole }
+			{ rock = rock, side = side, rest = model:GetPivot():ToObjectSpace(rock:GetPivot()), sole = sole }
 		)
 	end
 	return setmetatable({
 		model = model,
-		left = model.Left,
-		right = model.Right,
+		left = model.Left.PrimaryPart,
+		right = model.Right.PrimaryPart,
 		halves = halves,
 		gem = crystal,
 		gemTip = tip,
@@ -94,6 +89,7 @@ function PrecisionCut:place(actor)
 	self.model:ScaleTo(u)
 	self.site = actor.mineBearing * CF(1.85 * u, -0.40 * u, -3.08 * u) * A(0, math.rad(43), 0) * CF(-self.seam.Position)
 	self.model:PivotTo(self.site)
+	for _, half in self.halves do half.pose = nil end
 end
 
 function PrecisionCut:draw(stage, frame)
@@ -121,8 +117,11 @@ function PrecisionCut:draw(stage, frame)
 				transform += Vector3.yAxis * (-0.931 * self.unit - bottom) * spread
 			end
 		end
-		local r = half.rest
-		half.rock.CFrame = self.site * transform * CF(r.Position * self.unit) * r.Rotation
+		if half.pose ~= transform then
+			local r = half.rest
+			half.rock:PivotTo(self.site * transform * CF(r.Position * self.unit) * r.Rotation)
+			half.pose = transform
+		end
 	end
 	local gemPulse = S.ease(age, 17, 26) * (1 - S.ease(age, 27, 40))
 	local breath = S.ease(age, 44, 49) * (1 - S.ease(age, 49, 59))

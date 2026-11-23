@@ -17,20 +17,16 @@ Film.__index = Film
 Film.duration = frames.duration / sheet.fps
 
 local captions = {
-	{ 0.06, 2.14, "Millions of years ago" },
-	{ 12.12, 15.74, "Deep in the rock, the star still glowed." },
-	{ 16.99, 19.36, "Miners came to find it." },
-	{ sheet.sceneTime(786), sheet.sceneTime(851), "All they found were tiny pieces." },
+	{ 1, 52, "Millions of years ago" },
+	{ frames.aftermath + 7, frames.match - 7, "Deep in the rock, the star still glowed." },
+	{ frames.establish + 1, frames.present - 1, "Millions of years later" },
+	{ frames.measure - 36, frames.measure + 24, "One hit. Keep the gem whole." },
 }
 function Film.caption(t)
 	local picture = sheet.frameForScene(t)
-	if picture >= frames.present + 2 and picture < frames.measure + 12 then
-		return "One hit. Keep the gem whole.", ease(picture, frames.present + 2, frames.present + 7)
-			* (1 - ease(picture, frames.measure + 7, frames.measure + 12))
-	end
 	for _, cue in captions do
-		if t >= cue[1] and t < cue[2] then
-			return cue[3], ease(t, cue[1], cue[1] + 0.14) * (1 - ease(t, cue[2] - 0.17, cue[2]))
+		if picture >= cue[1] and picture < cue[2] then
+			return cue[3], ease(picture, cue[1], cue[1] + 4) * (1 - ease(picture, cue[2] - 4, cue[2]))
 		end
 	end
 	return "", 0
@@ -58,7 +54,7 @@ function Film.new(stage, screen, camera, handoff, motion, continueSetup, nightLo
 		if continueSetup and not continueSetup() then
 			return
 		end
-		self.island = Island.new(stage, base)
+		self.island = Island.new(stage, base, live)
 		self.daylight.lunar:relight(base, 0)
 		self.illumination = MeteorLight.new(stage, base, self.island.set)
 		if continueSetup and not continueSetup() then
@@ -68,6 +64,7 @@ function Film.new(stage, screen, camera, handoff, motion, continueSetup, nightLo
 		self.arrival.motion = motion
 		self.lode = StarfallLode.new(stage, base * CF(0, 94, -480), self.island.set)
 		self.arrival.marker.signal.chamber = self.lode.at
+		self.arrival.marker.signal.crystalContact = self.lode.contactPoint
 		self.broadcast = CoveBroadcast.new(screen)
 		self.portrait = ProspectorPortrait.new(stage, screen)
 		self.impact = Impact.new(stage, screen, base, motion)
@@ -127,7 +124,7 @@ end
 -- The ground carries vibration before the pressure front strikes the
 -- observer. Wider, slower oscillations follow it into the burning crater.
 local function vibration(frame)
-	if frame < frames.entry or frame >= frames.recovery then
+	if frame < frames.entry or frame >= frames.seam then
 		return CFrame.identity
 	end
 	local t = frame / sheet.fps
@@ -142,12 +139,11 @@ local function vibration(frame)
 			+ 0.95 * pulse(frame, 300, 336, 24)
 			+ 2.35 * pulse(frame, 324, 366, 3)
 			+ 1.18 * pulse(frame, 353, 382, 3)
-			+ 0.73 * pulse(frame, 398, 433, 4)
-			+ 0.54 * pulse(frame, 444, 474, 3)
+			+ 0.24 * ease(frame, 325, 352) * (1 - ease(frame, 355, frames.seam))
 	end
 	local lift = math.sin(2 * math.pi * 3.1 * t + 0.35) + 0.31 * math.sin(2 * math.pi * 6.7 * t)
 	local sway = math.sin(2 * math.pi * 1.7 * t) + 0.23 * math.sin(2 * math.pi * 4.3 * t + 0.8)
-	local travel = if frame < frames.aftermath then pressure else 0
+	local travel = pressure * (1 - ease(frame, 373, 382))
 	return CF(travel * 0.11 * sway, travel * 0.13 * lift, 0)
 		* CFrame.Angles(
 			math.rad(0.61 * pressure * lift),
@@ -194,19 +190,17 @@ end
 function Film:draw(t, liveReady, frame)
 	frame = frame or math.round(sheet.frameForScene(t))
 	local move = self.motion
-	if t >= clock.match and self.matchLive == nil then
-		self.matchLive = liveReady
+	local modern = frame >= frames.match
+	if not liveReady and frame >= frames.aftermath and not modern then
+		self.island:prepareReplica()
 	end
-	local scenery = t
-	if self.matchLive and t >= clock.match then
-		scenery = math.max(t, clock.present)
-	elseif t >= clock.present and (self.handoff.root.Position - self.handoff.landing).Magnitude >= 38 then
-		-- A replay can start deep below streaming range. Photograph the player's
-		-- own double on the completed private island until the return to depth.
+	if modern and self.matchLive == nil then self.matchLive = liveReady end
+	local remote = (self.handoff.root.Position - self.handoff.landing).Magnitude >= 38
+	local replica = modern and not self.matchLive and (frame < frames.present or remote)
+	if replica and remote then
 		self.arrival.replayLanding = self.handoff.landing + self.base.Position - self.live.Position
-		scenery = clock.present - 0.001
 	end
-	self.island:draw(scenery)
+	self.island:draw(t, modern, replica, frame < frames.present)
 	self.tide:draw(t)
 	self.daylight:draw(t, move, self.base, frame)
 	self.arrival:draw(t, frame)
@@ -226,60 +220,33 @@ function Film:draw(t, liveReady, frame)
 		local look = V(-7, 34, -21) + V(-3.3, 8.4, 0.5) * (lift / 2.9)
 		self:frame(base, eye, look, 54 + open, math.rad(roll), "offshore")
 	elseif frame < frames.seam then
-		local n = if move then (frame - frames.aftermath) / (frames.seam - frames.aftermath) else 0.5
-		self:frame(base, V(70, 49, 36):Lerp(V(57, 46, 21), n), V(-4, 39.4, -35), 38)
-	elseif frame < frames.recovery then
-		local span = frames.recovery - frames.seam
-		local age = frame - frames.seam
-		local brake = 8
-		local tail = math.clamp((age - span + brake) / brake, 0, 1)
-		local n = if move
-			then (math.min(age, span - brake) + brake * (tail - 0.5 * tail * tail)) / (span - 0.5 * brake)
-			else 0.5
-		self:frame(base, V(15.8, 36.6, -10.6):Lerp(V(10.3, 34, -16), n), V(0, 26.7, -32), 32)
-	elseif frame < 570 then
-		-- Hold the fissure in the same part of the frame as the ash crust cools.
-		-- The lens finishes the preceding inward move, comes to rest,
-		-- and only then pulls back. The tangent at the turn is zero.
-		local n = if move then ease(frame, frames.recovery + 4, 570) else 0.5
-		self:frame(base, V(10.3, 34, -16):Lerp(V(18, 38, -7), n), V(0, 26.7, -32), 32)
-	elseif frame < frames.landing then
-		-- Cut on the clearing smoke to a second dolly already moving offshore.
-		local n = if move then (frame - 570) / (frames.landing - 570) else 0.65
-		self:frame(base, V(80, 99, 138):Lerp(V(98, 112, 160), n), V(-3, 30, -5), 50, 0, "landscape")
-	elseif t < clock.settlement then
-		local n = if move then ease(t, clock.landing, clock.settlement) else 0.47
-		local boat = base:PointToObjectSpace(self.island.vessel:GetPivot().Position)
-		local eye = if move then boat + V(-40, 21, 43):Lerp(V(-39, 16.5, 45), n) else V(-201, 44, 167)
-		self:frame(base, eye, boat + V(6.3, 6.9, -4), 49)
-	elseif frame >= 780 and frame < frames.overview then
-		-- Keep the rising load in the same eyeline while its splinters slip
-		-- free. At the overview cut the headframe occupies that same bearing.
-		local h = self.island.hoist
-		local foot = base:PointToObjectSpace(h.rest.Position)
-		local load = if move then base:PointToObjectSpace(h.load:GetPivot().Position) else foot + V(0, 7, 0)
-		local n = if move then ease(frame, 783, 827) else 0.36
-		local target = (foot + V(-1.7, 12.1, 0)):Lerp(load + V(-0.45, 0.78, 0), n)
-		local eye = (foot + V(-5.9, 12.4, 31.4)):Lerp(load + V(-2.2, 4.9, 10.8), n)
-		self:frame(base, eye, target, 52 - 13.5 * n, if move then math.rad(-1.5 + 2.1 * n) else 0)
-	elseif t < clock.overview then
-		local n = if move then ease(t, clock.settlement, clock.overview) else 0.5
-		self:frame(base, V(76, 85, 146):Lerp(V(58, 80, 145), n), V(-11, 35, 24), 51, 0, "landscape")
-	elseif frame < 881 then
-		-- Re-establish the wheel to the right of the houses. The next lift
-		-- in camera height reveals the same settlement within its shoreline.
-		local n = if move then (frame - frames.overview) / (881 - frames.overview) else 0.48
-		self:frame(base, V(16, 59, 80):Lerp(V(10, 67, 96), n), V(8, 37, 17):Lerp(V(5, 35, 20), n), 51)
-	elseif t < clock.present then
-		local n = if move then ease(t, clock.overview, clock.match) else 1
-		self:frame(
-			if self.matchLive and t >= clock.match then self.live else base,
-			V(-68, 136, 303):Lerp(V(-61, 128, 285), n),
-			V(-1, 34, 13),
-			49,
-			0,
-			"landscape"
-		)
+		-- Hold the rim while the airborne earth settles. The next shot
+		-- picks out one piece of the fractured rock in this landscape.
+		self:frame(base, V(51, 51, 63), V(-2, 32, -23), 37, 0, "landscape")
+	elseif frame < frames.establish then
+		-- The very same fork fills the frame before and after the cut.
+		-- Keep the marks, focal length and the operator's sideways step
+		-- continuous. Only the rock finish and the world around it change.
+		local fork = self.island.witnessPoint
+		local offset = if move then (frame - frames.match) * 0.052 else 0
+		local eye = fork + V(-2.70 + offset, 1.80, 11.8)
+		local aim = fork + V(0.42 + 0.34 * offset, 0.90, 0)
+		self:frame(if modern and not replica then self.live else base, eye, aim, 23)
+	elseif frame < frames.present then
+		-- Widen on a cut from the mineral to the masonry that holds it.
+		-- From the spawn boulevard, the sign, arch and worked shore read
+		-- together. Let the audience look around this fixed composition.
+		local site = if replica then base else self.live
+		local mark = site:PointToObjectSpace(self.arrival.mineBearing.Position)
+		if (mark - V(0, 28.96, 93)).Magnitude < 14 then
+			local distance = self.arrival.unit * self.arrival.portraitDistance
+			local eye = mark + V(3.1, 2.4, 13.4) * distance
+			self:frame(site, eye, V(0.3, 34.5, 8), 34, 0, "landscape")
+		else
+			-- A replay can open from a shop counter or a partially streamed
+			-- shore. Keep that establishing lens clear of nearby kiosks.
+			self:frame(site, V(2, 43, 76), V(0, 35, 7), 36, 0, "landscape")
+		end
 	elseif frame >= frames.lode and frame < frames.challenge then
 		local portrait = self.camera.ViewportSize.X < self.camera.ViewportSize.Y
 		local eye, look, lens, roll = self.lode:camera(frame, move, portrait)
@@ -292,12 +259,12 @@ function Film:draw(t, liveReady, frame)
 	else
 		black = self:landingFrame(t)
 	end
-	if move and frame >= frames.entry and frame < frames.recovery then
+	if move and frame >= frames.entry and frame < frames.seam then
 		self.camera.CFrame *= vibration(frame)
 	end
 	self.impact:draw(t, self.camera, frame)
 	self.illumination:draw(t, Impact.position(t, frame), self.camera, move, frame)
-	self.daylight:focus(self.camera, base, t, move)
+	self.daylight:focus(self.camera, base, frame, move)
 	self.broadcast:draw(self.camera, frame, move)
 	self.portrait:draw(self.arrival, self.camera, frame, move)
 	return black

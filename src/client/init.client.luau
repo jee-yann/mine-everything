@@ -17,6 +17,8 @@ for _, name in
 		"Ores",
 		"Upgrades",
 		"Expeditions",
+		"OrePurity",
+		"FieldRewards",
 		"PassCatalog",
 		"Skills",
 		"FieldGuide",
@@ -37,6 +39,7 @@ local Pattern = require(shared.BlockPattern)
 local Hud, Effects, W = require(script.Hud), require(script.Effects), require(script.Widgets)
 local mobile = UIS.PreferredInput == Enum.PreferredInput.Touch
 local hud = Hud.new(player, net, mobile)
+local minerFocus = require(script.MinerFocus).new()
 local Audio = require(script.HarborAudio)
 local fx = Effects.new()
 require(script.PadAura).start(player, hud)
@@ -67,8 +70,8 @@ player:GetAttributeChangedSignal("ExpeditionStep"):Connect(function()
 	previousStep = step
 end)
 local receipt = require(script.SaleReceipt).new(hud)
-task.spawn(require(script.Tramway), origin)
-require(script.MineView).start(player, origin, hud)
+task.spawn(require(script.Tramway).run, origin)
+local restoreSurfaceLight = require(script.MineView).start(player, origin, hud)
 task.spawn(require(script.OreFaces))
 local function cancelStroke()
 	if rig then
@@ -257,13 +260,16 @@ UIS:GetPropertyChangedSignal("PreferredInput"):Connect(function()
 end)
 
 net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, normal)
-	if kind == "achievement" or kind == "titleUnlocked" then
+	if kind == "achievement" or kind == "titleUnlocked" or kind == "aura" then
 		hud.unlocks:show(kind, a)
 	elseif kind == "skillLearned" then
 		fx:chime(1.32)
 		if hud.menu.map then
 			hud.menu.map:showPurchase(a)
 		end
+	elseif kind == "pulse" then
+		if player:GetAttribute("MenuMotion") ~= false then fx:pulse(a, point) end
+		fx:chime(0.78)
 	elseif kind == "loot" then
 		expedition.lastCut = point
 		local best = Ores.byName.Dirt
@@ -280,6 +286,8 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		end
 		fx:burst(point, spread, best)
 		fx:labels(finds, a, normal)
+	elseif kind == "assay" then
+		fx:assay(a, point, spread, finds)
 	elseif kind == "caveCache" then
 		fx:chime(1.65)
 		hud:notice(
@@ -288,7 +296,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			W.gold
 		)
 	elseif kind == "milestone" then
-		hud:milestone(a, point, spread)
+		if a == "ORE DISCOVERED" then hud.unlocks:show("discovery", point) else hud:milestone(a, point, spread) end
 	elseif kind == "depart" then
 		release()
 		passage:depart(a, point)
@@ -365,7 +373,7 @@ for _, other in Players:GetPlayers() do
 	end
 end
 
-require(script.RockCompanions)(hud)
+require(script.RockCompanions)(hud, origin)
 local lastDepth, lastRegion
 local function targetName(ore, center)
 	if ore.secret and not player:GetAttribute("Found" .. ore.name) then
@@ -378,13 +386,19 @@ local function targetName(ore, center)
 end
 local function sampleAim()
 	aimPoint, aimPart = nil, nil
-	if hud.inOpening then expedition:hide() return end
+	if hud.inOpening then
+		expedition:hide()
+		hud:aimAt(nil)
+		minerFocus:update(false)
+		return
+	end
 	local camera = workspace.CurrentCamera
 	local char = player.Character
 	local head = char and char:FindFirstChild("Head")
 	local root = char and char:FindFirstChild("HumanoidRootPart")
 	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 	if not head or not root or not camera or not humanoid or humanoid.Health <= 0 then
+		minerFocus:update(false)
 		expedition:hide()
 		hud:aimAt(nil)
 		release()
@@ -406,6 +420,7 @@ local function sampleAim()
 	end
 	hud.surface.Visible = not passage.active and Config.inMine(localPos) and (root.Position - entrance).Magnitude > 7
 	if hud.overlay.Visible or passage.active then
+		minerFocus:update(inMine, nil, camera.CFrame.Position, params)
 		expedition:hide()
 		hud:aimAt(nil)
 		local station = if hud.menu.page == "Gear"
@@ -426,7 +441,11 @@ local function sampleAim()
 	local screen = if centerAim then camera.ViewportSize * 0.5 else UIS:GetMouseLocation()
 	local ray = camera:ViewportPointToRay(screen.X, screen.Y)
 	local reach = char:GetAttribute("PickReach") or Config.Reach
-	local hit = workspace:Raycast(ray.Origin, ray.Direction * (reach + 48), params)
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * (if inMine then math.max(reach + 48, minerFocus.range) else reach + 48), params)
+	local onControl = GuiService.MenuIsOpen or UIS:GetFocusedTextBox() or (hud.chatInput and hud.chatInput.IsFocused)
+		or (not centerAim and hit ~= nil and hud:pointerOnControl(screen))
+	if onControl then hit = nil end
+	minerFocus:update(inMine, hit, ray.Origin, params)
 	local cap = (player:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1])
 	local space = cap - (player:GetAttribute("Used") or 0)
 	if hud.touchActions.enabled and (space <= 0 or not ready) then
@@ -446,7 +465,7 @@ local function sampleAim()
 	fx:aim(cells)
 	local valid = cells ~= nil and #cells == 1
 	hud:aimAt(screen, valid, locked ~= nil or (cells ~= nil and space <= 0))
-	hud.reticle.Visible = centerAim
+	hud.reticle.Visible = centerAim and not hud.cursor.Visible
 	if centerAim then
 		hud.reticle.BackgroundColor3 = if valid then W.aqua else W.white
 	end
@@ -472,7 +491,7 @@ local function sampleAim()
 		local ore = Ores.byName[hit.Instance.Name]
 		local worth = if ore.secret and not player:GetAttribute("Found" .. ore.name)
 			then "???"
-			else W.number(ore.value * (if player:GetAttribute("DoubleGold") then 2 else 1)) .. " G"
+			else W.possiblePrice(ore, player)
 		local stats = "Hardness " .. Config.strength(center.Y - origin.Y) .. "  ·  " .. worth
 		hud:guide("Mine " .. string.lower(targetName(ore, center)), instruction or (if mobile then stats else "Hold to mine  ·  " .. stats), true)
 	else
@@ -484,6 +503,15 @@ local function sampleAim()
 		aimFacePoint = hit.Position + normal * 0.45
 	end
 end
+
+UIS.TouchTapInWorld:Connect(function(screen, processed)
+	if processed or not mobile or hud.inOpening or hud.overlay.Visible or passage.active or not minerFocus.underground then return end
+	local camera = workspace.CurrentCamera
+	if not camera then return end
+	local ray = camera:ViewportPointToRay(screen.X, screen.Y)
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * minerFocus.range, params)
+	if hit then minerFocus:tap(hit.Instance) end
+end)
 
 local elapsed = 1
 RunService.RenderStepped:Connect(function(dt)
@@ -537,7 +565,9 @@ RunService.RenderStepped:Connect(function(dt)
 		aimOre,
 		Config.strength(target.Y - origin.Y),
 		player:GetAttribute("TemperCharges"),
-		owned
+		owned,
+		player:GetAttribute("HasteCuts"),
+		player:GetAttribute("StoneChips")
 	)
 	if rig and not rig.shoulder:IsDescendantOf(workspace) then
 		rig:destroy()
@@ -577,6 +607,7 @@ local function playOpening()
 	fx:aim(nil)
 	hud:aimAt(nil)
 	hud:setShop(false)
+	restoreSurfaceLight()
 	Opening.play(player, net, hud)
 	return true
 end

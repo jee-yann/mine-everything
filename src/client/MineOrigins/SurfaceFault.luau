@@ -66,6 +66,7 @@ function Fault.new(parent, bed)
 				outer = vertex(edge),
 				side = side,
 				dist = math.abs(x - 1.6),
+				run = (i - 1) / 15,
 				span = taper * (1.06 + 0.18 * math.cos(i * 2.3)),
 				last = -1,
 			}
@@ -94,7 +95,7 @@ function Fault.new(parent, bed)
 			vein.CastShadow, hair.CastShadow = false, false
 			table.insert(
 				self.lightPaths,
-				{ violet = vein, hair = hair, dist = math.abs((a.X + b.X) * 0.5 - 1.6), taper = taper }
+				{ violet = vein, hair = hair, dist = math.abs((a.X + b.X) * 0.5 - 1.6), taper = taper, run = i / 16 }
 			)
 		end
 		previous = row
@@ -121,19 +122,31 @@ end
 function Fault:draw(t, base)
 	local reflection = 0
 	for _, p in self.lightPaths do
-		local ext = 0.035 * p.dist
-		local ignite = ease(t, 8.65 + ext, 9.09 + ext)
-		local ember = 0.52 * (1 - ease(t, 9.30, 10.04))
-		local pull = ease(t, 10.07 - ext, 10.30 - ext) * (1 - ease(t, 10.43 - ext, 10.80 - ext))
-		local glow = ignite * math.clamp(ember + pull, 0, 1) * p.taper ^ 0.6
+		-- A single tear runs across the rock face. It sits open long enough
+		-- to read, then both lit ends are pulled toward one deep pocket.
+		local head = 8.76 + 0.24 * p.run
+		local flare = ease(t, head, head + 0.033)
+		local rest = if t < head + 0.12 then 0.94 elseif t < 9.71 then 0.48 else 0.24
+		local retreat = 10.39 - 0.026 * p.dist
+		local last = ease(t, retreat - 0.12, retreat - 0.04) * (1 - ease(t, retreat, retreat + 0.048))
+		local glow = flare * math.max(rest * (1 - ease(t, retreat, retreat + 0.035)), last) * p.taper ^ 0.6
 		p.violet.Transparency, p.hair.Transparency = 1 - glow, 1 - glow * 0.85
 		reflection = math.max(reflection, glow)
 	end
 	self.lamp.Brightness = reflection * 1.78
 	local dirty = false
 	for _, b in self.banks do
-		local open = ease(t, 8.60 + 0.034 * b.dist, 9.05 + 0.029 * b.dist)
-			* (1 - ease(t, 10.54 + 0.014 * b.dist, 11.28 + 0.010 * b.dist))
+		local arrival = 8.76 + 0.24 * b.run
+		local tap = t - arrival
+		local open = if tap < 0 then 0 elseif tap < 0.043 then 0.39 elseif tap < 0.108 then 1.12 else 1
+		local slip = t - 0.004 * b.dist - (if b.side == 1 then 0.04 else 0)
+		if slip >= 11.08 then
+			open = 0
+		elseif slip >= 10.69 then
+			open *= 0.39
+		elseif slip >= 10.63 then
+			open *= 0.28
+		end
 		if b.last ~= open then
 			b.last = open
 			local move = V(0.12 * b.side, 0.40 + 0.08 * b.side, b.side * 1.08) * b.span * open
@@ -149,9 +162,12 @@ function Fault:draw(t, base)
 		end
 	end
 	for _, c in self.chips do
-		local settle = ease(t, 10.26 + c.off, 11.09 + c.off)
+		local first = math.clamp((t - 10.61 - c.off * 0.33) / 0.23, 0, 1)
+		local second = math.clamp((t - 11.07 - c.off * 0.26) / 0.22, 0, 1)
+		local settle = 0.62 * first + 0.38 * second
+		local hop = first * (1 - first) * 1.28 + second * (1 - second) * 0.66
 		c.part.CFrame = base
-			* CF(c.at + V(0.21 * settle, 0.22 * math.sin(math.pi * settle) - 0.12 * settle, -c.side * 0.73 * settle))
+			* CF(c.at + V(0.21 * settle, hop - 0.12 * settle, -c.side * 0.73 * settle))
 			* A(0.15 + c.rot * 0.24, c.rot + settle * 0.9, -0.08)
 	end
 end

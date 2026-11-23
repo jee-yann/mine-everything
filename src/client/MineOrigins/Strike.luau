@@ -2,6 +2,7 @@ local P = require(script.Parent.Props)
 local Plume = require(script.Parent.Plume)
 local Fault = require(script.Parent.SurfaceFault)
 local Crown = require(script.Parent.CinderCrown)
+local Wave = require(script.Parent.Shockwave)
 local Coast = require(script.Parent.LandfallCoast)
 local Descent = require(script.Parent.Descent)
 local Jets = require(script.Parent.EjectaJets)
@@ -14,15 +15,38 @@ local rgb, ease, tau = Color3.fromHex, P.ease, math.pi * 2
 local stone, neon = Enum.Material.Slate, Enum.Material.Neon
 local flightTime = require(script.Parent.Beats).impact
 local impact = V(0, Crater.coverHeight + 1.5, 0)
-local approach = V(-218, 186.5, -122)
+local approach = V(-407, 266, -238)
 Strike.impactTime = flightTime
 
--- Negative time extrapolates the entry trajectory so the wake already has a
--- history when the first shot opens. All three flight cameras track this body.
+-- Distance along one entry line, with a slow first sighting, a near pass
+-- and a last steep plunge. Tangents are fractions of the run per second.
+local flight = {
+	{ 0, 0, 0.048 },
+	{ 1.36, 0.115, 0.16 },
+	{ 2.46, 0.395, 0.31 },
+	{ 3.24, 0.575, 0.15 },
+	{ 4.28, 0.727, 0.16 },
+	{ 5.60, 0.856, 0.052 },
+	{ 6.23, 0.914, 0.18 },
+	{ flightTime, 1, 0.43 },
+}
 function Strike.position(t)
-	local u = math.min(t / flightTime, 1)
-	local distance = 0.52 * u + 0.48 * math.max(0, u) ^ 2.6
-	return impact + approach * (1 - distance) + V(9, 14, 6) * math.sin(distance * math.pi)
+	local s = math.min(t, 0) * flight[1][3]
+	if t >= flightTime then
+		s = 1
+	elseif t > 0 then
+		for i = 2, #flight do
+			local a, b = flight[i - 1], flight[i]
+			if t <= b[1] then
+				local span = b[1] - a[1]
+				local u = (t - a[1]) / span
+				local v = 1 - u
+				s = a[2] * v * v * (1 + 2 * u) + b[2] * u * u * (3 - 2 * u) + span * u * v * (a[3] * v - b[3] * u)
+				break
+			end
+		end
+	end
+	return impact + approach * (1 - s) + V(-9, 23, 6) * math.sin(math.pi * s)
 end
 
 local function between(p, base, a, b, width, height)
@@ -87,8 +111,31 @@ local function sculpt(parent, asset, name, scale)
 end
 
 local sliverOffset = CF(0.62, 0.52, 2.66) * A(-0.19, 0.21, -0.78)
+-- The cleft turns toward the lens and hangs there. Only the body rolls on
+-- exposed poses. The center of mass and its trailing wake keep flying.
+local flightDrawings = {
+	{ 0, 0.22, 0.38, -0.11 },
+	{ 0.44, 0.39, 0.54, -0.17 },
+	{ 0.66, 0.55, 0.72, -0.21 },
+	{ 0.82, 0.70, 1.02, -0.07 },
+	{ 0.94, 0.81, 1.36, 0.10 },
+	{ 1.02, 0.87, 1.48, 0.19 },
+	{ 1.68, 0.94, 1.81, 0.32 },
+	{ 1.79, 1.10, 2.24, 0.61 },
+	{ 1.88, 1.36, 2.87, 1.15 },
+	{ 2.01, 1.68, 3.53, 1.57 },
+	{ 2.23, 1.86, 3.80, 1.63 },
+}
 local function meteorPose(t)
-	return CF(Strike.position(t)) * A(0.36 + t * 0.46, 0.72 + t * 0.71, t * 0.40)
+	local key = flightDrawings[1]
+	for _, drawing in flightDrawings do
+		if t < drawing[1] then
+			break
+		end
+		key = drawing
+	end
+	local turns = math.max(0, math.floor((t - 2.43) * 12) / 12)
+	return CF(Strike.position(t)) * A(key[2] + turns * 0.74, key[3] + turns * 1.30, key[4] + turns * 0.82)
 end
 
 function Strike.frame(t, motion)
@@ -320,12 +367,19 @@ local function buildImpact(self, rng)
 	local crown = P.model(self.root, "Impact crown")
 	self.crown = crown
 	self.flash = marker(crown, "Contact heat", Vector3.zero)
-	self.impactLight = P.light(self.flash, "FFC57D", 82, 4)
+	self.impactLight = P.light(self.flash, "FFC57D", 48, 2)
+	self.bounce = marker(crown, "Violet scattering", Vector3.zero)
+	self.underlight = P.light(self.bounce, "A4ACC5", 34, 0)
 	self.jets = Jets.new(crown)
 	self.paint = Crown.new(crown, self.shelf)
 	self.ejecta = {}
 	for i = 1, 19 do
 		local s = if i % 4 == 0 then rng:NextNumber(1.9, 3.1) else rng:NextNumber(0.63, 1.45)
+		if i == 4 then
+			s = 4.25
+		elseif i == 12 then
+			s = 3.70
+		end
 		local a = i * 2.399
 		local v = V(
 			math.cos(a) * rng:NextNumber(12, 39) + 6.2,
@@ -343,7 +397,13 @@ local function buildImpact(self, rng)
 			NumberSequence.new(0.17, 1)
 		)
 		tail.LightEmission, tail.LightInfluence = 0.58, 0.12
-		self.ejecta[i] = { rock = rock, tail = tail, tip = tip, v = v, scale = s, delay = 0.04 + (i % 5) * 0.045 }
+		if i == 4 then
+			v = V(-37, 31, 32)
+		elseif i == 12 then
+			v = V(18, 40, 37)
+		end
+		self.ejecta[i] =
+			{ rock = rock, tail = tail, tip = tip, v = v, spin = 1.5 / math.sqrt(s), delay = 0.04 + (i % 5) * 0.045 }
 	end
 end
 
@@ -352,6 +412,7 @@ function Strike.new(shelf)
 	local self = setmetatable({ root = root, shelf = shelf }, Strike)
 	local rng = Random.new(58237)
 	self.shore = Coast.new(root)
+	self.wave = Wave.new(root, self.shore)
 	self.meteor, self.shard = buildMeteor(root)
 	buildWake(self)
 	buildImpact(self, rng)
@@ -360,21 +421,28 @@ end
 
 local function drawBlast(self, t, base, motion)
 	local age = t - flightTime
-	self.flash.Position = base:PointToWorldSpace(V(1.2, 1.45, 0.5))
-	self.impactLight.Brightness = (if motion then 2.65 else 1.8) * (1 - ease(age, 0.08, 0.56))
+	local ventHeight = Crater.contactHeight(age)
+	local vent = base * CF(0, ventHeight, 0)
+	self.flash.Position = vent:PointToWorldSpace(V(1.2, 1.45, 0.5))
+	self.bounce.Position = base * V(-18, 17, 13)
+	self.impactLight.Color = rgb(if age < 0.28 then "FFF1B1" elseif age < 0.68 then "FFD394" else "F9B28D")
+	self.impactLight.Brightness = (if motion then 1.65 else 1.10) * (1 - ease(age, 0.63, 1.16))
+	self.underlight.Brightness = 0.43 * ease(age, 0.52, 0.78) * (1 - ease(age, 1.22, 1.60))
 	self.jets.origin.CFrame = base
 	self.jets:draw(age)
-	self.paint:draw(age, base, motion)
+	self.paint:draw(age, base, vent, motion)
 	for i, e in self.ejecta do
 		local s = age - e.delay
+		local birth = Crater.contactHeight(e.delay)
 		local function point(h)
-			return e.v * h - V(0, 13.2 * h * h, 0)
+			return e.v * h + V(0, birth - 21.4 * h * h, 0)
 		end
 		local p = point(math.max(0, s))
-		local visible = s >= 0 and p.Y > 0
+		local visible = s >= 0 and p.Y > -4
 		place(e.rock, if visible then self.crown else self.shelf)
 		if visible then
-			local cf = CF(p) * A(s * (2.3 + i % 3), i + s * 2.8, s * 1.6)
+			local spin = s * e.spin
+			local cf = CF(p) * A(spin * (2.3 + i % 3), i + spin * 2.8, spin * 1.6)
 			e.rock:PivotTo(base * cf)
 			e.tip.Position = cf:PointToObjectSpace(point(math.max(0, s - 0.17)))
 			e.tail.Enabled = s < 1.4
@@ -383,9 +451,15 @@ local function drawBlast(self, t, base, motion)
 end
 
 local function groundInsert(self, t, base)
-	local u = ease(t, 5.60, 6.28)
 	local hold = ease(t, 5.64, 6.19)
 	for _, grain in self.groundGrit do
+		local beat = t - 0.018 * grain.phase
+		local u = if beat < 5.75
+			then 0
+			elseif beat < 5.89 then 0.18
+			elseif beat < 6.06 then 0.38
+			elseif beat < 6.18 then 0.86
+			else 1
 		local up = (0.36 + 0.52 * (1 + math.cos(grain.phase))) * u
 		local y = 0.18 + grain.size * 0.42
 		grain.part.CFrame = base
@@ -398,13 +472,14 @@ local function groundInsert(self, t, base)
 	self.penumbra.Size = V(3 + 18 * hold, 0.035, 2 + 10.2 * hold)
 	self.penumbra.CFrame = base * CF(-10 + 10.5 * hold, 0.223, -5 + 4.7 * hold) * A(0, -0.43, 0)
 	self.penumbra.Transparency = 0.72 - 0.35 * hold
-	self.warnLamp.Brightness = 0.50 + 2.2 * u * (1 - ease(t, 6.28, 6.49))
+	self.warnLamp.Brightness = 0.50 + 2.2 * hold * (1 - ease(t, 6.28, 6.49))
 end
 
 function Strike:draw(t, base, motion)
 	local flying = t < flightTime
 	local age = t - flightTime
 	self.bed:draw(age, base)
+	self.wave:draw(age, base)
 	for _, v in self.rimRocks do
 		local rise = ease(age, v.delay, v.delay + 0.43)
 		if rise ~= v.last then
@@ -429,19 +504,16 @@ function Strike:draw(t, base, motion)
 	-- The iron and its inset violet nucleus disappear together on contact.
 	-- Only light can escape the broken ground after the pressure wave passes.
 	if flying then
-		self.meteor:PivotTo(base * meteorPose(t))
-		self.shard:PivotTo(base * meteorPose(t) * sliverOffset)
+		self.paint:prepare(t)
+		local posed = base * meteorPose(t)
+		self.meteor:PivotTo(posed)
+		self.shard:PivotTo(posed * sliverOffset)
 		drawWake(self, t, base)
 	end
-	local flame = age >= 0 and t < 8.63
+	local flame = age >= 0 and t < 9.40
 	place(self.crown, if flame then self.root else self.shelf)
 	if flame then
-		drawBlast(
-			self,
-			t,
-			base * CF(0, Crater.coverHeight - (Crater.coverHeight + 3.8) * ease(age, 0.16, 0.77), 0),
-			motion
-		)
+		drawBlast(self, t, base, motion)
 	end
 	local exposed = t >= 8.34
 	place(self.bed.inner, if exposed then self.shelf else self.bed.root)

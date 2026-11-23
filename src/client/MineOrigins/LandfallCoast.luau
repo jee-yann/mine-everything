@@ -71,7 +71,7 @@ function Coast.new(root)
 	for x = -2, 2 do
 		for z = -2, 2 do
 			if x ~= 0 or z ~= 0 then
-				local ocean = P.box(coast, "Dawn strait", V(x * 1960, -3.95, z * 1960), V(1960, 0.8, 1960), "386D84")
+				local ocean = P.box(coast, "Dawn strait", V(x * 1960, -3.95, z * 1960), V(1960, 0.8, 1960), "568F9F")
 				ocean.Reflectance, ocean.CastShadow = 0.05, false
 			end
 		end
@@ -80,7 +80,7 @@ function Coast.new(root)
 	-- is below that elevation; keep the water plane outside the basin.
 	for _, item in { { -510, 0, 940, 1960 }, { 510, 0, 940, 1960 }, { 0, -510, 80, 940 }, { 0, 510, 80, 940 } } do
 		local ocean =
-			P.box(coast, "Strait around the headland", V(item[1], -3.95, item[2]), V(item[3], 0.8, item[4]), "386D84")
+			P.box(coast, "Strait around the headland", V(item[1], -3.95, item[2]), V(item[3], 0.8, item[4]), "568F9F")
 		ocean.Reflectance, ocean.CastShadow = 0.05, false
 	end
 	local rng = Random.new(813)

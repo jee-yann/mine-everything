@@ -140,8 +140,8 @@ function Signal:place(marker, actor)
 	self.face = marker.site.Rotation
 	local u = actor.unit
 	-- One physical route across the planks, the sill and the cut face. The
-	-- player chooses launch time. The tip travels the same distance on each
-	-- picture, including the exposure that matches into the isolated chamber.
+	-- player chooses launch time. The far end is a point on the photographed
+	-- front facet, shared with the chamber light and reflected in the stone.
 	local points = { marker.core.WorldPosition - origin, marker.site * V(-0.24 * u, -1.69 * u, 0.43 * u) - origin }
 	for _, vane in marker.runnels do
 		table.insert(points, vane.at.WorldPosition - origin + V(0, 0.13 * u, 0))
@@ -153,22 +153,57 @@ function Signal:place(marker, actor)
 	self.sill = #points - 3
 	for _, at in {
 		V(2.85, 0.50, 22.41), V(1.90, 2.04, 22.43), V(0.99, 2.82, 22.12), V(0.45, 2.92, 20.05),
-		V(0.30, 2.88, 16.11), V(0.61, 2.97, 10.72), V(1.14, 2.01, 3.15), V(0.96, 0.55, -0.97),
+		V(0.30, 1.02, 16.11), V(0.61, 1.37, 10.72), V(1.14, 1.36, 3.15), self.crystalContact,
 	} do table.insert(points, Run.shaft * at) end
 	self.lip, self.match = #points - 4, #points - 3
 	self.points, self.curve = points, Curve.new(points)
+	self.timedContact = nil
 	for i, v in points do
 		self.waypoints[i].Position = v
 	end
 end
 
 function Signal:time(i, contact)
-	return contact + (F.lode - contact) * self.curve.stops[i] / self.curve.stops[self.match]
+	if i == 1 then return contact end
+	if i == self.lip then return F.lode - 12 end
+	if i == self.match then return F.lode end
+	if i == #self.points then return Run.gemFrame end
+	-- Expose each inlay exactly when the travelling head crosses it.
+	if self.timedContact ~= contact then
+		self.timedContact, self.times = contact, {}
+	end
+	if self.times[i] then return self.times[i] end
+	local stop = self.curve.stops[i]
+	local lo, hi = contact, Run.gemFrame
+	for _ = 1, 17 do
+		local mid = (lo + hi) * 0.5
+		if self:distance(mid, contact) < stop then lo = mid else hi = mid end
+	end
+	self.times[i] = (lo + hi) * 0.5
+	return self.times[i]
+end
+
+function Signal:distance(frame, contact)
+	local match = self.curve.stops[self.match]
+	local lip = self.curve.stops[self.lip]
+	local lipFrame = F.lode - 12
+	local pace = (match - lip) / (F.lode - lipFrame)
+	if frame <= lipFrame then
+		-- Ease off over the last ten ground exposures and slip below the
+		-- collar half a second before the camera reaches the shaft match.
+		local bridgePace = (lip - pace * 5) / (lipFrame - contact - 5)
+		local braking = math.max(0, frame - lipFrame + 10)
+		return (frame - contact) * bridgePace + (pace - bridgePace) * braking * braking / 20
+	end
+	if frame <= F.lode then return lip + (frame - lipFrame) * pace end
+	local span = Run.gemFrame - F.lode
+	local t = math.clamp((frame - F.lode) / span, 0, 1)
+	return match + (self.curve.length - match) * (3 - 2 * t) * t * t
+		+ pace * span * t * (1 - t) ^ 2 + 0.25 * span * t * t * (t - 1)
 end
 
 function Signal:sample(frame, contact)
-	local distance = (frame - contact) * self.curve.stops[self.match] / (F.lode - contact)
-	return self.curve:sample(distance)
+	return self.curve:sample(self:distance(frame, contact))
 end
 
 function Signal:basis(frame)
@@ -187,7 +222,7 @@ function Signal:draw(stage, frame, contact, motion)
 	self.root.Parent = stage
 	local ageAtLip = frame - self:time(self.lip, contact)
 	local atLip = ageAtLip >= 0
-	local finish = 1 - S.ease(frame, arrived - 2, arrived + 6)
+	local finish = 1 - S.ease(frame, arrived, arrived + 6)
 	local point = self:sample(frame, contact)
 	local hit = if atLip then ageAtLip else age
 	local strike = if motion then (1 - S.ease(hit, 1, 8)) else 0
@@ -203,7 +238,7 @@ function Signal:draw(stage, frame, contact, motion)
 	self.heart.CFrame, self.mantle.CFrame = head, head
 	self.heart.Size = V(0.74, 0.79, 2.05) * math.max(0.015, wide)
 	self.mantle.Size = V(1.71, 1.53, 2.87) * math.max(0.015, wide)
-	self.heart.Transparency = if motion then 1 - finish else 1
+	self.heart.Transparency = 1 - finish
 	self.mantle.Transparency = if motion then 0.53 + 0.47 * (1 - finish) else 1
 	self.heartLight.Enabled = motion and not self.compact and finish > 0.01
 	self.heartLight.Brightness = (1.8 + 2.9 * strike) * finish

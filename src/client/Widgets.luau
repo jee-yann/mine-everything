@@ -1,5 +1,6 @@
 local TweenService = game:GetService("TweenService")
 local Audio = require(script.Parent.HarborAudio)
+local Purity = require(game:GetService("ReplicatedStorage").Shared.OrePurity)
 local W = {}
 local rgb = Color3.fromRGB
 W.ink, W.panel, W.card, W.line = rgb(18, 24, 44), rgb(30, 41, 65), rgb(48, 61, 89), rgb(77, 95, 127)
@@ -208,5 +209,12 @@ function W.colored(text, color)
 end
 function W.unitPrice(value)
 	return W.colored(W.number(value) .. " G each", W.gold)
+end
+function W.possiblePrice(ore, player)
+	local low, high = Purity.priceRange(ore, player:GetAttribute("SkillBroker"))
+	local multiplier = if player:GetAttribute("DoubleGold") then 2 else 1
+	local amount = W.number(low * multiplier)
+	if low ~= high then amount ..= "–" .. W.number(high * multiplier) end
+	return amount .. " G"
 end
 return W

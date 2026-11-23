@@ -279,7 +279,7 @@ function Map:position()
 	if size.X <= 0 or size.Y <= 0 then
 		return
 	end
-	local scale = math.clamp(math.min(size.X / 800, (size.Y - 95) / 553), 0.73, 1.72) * self.zoom
+	local scale = math.clamp(math.min(size.X / 690, (size.Y - 95) / 474), 0.86, 1.94) * self.zoom
 	self.scale.Scale = scale
 	local bounds = self.extent * scale + Vector2.new(75, 95)
 	self.pan = Vector2.new(math.clamp(self.pan.X, -bounds.X, bounds.X), math.clamp(self.pan.Y, -bounds.Y, bounds.Y))

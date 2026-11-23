@@ -1,9 +1,11 @@
 -- Music and location effects have separate player-controlled buses.
 local sheet = require(script.Parent.ExposureSheet)
+local gemFrame = require(script.Parent.GalleryRun).gemFrame
 local fps, frame = sheet.fps, sheet.frames
 local contact, ignition, eruption, breaker = frame.contact / fps, frame.ignition / fps, frame.eruption / fps, frame.breaker / fps
-local chooseScoreAt = 458 / fps
-local scoreIn, scoreOut = frame.settlement / fps, (frame.duration - 1) / fps
+local seam, match = frame.seam / fps, frame.match / fps
+local chooseScoreAt = seam
+local scoreIn, scoreOut = match + 0.50, (frame.duration - 1) / fps
 local backswing = 8
 local automaticContact = frame.autoStrike + backswing
 local aftermath = frame.aftermath / fps
@@ -28,7 +30,7 @@ local bank = {
 	glass = instrument("Star harmonics", "volume_slider.ogg", 0.154422, 0.157030, 4.5, 0.008, 0.31, 1.65),
 	cello = instrument("Low bowed string", "impact_water.mp3", 0.132698, 0.135306, 0.43, 0.38, 0.40),
 	horn = instrument("Expedition horns", "impact_water.mp3", 0.633152, 0.635964, 0.83, 0.053, 0.12),
-	pulse = instrument("Ostinato bass", "action_jump_land.mp3", 0.046712, 0.050454, 1.58, 0.013, 0.078, 0.92),
+	pulse = instrument("Ostinato bass", "impact_water.mp3", 0.132698, 0.135306, 0.94, 0.032, 0.13, 0.92),
 	tide = timbre("Tide under the stars", "action_swim.mp3", 1.34, 2.92, 0.92, 0.38, 0.54),
 	swell = timbre("Atmospheric entry", "action_falling.ogg", 0.72, 5.42, 7.7, 0.44, 0.14),
 	pass = timbre("Ablation flypast", "action_falling.ogg", 3.03, 4.92, 6.85, 0.18, 0.15),
@@ -46,20 +48,21 @@ local bank = {
 	steam = timbre("Steam escaping the broken shore", "action_swim.mp3", 2.05, 3.26, 3.1, 0.75, 0.68),
 	collapse = timbre("Collapsing crater wall", "impact_explosion_03.mp3", 0.18, 0.95, 0.83, 0.22, 0.58),
 	blast = timbre("Shockwave bow", "impact_water.mp3", 0.047, 0.72, 1.48, 0.005, 0.19),
-	front = timbre("Shockwave arrival", "impact_explosion_03.mp3", 0.049, 1.78, 0.97, 0.003, 0.37),
+	front = timbre("Shockwave arrival", "action_falling.ogg", 2.35, 4.80, 5.3, 0.10, 0.48),
+	debris = timbre("Debris at the lens", "impact_explosion_03.mp3", 0.042, 0.70, 0.55, 0.006, 0.29),
 	ground = timbre("Basin rumble", "impact_explosion_03.mp3", 0.34, 2.45, 0.68, 0.28, 0.95),
 	sea = timbre("Whitewater", "impact_water.mp3", 0.06, 1.86, 0.92, 0.13, 0.37),
-	fault = timbre("Rock under strain", "action_jump_land.mp3", 0.026, 0.24, 2.05, 0.004, 0.10),
+	fault = timbre("Rock under strain", "impact_explosion_03.mp3", 0.87, 1.24, 0.36, 0.024, 0.14),
 	shard = timbre("Shale through the air", "action_falling.ogg", 2.37, 3.25, 5.30, 0.05, 0.24),
 	wind = timbre("Wind in the basin", "action_falling.ogg", 3.12, 7.90, 4.2, 0.52, 0.69),
 	cinder = timbre("Fire in the fissure", "action_swim.mp3", 1.87, 3.04, 3.2, 0.33, 0.68),
 	flame = timbre("Flame drawn through the vent", "action_falling.ogg", 2.54, 4.36, 6.8, 0.46, 0.80),
-	pop = timbre("Cinders spitting", "action_footsteps_plastic.mp3", 1.211, 1.273, 2.75, 0.003, 0.022),
-	boulder = timbre("Slumping basalt", "action_jump_land.mp3", 0.031, 0.235, 2.25, 0.007, 0.20),
-	sand = timbre("Loose shale", "action_footsteps_plastic.mp3", 0.047, 0.245, 1.86, 0.003, 0.085),
-	ember = timbre("Crater crackles", "action_jump.mp3", 0.02, 0.112, 1.16, 0.002, 0.024),
-	keel = timbre("Keel in the shallows", "action_swim.mp3", 0.45, 2.55, 3.4, 0.065, 0.24),
-	pulley = timbre("Ore hoist pulley", "action_get_up.mp3", 0.094, 0.406, 3.05, 0.062, 0.09),
+	pop = timbre("Cinders spitting", "impact_water.mp3", 0.419, 0.485, 0.47, 0.003, 0.034),
+	boulder = timbre("Slumping basalt", "impact_explosion_03.mp3", 0.76, 1.61, 0.47, 0.075, 0.31),
+	sand = timbre("Loose shale", "impact_explosion_03.mp3", 1.19, 1.66, 0.34, 0.019, 0.13),
+	ember = timbre("Crater crackles", "impact_water.mp3", 0.139, 0.182, 0.34, 0.003, 0.028),
+	vein = instrument("Resonance in the seam", "volume_slider.ogg", 0.154422, 0.157030, 2.1, 0.46, 0.84, 0.34),
+	iron = timbre("Iron pick at the working mine", "impact_water.mp3", 0.055, 0.125, 0.97, 0.002, 0.026),
 	cloth = timbre("Survey sleeve", "action_swim.mp3", 1.16, 1.72, 1.70, 0.05, 0.10),
 	lift = timbre("Pick settles on shoulder", "action_footsteps_plastic.mp3", 0.049, 0.16, 1.56, 0.003, 0.04),
 	fly = timbre("Lettering rush", "action_falling.ogg", 2.37, 3.25, 7.42, 0.022, 0.04),
@@ -83,7 +86,8 @@ bank.slam.eq, bank.paper.eq = { 6, 0, -6 }, { -20, 1, 5 }
 bank.prism.room, bank.ring.room = { 0.81, -11 }, { 0.95, -14 }
 bank.prism.effect, bank.ring.effect = true, true
 bank.chisel.eq, bank.chip.eq = { -5, 2, 6 }, { -16, 3, 1 }
-bank.pulley.eq, bank.pulley.loop = { -14, 4, -4 }, true
+bank.vein.room, bank.vein.effect = { 1.1, -12 }, true
+bank.iron.eq, bank.iron.room = { -13, 3, 5 }, { 0.66, -18 }
 bank.glass.room = { 1.1, -12 }
 bank.cello.eq = { 1, -3, -13 }
 bank.cello.room = { 1.3, -13 }
@@ -102,6 +106,7 @@ bank.collapse.eq = { 1, -2, -6 }
 bank.collapse.loop = true
 bank.blast.eq = { -5, 2, 5 }
 bank.front.eq = { 1, 1, -2 }
+bank.debris.eq = { -3, 1, -6 }
 bank.ground.eq = { 4, -9, -19 }
 bank.sea.eq = { 1, -3, -5 }
 bank.fault.eq = { -4, 1, 2 }
@@ -114,6 +119,7 @@ bank.boulder.room = { 0.6, -18 }
 bank.cinder.loop, bank.flame.loop = true, true
 bank.ember.eq = { -16, -4, 4 }
 bank.wind.eq = { -6, -5, -2 }
+bank.sand.eq = { -25, -6, 3 }
 bank.sand.pan, bank.ember.pan, bank.sea.pan = "left", "right", "left"
 bank.cinder.pan = "right"
 bank.ear.effect = true
@@ -161,33 +167,28 @@ local function arrange()
 	play("flame", eruption + 1.12, 2.27, 0.52, 0.91, 1.42, "right")
 	play("pressure", breaker - 1.55, 1.62, 0.29, 0.62, 0.94)
 	play("sea", breaker - 1.10, 1.16, 0.49, 0.63, 1.12, "left")
-	play("front", breaker, 1.67, 0.87, 1.03, 0.52)
-	play("blast", breaker, 0.42, 1.34, 0.92, 0.64, "inbound")
+	play("front", breaker - 0.14, 1.36, 1.46, 1.12, 0.60, "inbound")
+	play("blast", breaker, 0.28, 0.70, 0.49, 0.45, "inbound")
+	-- The rush carries the wave. A short, quieter report lands with the
+	-- first pieces of shale, after the main impact has already decayed.
+	play("debris", breaker + 3 / fps, 0.44, 1.13, 0.78, 0.87, "inbound")
 	play("fault", breaker + 0.09, 0.22, 1.46, 0.81, 0.96, "left")
 	play("shard", breaker + 0.17, 0.66, 1.89, 0.86, 0.63, "inbound")
-	play("ground", breaker + 0.13, 3.90, 0.63, 0.80, 0.39)
+	play("ground", breaker + 0.24, 3.30, 0.50, 0.67, 0.35)
 	play("sea", breaker + 0.34, 1.43, 0.85, 0.63, 0.54)
 	play("fault", breaker + 0.61, 0.27, 0.79, 0.66, 0.54, "right")
 	play("ear", breaker + 0.65, 1.96, 2.22, 0.69, 1.70)
 	play("shudder", 356 / fps, 0.61, 0.47, 0.66, 0.34, "right")
 	play("shudder", 402 / fps, 0.48, 0.41, 0.48, 0.32, "left")
-	play("shudder", 447 / fps, 0.39, 0.37, 0.34, 0.29, "left")
 	-- The pressure exhausts itself. Turbulent air feeding the hot vent, fine
 	-- crackles and a collapsing block keep their own depths across the basin.
-	play("flame", aftermath - 0.35, 4.12, 0.94, 0.88, 1.24, "left")
-	play("cinder", aftermath + 0.12, 5.99, 0.93, 1.05, 1.19)
-	play("wind", aftermath + 0.64, 6.07, 0.68, 1.02, 0.45)
-	play("steam", aftermath + 1.80, 3.72, 0.73, 0.54, 0.41, "left")
-	play("ground", aftermath + 2.06, 2.73, 0.38, 0.29, 0.27, "right")
-	play("flame", aftermath + 2.65, 3.50, 1.37, 0.78, 0.60, "right")
-	play("boulder", aftermath + 0.51, 0.54, 0.51, 1.03, 0.39, "left")
-	play("boulder", aftermath + 0.90, 0.30, 0.69, 0.65, 0.56, "left")
-	play("boulder", aftermath + 1.08, 0.20, 0.88, 0.38, 0.72, "left")
-	for i, rock in { 0.30, 1.16, 2.27, 3.54, 4.68 } do
-		local side = if i == 2 or i == 4 then "right" else "left"
-		play("sand", aftermath + rock, 0.19 + 0.018 * i, 1.24 - i * 0.13, 1.19 - i * 0.085, nil, side)
-	end
-	for i, tick in { 0.21, 0.73, 0.78, 1.93, 2.10, 3.52, 3.58, 4.44, 5.12 } do
+	play("flame", aftermath - 0.35, 2.10, 0.94, 0.88, 1.12, "left")
+	play("cinder", aftermath + 0.12, 2.82, 0.93, 0.92, 0.69)
+	play("wind", aftermath + 0.64, match - aftermath + 0.05, 0.68, 0.72, 0.45)
+	play("steam", seam - 0.42, match - seam + 0.28, 0.73, 0.51, 0.41, "left")
+	play("boulder", aftermath + 0.51, 1.32, 0.58, 0.76, 0.40, "left")
+	play("sand", aftermath + 1.19, 0.38, 0.91, 0.59, 0.69, "left")
+	for i, tick in { 0.21, 0.78, 1.93, 2.10 } do
 		local side = if i % 4 < 2 then "right" else "left"
 		play("pop", aftermath + tick, 0.047, 1.21 + (i % 5) * 0.26, 0.69 + (i % 4) * 0.13, nil, side)
 		if i % 3 == 1 then
@@ -195,18 +196,22 @@ local function arrange()
 		end
 	end
 
-	-- Water, cable and the two loose chips bridge the successive settlements.
-	play("wind", frame.recovery / fps + 0.40, 6.20, 0.61, 0.37, 0.41, "left")
-	note("glass", (frame.recovery + 42) / fps, 67, 1.85, 0.34)
-	note("glass", (frame.landing - 12) / fps, 74, 1.52, 0.31)
-	play("keel", frame.landing / fps, 1.48, 0.83, 0.86, 0.57)
-	play("tide", (frame.landing + 14) / fps, 2.17, 0.53, 0.62, 0.65)
-	play("pulley", 789 / fps, 44 / fps, 0.73, 1.04, 1.22, "left")
-	play("sand", 829 / fps, 0.17, 1.20, 0.76, 0.86, "right")
-	play("sand", 836 / fps, 0.11, 1.69, 0.49, 1.18, "right")
-	-- At the trial, first hear the point test the stone. The blow has a dry
-	-- attack; the two halves land on separate beats before the jewel rings.
-	play("sand", (frame.present + 4) / fps, 0.22, 0.73, 0.68, 0.62, "left")
+	-- The mineral hum crosses the cut intact. A pick in the working mine
+	-- catches the same E in a sharper attack, with a fifth in its reflection.
+	note("vein", seam + 0.18, 76, match - seam + 0.92, 0.70, "left")
+	play("iron", match + 1 / fps, 0.09, 1.88, 0.86, 1.32, "left")
+	note("ring", match + 1 / fps, 76, 1.02, 0.85, "left")
+	note("ring", match + 3 / fps, 83, 0.69, 0.34, "right")
+	-- Widen the sound on the cut to the finished harbor boulevard.
+	play("tide", (frame.establish - 2) / fps, 2.24, 0.54, 0.53, 0.61, "right")
+	play("wind", frame.establish / fps, 1.86, 0.56, 0.34, 0.47, "left")
+	note("cello", match - 0.58, 40, 2.24, 0.69)
+	note("cello", match + 1.02, 47, 1.62, 0.51)
+	-- The viewer meets the miner before the broadcast. Close cloth and a
+	-- higher glass note carry their introduction into the quieter screens.
+	play("cloth", (frame.present + 3) / fps, 0.34, 0.89, 0.49)
+	note("glass", (frame.present + 7) / fps, 71, 1.10, 0.47)
+	-- The two halves of the assay block land before the exposed jewel rings.
 	play("cloth", (frame.measure - 7) / fps, 0.42, 0.83, 0.78)
 	play("lift", (frame.measure + 3) / fps, 0.10, 1.37, 0.72)
 	play("swing", (frame.proofStrike - 5) / fps, 5 / fps, 1.18, 0.78, 2.03, "left")
@@ -224,8 +229,8 @@ local function arrange()
 	note("ring", (frame.lode - 5) / fps, 67, 0.94, 0.62, "signal")
 	play("drift", (frame.lode - 2) / fps, 1.39, 0.62, 0.70, 0.48)
 	note("prism", (frame.lode + 4) / fps, 69, 0.88, 0.51, "left")
-	note("prism", (frame.lode + 32) / fps, 88, 0.63, 0.90, "right")
-	note("prism", (frame.lode + 33) / fps, 100, 0.30, 0.31, "right")
+	note("prism", gemFrame / fps, 88, 0.63, 0.90, "signal")
+	note("prism", (gemFrame + 1) / fps, 100, 0.30, 0.31, "signal")
 
 	-- Each line arrives in two movements. The last downbeat is wider and
 	-- heavier, while the small ore stamp has a dry, paper-like slap.
@@ -235,7 +240,6 @@ local function arrange()
 		play("slam", headline / fps, 0.31, pitch, weight)
 		play("paper", headline / fps, 0.11, 1.06, weight * 0.76, 0.80)
 	end
-	title(906, 910, 1.04, 0.71)
 	title(frame.portrait + 7, frame.portrait + 9, 1.07, 0.85)
 	title(frame.lode + 13, frame.lode + 15, 0.55, 0.83)
 	title(frame.challenge + 2, frame.challenge + 4, 1.14, 0.64)
@@ -256,40 +260,37 @@ local function arrange()
 		cues[i].strike = true
 	end
 
-	-- A rising fifth first heard over the dark water becomes a G-major horn
-	-- call. The local arrangement has a pickup, a developing phrase and a coda,
-	-- so an unavailable performance still gives the story a scored ending.
+	-- The local score shares the pickup from the match cut. Its melody
+	-- follows the miner through the broadcast, the assay and the first dig.
 	local function alternate(key, exposure, pitch, count, gain)
 		note(key, exposure / fps, pitch, count / fps, gain)
 		cues[#cues].alternate = true
 	end
-	local roots = { 43, 43, 40, 36, 43, 38, 40, 36, 43, 38, 36, 40, 38, 43, 38, 36, 40, 38, 43, 36, 40, 38, 43 }
-	for bar, root in roots do
-		local beat = 458 + (bar - 1) * 48
-		alternate("pulse", beat, root, 11, 1.34)
-		alternate("pulse", beat + 24, root + 7, 7, 0.98)
-		if bar >= 4 then
-			alternate("pulse", beat + 18, root + 12, 4, 0.68)
-			alternate("pulse", beat + 36, root + (if bar % 2 == 0 then 12 else 7), 8, 0.86)
+	local scoreStart = frame.match + 12
+	local bass = { 40, 43, 38, 43, 40, 36, 43, 38 }
+	for beat = scoreStart, frame.handoff - 16, 24 do
+		local bar = math.floor((beat - scoreStart) / 48)
+		local root = bass[bar % #bass + 1]
+		local offbeat = (beat - scoreStart) % 48 == 24
+		local gain = if beat < frame.measure then 0.57 elseif beat < frame.beacon then 0.80 else 1.06
+		alternate("pulse", beat, if offbeat then root + 7 else root, if offbeat then 8 else 13, gain)
+	end
+	local function phrase(start, notes, gain)
+		for _, n in notes do
+			alternate("horn", start + n[1], n[2], n[3], gain)
 		end
 	end
-	for _, phrase in {
-		{ 474, 62, 16 }, { 494, 67, 31 }, { 536, 69, 13 }, { 555, 71, 30 },
-		{ 600, 67, 13 }, { 620, 69, 12 }, { 644, 74, 30 }, { 686, 71, 13 },
-		{ 710, 72, 22 }, { 740, 71, 9 }, { 752, 67, 14 }, { 776, 69, 12 },
-		{ 800, 74, 28 }, { 840, 67, 10 }, { 853, 71, 11 }, { 869, 74, 13 },
-		{ 891, 76, 14 }, { 910, 79, 38 }, { 960, 74, 18 }, { 990, 71, 18 },
-		{ 1020, 74, 18 }, { 1042, 79, 22 }, { 1076, 72, 12 }, { 1094, 74, 14 },
-		{ 1116, 79, 30 }, { 1156, 78, 11 }, { 1170, 79, 14 },
-		{ 1201, 76, 24 }, { 1240, 74, 16 }, { 1274, 71, 22 }, { 1310, 74, 14 },
-		{ 1346, 79, 25 }, { 1382, 81, 16 }, { 1410, 83, 21 }, { 1450, 78, 21 },
-		{ 1496, 79, 35 }, { 1535, 74, 10 }, { 1548, 79, 12 },
-	} do
-		alternate("horn", phrase[1], phrase[2], phrase[3], if phrase[1] < 640 then 0.88 else 1.23)
-	end
-	for _, answer in { { 624, 74 }, { 852, 76 }, { 915, 86 }, { 1028, 83 }, { 1133, 86 }, { 1172, 91 } } do
-		alternate("glass", answer[1], answer[2], 17, 0.45)
-	end
+	phrase(frame.match, { { 29, 59, 13 }, { 44, 64, 25 } }, 0.65)
+	phrase(frame.broadcast, { { 10, 66, 11 }, { 28, 67, 26 }, { 72, 69, 18 } }, 0.68)
+	phrase(frame.computer, { { 4, 67, 22 }, { 40, 64, 16 } }, 0.73)
+	phrase(frame.revealGem, { { 4, 71, 13 }, { 22, 74, 22 } }, 0.93)
+	phrase(frame.portrait, { { 3, 67, 8 }, { 12, 74, 26 }, { 45, 71, 18 } }, 1.03)
+	phrase(frame.commission, { { 3, 69, 19 }, { 34, 67, 22 } }, 0.80)
+	phrase(frame.beacon, { { 1, 71, 23 }, { 52, 74, 19 } }, 0.78)
+	phrase(frame.mineRun, { { 1, 67, 16 }, { 20, 71, 12 } }, 1.04)
+	phrase(frame.lode, { { 2, 74, 19 }, { 34, 78, 15 }, { 54, 79, 14 } }, 0.94)
+	phrase(frame.challenge, { { 1, 74, 12 }, { 16, 79, 32 } }, 1.12)
+	alternate("cello", frame.handoff + 2, 43, 31, 0.65)
 	table.sort(cues, function(a, b)
 		return a.at < b.at
 	end)
@@ -424,7 +425,7 @@ return function(parent, musicGroup, effectsGroup)
 		-- Commit to one arrangement for this screening. A late network load must
 		-- never replace the live arrangement halfway through a phrase.
 		if useRecording == nil and t >= chooseScoreAt then
-			useRecording = score.IsLoaded and score.TimeLength >= 24
+			useRecording = score.IsLoaded and score.TimeLength >= math.max(24, (scoreOut - scoreIn) * 0.5)
 			if useRecording then
 				local speed = math.min(1, score.TimeLength / (scoreOut - scoreIn))
 				score.PlaybackSpeed = speed
@@ -441,16 +442,17 @@ return function(parent, musicGroup, effectsGroup)
 				score:Play()
 				scoreStarted = true
 			end
-			local emphasis = math.max(duck(t, 789 / fps), duck(t, 910 / fps), duck(t, frame.proofStrike / fps),
-				duck(t, (frame.portrait + 9) / fps), duck(t, frame.lode / fps), duck(t, (frame.challenge + 4) / fps))
+			local emphasis = math.max(duck(t, frame.proofStrike / fps), duck(t, (frame.portrait + 9) / fps),
+				duck(t, gemFrame / fps), duck(t, (frame.challenge + 4) / fps))
 			if strikeAt then
 				emphasis = math.max(emphasis, duck(t, strikeAt))
 			end
-			-- Ease the same orchestra underneath the measured blow and let it
-			-- rise naturally with the emerald, the guild portrait and the mine.
-			local trial = math.clamp(math.min((t * fps - frame.present + 18) / 24, (frame.revealGem + 20 - t * fps) / 23), 0, 1)
-			local envelope = math.clamp(math.min(age / 1.15, (scoreOut - t) / 0.70), 0, 1)
-			score.Volume = (1.22 - 0.46 * trial - 0.32 * emphasis) * envelope
+			-- Ease the orchestra in under the face. Let the workbench strike
+			-- speak, then open the score as the miner shoulders the pick.
+			local trial = math.clamp(math.min((t * fps - frame.measure + 14) / 22, (frame.revealGem + 19 - t * fps) / 20), 0, 1)
+			local entrance = math.clamp(age / 2.8, 0, 1)
+			local envelope = entrance * entrance * (3 - 2 * entrance) * math.clamp((scoreOut - t) / 0.85, 0, 1)
+			score.Volume = (1.14 - 0.39 * trial - 0.31 * emphasis) * envelope
 		elseif scoreStarted and score.IsPlaying then
 			score:Stop()
 		end
@@ -465,7 +467,7 @@ return function(parent, musicGroup, effectsGroup)
 			if t >= passStart and t <= passEnd then
 				local pass = math.clamp((t - passStart) / (passEnd - passStart), 0, 1)
 				anchors.outbound.Position = view * Vector3.new(-26 + 51 * pass, 4, -31 + 39 * pass)
-			elseif t >= breaker and t <= breaker + 0.85 then
+			elseif t >= breaker - 0.14 and t <= breaker + 0.85 then
 				local pass = math.clamp((t - breaker) / 0.62, 0, 1)
 				anchors.inbound.Position = view * Vector3.new(20 - 46 * pass, 2, -24 + 31 * pass)
 			elseif t >= frame.mineRun / fps then

@@ -1,5 +1,6 @@
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Ores = require(Shared.Ores)
+local Purity = require(Shared.OrePurity)
 local W, Slider = require(script.Parent.Widgets), require(script.Parent.Slider)
 local SellCounter = {}
 local stride = 124
@@ -9,36 +10,40 @@ local function makeRow(menu, ore, slot)
 	local row = title.Parent
 	row.Position, row.Size = UDim2.fromOffset(1, 1 + slot * stride), UDim2.fromOffset(447, 117)
 	title.Name, title.RichText = "Stock", true
-	title.Size = UDim2.fromOffset(206, 25)
+	title.Size = UDim2.fromOffset(206, 27)
 	title.TextScaled = true
 	local stockFont = Instance.new("UITextSizeConstraint")
-	stockFont.MinTextSize, stockFont.MaxTextSize, stockFont.Parent = 12, 20, title
+	stockFont.MinTextSize, stockFont.MaxTextSize, stockFont.Parent = 13, 22, title
 	detail.Name, detail.RichText = "Unit price", true
-	detail.Position, detail.Size, detail.TextSize = UDim2.fromOffset(67, 30), UDim2.fromOffset(205, 25), 15
+	detail.Position, detail.Size, detail.TextSize = UDim2.fromOffset(67, 28), UDim2.fromOffset(205, 34), 16
 	detail.TextScaled = true
 	local detailFont = Instance.new("UITextSizeConstraint")
-	detailFont.MinTextSize, detailFont.MaxTextSize, detailFont.Parent = 12, 15, detail
+	detailFont.MinTextSize, detailFont.MaxTextSize, detailFont.Parent = 12, 16, detail
 	sell.Name, sell.Position, sell.Size = "Sell quantity", UDim2.fromOffset(277, 8), UDim2.fromOffset(158, 51)
 	sell.TextScaled = true
 	local saleFont = Instance.new("UITextSizeConstraint")
-	saleFont.MinTextSize, saleFont.MaxTextSize, saleFont.Parent = 11, 18, sell
+	saleFont.MinTextSize, saleFont.MaxTextSize, saleFont.Parent = 13, 21, sell
 	local stack = W.button(row, "Select stack", 277, 66, 158, 44, W.muted, "", "Select")
 	local less = W.button(row, "Fewer", 9, 66, 44, 44, W.muted, "−", "Select")
 	local more = W.button(row, "More", 222, 66, 44, 44, W.muted, "+", "Select")
 	local tint = ore.color:Lerp(W.white, 0.5)
-	local stock, quantity, price = 0, 1, ore.value
+	local stock, quantity, multiplier = 0, 1, 1
+	local grades = {}
 	local paint
 	local function draw()
 		local available = stock > 0
 		quantity = if available then math.clamp(quantity, 1, stock) else 0
-		sell.Text = if available then string.format("Sell %s %s\n+%s gold", W.goldAmount(quantity), ore.name, W.goldAmount(quantity * price)) else "Sold out"
+		sell.Text = if available then string.format("Sell %s %s\n+%s gold", W.goldAmount(quantity), ore.name, W.goldAmount(Purity.quote(ore, stock, grades, quantity, menu.player:GetAttribute("SkillBroker")) * multiplier)) else "Sold out"
 		sell.Interactable, sell.BackgroundColor3 = available, if available then W.gold else W.muted
 		stack.Text = "Select all (" .. W.goldAmount(stock) .. ")"
 		stack.Interactable = quantity < stock
 		less.Interactable, more.Interactable = quantity > 1, quantity < stock
 		less.TextTransparency = if less.Interactable then 0 else 0.55
 		more.TextTransparency = if more.Interactable then 0 else 0.55
-		detail.Text = W.unitPrice(price) .. "  ·  " .. W.goldAmount(stock - quantity) .. " left after sale"
+		local low, high = Purity.range(grades)
+		local gradeText = if low then (if low == high then low .. "%" else low .. "–" .. high .. "%") .. " pure · low sells first"
+			else W.unitPrice(Purity.quote(ore, stock, grades, math.min(stock, 1), menu.player:GetAttribute("SkillBroker")) * multiplier)
+		detail.Text = gradeText .. "\n" .. W.goldAmount(stock - quantity) .. " left after sale"
 		paint(if stock > 1 then (quantity - 1) / (stock - 1) else 0, stock > 1)
 	end
 	local function step(delta)
@@ -59,9 +64,10 @@ local function makeRow(menu, ore, slot)
 		quantity = stock
 		draw()
 	end)
-	return function(count, multiplier)
+	return function(count, saleMultiplier)
 		if count < stock then quantity = 1 end
-		stock, price = count, ore.value * multiplier
+		stock, multiplier = count, saleMultiplier
+		grades = Purity.decode(menu.player:GetAttribute("Grades" .. ore.name))
 		title.Text = ore.name .. "  " .. W.colored("×" .. W.goldAmount(count), tint) .. " in pack"
 		draw()
 	end
@@ -73,7 +79,7 @@ function SellCounter.build(menu)
 	table.insert(menu.updates, function()
 		local player = menu.player
 		local multiplier = if player:GetAttribute("DoubleGold") then 2 else 1
-		local value, blocks = 0, 0
+		local value, blocks = (player:GetAttribute("BagValue") or 0) * multiplier, 0
 		for _, ore in Ores.list do
 			local count = player:GetAttribute("Held" .. ore.name) or 0
 			-- Keep each stack in its slot until the menu closes, including after a sale.
@@ -82,7 +88,6 @@ function SellCounter.build(menu)
 				slots += 1
 			end
 			if rows[ore.name] then rows[ore.name](count, multiplier) end
-			value += count * ore.value * multiplier
 			blocks += count
 		end
 		menu.sellAll.Text = string.format("Sell entire pack\n%s %s · +%s G", W.goldAmount(blocks),

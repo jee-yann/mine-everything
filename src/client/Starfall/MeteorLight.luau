@@ -177,7 +177,7 @@ end
 -- angle onto the surveyed terraces so the light grazes their actual surfaces.
 function MeteorLight:draw(t, star, camera, motion, masterFrame)
 	local frame = masterFrame or math.floor(sheet.frameForScene(t) + 0.5)
-	local nightSea = frame < 570
+	local nightSea = frame < sheet.frames.match
 	if nightSea ~= self.nightSea then
 		self.nightSea = nightSea
 		for _, water in self.receivers do

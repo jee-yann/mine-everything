@@ -168,7 +168,7 @@ local function drawSlab(v, age, base, direction, scale)
 		if v.where == "landed" then
 			return
 		end
-		location = CF(v.wornTarget or v.target) * v.terminal
+		location = CF(v.target) * v.terminal
 		v.where = "landed"
 	end
 	v.shell:PivotTo(base * location)
@@ -186,8 +186,6 @@ function Fault.new(stage, base)
 			compact = compact,
 			coast = {},
 			branches = {},
-			inlet = {},
-			buried = Instance.new("Folder"),
 		},
 		Fault
 	)
@@ -208,10 +206,6 @@ function Fault.new(stage, base)
 		top.Quartz.Color = if i % 3 == 0 then Color3.fromHex("A39376") else Color3.fromHex("A39981")
 		top.Cap.Color = crowns[i % 3 + 1]
 		foot.Parent, top.Parent = root, root
-		if x < -85 and z > 45 then
-			self.inlet[#self.inlet + 1] = foot
-			self.inlet[#self.inlet + 1] = top
-		end
 		if loose then
 			local heading = V(x, 0, z + 32).Unit
 			local spin = A(1.74, 0.78, 1.58)
@@ -286,46 +280,14 @@ function Fault:addCanopy(tree, index)
 	)
 end
 
-function Fault:draw(t)
-	local active = t >= 0 and t < 19.30
+function Fault:draw(t, active)
 	if active ~= (self.root.Parent ~= nil) then
 		self.root.Parent = if active then self.stage else nil
 	end
 	if not active then
 		return
 	end
-	local wear = if t < 13.55 then 0 elseif t < 14.55 then 1 elseif t < 15.60 then 2 elseif t < 16.70 then 3 else 4
-	if self.erosion ~= wear then
-		local change = self.erosion ~= nil or wear > 0
-		self.erosion = wear
-		local factor = ({ 1, 0.87, 0.73, 0.58, 0.58 })[wear + 1]
-		for _, s in self.sites do
-			local inlet = s.origin.X < -85 and s.origin.Z > 45
-			s.bed.Parent = if wear == 4 and inlet then self.buried else self.root
-			for _, p in s.pieces do
-				if change then
-					p.shell:ScaleTo(s.scale * factor)
-					p.wornTarget = if wear == 0
-						then nil
-						else p.target - V(
-							0,
-							(1 - factor) * (math.max(0, p.target.Y - p.ground.Y) + 1.85 * s.scale),
-							0
-						)
-					if p.where == "landed" then
-						p.where = "burial"
-					end
-				end
-				p.shell.Parent = if wear == 4 and (inlet or p.target.X < -85 and p.target.Z > 45)
-					then self.buried
-					else self.root
-			end
-		end
-		for _, p in self.inlet do
-			p.Parent = if wear == 4 then self.buried else self.root
-		end
-	end
-	local still = if t < 4.87 then 1 elseif t >= 13.55 then 3 + wear elseif t >= 11.4 then 2 else 0
+	local still = if t < 4.87 then 1 elseif t >= 11.4 then 2 else 0
 	if still ~= 0 and self.still == still then
 		return
 	end
@@ -356,7 +318,7 @@ function Fault:draw(t)
 	end
 	for _, v in self.sites do
 		local age = t - v.cut
-		local temp = if age < -0.15 then 0 elseif age < 0.08 then 1 elseif age < 0.70 then 2 elseif t < 13.55 then 3 else 4
+		local temp = if age < -0.15 then 0 elseif age < 0.08 then 1 elseif age < 0.70 then 2 else 3
 		if temp ~= v.band then
 			v.band = temp
 			for j, p in v.pieces do
@@ -370,7 +332,7 @@ function Fault:draw(t)
 					then v.stone:Lerp(Color3.fromHex("A58C7E"), 0.48)
 					elseif temp == 3 then v.stone:Lerp(ash, (j + 1) * 0.09)
 					else v.stone
-				p.shell.Cap.Color = if temp >= 2 then (if temp == 3 then ash else v.crown:Lerp(ash, 0.44)) else v.crown
+				p.shell.Cap.Color = if temp == 3 then ash elseif temp == 2 then v.crown:Lerp(ash, 0.44) else v.crown
 			end
 			v.bed.Cleavage.Color = if temp == 2 then glow elseif temp == 3 then peat else ash
 			for j, p in v.cracks do
@@ -378,7 +340,6 @@ function Fault:draw(t)
 				p.Material = if temp == 1 and j <= 2 then Enum.Material.Neon else Enum.Material.Slate
 				p.Transparency = if temp == 0
 					then 1
-					elseif temp == 4 then 0.56
 					elseif temp == 1 then 0.29 + j * 0.07
 					else 0.20
 			end
@@ -414,6 +375,5 @@ function Fault:Destroy()
 		b.model:Destroy()
 	end
 	self.root:Destroy()
-	self.buried:Destroy()
 end
 return Fault

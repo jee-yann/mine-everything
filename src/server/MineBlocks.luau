@@ -109,7 +109,8 @@ local function brick(self, p, material)
 	end
 	local grain = (p.X * 7 + p.Y * 3 + p.Z * 11) % 5
 	part.Color = tint:Lerp(if grain < 2 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1), math.abs(grain - 2) * 0.016)
-	part.Material = if not ore
+	part.Material = if grade then grade.material
+		elseif not ore
 		then Enum.Material.SmoothPlastic
 		elseif not ore.host then Enum.Material.SmoothPlastic
 		else Enum.Material.Plastic

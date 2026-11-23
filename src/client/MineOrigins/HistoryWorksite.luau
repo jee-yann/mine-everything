@@ -264,11 +264,20 @@ function Worksite.build(shelf, register, spent, dock, camp)
 	local foreman = Rig.new(shelf, "Quarry foreman")
 	local mate = Rig.new(shelf, "Bridge carpenter")
 	local surveyor = Rig.new(shelf, "First surveyor ashore")
+	local mallet = P.model(mate.model, "Decking mallet")
+	timber(mallet, "Ash haft", Vector3.zero, V(0, 1.5, 0), 0.17, "E1B97C")
+	P.box(mallet, "Hardwood head", V(0, 1.46, 0), V(0.96, 0.48, 0.55), "996744")
+	local flag = P.model(foreman.model, "Hoist signal")
+	timber(flag, "Hickory staff", Vector3.zero, V(0, 3.62, 0), 0.13, "EAC89C")
+	P.face(flag, V(0, 3.61, 0), V(0, 2.26, 0), V(2.55, 2.76, 0.22), rgb("F29C49"))
+	P.face(flag, V(0, 3.61, 0), V(1.09, 3.24, 0.08), V(0, 3.19, 0), rgb("FFF0C1"))
 	register(surveyor.model, 5.0, 7.93, false)
 	register(foreman.model, 11.47, 14.75, false)
 	register(mate.model, 9.1, 10.82, false)
 	return {
 		hull = hull,
+		mallet = mallet,
+		flag = flag,
 		dock = dockCF,
 		foreman = foreman,
 		mate = mate,
@@ -280,6 +289,17 @@ function Worksite.build(shelf, register, spent, dock, camp)
 	}
 end
 
+local deckNails = { 9.10, 9.46, 9.82, 10.71 }
+local function hammerLoad(t)
+	local lift = 0
+	for _, contact in deckNails do
+		local gather = P.ease(t, contact - 0.25, contact - 0.17)
+		local strike = math.clamp((t - (contact - 0.09)) / 0.09, 0, 1)
+		lift = math.max(lift, gather * (1 - strike * strike))
+	end
+	return lift
+end
+
 function Worksite.expose(work, t, base)
 	if t >= 6.70 and t < 9.84 then
 		local camp = work.station
@@ -289,8 +309,15 @@ function Worksite.expose(work, t, base)
 		local leave = math.clamp((t - 9.42) / 0.31, 0, 1)
 		local floor = base * CF(at.X, math.max(-0.08, at.Y) + 0.12, at.Z) * A(0, 0.52, 0)
 		camp.m:PivotTo(floor * CF(0, -(1 - start) * 2.6, 0))
-		local span = math.clamp((t - 6.86) / 0.48, 0, 1) * (1 - leave)
 		for _, w in camp.wings do
+			-- One side catches the breeze before the second sheet is hauled
+			-- across. Both continue to pivot on the actual ridgepole.
+			local pull = t - 6.86 - (if w.side < 0 then 0.105 else 0)
+			local span = (
+				0.35 * P.ease(pull, 0.00, 0.065)
+				+ 0.78 * P.ease(pull, 0.18, 0.29)
+				- 0.13 * P.ease(pull, 0.32, 0.40)
+			) * (1 - leave)
 			w.m:PivotTo(floor * CF(0, 7.4, 0) * A(0, 0, -w.side * 0.706 * (1 - span)))
 		end
 	end
@@ -344,26 +371,35 @@ function Worksite.expose(work, t, base)
 	end
 	if t >= 9.1 and t < 10.82 then
 		local u = math.clamp((t - 9.1) / 1.64, 0, 1)
-		local bend = (1 - math.cos((t - 9.1) * math.pi * 4.25)) * 0.5
-		work.mate:pose(base * CF(-2.8, 0.08, 39.5 - 13.5 * u) * A(0, -0.23, 0), {
-			bob = -0.32 * bend,
-			RootJoint = A(-0.46 * bend, 0, 0),
-			RightShoulder = A(0.29 + 1.1 * bend, 0, 0.14),
-			LeftShoulder = A(0.48, 0, -0.13),
-			RightHip = A(-0.13, 0, 0),
-			LeftHip = A(0.13, 0, 0),
+		local lift = hammerLoad(t)
+		local foot = base * CF(-2.8, 0.08, 39.5 - 13.5 * u) * A(0, -0.23, 0)
+		work.mate:pose(foot, {
+			bob = -0.51 + 0.46 * lift,
+			RootJoint = A(-0.59 + 0.54 * lift, 0.18 - 0.38 * lift, -0.05),
+			RightTarget = foot * V(1.20, 1.42 + 2.72 * lift, -0.75 + 0.19 * lift),
+			LeftTarget = foot * V(-0.83, 1.82, -0.94),
+			RightHip = A(-0.24, 0, 0),
+			LeftHip = A(0.28, 0, 0),
 		})
+		local hand = work.mate:palm("Right")
+		work.mallet:PivotTo(CF(hand) * foot.Rotation * A(2.65 - 2.98 * lift, 0, -0.27))
 	end
 	if t >= 11.47 and t < 14.75 then
-		local strike = ((1 - math.cos((t - 11.47) * math.pi * 3.65)) * 0.5) ^ 0.62
 		local side = math.clamp((t - 12.15) / 1.62, 0, 1)
-		work.foreman:pose(base * CF(-3.2 + side * 6.1, 0.06, 8.35) * A(0, -0.18, 0), {
-			bob = -0.17 * strike,
-			RootJoint = A(-0.28 * strike, 0, 0),
-			RightShoulder = A(0.25 + 1.28 * (1 - strike), 0, 0.18),
-			LeftShoulder = A(0.51, 0, -0.27),
-			Neck = A(0.14 * strike, 0, 0),
+		local signal = P.ease(t, 12.25, 12.41)
+			- P.ease(t, 12.90, 12.98)
+			+ P.ease(t, 13.17, 13.27)
+			- P.ease(t, 13.63, 13.70)
+		local foot = base * CF(-3.2 + side * 6.1, 0.06, 8.35) * A(0, -0.18, 0)
+		work.foreman:pose(foot, {
+			bob = -0.10 + 0.19 * signal,
+			RootJoint = A(-0.12 + 0.25 * signal, -0.14, 0.07 * signal),
+			RightTarget = foot * V(1.34 + 0.34 * signal, 2.63 + 1.76 * signal, -0.44),
+			LeftShoulder = A(0.46, 0, -0.27),
+			Neck = A(0.19 * signal, -0.18, 0),
 		})
+		local hand = work.foreman:palm("Right")
+		work.flag:PivotTo(CF(hand) * foot.Rotation * A(0.09, -0.10, -1.33 + 1.22 * signal))
 	end
 end
 

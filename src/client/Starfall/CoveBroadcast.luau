@@ -1,84 +1,16 @@
--- The workbench is the live picture through the set's open TV bezel. Keeping
--- the actual camera feed preserves the miner's outfit, tools and performance.
+-- Each receiver has an open screen in a ViewportFrame. The picture inside
+-- is the actual player's live workbench, continuously photographed by Film.
 local S = require(script.Parent.Scenery)
 local cuts = require(script.Parent.ExposureSheet).frames
+local Rooms = require(script.Parent.AudienceRooms)
+local Cast = require(script.Parent.AudienceCast)
 local V, CF, A = Vector3.new, CFrame.new, CFrame.Angles
 local Broadcast = {}
 Broadcast.__index = Broadcast
-
-local glassY, glassW, glassH = 4.55, 8.0, 4.5
 local roomLens = 47
 local roomTangent = math.tan(math.rad(roomLens / 2))
-
-local function watcher(world, foot, scale, clothes, skin, cap, side)
-	local person = S.group("Fan at the TV")
-	local torso, arm = S.group("Coat and cap"), S.group("Raised sleeve")
-	torso.Parent, arm.Parent = person, person
-	for _, x in { -0.34, 0.34 } do
-		S.part(person, "Boot", CF(x, 0.19, -0.14), V(0.62, 0.36, 0.90), "343942")
-		S.part(person, "Denim", CF(x, 0.79, 0), V(0.57, 1.03, 0.62), "354A57")
-	end
-	S.part(torso, "Work coat", CF(0, 0.71, 0), V(1.49, 1.45, 0.83), clothes)
-	S.part(torso, "Collar", CF(0, 1.37, 0), V(1.03, 0.20, 0.88), cap)
-	local head = S.part(torso, "Head", CF(0, 1.94, 0), V(1.08, 1.05, 0.96), skin)
-	local shape = Instance.new("SpecialMesh")
-	shape.MeshType, shape.Parent = Enum.MeshType.Head, head
-	S.part(torso, "Hair at nape", CF(0, 2.08, 0.34), V(1.04, 0.51, 0.37), "483F43")
-	local brim = S.part(torso, "Cap brim", CF(0, 2.39, -0.10), V(1.38, 0.14, 1.48), cap)
-	local crown = S.part(torso, "Cap crown", brim.CFrame * CF(0, 0.17, 0.08), V(1.22, 0.55, 1.10), cap)
-	crown.Shape = Enum.PartType.Ball
-	S.part(torso, "Miner's cap band", CF(0, 2.44, 0.05), V(1.18, 0.08, 1.11), "E2B879")
-	S.part(torso, "Resting sleeve", CF(-side * 0.85, 0.79, -0.06) * A(0.22, 0, -side * 0.12), V(0.50, 0.99, 0.58), clothes)
-	S.part(torso, "Resting hand", CF(-side * 0.94, 0.24, -0.17), V(0.42, 0.42, 0.48), skin)
-	S.part(arm, "Sleeve", CF(0, -0.38, 0), V(0.48, 0.80, 0.56), clothes)
-	S.part(arm, "Fist", CF(0, -0.88, -0.04), V(0.44, 0.41, 0.48), skin)
-	if side < 0 then
-		local flag = S.part(arm, "Gold pennant", CF(-0.27, -1.57, -0.02) * A(0, math.pi / 2, math.pi), V(0.08, 0.45, 0.62), "F4C256", nil, "WedgePart")
-		flag.CastShadow = false
-		S.part(arm, "Pennant stick", CF(0, -1.34, 0), V(0.07, 0.94, 0.07), "B78152")
-	end
-	person.Parent = world
-	person:ScaleTo(scale)
-	person:PivotTo(foot)
-	return { torso = torso, arm = arm, foot = foot, scale = scale, side = side }
-end
-
-local function room(world)
-	local function box(name, x, y, z, w, h, d, color)
-		return S.part(world, name, CF(x, y, z), V(w, h, d), color)
-	end
-	local top, bottom = glassY + glassH / 2, glassY - glassH / 2
-	-- Four boards close the wall everywhere except the live picture.
-	box("Upper wall", 0, top + 16, -0.29, 100, 32, 0.42, "405A60")
-	box("Lower wall", 0, bottom - 16, -0.29, 100, 32, 0.42, "4E6261")
-	for _, side in { -1, 1 } do
-		box("Wall beside receiver", side * (glassW / 2 + 25), glassY, -0.29, 50, glassH + 0.06, 0.42, "496568")
-		box("Copper upright", side * 8, 4, 0.02, 0.24, 12, 0.30, "A78055")
-		box("Cabinet stile", side * 4.23, glassY, 0, 0.46, glassH + 0.84, 0.46, "845C46")
-		box("Graphite bezel", side * 4.06, glassY, 0.15, 0.13, glassH + 0.19, 0.19, "152635")
-	end
-	for _, y in { bottom - 0.2, top + 0.2 } do
-		box("Walnut cabinet", 0, y, -0.01, 8.76, 0.40, 0.46, "A8744D")
-	end
-	for _, y in { bottom - 0.05, top + 0.05 } do
-		box("Bezel lip", 0, y, 0.15, glassW, 0.1, 0.19, "172C37")
-	end
-	box("Receiver shelf", 0, bottom - 0.54, 0.26, 9.85, 0.20, 1.43, "CA9362")
-	box("Radio cabinet", 0, 0.76, -0.01, 8.40, 1.43, 1.01, "654F46")
-	for i = -10, 10 do
-		box("Speaker slat", i * 0.35, 0.80, 0.56, 0.21, 0.96, 0.09, "99755B")
-	end
-	local floor = box("Floor", 0, -0.14, 4, 100, 0.27, 60, "80654D")
-	for i = 1, 7 do
-		box("Floorboard seam", 0, 0.009, i * 1.37, floor.Size.X, 0.015, 0.034, "654F42")
-	end
-	-- Oak pegs with the tools off duty beside their owners.
-	for _, x in { -5.95, 6.18 } do
-		local tool = CF(x, 4.7, 0.17) * A(0, 0, math.rad(if x < 0 then -27 else 28))
-		S.part(world, "Worn pick handle", tool, V(0.21, 2.51, 0.19), "CB9A67")
-		S.part(world, "Mounted pick head", tool * CF(0, 0.91, 0), V(1.47, 0.26, 0.31), "9EAAA7")
-	end
-end
+-- The top matte is at least 4.5% of the picture height.
+local warmPosition, warmSize = UDim2.fromScale(0.46, 0.006), UDim2.fromScale(0.047, 0.034)
 
 local function label(parent, text, color, background, x, width)
 	local t = Instance.new("TextLabel")
@@ -87,69 +19,227 @@ local function label(parent, text, color, background, x, width)
 	t.BorderSizePixel, t.TextScaled, t.ZIndex = 0, true, 3
 	t.Position, t.Size, t.Parent = UDim2.fromScale(x, 0), UDim2.fromScale(width, 1), parent
 	local pad = Instance.new("UIPadding")
-	pad.PaddingTop, pad.PaddingBottom = UDim.new(0.10, 0), UDim.new(0.10, 0)
+	pad.PaddingTop, pad.PaddingBottom = UDim.new(0.1, 0), UDim.new(0.1, 0)
 	pad.Parent = t
 end
 
-function Broadcast.new(screen)
+local function viewport(screen)
 	local view = Instance.new("ViewportFrame")
-	view.Name, view.Size = "Miners watching Cove TV", UDim2.fromScale(1, 1)
+	view.Name, view.Size = "Cove TV audience", UDim2.fromScale(1, 1)
 	view.BackgroundTransparency, view.BorderSizePixel, view.Visible, view.ZIndex = 1, 0, false, 2
-	view.Ambient, view.LightColor = Color3.fromHex("89818D"), Color3.fromHex("FFE6BC")
-	view.LightDirection, view.Parent = V(-0.65, -0.59, -0.46), screen
+	view.LightDirection, view.Parent = V(-0.53, -0.68, -0.48), screen
 	local cam = Instance.new("Camera")
 	cam.FieldOfView, cam.Parent, view.CurrentCamera = roomLens, view, cam
+	return view
+end
+
+function Broadcast.new(screen)
+	local view = viewport(screen)
 	local bug = Instance.new("Frame")
 	bug.Name, bug.BackgroundTransparency, bug.ZIndex, bug.Visible, bug.Parent = "Cove TV station ID", 1, 3, false, screen
 	label(bug, "LIVE", "FFFFFF", "AE3542", 0, 0.36)
 	label(bug, "COVE TV", "FEF3DB", "203749", 0.36, 0.64)
-	return setmetatable({ view = view, camera = cam, bug = bug }, Broadcast)
+	return setmetatable({
+		view = view, camera = view.CurrentCamera, bug = bug, cast = Cast.new(), rooms = {},
+		views = { [Rooms.bedroom] = view, [Rooms.livingRoom] = viewport(screen), [Rooms.computer] = viewport(screen) },
+	}, Broadcast)
+end
+
+local function act(fan, age, motion, roll)
+	local place, rig = fan.place, fan.rig
+	-- Each gesture has an anticipation and a landing. The friends respond
+	-- to one another a few exposures apart as the camera turns to the screen.
+	local t = if motion then age else 23
+	local seat = place.seat
+	local breath = if motion then math.sin(t / 22 + seat) else 0
+	local forward = if place.seated then 1.28 else 0.03
+	local pose = {
+		bob = 0.018 * breath,
+		LeftHip = A(forward, -0.09, -0.04),
+		RightHip = A(forward + 0.07, 0.10, 0.04),
+		LeftKnee = A(if place.seated then -1.24 else 0, 0, 0),
+		RightKnee = A(if place.seated then -1.15 else 0, 0, 0),
+	}
+	local lean, turn, sway = 0, 0, 0
+	local foot = fan.foot
+	if seat == 1 then
+		local lift = S.ease(t, 4, 23)
+		local settle = S.ease(t, 26, 42)
+		lean = 0.43 - 0.17 * lift + 0.045 * settle
+		turn = -0.10 * lift
+		pose.RightTarget = (CF(0, Rooms.bedroom.y, 0) * A(0, 0, roll or Rooms.bedroom.roll)) * V(-0.85, -0.04, 0.15)
+		pose.LeftShoulder = A(0.45 + 0.26 * lift, -0.08, -0.18)
+		pose.Neck = A(-0.25 + 0.15 * lift, -0.03 - 0.08 * settle, 0.035)
+	elseif seat == 2 then
+		local notice = S.ease(t, 2, 16)
+		local point = S.ease(t, 9, 28) * (1 - S.ease(t, 36, 53))
+		local smile = S.ease(t, 35, 46) * (1 - 0.4 * S.ease(t, 48, 57))
+		lean = -0.20 * notice + 0.075 * smile
+		turn = -0.12 + 0.15 * notice
+		pose.RightShoulder = A(0.47 + 0.86 * point, -0.06, 0.16)
+		pose.LeftShoulder = A(0.47 + 0.12 * notice, 0, -0.11)
+		pose.RightElbow = A(0.46 - 0.33 * point, 0, 0)
+		pose.LeftElbow = A(0.45, 0, 0)
+		pose.Neck = A(-0.11 + 0.19 * notice + 0.11 * smile, 0.17 - 0.20 * notice, -0.09 * smile)
+	elseif seat == 3 then
+		local answer = S.ease(t, 12, 27) * (1 - S.ease(t, 31, 45))
+		turn = -0.20 * answer
+		lean = -0.07 - 0.09 * S.ease(t, 28, 45)
+		pose.Neck = A(-0.06, -0.39 * answer, -0.03)
+		pose.RightTarget = V(-0.96, 2.55 + 0.08 * answer, 1.39)
+		pose.LeftShoulder = A(0.62 + 0.25 * answer, 0, -0.12)
+	elseif seat == 4 then
+		local beckon = S.ease(t, 0, 15) * (1 - S.ease(t, 21, 36))
+		local point = S.ease(t, 18, 35) * (1 - 0.56 * S.ease(t, 46, 59))
+		turn = 0.21 * beckon
+		lean, sway = -0.15 * point, -0.07 * beckon
+		pose.LeftShoulder = A(0.23 + 0.60 * beckon + 0.98 * point, -0.11, -0.17)
+		pose.LeftElbow = A(0.32 + 0.58 * beckon - 0.20 * point, 0, 0)
+		pose.RightShoulder = A(0.11, 0, 0.10)
+		pose.Neck = A(-0.04 + 0.08 * point, 0.29 * beckon, -0.035 * point)
+	else
+		local step = S.ease(t, 4, 26)
+		local nod = S.ease(t, 23, 30) - S.ease(t, 30, 40)
+		foot += V(-0.31 * (1 - step), 0.05 * math.sin(step * math.pi), 0.10 * (1 - step))
+		lean, turn = -0.10 * step, -0.11 * step
+		pose.LeftShoulder = A(0.17 - 0.10 * step, 0, -0.10)
+		pose.RightShoulder = A(0.24 + 0.25 * step, 0, 0.15)
+		pose.Neck = A(0.13 * nod - 0.04, -0.17 * (1 - step), 0)
+	end
+	-- Turn about the hips for both classic and modern Roblox avatars.
+	local hip = rig.height - place.scale
+	foot *= CF(0, hip, 0) * A(lean, turn, sway) * CF(0, -hip, 0)
+	rig:pose(foot, pose)
+end
+
+function Broadcast:prepare(shot, warm)
+	if not self.rooms[shot] then
+		local room = Rooms.build(shot, self.cast, warm)
+		local view = self.views[shot]
+		room.world.Parent = view
+		view.Ambient, view.LightColor = Color3.fromHex(shot.ambient), Color3.fromHex(shot.light)
+		view.CurrentCamera.CFrame = CF(0, shot.y, shot.z)
+		for _, fan in room.fans do act(fan, 0, false) end
+		-- Behind the upper letterbox, render the dressed characters in the
+		-- same viewport that will go on air. This builds their appearance
+		-- atlases before the cut, including for classic shirts and R15 heads.
+		view.Position, view.Size = warmPosition, warmSize
+		view.Visible = warm
+		self.rooms[shot] = room
+	end
+	return self.rooms[shot]
 end
 
 function Broadcast:draw(camera, frame, motion)
-	if frame < cuts.present - 8 or frame >= cuts.measure then
-		self.view.Visible, self.bug.Visible = false, false
+	-- Assemble each small set just before its cut. Direct studio seeks also
+	-- construct the requested room. Actors stay fixed for the whole take.
+	if frame < cuts.broadcast or frame >= cuts.measure then
+		for _, view in self.views do view.Visible = false end
+		self.bug.Visible, self.room, self.shot = false, nil, nil
+		if frame >= cuts.broadcast - 72 and frame < cuts.broadcast then
+			self:prepare(Rooms.bedroom, frame < cuts.broadcast - 18)
+			local warm = self.views[Rooms.bedroom]
+			warm.Position, warm.Size = warmPosition, warmSize
+			warm.Visible = true
+		end
 		return
 	end
-	if not self.fans then
-		local world = Instance.new("WorldModel")
-		world.Parent = self.view
-		room(world)
-		self.fans = {
-			watcher(world, CF(-3.55, 0, 4.1) * A(0, -0.38, 0), 1.19, "9B5E46", "BD8765", "F0B55E", 1),
-			watcher(world, CF(3.00, 0.43, 4.9) * A(0, 0.43, 0), 0.93, "3B8391", "C88965", "D97656", -1),
-		}
-		S.part(world, "Child's footstool", CF(3, 0.23, 4.95), V(1.88, 0.46, 1.43), "B68355")
+	local shot, first
+	if frame < cuts.livingRoom then
+		shot, first = Rooms.bedroom, cuts.broadcast
+		if frame >= cuts.livingRoom - 72 then self:prepare(Rooms.livingRoom, frame < cuts.livingRoom - 18) end
+	elseif frame < cuts.computer then
+		shot, first = Rooms.livingRoom, cuts.livingRoom
+		if frame >= cuts.computer - 72 then self:prepare(Rooms.computer, frame < cuts.computer - 18) end
+	else
+		shot, first = Rooms.computer, cuts.computer
 	end
-	if frame < cuts.present then
-		self.view.Visible, self.bug.Visible = false, false
-		return
+	local room = self:prepare(shot, false)
+	if room ~= self.room then
+		self.shot, self.room = shot.name, room
+		self.view.Visible = false
+		self.view = self.views[shot]
+		self.view.Position, self.view.Size = UDim2.fromScale(0, 0), UDim2.fromScale(1, 1)
+		self.camera = self.view.CurrentCamera
 	end
-	local age = frame - cuts.present
-	-- Start at shoulder height with the viewers. Pass the glass by the next cut.
-	local push = if motion then S.ease(age, 16, cuts.measure - cuts.present - 1) else 0
-	local z = 11.55 - 9.68 * push
-	local height = glassH / (2 * z * roomTangent)
+	local age = frame - first
+	local roll = shot.roll or 0
+	if shot == Rooms.bedroom then
+		local t = if motion then age else 23
+		roll += 0.125 * S.ease(t, 4, 23) - 0.028 * S.ease(t, 26, 42)
+		room.receiver:PivotTo(CF(0, shot.y, 0) * A(0, 0, roll) * CF(0, -shot.y, 0))
+	end
+	for _, fan in room.fans do
+		act(fan, age, motion, roll)
+	end
+
 	local viewport = camera.ViewportSize
-	local width = height * (glassW / glassH) * viewport.Y / math.max(1, viewport.X)
-	self.camera.CFrame = CF(0, glassY, z)
-	self.view.Visible = height < 1.03 or width < 1.03
-	self.bug.Visible = self.view.Visible and push < 0.66
-	self.bug.Position = UDim2.fromScale(0.5 - width * 0.463, 0.5 - height * 0.443)
-	self.bug.Size = UDim2.fromScale(width * 0.29, height * 0.135)
-	camera.FieldOfView = math.min(115, math.deg(2 * math.atan(math.tan(math.rad(camera.FieldOfView / 2)) / math.min(1, height))))
-	for i, fan in self.fans do
-		local beat = if motion then S.ease(age, 2 + i * 3, 13 + i * 3) - 0.47 * S.ease(age, 20 + i, 35 + i) else 0.68
-		local scale, side = fan.scale, fan.side
-		local body = fan.foot * CF(0, (1.18 + 0.09 * beat) * scale, 0) * A(-0.12 * beat, side * 0.06 * beat, 0)
-		fan.torso:PivotTo(body)
-		fan.arm:PivotTo(body * CF(side * 0.91 * scale, 1.24 * scale, 0)
-			* A(0.52 + 1.87 * beat, 0, side * (0.12 + 0.20 * beat)))
+	local aspect = math.max(0.25, viewport.X / math.max(1, viewport.Y))
+	if room.reverse then
+		local reverse = age >= 36
+		room.reverse.Parent = if reverse then room.world else nil
+		if reverse then
+			-- Across the TV, a brief answer on the child's face motivates
+			-- the next cut to the group reacting to the same broadcast.
+			local child = room.fans[1]
+			local n = if motion then S.ease(age, 36, 57) else 0.46
+			local head = child.rig.head.Position
+			local hat = math.min(0.72, child.rig.headroom * child.place.scale)
+			local aim = head + child.foot:VectorToWorldSpace(V(0.17, -0.17 + hat * 0.24, 0))
+			local eye = head + child.foot:VectorToWorldSpace(V(0.92 - 0.23 * n, 0.13 + hat * 0.25, -2.85 - hat + 0.14 * n))
+				* math.clamp(1.15 / aspect, 1, 1.60)
+			self.camera.CFrame = CFrame.lookAt(eye, aim)
+			self.view.Visible, self.bug.Visible = true, false
+			return
+		end
 	end
+	local drift = if shot == Rooms.bedroom then 0.16 elseif shot == Rooms.livingRoom then 0.095 else 0.055
+	local take = if motion then S.ease(age, 0, if shot == Rooms.livingRoom then 35 else 43) else 0.46
+	local z = shot.z * (1 - drift * take)
+	-- Fit the viewer(s) as the screen narrows. The last move ends inside
+	-- the monitor on both a tablet and an ultrawide desktop.
+	z *= math.clamp(1.60 / math.max(0.25, aspect), 1, 1.65)
+	local glassH = shot.width * 9 / 16
+	local inside = math.min(glassH, shot.width / math.max(aspect, 0.25)) / (2.15 * roomTangent)
+	local push = if motion and shot == Rooms.computer then S.ease(frame, cuts.measure - 23, cuts.measure - 1) else 0
+	z += (inside - z) * push
+	local height = glassH / (2 * z * roomTangent)
+	local width = height * (16 / 9) / math.max(0.25, aspect)
+	local eyeX = (if shot == Rooms.bedroom then -0.57 + 0.47 * take
+		elseif shot == Rooms.livingRoom then -0.30 + 0.79 * take else -0.45 + 0.51 * take) * (1 - push)
+	local centerX = 0.5 - eyeX / (2 * z * roomTangent * aspect)
+	self.camera.CFrame = CF(eyeX, shot.y, z)
+	self.view.Visible = height < 1.02 or width < 1.02
+	self.bug.Visible = self.view.Visible and push < 0.69
+	-- Register both the station ID and its live feed with the handheld glass.
+	local x, y = -width * 0.32, -height * 0.375
+	self.bug.AnchorPoint, self.bug.Rotation = Vector2.new(0.5, 0.5), -math.deg(roll)
+	self.bug.Position = UDim2.fromScale(centerX + x * math.cos(roll) + y * math.sin(roll) / aspect,
+		0.5 - x * math.sin(roll) * aspect + y * math.cos(roll))
+	self.bug.Size = UDim2.fromScale(width * 0.28, height * 0.13)
+	local fullLens = math.tan(math.rad(camera.FieldOfView / 2)) / math.min(1, height)
+	local lens = math.min(math.tan(math.rad(119 / 2)), fullLens)
+	if fullLens > lens then
+		-- The narrow phone screen needs more coverage than a 119-degree lens.
+		-- Move the eye along the same sightline so both miner and rock still fit.
+		camera.CFrame += (camera.CFrame.Position - camera.Focus.Position) * (fullLens / lens - 1)
+	end
+	camera.FieldOfView = math.deg(2 * math.atan(lens))
+	camera.CFrame *= A(0, 0, -roll)
+	-- The film camera sees through the aperture even when an observer's
+	-- shoulder moves across the near foreground. Keep the live image centered.
+	local depth = (camera.Focus.Position - camera.CFrame.Position):Dot(camera.CFrame.LookVector)
+	camera.CFrame += camera.CFrame.RightVector * ((0.5 - centerX) * aspect * lens * 2 * depth)
 end
 
 function Broadcast:Destroy()
-	self.view:Destroy()
+	self.cast:Destroy()
+	for _, room in self.rooms do
+		if room.reverse then room.reverse:Destroy() end
+	end
+	for _, view in self.views do
+		view:Destroy()
+	end
 	self.bug:Destroy()
 end
 

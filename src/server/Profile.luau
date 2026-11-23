@@ -1,7 +1,10 @@
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Ores = require(Shared.Ores)
+local Purity = require(Shared.OrePurity)
+local miningRandom = Random.new()
 local Upgrades = require(Shared.Upgrades)
 local Materials = require(Shared.Materials)
+local Field = require(Shared.FieldRewards)
 local Expeditions = require(Shared.Expeditions)
 local Preferences = require(Shared.Preferences)
 local Guide = require(Shared.FieldGuide)
@@ -14,8 +17,19 @@ function Profile.new()
 		introSeen = false,
 		firstTrip = {},
 		gold = 0,
+		gems = 0,
+		stampDay = 0,
+		stampCount = 0,
+		shiftDay = 0,
+		shiftSeconds = 0,
+		shiftClaims = 0,
+		hasteCuts = 0,
+		stoneChips = 0,
+		pulses = 0,
 		levels = { Speed = 1, Power = 1, Capacity = 1 },
 		bag = {},
+		grades = {},
+		bestPurity = {},
 		flares = 0,
 		temper = 0,
 		dailyClaim = 0,
@@ -53,7 +67,7 @@ function Profile.stat(p, key)
 	return if key == "Capacity" then Skills.capacity(base, p.skills) else base
 end
 
-local function ownsUpgrade(p)
+function Profile.hasUpgrade(p)
 	return p.levels.Speed > 1 or p.levels.Power > 1 or p.levels.Capacity > 1
 end
 
@@ -65,7 +79,7 @@ function Profile.expeditionStep(p)
 		if p.xp == 0 and Profile.used(p) < Profile.stat(p, "Capacity") then return "Ore" end
 		return "Sell"
 	end
-	if not ownsUpgrade(p) then return "Upgrade" end
+	if not Profile.hasUpgrade(p) then return "Upgrade" end
 	return if trip.tried then "Done" else "Return"
 end
 
@@ -84,6 +98,19 @@ function Profile.recordDepth(p, blocks)
 	return false
 end
 
+local function takeStack(p, name, amount)
+	local count = p.bag[name] or 0
+	local grades = p.grades[name]
+	local value = Purity.remove(Ores.byName[name], count, grades, amount, p.skills.Broker)
+	if grades and not next(grades) then p.grades[name] = nil end
+	p.bag[name] = if count > amount then count - amount else nil
+	return value
+end
+
+function Profile.consume(p, recipe)
+	for name, count in recipe do takeStack(p, name, count) end
+end
+
 function Profile.spill(p)
 	local used = Profile.used(p)
 	local loss = math.floor(used / 10)
@@ -95,7 +122,7 @@ function Profile.spill(p)
 		local stock = p.bag[ore.name] or 0
 		local removed = math.min(stock, left)
 		if removed > 0 then
-			p.bag[ore.name] = if stock > removed then stock - removed else nil
+			takeStack(p, ore.name, removed)
 			left -= removed
 		end
 	end
@@ -122,6 +149,17 @@ function Profile.valid(p)
 			return false
 		end
 	end
+	-- Legacy profiles may omit all of the field rewards.
+	for key, max in { gems = 9e15, stampDay = 9e15, stampCount = 7, hasteCuts = Field.hasteCuts,
+		stoneChips = Field.stoneChips, pulses = 9e15, shiftDay = 9e15, shiftSeconds = Field.maxShiftTime,
+		shiftClaims = #Field.shiftRewards } do
+		if p[key] ~= nil and not integer(p[key], max) then return false end
+	end
+	local claimed = Field.shiftRewards[p.shiftClaims or 0]
+	if claimed and (p.shiftSeconds or 0) < claimed.seconds then return false end
+	for _, key in { "oreCompass", "auraOff" } do
+		if p[key] ~= nil and type(p[key]) ~= "boolean" then return false end
+	end
 	if p.levels.Radius ~= nil and (not integer(p.levels.Radius, 8) or p.levels.Radius < 1) then
 		return false
 	end
@@ -133,6 +171,27 @@ function Profile.valid(p)
 	for name, n in p.bag do
 		if not Ores.byName[name] or not integer(n, 9e15) then
 			return false
+		end
+	end
+	if p.bestPurity ~= nil then
+		if type(p.bestPurity) ~= "table" then return false end
+		for name, percent in p.bestPurity do
+			local ore = Ores.byName[name]
+			if not ore or ore.host or not integer(percent, 100) or not Purity.validGrade(tostring(percent)) then return false end
+		end
+	end
+	if p.grades ~= nil then
+		if type(p.grades) ~= "table" then return false end
+		for name, stack in p.grades do
+			local ore = Ores.byName[name]
+			if not ore or ore.host or type(stack) ~= "table" then return false end
+			local count = 0
+			for grade, n in stack do
+				if not Purity.validGrade(grade) or not integer(n, 9e15) or n == 0 then return false end
+				if not p.bestPurity or tonumber(grade) > (p.bestPurity[name] or 0) then return false end
+				count += n
+			end
+			if count > (p.bag[name] or 0) then return false end
 		end
 	end
 	if p.xp ~= nil and not integer(p.xp, 9e15) then
@@ -243,9 +302,13 @@ function Profile.valid(p)
 end
 
 function Profile.upgradeSave(p)
+	for _, key in { "gems", "stampDay", "stampCount", "shiftDay", "shiftSeconds", "shiftClaims", "hasteCuts", "stoneChips", "pulses" } do
+		p[key] = p[key] or 0
+	end
 	-- Profiles predating the opening belong to returning players.
 	if p.introSeen == nil then p.introSeen = true end
 	if p.firstTrip == nil then p.firstTrip = { skipped = true } end
+	p.grades, p.bestPurity = p.grades or {}, p.bestPurity or {}
 	local beforeSupplies = p.flares == nil
 	p.flares, p.temper, p.dailyClaim = p.flares or 0, p.temper or 0, p.dailyClaim or 0
 	-- Repay retired area upgrades once, using their original workshop prices.
@@ -349,14 +412,28 @@ function Profile.equipTitle(p, id)
 	p.title = id
 	return true
 end
-function Profile.recordCut(p, name, depth)
+function Profile.recordCut(p, name, depth, random)
 	local ore = Ores.byName[name]
+	local units, grade, record = 1, nil, false
+	if not ore.host then
+		random = random or miningRandom
+		grade = Purity.roll(random)
+		if p.skills.Fortune and Profile.used(p) + 1 < Profile.stat(p, "Capacity") and random:NextInteger(1, 10) == 1 then
+			units = 2
+		end
+		local stock = p.grades[name] or {}
+		local key = tostring(grade)
+		stock[key] = (stock[key] or 0) + units
+		p.grades[name] = stock
+		record = grade > (p.bestPurity[name] or 0)
+		if record then p.bestPurity[name] = grade end
+	end
 	local xp = Skills.oreXP(ore, p.skills, not p.discoveries[name], depth or 0)
 	p.discoveries[name] = true
-	p.bag[name] = (p.bag[name] or 0) + 1
+	p.bag[name] = (p.bag[name] or 0) + units
 	p.counts[name] = (p.counts[name] or 0) + 1
 	p.mined += 1
-	if ownsUpgrade(p) then p.firstTrip.tried = true end
+	if Profile.hasUpgrade(p) then p.firstTrip.tried = true end
 	p.xp += xp
 	if #p.recentCuts == Guide.cutWindow then
 		table.remove(p.recentCuts, 1)
@@ -373,7 +450,7 @@ function Profile.recordCut(p, name, depth)
 			table.insert(unlocked, award.name)
 		end
 	end
-	return unlocked
+	return unlocked, grade, units, record
 end
 
 function Profile.claimJob(p, i)
@@ -390,10 +467,10 @@ function Profile.claimJob(p, i)
 	return job, if p.jobs == #Expeditions.jobs then Profile.unlock(p, "Shifts") else nil
 end
 
-function Profile.value(bag)
+function Profile.value(bag, grades, broker)
 	local amount = 0
 	for name, n in bag do
-		amount += Ores.byName[name].value * n
+		amount += Purity.quote(Ores.byName[name], n, grades and grades[name], n, broker)
 	end
 	return amount
 end
@@ -417,12 +494,11 @@ function Profile.sell(p, multiplier, selectedOre, portion)
 		if selectedOre == nil or selectedOre == name then
 			local sold = if type(portion) == "number" then portion else count
 			local ore = Ores.byName[name]
-			value += sold * ore.value
+			value += takeStack(p, name, sold)
 			quantity += sold
 			if sold > 0 and ore.host then
 				oreOnly = false
 			end
-			p.bag[name] = if count > sold then count - sold else nil
 		end
 	end
 	local amount = value * (multiplier or 1)
@@ -456,11 +532,32 @@ function Profile.buySupply(p, key)
 	if key == "Temper" and p.temper > 0 then
 		return false, "Your pick is already tempered"
 	end
+	if (key == "Haste" and p.hasteCuts > 0) or (key == "Chips" and p.stoneChips > 0) then
+		return false, "Finish the charges on your pick first"
+	elseif key == "Compass" and p.oreCompass then
+		return false, "Your pet already has a compass"
+	elseif item.gems and p.gems < item.gems then
+		return false, string.format("Need %d more gems", item.gems - p.gems)
+	end
 	local name, count = Materials.missing(item.recipe, p.bag)
 	if name then
 		return false, string.format("Bring %d more %s to Field Supplies", count, name)
 	end
-	Materials.consume(item.recipe, p.bag)
+	Profile.consume(p, item.recipe)
+	p.gems -= item.gems or 0
+	if key == "Haste" then
+		p.hasteCuts = Field.hasteCuts
+		return true, "Quick-cut wax ready for 12 cuts"
+	elseif key == "Chips" then
+		p.stoneChips = Field.stoneChips
+		return true, "Diamond teeth ready for 6 stone cuts"
+	elseif key == "Pulse" then
+		p.pulses += 1
+		return true, "Cave pulse packed. Use it underground from Supplies."
+	elseif key == "Compass" then
+		p.oreCompass = true
+		return true, "Ore compass crafted. Equip a pet and follow its gaze."
+	end
 	if key == "Flare" then
 		p.flares += 1
 		return true, "Flare packed • use it from Inventory → Supplies"
@@ -476,9 +573,10 @@ function Profile.deliver(p, day, requestedDay)
 	if Materials.missing(order.recipe, p.bag) then
 		return false
 	end
-	Materials.consume(order.recipe, p.bag)
+	Profile.consume(p, order.recipe)
 	p.dailyClaim = day
 	p.gold += order.gold
+	p.gems += 2
 	p.flares += if p.skills.SupplyRunner then 2 else 1
 	return true
 end
