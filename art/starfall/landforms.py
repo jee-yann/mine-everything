@@ -39,7 +39,9 @@ def build(shore, coast, sample, front_exposure, group, part, face, spar, destina
                 if ring == 0
                 else rng.uniform(0.47, 0.69) if ring == 1 else rng.uniform(0.85, 0.94)
             )
-            r = max(33.0, r)
+            # Fault blocks stand outside the newly uplifted 43-stud wall in
+            # both the undisturbed and post-impact exposures.
+            r = max(45.0, r)
             p = point(a, r, 0)
             x, z = p[0], p[2]
             y = ground(x, z)
@@ -96,8 +98,8 @@ def build(shore, coast, sample, front_exposure, group, part, face, spar, destina
 
     # Folded beds are exposed in short oblique patches under headland crests.
     # They follow the native rim depth and stop at small cobble beaches.
-    minerals = group(0, 19.30, "Sea-cut strata and reefs")
-    spray = group(0, 19.56, "Tidal froth on skerries")
+    minerals = group(0, 99.99, "Sea-cut strata and reefs")
+    spray = group(0, 99.99, "Tidal froth on skerries")
     for key, (a, _, _, _) in enumerate(shore):
         if key % 4 == 2:
             continue
@@ -210,29 +212,27 @@ def build(shore, coast, sample, front_exposure, group, part, face, spar, destina
         y = ground(u, v)
         at = front_exposure(r)
         heath = group(0, at + 0.08, "Windward meadow flowers")
-        returning = group(13.87 + j % 6 * 0.25, 18.28, "Recovering heath")
-        # The source Wildflowers use solid, broad petals and a leaf rosette.
-        for target in (heath, returning):
+        # The source wildflowers use broad petals and a leaf rosette.
+        for k in range(3):
+            phi = yaw + k * math.tau / 3
+            c, s = math.cos(phi), math.sin(phi)
+            axis = np.array(((c, 0, s), (0, 1, 0), (-s, 0, c)))
+            part(
+                heath,
+                "Meadow leaf",
+                (u + c * 0.68, y + 0.36, v - s * 0.68),
+                (2.24, 0.64, 1.21),
+                ("65B859", "7EC962", "4DA366")[k],
+                272,
+                axis,
+            )
+        if j % 3:
             for k in range(3):
                 phi = yaw + k * math.tau / 3
-                c, s = math.cos(phi), math.sin(phi)
-                axis = np.array(((c, 0, s), (0, 1, 0), (-s, 0, c)))
                 part(
-                    target,
-                    "Meadow leaf",
-                    (u + c * 0.68, y + 0.36, v - s * 0.68),
-                    (2.24, 0.64, 1.21),
-                    ("65B859", "7EC962", "4DA366")[k],
-                    272,
-                    axis,
+                    heath,
+                    "Wildflower petals",
+                    (u + math.cos(phi) * 0.39, y + 0.92, v + math.sin(phi) * 0.39),
+                    (0.74, 0.27, 0.71),
+                    ("FFD462", "ED9975", "EBB0C0")[j % 3],
                 )
-            if j % 3:
-                for k in range(3):
-                    phi = yaw + k * math.tau / 3
-                    part(
-                        target,
-                        "Wildflower petals",
-                        (u + math.cos(phi) * 0.39, y + 0.92, v + math.sin(phi) * 0.39),
-                        (0.74, 0.27, 0.71),
-                        ("FFD462", "ED9975", "EBB0C0")[j % 3],
-                    )

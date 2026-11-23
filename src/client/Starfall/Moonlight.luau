@@ -241,7 +241,7 @@ function Moonlight:relight(base, frame)
 	if self.strength == strength and self.tinted == tinted and self.island then
 		return
 	end
-	local island = self.stage:FindFirstChild("Citrine Cove through the ages")
+	local island = self.stage:FindFirstChild("Ancient Citrine Cove")
 	if island and not self.island and tinted then
 		for _, piece in island:GetDescendants() do
 			local swatch = pigments[piece.Name]

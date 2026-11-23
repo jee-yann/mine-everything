@@ -1,5 +1,4 @@
 -- The surveyed island and its construction schedule, private to one viewer.
-local Build = require(script.Parent.HistoryBuild)
 local P, Atlas = require(script.Parent.Props), require(script.Parent.HistoryAtlas)
 local Island, Worksite = require(script.Parent.HistoryIsland), require(script.Parent.HistoryWorksite)
 local V, CF = Vector3.new, CFrame.new
@@ -76,7 +75,6 @@ function History.new(stage, base)
 		skyline = {},
 		reclaimed = {},
 		weathering = 0,
-		motion = Build.new(),
 	}, History)
 	self.loader = coroutine.create(function()
 		local function spent(n)
@@ -152,7 +150,6 @@ function History.new(stage, base)
 				end
 				spent(1)
 			end
-			Build.group(self.motion, group, shot[2], shot[1] / History.rate)
 			register(group, shot[1] / History.rate, nil, false)
 		end
 		for _, shot in Atlas.exposures do
@@ -230,9 +227,17 @@ function History:draw(t)
 	if self.root.Parent ~= self.stage then
 		self.root.Parent = self.stage
 	end
-	local frame = math.clamp(math.floor(t * History.rate + 0.00001), 0, History.duration * History.rate)
+	-- Group the original survey parcels into photographic exposures. During
+	-- one exposure the tide, light and camera can travel across a still camp.
+	local tick = math.floor(t * History.rate + 0.00001)
+	local remainder = tick % History.rate
+	local shutter = if remainder >= 18 then 18 elseif remainder >= 11 then 11 elseif remainder >= 7 then 7 else 0
+	local frame = tick - remainder + shutter
+	if self.frame == frame then
+		return
+	end
+	local age = frame / History.rate
 	if frame < self.frame then
-		Build.seek(self.motion, t)
 		for _, shot in self.scene do
 			shot[1].Parent = if frame >= shot[2] and frame < shot[3]
 				then self.containers[shot[1]] or self.root
@@ -244,7 +249,6 @@ function History:draw(t)
 				m.Parent = self.shelf
 			end
 			for _, m in self.starts[i] or {} do
-				Build.activate(self.motion, m)
 				local destination = self.containers[m] or self.root
 				if m.Parent ~= destination then
 					m.Parent = destination
@@ -252,16 +256,11 @@ function History:draw(t)
 			end
 		end
 	end
-	Build.update(self.motion, t)
-	Island.expose(self.island, t, self.base, self.root)
+	Island.expose(self.island, age, self.base, self.root)
 	if self.work then
-		Worksite.expose(self.work, t, self.base)
-	end
-	if self.frame == frame then
-		return
+		Worksite.expose(self.work, age, self.base)
 	end
 	self.frame = frame
-	local age = t
 	local weathering = math.clamp(math.floor((age - 1.75) * 2.5), 0, 8)
 	if weathering ~= self.weathering then
 		for _, band in self.skyline do

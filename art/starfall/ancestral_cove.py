@@ -86,7 +86,6 @@ class CoveKit:
                 self.firs[-1].append(read(child))
         assert self.palms and all(len(f) == 4 for f in self.firs)
         self.native_caps = []
-        self.recovered_caps = []
         self.reef = []
         self.shelves = list(SHELVES)
 
@@ -105,6 +104,7 @@ class CoveKit:
         color,
         material=272,
         stud=False,
+        tilt=None,
     ):
         """The seven boxes/wedges and the bevel orientations are those of Landing island turf."""
         c, h = min(corner, depth * 0.34, width * 0.34), max(0.04, top - bottom)
@@ -123,14 +123,20 @@ class CoveKit:
         center = np.array((x, (bottom + top) * 0.5, z))
         for i, (u, v, size) in enumerate(pieces):
             shape = "WedgePart" if i in (2, 3, 5, 6) else "Part"
+            position = center + yaw @ np.array((u, 0.0, v))
+            basis = yaw @ self.bevels[i]
+            if tilt is not None:
+                hinge, turn = tilt
+                position = hinge + turn @ (position - hinge)
+                basis = turn @ basis
             piece = self.part(
                 group,
                 label,
-                center + yaw @ np.array((u, 0.0, v)),
+                position,
                 size,
                 color,
                 material,
-                yaw @ self.bevels[i],
+                basis,
                 shape,
             )
             self.field(piece, "CastShadow", "bool", "false" if h < 1.4 else "true")
@@ -164,7 +170,7 @@ class CoveKit:
             )
             self.field(body, "TopSurface", "token", "0")
 
-    def add_native_cap(self, pos, size, matrix, cl, buried=False):
+    def add_native_cap(self, pos, size, matrix, cl):
         # Tree roots, footings, shock dust and rock debris use the same height
         # as the source caps. Each of the real bevels has triangular coverage.
         if cl == "WedgePart":
@@ -184,17 +190,13 @@ class CoveKit:
             return
         low = np.min(corners, axis=0)
         high = np.max(corners, axis=0)
-        caps = self.recovered_caps if buried else self.native_caps
-        caps.append((low, high, corners, height))
+        self.native_caps.append((low, high, corners, height))
 
     def top(self, x, z, raw):
         for shelf in self.shelves + self.reef:
             if shelf[4] > raw and contains(x, z, shelf):
                 raw = shelf[4]
         return self.cap_height(self.native_caps, x, z, raw)
-
-    def mature_top(self, x, z, raw):
-        return self.cap_height(self.recovered_caps, x, z, raw)
 
     @staticmethod
     def cap_height(caps, x, z, raw):
@@ -208,15 +210,13 @@ class CoveKit:
                 raw = h
         return raw
 
-    def build_shelves(self, clearing, wave):
+    def build_shelves(self, end, wave):
         soil = ("CB8457", "DA9765", "B97457", "E6A96D")
         turf = ("74D44F", "88D75E", "83D463", "91DC66")
         for i, s in enumerate(self.shelves):
             x, z, w, d, y, angle, corner = s
-            cut = clearing(x, z)
             hit = wave(math.hypot(x, z + 32))
-            green = 13.13 + (i % 5) * 0.35
-            dirt = self.group(0, cut, "Ancestral sandstone shelves")
+            dirt = self.group(0, end, "Ancestral sandstone shelves")
             self.pad(
                 dirt,
                 "Sandstone shoulder",
@@ -232,11 +232,28 @@ class CoveKit:
             )
             for a, b, c in [
                 (0, hit, turf[i % 4]),
-                (hit, green, ("564B56", "695762", "66595F")[i % 3]),
-                (green, green + 0.77, "AEA768"),
-                (green + 0.77, cut, turf[i % 4]),
+                (hit, end, ("564B56", "695762", "66595F")[i % 3]),
             ]:
                 surface = self.group(a, b, "Weather across the grass shelves")
+                tilt = None
+                if i in (3, 5, 7, 15, 18, 19) and a == hit:
+                    # Hinge the upper bed of the surrounding hills at its
+                    # outward toe. The rock beneath the tilted turf is exposed
+                    # on the crater-facing side throughout the aftermath.
+                    out = np.array((x, 0, z + 32)) / math.hypot(x, z + 32)
+                    up = np.array((0, 1, 0))
+                    basis = np.column_stack((out, up, np.cross(out, up)))
+                    slope = math.radians(17)
+                    cs, sn = math.cos(slope), math.sin(slope)
+                    turn = basis @ ((cs, sn, 0), (-sn, cs, 0), (0, 0, 1)) @ basis.T
+                    local_out = rotation(-math.radians(angle)) @ out
+                    span = (abs(local_out[0]) * w + abs(local_out[2]) * d) * 0.5
+                    tilt = (np.array((x, y, z)) + out * span, turn)
+                    self.pad(
+                        surface, "Upturned sandstone", x, z, w - 0.23, d - 0.23,
+                        y - 2 * span * math.sin(slope) - 1.2, y - 0.65, angle, corner,
+                        "826B68", tilt=tilt,
+                    )
                 self.pad(
                     surface,
                     "Turf lip",
@@ -251,23 +268,10 @@ class CoveKit:
                     c,
                     256,
                     True,
+                    tilt,
                 )
-            graded = 24.64 + (y - 24.64) * 0.19
-            self.pad(
-                self.group(cut, cut + 0.62, "Excavated sandstone bench"),
-                "Cut terrace",
-                x,
-                z,
-                w,
-                d,
-                23.9,
-                graded,
-                angle,
-                corner,
-                "CA925E",
-            )
 
-    def build_shore(self, shore, developed):
+    def build_shore(self, shore, end):
         # Horizontal shingle steps and sharp chamfers at sea level ground the
         # original cliff blocks. The western landing retains a low beach.
         for i, (a, x, z, h) in enumerate(shore):
@@ -277,7 +281,7 @@ class CoveKit:
             length = max(
                 14, min(30, math.hypot(x - shore[i - 1][1], z - shore[i - 1][2]) * 1.38)
             )
-            q = self.group(0, developed(20.31), "Wave-cut sandstone steps")
+            q = self.group(0, end, "Wave-cut sandstone steps")
             col = ("D88F64", "A37F75", "8589A4", "AD92A2")[i % 4]
             self.reef.append(
                 (p[0], p[1], length, 15.8, 22.10 + 0.45 * math.sin(i), tangent, 3.4)

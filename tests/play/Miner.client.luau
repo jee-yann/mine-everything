@@ -112,6 +112,9 @@ local function test()
 		assert(opening["Residual ringing"].SoundGroup == effects and opening.Eruption.SoundGroup == effects)
 		assert(acousticRig.outbound["Ablation flypast"].SoundGroup == effects)
 		assert(acousticRig.inbound["Shale through the air"].SoundGroup == effects)
+		assert(acousticRig.inbound["Debris at the lens"].SoundGroup == effects)
+		assert(acousticRig.left["Resonance in the seam"].SoundGroup == effects)
+		assert(acousticRig.left["Iron pick at the working mine"].SoundGroup == effects)
 		if r:GetAttribute("CheckSwing") then
 			local mix = song.SoundGroup.Volume
 			song.SoundGroup.Volume = 0
@@ -204,12 +207,16 @@ local function test()
 					voice.Played:Connect(function() fallbackNotes += 1 end)
 				end
 			end
-			local landed, eruption, breaker, fire, rock, lifted, collapse, bow
+			local landed, eruption, breaker, fire, rock, lifted, collapse, bow, debris
+			local seamHeard, modernPick
+			acousticRig.left["Resonance in the seam"].Played:Once(function() seamHeard = os.clock() end)
+			acousticRig.left["Iron pick at the working mine"].Played:Once(function() modernPick = os.clock() end)
 			opening.Landfall.Played:Once(function() landed = os.clock() end)
 			opening["Collapsing crater wall"].Played:Once(function() collapse = os.clock() end)
 			opening.Eruption.Played:Once(function() eruption = os.clock() end)
 			acousticRig.inbound["Shockwave arrival"].Played:Once(function() breaker = os.clock() end)
 			acousticRig.inbound["Shockwave bow"].Played:Once(function() bow = os.clock() end)
+			acousticRig.inbound["Debris at the lens"].Played:Once(function() debris = os.clock() end)
 			acousticRig.right["Fire in the fissure"].Played:Once(function() fire = os.clock() end)
 			acousticRig.left["Slumping basalt"].Played:Once(function() rock = os.clock() end)
 			opening["Pick settles on shoulder"].Played:Once(function() lifted = true end)
@@ -223,25 +230,27 @@ local function test()
 			waitFor(function() return bow end, 1, "directional bow plays with the shockwave")
 			assert(collapse >= landed and collapse - landed < 0.45 and opening["Collapsing crater wall"].IsPlaying, "crumbling rock carries the blast to the coast")
 			assert(eruption - landed > 0.045 and eruption - landed < 0.23, "ignition follows contact by three film frames")
-			assert(math.abs(bow - breaker) < 0.32, "the stereo bow and wave reach the camera together")
-			assert(breaker - landed > 3.2 and breaker - landed < 3.8, "the front reaches the fixed lens 84 film frames after impact")
+			waitFor(function() return debris end, 1, "debris lands after the passing wave")
+			assert(math.abs(debris - bow - 3 / 24) < 0.13 and math.abs(bow - breaker - 0.14) < 0.14,
+				"the quieter debris report follows the wave edge")
+			assert(bow - landed > 3.2 and bow - landed < 3.8, "the front reaches the fixed lens 84 film frames after impact")
 			waitFor(function() return fire and rock end, 7, "fire and settling debris sustain the burned basin")
 			assert(rock > breaker and fire > breaker, "the close aftermath follows the pressure wave")
 			waitFor(function()
 				return titles.Caption.Text:find("the star still glowed", 1, true)
 			end, 10, "the cooled island retains its fracture")
 			waitFor(function()
-				return titles.Caption.Text:find("Miners came to find it", 1, true)
-			end, 12, "prospectors reach the island")
+				return titles.Caption.Text == "Millions of years later"
+			end, 7, "the mineral cut reveals the completed cove")
 			local card = titles:WaitForChild("Expedition title", 2)
 			local typeArea = card.Letterpress
-			waitFor(function()
-				return card.Visible and typeArea.Lead.Text == "CITRINE COVE"
-					and typeArea.Headline.Visible and typeArea.Headline.Text == "PRESENT DAY"
-			end, 14, "the present-day title lands on the playable cove")
-			assert(card.AnchorPoint == Vector2.new(0.5, 0.5) and math.abs(card.Position.X.Scale - 0.5) < 0.001, "centered chapter card")
-			waitFor(function() return titles.Caption.Text:find("Keep the gem whole", 1, true) end, 5, "the precision trial")
-			assert(not stage:FindFirstChild(p.Character.Name), "the first visit uses the live miner")
+			waitFor(function() return titles.Caption.Text:find("Keep the gem whole", 1, true) end, 17, "the precision trial")
+			local actor = assert(stage:FindFirstChild("Cinematic miner"), "the dressed performer is missing")
+			assert(actor.Head.Anchored and p.Character.Head.Transparency == 1)
+			assert(not actor:FindFirstChildWhichIsA("Animator", true), "gameplay animation entered the shot")
+			for _, body in actor:GetDescendants() do
+				if body:IsA("BasePart") then assert(not body.CanCollide, "the performance rig can push the real miner") end
+			end
 			waitFor(function()
 				return lifted and card.Visible and typeArea.Headline.Text == "GEM HUNTER"
 					and typeArea.Lead.Text == p.DisplayName and stage:FindFirstChild("Expedition pick")
@@ -269,7 +278,13 @@ local function test()
 				return card.Visible and typeArea.Headline.Text == "STARFALL FIRST?"
 			end, 6, "the route points to the real mine")
 			assert((orchestraStarts == 1 and fallbackNotes == 0) or (orchestraStarts == 0 and fallbackNotes > 0),
-				"the screening must keep one musical arrangement through the hoist, portrait and mine")
+				"the screening keeps one score from the match cut through the mine")
+			local sheet = require(p.PlayerScripts.Client.Starfall.ExposureSheet)
+			local ironAfterLandfall = (sheet.frames.match + 1 - sheet.frames.contact) / sheet.fps
+			assert(seamHeard and modernPick and seamHeard < modernPick
+				and math.abs(modernPick - landed - ironAfterLandfall) < 0.24,
+				string.format("mineral match cut: resonance %s, iron %s, expected %.3fs after impact",
+					tostring(seamHeard and seamHeard - landed), tostring(modernPick and modernPick - landed), ironAfterLandfall))
 			for _, miner in game.Players:GetPlayers() do
 				if miner ~= p then
 					local head = miner.Character and miner.Character:FindFirstChild("Head")
@@ -412,6 +427,7 @@ local function test()
 		Gear = map["Shore market"].Upgrades["Service mat"],
 		Store = map["Harbor Plaza"].Store.Counter,
 		Book = map["Harbor Plaza"].Book.Counter,
+		Samples = map["Field sample bench"]["Catalogue plate"],
 		Supplies = map["Harbor Plaza"].Supplies.Counter,
 	}
 	local function visit(key, activate)
@@ -422,11 +438,16 @@ local function test()
 		end, 5, "walk to " .. key)
 		if activate then
 			task.wait(0.25)
-			pad.Service:InputHoldBegin()
-			task.wait(pad.Service.HoldDuration + 0.15)
-			pad.Service:InputHoldEnd()
+			local service = assert(pad:FindFirstChildOfClass("ProximityPrompt"))
+			service:InputHoldBegin()
+			task.wait(service.HoldDuration + 0.15)
+			service:InputHoldEnd()
 		end
 	end
+	visit("Samples", true)
+	waitFor(function() return overlay.Visible and menu.Listings:FindFirstChild("Iron Shelf") end, 5, "consult samples at the physical bench")
+	r:FireServer("closePage")
+	waitFor(function() return not overlay.Visible end, 5, "leave the sample bench")
 	local roster = gui.SafeArea["Server leaderboard"]
 	assert(not game.StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.PlayerList))
 	if game.UserInputService.PreferredInput == Enum.PreferredInput.Touch then

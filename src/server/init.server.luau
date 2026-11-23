@@ -592,6 +592,9 @@ local function action(player, key, option, value)
 	end
 end
 net.Action.OnServerEvent:Connect(action)
+site.samples.Triggered:Connect(function(player)
+	if atCounter(player, site.samples) then net.Feedback:FireClient(player, "page", "Book") end
+end)
 for name, prompt in site.stations do
 	if name == "Sell" or name == "Shop" or name == "Store" or name == "Supplies" then
 		net:SetAttribute(name .. "Position", prompt.Parent.Position)

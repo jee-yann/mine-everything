@@ -1,5 +1,4 @@
--- The survey print is a still-life of the player who just split the specimen.
--- Photograph the character and the dressed pick through the film's own lens.
+-- Keep the player and shouldered pick registered to the lens as the glass appears.
 local F = require(script.Parent.ExposureSheet).frames
 local SurveyPrint = require(script.Parent.SurveyPrint)
 local Portrait = {}
@@ -66,7 +65,7 @@ local function register(source, copy, poses, ink)
 				child.Anchored, child.CanCollide, child.CanTouch, child.CanQuery = true, false, false, false
 				child.CastShadow = false
 				if ink then
-					child.Color, child.Material = Color3.fromHex("EEC894"), Enum.Material.SmoothPlastic
+					child.Color, child.Material = Color3.fromHex("ABD8D9"), Enum.Material.SmoothPlastic
 					if child:IsA("MeshPart") then
 						child.TextureID = ""
 					end
@@ -98,7 +97,7 @@ end
 
 function Portrait.new(stage, screen)
 	local root = Instance.new("Frame")
-	root.Name, root.BorderSizePixel, root.BackgroundTransparency = "Fault reader | two-ink registration", 0, 1
+	root.Name, root.BorderSizePixel, root.BackgroundTransparency = "Gem Hunter portrait", 0, 1
 	root.Size, root.ZIndex, root.Visible = UDim2.fromScale(1, 1), 3, false
 	root.ClipsDescendants, root.Parent = true, screen
 	return setmetatable({ stage = stage, root = root }, Portrait)
@@ -107,7 +106,7 @@ end
 function Portrait:prepare(character, pick)
 	if not self.art then
 		self.art = SurveyPrint.new(self.root)
-		self.under = viewport(self.root, "Warm cut edge", 5)
+		self.under = viewport(self.root, "Reflected rim", 5)
 		self.under.view.Ambient, self.under.view.LightColor = Color3.new(1, 1, 1), Color3.new()
 		self.subject = viewport(self.root, "Player and shouldered pick", 6)
 		self.subject.view.Ambient = Color3.fromHex("CAD2D9")
@@ -160,7 +159,7 @@ function Portrait:draw(actor, camera, frame, motion)
 		end
 	end
 	local size = camera.ViewportSize
-	local offset = math.max(2, math.round(math.min(size.X, size.Y) * 0.0055))
+	local offset = math.max(1, math.round(math.min(size.X, size.Y) * 0.0025))
 	local face = camera:WorldToViewportPoint(actor.head.Position)
 	self.root.Visible = true
 	self.under.view.Position = UDim2.fromOffset(-offset, offset)

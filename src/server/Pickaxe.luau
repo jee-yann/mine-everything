@@ -39,7 +39,17 @@ function Pickaxe.equip(player, char)
 	handle.Massless, handle.CanCollide, handle.CanTouch, handle.CanQuery = true, false, false, false
 	local palm = hand:FindFirstChild("RightGripAttachment")
 	local function palmOffset()
-		return if palm then palm.CFrame else CFrame.new(0, -hand.Size.Y * 0.4, 0) * CFrame.Angles(-math.pi / 2, 0, 0)
+		local toolAxis = CFrame.Angles(-math.pi / 2, 0, 0)
+		if not palm then
+			return CFrame.new(0, -hand.Size.Y * 0.4, 0) * toolAxis
+		end
+		local socket = palm.CFrame
+		-- The stock R6 socket points up the inside of its rectangular arm.
+		-- Turn the shaft out through the palm, keeping its measured origin.
+		if humanoid.RigType == Enum.HumanoidRigType.R6 and socket.UpVector:Dot(Vector3.yAxis) > 0.95 then
+			return socket * toolAxis
+		end
+		return socket
 	end
 	handle.CFrame = hand.CFrame * palmOffset() * handleGrip:Inverse()
 	handle.Parent = model

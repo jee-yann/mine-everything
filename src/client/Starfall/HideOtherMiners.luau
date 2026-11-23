@@ -21,15 +21,21 @@ local function hold(item, key, value)
 	end
 end
 
-local function conceal(item)
-	if item:IsA("BasePart") or item:IsA("Decal") then
+local function conceal(item, viewer, silent)
+	if item:IsA("Sound") then
+		-- Roblox updates movement volumes while a character changes state.
+		-- Muting this route lets its controller keep the right playback level.
+		return hold(item, "SoundGroup", silent)
+	elseif item:IsA("AudioPlayer") then
+		return hold(item, "Volume", 0)
+	elseif viewer then
+		return nil
+	elseif item:IsA("BasePart") or item:IsA("Decal") then
 		return hold(item, "LocalTransparencyModifier", 1)
 	elseif item:IsA("Humanoid") then
 		return hold(item, "DisplayDistanceType", Enum.HumanoidDisplayDistanceType.None)
 	elseif item:IsA("ParticleEmitter") or item:IsA("Beam") or item:IsA("Trail") then
 		return hold(item, "Transparency", clear)
-	elseif item:IsA("Sound") then
-		return hold(item, "Volume", 0)
 	elseif item:IsA("LayerCollector") or item:IsA("Light") or item:IsA("Highlight")
 		or item:IsA("Fire") or item:IsA("Smoke") or item:IsA("Sparkles") then
 		return hold(item, "Enabled", false)
@@ -39,10 +45,10 @@ local function conceal(item)
 	return nil
 end
 
-local function hideCharacter(character)
+local function hideCharacter(character, viewer, silent)
 	local hidden = {}
 	local function added(item)
-		if not hidden[item] then hidden[item] = conceal(item) end
+		if not hidden[item] then hidden[item] = conceal(item, viewer, silent) end
 	end
 	local function removed(item)
 		if hidden[item] then
@@ -61,13 +67,15 @@ local function hideCharacter(character)
 end
 
 return function(viewer)
+	local silent = Instance.new("SoundGroup")
+	silent.Name, silent.Volume, silent.Parent = "Character sounds during the film", 0, game:GetService("SoundService")
 	local watching = {}
 	local function watch(player)
-		if player == viewer or watching[player] then return end
+		if watching[player] then return end
 		local restore
 		local function swap(character)
 			if restore then restore() end
-			restore = if character then hideCharacter(character) else nil
+			restore = if character then hideCharacter(character, player == viewer, silent) else nil
 		end
 		local changed = player:GetPropertyChangedSignal("Character"):Connect(function() swap(player.Character) end)
 		watching[player] = function()
@@ -91,6 +99,7 @@ return function(viewer)
 		added:Disconnect()
 		removing:Disconnect()
 		for _, stop in watching do stop() end
+		silent:Destroy()
 		if restoreBubbles then restoreBubbles() end
 	end
 end

@@ -49,7 +49,7 @@ function Bed.new(parent)
 				cover = cover,
 				off = h,
 				wave = heave,
-				start = 0.38 * r + 0.014 * math.sin(angle * 3) * r,
+				start = 0.23 * r + 0.016 * math.sin(angle * 3) * r,
 				point = at,
 			}
 			table.insert(self.knots, node)
@@ -94,6 +94,16 @@ function Bed:heightAt(x, z)
 	return -3.9
 end
 
+-- The upright cap shears, catches on a lower shelf, then gives way.
+-- The light source uses the same falling contact height as the rock.
+function Bed.collapse(t)
+	return 0.39 * ease(t, 0.085, 0.18) + 0.46 * ease(t, 0.225, 0.33) + 0.15 * ease(t, 0.365, 0.49)
+end
+
+function Bed.contactHeight(t)
+	return -3.8 + (Bed.coverHeight + 3.8) * (1 - Bed.collapse(t))
+end
+
 function Bed:draw(age, base)
 	local time = math.clamp(age, -0.1, 1.0)
 	if time == self.last then
@@ -102,7 +112,7 @@ function Bed:draw(age, base)
 	self.last = time
 	for _, node in self.knots do
 		local t = time - node.start
-		local u = ease(t, 0, 0.54)
+		local u = Bed.collapse(t)
 		local peak = math.sin(math.pi * ease(t, 0, 0.37))
 		node.point = node.at + V(0, node.cover * (1 - u) + node.wave * peak + node.off * u, 0)
 	end

@@ -294,7 +294,11 @@ function Hud.new(player, net, mobile)
 		-- These rectangles all use the core-safe origin, including negative top/left offsets.
 		local leftEdge = math.max(margin, device.Min.X + 3)
 		local outerRight = math.max(width - margin, width + full.Max.X - core.Max.X - 12)
-		local freeLeft = math.max(0, bar.Min.X) + 5
+		local narrow = width < 515
+		local minimumWallet = 96
+		-- The native bar can start at X=0 while chat pushes both corners onto
+		-- the same row. Reserve the wallet's minimum width in that case.
+		local freeLeft = math.max(math.max(0, bar.Min.X) + 5, if narrow then leftEdge + minimumWallet + 6 else 0)
 		local freeRight = if bar.Max.X >= core.Max.X - 1 then outerRight else width + bar.Max.X - core.Max.X - 5
 		local top = math.max(full.Min.Y + 11, device.Min.Y + 8)
 		local pairWidth = 172
@@ -310,11 +314,10 @@ function Hud.new(player, net, mobile)
 		self.layer.Size = UDim2.fromOffset(locWidth, 39)
 		self.depth.Size = UDim2.fromOffset(locWidth, 21)
 		W.anchor(loc, 0.5, 0, UDim2.fromOffset(titleX, if inTopbar then top else 7))
-		local narrow = width < 515
 		-- Leave a left column for the wallet when the region and shortcuts
 		-- share its row on a compact screen. The gold amount scales to fit.
 		local walletWidth = if narrow then math.clamp(math.min(titleX - titleHalf,
-			width - margin - pairWidth) - leftEdge - 6, 96, 220) else 220
+			width - margin - pairWidth) - leftEdge - 6, minimumWallet, 220) else 220
 		wallet.Size = UDim2.fromOffset(walletWidth, 52)
 		local rosterRoom = if edge then height * 0.45 else height - 18 - self.haul.Size.Y.Offset * s
 		local rosterHeight, browsing = self.roster:layout(s, margin, edge, rosterRoom, rosterOnDemand)
@@ -362,6 +365,11 @@ function Hud.new(player, net, mobile)
 			self.surface.Position = UDim2.new(0.5, 0, 0, surfaceY - locationY)
 			local right = if topActions then freeRight else width - margin
 			local rowY = if topActions then top elseif inTopbar then 4 else math.max(73, depthY + 26)
+			rowY = belowChat(right - pairWidth, rowY, pairWidth, 48)
+			if right > titleX - titleHalf and right - pairWidth < titleX + titleHalf
+				and rowY + 48 > locationY and rowY < depthY + 21 then
+				rowY = depthY + 26
+			end
 			if
 				self.surface.Visible
 				and titleX + 56 > right - pairWidth

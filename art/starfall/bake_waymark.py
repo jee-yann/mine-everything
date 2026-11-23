@@ -12,7 +12,7 @@ ART = Path(__file__).resolve().parent
 STAGE = ART.parents[1] / "src/client/Starfall"
 
 
-def build(name="ExpeditionVane", recipe="cook_waymark.luau", prefix="VANE"):
+def build(name="ExpeditionVane", recipe="cook_waymark.luau", prefix="VANE", modules=None):
     studio = max(
         (Path(os.environ["LOCALAPPDATA"]) / "Roblox/Versions").glob(
             "*/RobloxStudioBeta.exe"
@@ -30,7 +30,8 @@ def build(name="ExpeditionVane", recipe="cook_waymark.luau", prefix="VANE"):
                     "tree": {
                         "$className": "DataModel",
                         "ReplicatedStorage": {
-                            "Scenery": {"$path": str(STAGE / "Scenery.luau")}
+                            "Scenery": {"$path": str(STAGE / "Scenery.luau")},
+                            **(modules or {}),
                         },
                     },
                 }

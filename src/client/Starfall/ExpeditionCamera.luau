@@ -18,10 +18,18 @@ function Camera.frame(actor, _, motion)
 		return if motion then math.clamp((frame - first) / (last - first), 0, 1) else 0.55
 	end
 	local eye, aim, lens, roll
-	if frame < cut.measure then
+	if frame < cut.broadcast then
+		-- The approach to the gate establishes the miner's eyeline. Reverse
+		-- to the actual player as they settle at the bench. Keep the tripod
+		-- on its mark so the avatar can move within the portrait.
+		local mark = route.Position + V(0, 1.37 * u + actor.headroom * 0.40, 0)
+		aim = mark + route:VectorToWorldSpace(V(0.35, 0.02, 0) * u)
+		eye = mark + route:VectorToWorldSpace(V(-3.25, 0.39, -8.1) * u * actor.portraitDistance)
+		lens, roll = 34, 0
+	elseif frame < cut.measure then
 		-- Looking across the scarred side puts the fissure in the foreground.
 		-- The prospector's free hand and eyeline indicate where to look next.
-		local n = phase(cut.present, cut.measure)
+		local n = phase(cut.broadcast, cut.measure)
 		local p = actor.proof
 		local plane = p.face.WorldCFrame
 		local stone = p.seam.WorldPosition
@@ -92,6 +100,9 @@ function Camera.frame(actor, _, motion)
 		local closeEye = surface + route:VectorToWorldSpace(V(3.36 + 0.19 * kick, 0.92, 0.86) * u)
 		local closeAim = surface + route.RightVector * 0.08 * u
 		local lowEye, lowAim = GalleryRun.gallery(actor, frame, contact + 4, motion)
+		if motion and age >= 0 then
+			closeAim = closeAim:Lerp(lowAim, S.ease(age, 0, 4))
+		end
 		eye, aim = closeEye:Lerp(lowEye, follow), closeAim:Lerp(lowAim, follow)
 		lens = 40 + kick + (14 - kick) * follow
 		roll = (-5.2 + 3.5 * kick) * (1 - follow) + -2.6 * (1 - n) * follow

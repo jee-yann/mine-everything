@@ -1,6 +1,7 @@
 local P = require(script.Parent.Props)
 local Rig = require(script.Parent.RobloxRig)
 local Beats = require(script.Parent.Beats)
+local Acting = require(script.Parent.CrewActing)
 local Survey = {}
 Survey.__index = Survey
 local V, CF, A, rgb = Vector3.new, CFrame.new, CFrame.Angles, Color3.fromHex
@@ -43,6 +44,8 @@ function Survey.new(shelf)
 	self.ram = P.model(root, "Test hammer")
 	P.cylinder(self.ram, "Piston shaft", V(0, 0.99, 0), 0.2, 1.7, "9CABAA", metal)
 	P.cylinder(self.ram, "Hammer head", V(0, 0.20, 0), 0.52, 0.40, "596574", metal)
+	P.cylinder(self.ram, "Striker collar", V(0, 0.34, 0), 0.54, 0.10, "E2BA69", metal)
+	P.cylinder(self.ram, "Guide ring", V(0, 0.78, 0), 0.22, 0.10, "D8C9A3", metal)
 	-- A miner cocks the drop hammer by hand. The catch releases the ram on
 	-- the downstroke; both the lever and the hands use this same hinge.
 	self.tech = Rig.new(root, "Sounding crew", nil, true)
@@ -90,13 +93,44 @@ function Survey.new(shelf)
 	self.light = P.light(self.front, "DC9AFF", 11, 1.0)
 	return self
 end
+-- The operator loads the latch, the ram drops under its own weight and
+-- the lever follows through. Each test uses a different height and grip.
+local function hammer(ram, wrist, waist, face, brace)
+	return { ram = ram, wrist = wrist, waist = waist, face = face, brace = brace }
+end
+local rest = hammer(0, 0.14, -7, -12, 0)
+local firstLift = hammer(0.72, 0.86, 4, -5, 0.18)
+local firstBite = hammer(0, 0.28, -15, -18, 0.08)
+local quickLift = hammer(0.58, 0.70, -2, -13, 0.13)
+local quickBite = hammer(0, 0.16, -13, -17, 0.04)
+local shoulders = hammer(0.96, 1.03, 9, -10, 0.24)
+local hanging = hammer(1, 1.01, 10, -8, 0.26)
+local thirdBite = hammer(0, 0.29, -19, -24, -0.10)
+local dumped = hammer(0, -0.12, -22, -18, -0.14)
+local glance = hammer(0, 0.03, -8, -3, -0.03)
+local a, b, c = table.unpack(Beats.outbound)
+local strokes = {
+	{ 0, rest, 0 },
+	{ a - 0.20, firstLift, 0.11 },
+	{ a - 0.045, hammer(0.47, 0.74, 0, -6, 0.12), 0.018 },
+	{ a, firstBite, 0.026 },
+	{ a + 0.12, hammer(0.10, 0.10, -17, -14, 0.02), 0.04 },
+	{ b - 0.14, quickLift, 0.09 },
+	{ b - 0.045, hammer(0.38, 0.59, -5, -14, 0.09), 0.02 },
+	{ b, quickBite, 0.028 },
+	{ b + 0.12, rest, 0.035 },
+	{ c - 0.30, shoulders, 0.13 },
+	{ c - 0.21, hanging, 0.04 },
+	{ c - 0.055, hammer(0.76, 0.92, 5, -9, 0.16), 0.025 },
+	{ c, thirdBite, 0.04 },
+	{ c + 0.09, dumped, 0.04 },
+	{ c + 0.41, glance, 0.12 },
+}
+
 function Survey:draw(t, base)
-	local lift = 0
+	local stroke = Acting.read(strokes, t)
 	for i, when in Beats.outbound do
 		local age = t - when
-		-- Retract smoothly; release the head into the plate over three frames.
-		local stroke = P.ease(t, when - 0.32, when - 0.09) * (1 - P.ease(t, when - 0.09, when))
-		lift = math.max(lift, stroke)
 		local lamp = self.lamps[i]
 		lamp.Color = rgb(if age >= 0 and age < 3.1 then "FFCD54" else "37454B")
 		lamp.Material = if age >= 0 and age < 3.1 then neon else metal
@@ -106,17 +140,19 @@ function Survey:draw(t, base)
 			p.Position = base * onPath(cablePath, age / 1.70)
 		end
 	end
-	self.ram:PivotTo(base * CF(pad + V(0, 0.25 + lift * 1.47, 0)))
-	local hinge = base * CF(pad + V(-0.46, 2.57, 0.58)) * A(0, 0, 0.33 - 0.86 * lift)
+	self.ram:PivotTo(base * CF(pad + V(0, 0.25 + stroke.ram * 1.62, 0)))
+	local hinge = base * CF(pad + V(-0.46, 2.57, 0.58)) * A(0, 0, 0.33 - 0.89 * stroke.wrist)
 	self.handle:PivotTo(hinge)
-	local listening = P.ease(t, Beats.outbound[3] + 0.12, Beats.outbound[3] + 0.85)
+	local listening = P.ease(t, c + 0.29, c + 0.41)
 	local techFloor = base * CF(pad + V(-2.65, -0.14, -0.68)) * A(0, -2.07, 0)
 	self.tech:pose(techFloor, {
-		bob = -0.16 + 0.19 * lift,
-		RootJoint = A(-0.06 - 0.16 * (1 - lift), -0.1 * listening, 0.06),
-		Neck = A(-0.24 + 0.21 * listening, -0.5 * listening, 0.035 * lift),
-		RightTarget = hinge:PointToWorldSpace(V(-1.54, 0.10, 0)),
-		LeftTarget = base:PointToWorldSpace(pad + V(-1.98, 2.55 + 0.42 * lift, -0.10)),
+		bob = -0.11 + stroke.brace,
+		RootJoint = A(math.rad(stroke.waist), -0.11 * listening, 0.055 - 0.12 * stroke.brace),
+		Neck = A(math.rad(stroke.face), -0.55 * listening, 0.07 * stroke.wrist),
+		RightTarget = hinge * V(-1.54, 0.10, 0),
+		LeftTarget = base * (pad + V(-2.14 + 0.15 * stroke.wrist, 2.40 + 0.65 * stroke.wrist, -0.04)),
+		LeftHip = A(0.14 - 0.3 * stroke.brace, 0, 0.04),
+		RightHip = A(-0.16 + 0.3 * stroke.brace, 0, -0.045),
 	})
 	local swing = 0
 	for _, knock in Beats.returned do
