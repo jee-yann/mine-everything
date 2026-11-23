@@ -1,8 +1,9 @@
 -- Dresses every open mine block face in the Ink & Facet look. Each face shows its Storybook Ink
--- drawing (DrawnFaces) and gem blocks grow 3D crystals out of one face. Without drawings, faces
--- fall back to an ink frame plus 3D relief and decor. Calcite marks cave ceilings either way.
--- The nearest crystals and reliefs get ink outlines. Ores from Gold up (OreLooks `shine`) glow
--- from their ore pieces: Gold barely, Starfall the most.
+-- drawing (DrawnFaces), and on gems the drawing's ore pieces stand a little out of the face.
+-- Without drawings, faces fall back to an ink frame plus 3D relief, gem crystals and decor.
+-- Calcite marks cave ceilings either way.
+-- The nearest 3D reliefs and crystals (shown without drawings) get ink outlines. Ores from Gold
+-- up (OreLooks `shine`) glow from their ore pieces: Gold barely, Starfall the most.
 local Tags = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage").Shared
@@ -39,16 +40,15 @@ local function crownFace(mask)
 	return nil
 end
 
--- Which 3D art an open face wants: "crystals", "crown", "relief", "calcite", "decor" or nil.
--- A drawn face already shows the ore or the rock, so it only adds crystals and calcite.
+-- Which 3D art an open face wants: "raised", "crown", "relief", "calcite", "decor" or nil.
+-- A drawn face already shows the ore or the rock, so it only adds raised gem pieces and calcite.
 local function wanted(block, face, mask, calcite, drawn)
 	local name = block.Name
-	local crowned = Art.hasCrown(name) and crownFace(mask) == face
 	if Art.isMineral(name) then
 		if drawn then
-			return if crowned then "crystals" else nil
+			return if Art.hasCrown(name) then "raised" else nil
 		end
-		return if crowned then "crown" else "relief"
+		return if Art.hasCrown(name) and crownFace(mask) == face then "crown" else "relief"
 	elseif bit32.btest(calcite, 2 ^ face.Value) then
 		return "calcite"
 	elseif not drawn and Art.decorates(name, (block.Position / Config.Cell):Floor(), face.Value) then
@@ -57,12 +57,52 @@ local function wanted(block, face, mask, calcite, drawn)
 	return nil
 end
 
+-- A gem's ore pieces raised off one face: thin clear layers just above the face, each showing
+-- the pieces (DrawnFaces), darker underneath, so from an angle they read as standing out.
+-- The layers keep the block's orientation so their pieces line up with the face's drawing.
+local function raise(block, face)
+	local pieces = Drawn.pieces(block.Name)
+	if not pieces then
+		return nil
+	end
+	local settings = Looks.raised
+	local normal = Vector3.FromNormalId(face)
+	local across = Vector3.new(math.abs(normal.X), math.abs(normal.Y), math.abs(normal.Z))
+	local half = (block.Size * across).Magnitude * 0.5
+	local model = Instance.new("Model")
+	model.Name = block.Name .. " raised"
+	for i = 1, settings.layers do
+		local top = i == settings.layers
+		local part = Instance.new("Part")
+		part.Name, part.Anchored, part.Transparency = if top then "Top" else "Layer", true, 1
+		part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = false, false, false, false
+		part.Size = block.Size * (Vector3.one - across) + across * 0.02
+		-- The lowest layer sits right on the face, dark, covering the drawing's flat pieces.
+		local lift = half + 0.01 + (settings.height - 0.01) * (i - 1) / (settings.layers - 1)
+		part.CFrame = block.CFrame + block.CFrame:VectorToWorldSpace(normal * lift)
+		local decal = Instance.new("Decal")
+		decal.Name, decal.Face = "Ore pieces", face
+		if not pcall(function()
+			decal.ColorMapContent = pieces
+		end) then
+			model:Destroy()
+			return nil
+		end
+		local shade = settings.shade
+		local k = if top then 1 else shade[1] + (shade[2] - shade[1]) * (i - 1) / (settings.layers - 2)
+		decal.Color3 = Color3.new(k, k, k)
+		decal.Parent = part
+		part.Parent = model
+	end
+	return model
+end
+
 local function build(block, face, kind)
 	local cf = faceCFrame(block, face)
 	if kind == "relief" or kind == "crown" then
 		return Art.face(block.Name, cf, nil, kind == "crown"), cf
-	elseif kind == "crystals" then
-		return Art.crown(block.Name, cf), cf
+	elseif kind == "raised" then
+		return raise(block, face), cf
 	end
 	local p = (block.Position / Config.Cell):Floor()
 	if kind == "calcite" then
@@ -113,10 +153,13 @@ return function()
 		for _, face in normals do
 			local gui = Instance.new("SurfaceGui")
 			gui.Name, gui.Face, gui.Enabled, gui.ResetOnSpawn = "Ore glow", face, false, false
-			gui.LightInfluence, gui.ZOffset = 0, 0.5
+			gui.LightInfluence, gui.ZOffset = 0, 0.02
 			gui.SizingMode, gui.CanvasSize = Enum.SurfaceGuiSizingMode.FixedSize, Vector2.new(256, 256)
 			local image = Instance.new("ImageLabel")
 			image.Name, image.Size, image.BackgroundTransparency = "Glow", UDim2.fromScale(1, 1), 1
+			-- On top and bottom faces a SurfaceGui sits a quarter turn from a Decal; turn it back.
+			local flat = face == Enum.NormalId.Top or face == Enum.NormalId.Bottom
+			image.Rotation = if flat then 270 else 0
 			image.Parent = gui
 			gui.Parent = playerGui
 			overlays[face] = gui
@@ -152,7 +195,7 @@ return function()
 				local label = gui:FindFirstChild("Glow") :: ImageLabel
 				label.ImageContent = image
 				label.ImageTransparency = lerp(glow.pieces.transparency, g.shine)
-				gui.Adornee, gui.Brightness = block, slot.piece0
+				gui.Adornee, gui.Brightness = g.tops[face] or block, slot.piece0
 			else
 				gui.Adornee = nil
 			end
@@ -213,25 +256,31 @@ return function()
 					end
 					if kind and not art then
 						local model, cf = build(block, face, kind)
-						model.Parent = block
-						arts[face] = { model = model, kind = kind }
-						if kind == "relief" or kind == "crown" or kind == "crystals" then
-							reliefs[model] = cf.Position
+						if model then
+							model.Parent = block
+							arts[face] = { model = model, kind = kind }
+							if kind == "relief" or kind == "crown" then
+								reliefs[model] = cf.Position
+							end
 						end
 					end
 				end
 				if color and shine then
-					-- Light shines out of the face the crystals use. Every drawn face can show the glow.
+					-- Light shines out of one open face: the top if it is open, then a side, then the bottom.
 					local face = crownFace(mask)
 					if face then
-						local drawn = {}
+						-- The glow shows on each drawn face, or on its raised pieces when a gem has them.
+						local drawn, tops = {}, {}
 						for f, skin in skins do
 							drawn[f] = skin.drawn
+							local raised = arts[f]
+							tops[f] = raised and raised.kind == "raised" and raised.model:FindFirstChild("Top") or nil
 						end
 						glowing[block] = {
 							position = block.Position + Vector3.FromNormalId(face) * block.Size.Y * 0.5,
 							face = face,
 							faces = drawn,
+							tops = tops,
 							color = color,
 							shine = shine,
 							phase = phase,

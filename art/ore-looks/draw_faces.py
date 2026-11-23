@@ -74,6 +74,16 @@ class Style:
 STYLE = Style()
 
 
+class GlowStyle(Style):
+    """For glow images: cracks stay in the rock, so only the ore pieces glow and stand out."""
+
+    def crack(self, t, pts, ore):
+        pass
+
+
+GLOW_STYLE = GlowStyle()
+
+
 def malachite(t, ore, rng, style):
     """Copper nuggets sitting in cradles of banded green malachite, the rock copper is found in."""
     pal, green = ore["pal"], ore["extra"]
@@ -208,7 +218,7 @@ def draw(face, variant, glow=False):
         t.d = ImageDraw.Draw(t.img)
     shape = DRAWN.get(face["shape"]) or SHAPES[face["shape"]]
     face = dict(face, matrix=face.get("matrix", face["host"]), variant=variant)
-    shape(t, face, rng, STYLE)
+    shape(t, face, rng, GLOW_STYLE if glow else STYLE)
     if glow:
         return glow_layer(t.img, hexrgb(face["glow"]))
     t.d.rectangle([0, 0, DRAW - 1, DRAW - 1], outline=to255(INK), width=int(0.035 * DRAW))

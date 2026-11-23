@@ -1,7 +1,7 @@
 # Ore looks: Ink & Facet
 
-Mine blocks use a Storybook Ink style (flat colour, bold ink lines, hatching). Gem ores grow
-low-poly 3D crystals out of one face.
+Mine blocks use a Storybook Ink style (flat colour, bold ink lines, hatching). On gem ores the
+drawing's own ore pieces stand a little out of every face.
 
 - `src/shared/OreLooks.luau` holds the look data for every block: palettes, crowns, glow.
 - `src/client/DrawnFaces.luau` decodes the face drawings in `src/client/OreDrawings/` and puts
@@ -9,8 +9,10 @@ low-poly 3D crystals out of one face.
 - Ores from Gold up glow from their ore pieces. Each has a glow image in `src/client/OreGlow/`
   (just its ore pieces and a soft halo), which `OreFaces` shows self-lit on the nearest glowing
   ores. How strongly each ore glows is its `shine` in `OreLooks`.
-- `src/shared/ReliefKit.luau` builds the 3D crystals, plus a 3D fallback for every face that the
-  game uses when it can't show drawings.
+- `OreFaces` raises a gem's ore pieces by stacking its pieces image (the glow image without the
+  halo) in thin layers just off each face, darker underneath. `Looks.raised` sets the height.
+- `src/shared/ReliefKit.luau` builds a 3D fallback for every face, including gem crystals, that
+  the game uses when it can't show drawings.
 
 ## Redraw the faces
 

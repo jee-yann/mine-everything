@@ -16,7 +16,7 @@ export type Look = {
 	relief: string, -- a ReliefKit.recipes entry, drawn flush on every open face
 	palette: { string }, -- four colours, dark to light
 	accent: { string }?, -- a second material, such as copper's malachite
-	crown: string?, -- a ReliefKit.crowns entry: crystals that break out of the face
+	crown: string?, -- a ReliefKit.crowns entry: 3D crystals, used when drawings can't be shown
 	glow: string?, -- light colour for ores that glow (Gold and up)
 	shine: number?, -- how strongly it glows, 0 to 1: Gold barely, Starfall the most
 	sparkle: boolean?, -- white glints on the relief
@@ -52,6 +52,13 @@ Looks.glow = {
 	pieces = { brightness = { 1, 1.7 }, transparency = { 0.7, 0.05 } }, -- the self-lit ore pieces
 	light = { brightness = { 0.2, 1 }, reach = { 5, 12 }, angle = 120, offset = 0.4 }, -- light thrown outward
 }
+
+-- Gems (ores with a `crown`) show their ore pieces raised a little off every drawn face: the
+-- pieces from the glow image, stacked in thin layers, darker underneath, so from an angle they
+-- read as standing out of the rock. `height` is in studs, `layers` is at least 3, and `shade`
+-- darkens the lower layers (the lowest sits on the face and hides the flat drawn pieces).
+-- Without drawings, gems grow 3D crystals from their `crown` instead.
+Looks.raised = { height = 0.3, layers = 8, shade = { 0.1, 0.32 } }
 
 -- Every open face gets an ink frame. The client draws the image itself when the
 -- experience allows EditableImage. Otherwise it uses `image` (an uploaded asset id)

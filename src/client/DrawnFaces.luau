@@ -13,6 +13,7 @@ local folder = script.Parent:FindFirstChild("OreDrawings")
 local glowFolder = script.Parent:FindFirstChild("OreGlow")
 local variants = {} -- block name -> number of variants, or 0 for a single drawing named after the block
 local images = {} -- source StringValue -> Content, or false when it can't be shown
+local solids = {} -- the same for glow images with their soft halo left out
 
 if folder then
 	for _, value in folder:GetChildren() do
@@ -26,14 +27,18 @@ if folder then
 end
 
 -- Per row: u16 y, u16 x, u8 count, then count runs of (u16 length, u8 palette index).
--- Palette entries are RRGGBB, or RRGGBBAA for images with clear parts.
-local function decode(source)
+-- Palette entries are RRGGBB, or RRGGBBAA for images with clear parts. `solid` drops every
+-- partly clear colour, which leaves a glow image's ore pieces without their halo.
+local function decode(source, solid)
 	local art = Http:JSONDecode(source)
 	local width, height = art.width, art.height
 	local swatches = {}
 	for i, hex in art.palette do
 		local c = Color3.fromHex(string.sub(hex, 1, 6))
 		local alpha = if #hex == 8 then tonumber(string.sub(hex, 7, 8), 16) :: number else 255
+		if solid and alpha < 240 then
+			alpha = 0
+		end
 		local rgba = math.round(c.R * 255)
 			+ 256 * math.round(c.G * 255)
 			+ 65536 * math.round(c.B * 255)
@@ -63,16 +68,17 @@ local function decode(source)
 	return Content.fromObject(image)
 end
 
-local function content(from, key)
+local function content(from, key, solid)
 	local value = from and from:FindFirstChild(key)
 	if not value then
 		return nil
 	end
-	if images[value] == nil then
-		local ok, image = pcall(decode, value.Value)
-		images[value] = ok and image or false
+	local cache = if solid then solids else images
+	if cache[value] == nil then
+		local ok, image = pcall(decode, value.Value, solid)
+		cache[value] = ok and image or false
 	end
-	return images[value] or nil
+	return cache[value] or nil
 end
 
 -- The drawing for `face` (a NormalId value) of a block at cell `p`, or nil if the block has none.
@@ -121,6 +127,15 @@ function Drawn.glow(name)
 		return Content.fromUri(uploaded)
 	end
 	return content(glowFolder, name)
+end
+
+-- Just the ore pieces of ore `name`, on a clear background (its glow image without the halo),
+-- or nil. Gems raise these a little off their faces.
+function Drawn.pieces(name)
+	if not Looks.drawn.enabled then
+		return nil
+	end
+	return content(glowFolder, name, true)
 end
 
 return Drawn
