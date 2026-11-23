@@ -22,15 +22,18 @@ local function expectGuideArrow(button)
 	end, 3, "onboarding arrow on " .. button.Name)
 	assert(button.Interactable and not marker.Active, "onboarding blocked its own action")
 end
--- The art on an ore block's open faces: its drawn faces, or relief models when drawings are unavailable.
+-- The art on an ore block's open faces, one item per face: its drawn faces (each also carries a
+-- raised-pieces model), or relief models when drawings are unavailable.
 local function faceArt(block)
-	local found = {}
+	local drawn, relief = {}, {}
 	for _, child in block:GetChildren() do
-		if child:IsA("Model") or (child:IsA("Decal") and child.Name == block.Name .. " face") then
-			table.insert(found, child)
+		if child:IsA("Decal") and child.Name == block.Name .. " face" then
+			table.insert(drawn, child)
+		elseif child:IsA("Model") and child.Name ~= block.Name .. " raised" then
+			table.insert(relief, child)
 		end
 	end
-	return found
+	return if #drawn > 0 then drawn else relief
 end
 local function checkOreFaces()
 	local folder = Instance.new("Folder")
