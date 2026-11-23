@@ -15,7 +15,7 @@
 export type Look = {
 	relief: string, -- a ReliefKit.recipes entry, drawn flush on every open face
 	palette: { string }, -- four colours, dark to light
-	accent: { string }?, -- a second material, such as copper's malachite or iron rust
+	accent: { string }?, -- a second material, such as copper's malachite
 	crown: string?, -- a ReliefKit.crowns entry: crystals that break out of the face
 	glow: string?, -- light colour for gems that glow near the player
 	sparkle: boolean?, -- white glints on the relief
@@ -55,8 +55,8 @@ Looks.hostTint = 0.12
 Looks.rock = {
 	Dirt = {
 		color = "8A5B3C",
-		decor = "pebbles",
-		palette = { "5E544B", "8E8174", "BEB2A2", "ECE4D8" },
+		decor = "specks",
+		palette = { "4A2E1C", "6A4129", "8A5B3C", "A87552" },
 		every = 3,
 	},
 	Stone = { decor = "cracks", palette = { "6E7079", "999BA4", "C4C6CC", "EEEFF2" }, every = 4, tint = true },
@@ -74,7 +74,6 @@ Looks.ores = {
 	Iron = {
 		relief = "chunks",
 		palette = { "343C47", "667487", "AAB8C8", "F2F6FA" },
-		accent = { "9E4A1C", "D07A33" },
 	},
 	Gold = { relief = "nugget", palette = { "7A3F02", "D08A16", "FFD050", "FFF7D6" }, sparkle = true },
 	Diamond = {

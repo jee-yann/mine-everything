@@ -103,7 +103,7 @@ def nugget(t, ore, rng, style):
 
 
 def chunks(t, ore, rng, style):
-    """Angular steel chunks with rust stains, in flat cel colour."""
+    """Angular steel chunks in flat cel colour."""
     pal = ore["pal"]
     rust = [hexrgb(c) for c in ore.get("rust", [])]
     for i, (cx, cy, r) in enumerate([(0.42, 0.45, 0.27), (0.78, 0.74, 0.12), (0.77, 0.24, 0.1), (0.17, 0.82, 0.075)]):
@@ -112,17 +112,11 @@ def chunks(t, ore, rng, style):
         t.poly([(cx, cy)] + list(pts[4:6]) + [pts[0]], pal_at(pal, 0.45))
         t.poly([(cx + LIGHT[0] * r * 0.15, cy + LIGHT[1] * r * 0.15)] + list(pts[1:4]), pal_at(pal, 0.7))
         t.poly([(cx + LIGHT[0] * r * 0.15, cy + LIGHT[1] * r * 0.15), pts[3], pts[4]], pal_at(pal, 0.92))
-        for k in range(3 if i == 0 else 1):
+        for k in range(3 if i == 0 else 1) if rust else ():
             off = -LIGHT * r * rng.uniform(0.15, 0.4) + rng.uniform(-0.4, 0.4, 2) * r * 0.5
             rc = (cx + off[0], cy + off[1])
             t.poly(blob(rc, r * rng.uniform(0.24, 0.34), 8, rng, 0.35), rust[k % len(rust)])
         t.d.polygon(t.P(pts), outline=to255(INK), width=style.ow(t))
-
-
-def outlined_root(t, pts, width):
-    """An outlined root: a tan line inside a thicker ink line."""
-    t.line(pts, INK, width * 1.9)
-    t.line(pts, hexrgb("C9A27A"), width)
 
 
 def crumbs(t, host, rng, count):
@@ -132,47 +126,8 @@ def crumbs(t, host, rng, count):
 
 
 def dirt(t, ore, rng, style):
-    """Five clearly different dirt faces, so a dug wall doesn't repeat."""
-    host = hexrgb(ore["host"])
-    variant = ore["variant"]
-    pal = ore["pal"]
-    if variant == 1:  # a scatter of pebbles
-        crumbs(t, host, rng, 24)
-        for _ in range(5):
-            c = (rng.uniform(0.15, 0.85), rng.uniform(0.15, 0.85))
-            style.dome(t, blob(c, rng.uniform(0.04, 0.075), 7, rng, 0.2, aspect=1.35), pal, rng)
-    elif variant == 2:  # roots reaching down from above
-        crumbs(t, host, rng, 14)
-        for x0 in (0.28, 0.66):
-            x = x0 + rng.uniform(-0.05, 0.05)
-            main = [(x, 0.0), (x + 0.04, 0.2), (x - 0.03, 0.42), (x + 0.02, 0.62)]
-            outlined_root(t, main, 0.016)
-            for k in (1, 2):
-                a = main[k]
-                side = 1 if k == 1 else -1
-                outlined_root(t, [a, (a[0] + side * 0.12, a[1] + 0.07), (a[0] + side * 0.18, a[1] + 0.16)], 0.009)
-        style.dome(t, blob((0.5, 0.82), 0.05, 7, rng, 0.2, aspect=1.4), pal, rng)
-    elif variant == 3:  # a darker clay band with stones caught in it
-        crumbs(t, host, rng, 16)
-        xs = np.linspace(0, 1, 9)
-        top = [(x, 0.44 + 0.03 * math.sin(x * 7 + 1)) for x in xs]
-        bottom = [(x, 0.62 + 0.03 * math.sin(x * 6 + 2)) for x in xs]
-        t.poly(top + bottom[::-1], host * 0.8)
-        t.line(top, INK, 0.009)
-        t.line(bottom, INK, 0.009)
-        for x in (0.22, 0.55, 0.8):
-            style.dome(t, blob((x, 0.53 + rng.uniform(-0.02, 0.02)), 0.04, 6, rng, 0.2, aspect=1.4), pal, rng)
-    elif variant == 4:  # one big half-buried rock
-        crumbs(t, host, rng, 18)
-        style.dome(t, blob((0.62, 0.62), 0.2, 9, rng, 0.12, aspect=1.25), pal, rng)
-        style.dome(t, blob((0.26, 0.3), 0.045, 6, rng, 0.2), pal, rng)
-    else:  # a worm burrow and a crack
-        crumbs(t, host, rng, 20)
-        burrow = [(0.12, 0.3), (0.3, 0.38), (0.42, 0.3), (0.58, 0.42), (0.72, 0.36), (0.86, 0.5)]
-        t.line(burrow, INK, 0.05)
-        t.line(burrow, host * 0.62, 0.032)
-        crack = [(0.7, 1.0), (0.66, 0.86), (0.72, 0.76), (0.68, 0.68)]
-        t.line(crack, INK, 0.008)
+    """Plain dirt: flat colour with little dark specks, no stones or lines."""
+    crumbs(t, hexrgb(ore["host"]), rng, 46)
 
 
 def stone(t, ore, rng, style):
@@ -205,12 +160,12 @@ DRAWN = {"hex": hexes, "chunks": chunks, "dirt": dirt, "stone": stone, "malachit
 # stands apart from Dirt and Gold). Stone is drawn light and neutral:
 # the game tints it with the stone grade's colour.
 FACES = [
-    dict(name="Dirt", rarity="Common", host="9A6440", shape="dirt", pal=["5E544B", "8E8174", "BEB2A2", "ECE4D8"], variants=5, tones=[1.0, 0.96, 1.03, 0.98, 1.02]),
+    dict(name="Dirt", rarity="Common", host="9A6440", shape="dirt", pal=["5E544B", "8E8174", "BEB2A2", "ECE4D8"], plain=True),
     dict(name="Stone", rarity="Common", host="E6E7EA", shape="stone", pal=["8C8E96", "B4B6BD", "D8D9DE", "FFFFFF"], variants=3),
     dict(name="Coal", rarity="Common", host="A3A6B0", shape="lumps", pal=["15161C", "2C2E37", "4C4F5A", "A9ADB8"]),
     dict(name="Copper", rarity="Uncommon", host="7D8C89", shape="malachite", pal=["5A1E10", "B5502E", "EA8862", "FFDCCB"], extra=["0B4A33", "1F7A52", "3FAE74", "8FE3AE"]),
-    dict(name="Iron", rarity="Uncommon", host="A79F96", shape="chunks", pal=["39414D", "6C7A8C", "AFBCCB", "F2F6FA"], rust=["A2501F", "D27C35"]),
-    dict(name="Gold", rarity="Rare", host="8A6A45", shape="nugget", pal=["7A3F02", "D8921A", "FFD45A", "FFF7D6"]),
+    dict(name="Iron", rarity="Uncommon", host="A79F96", shape="chunks", pal=["39414D", "6C7A8C", "AFBCCB", "F2F6FA"]),
+    dict(name="Gold", rarity="Rare", host="98784A", shape="nugget", pal=["7A3F02", "D8921A", "FFD45A", "FFF7D6"]),
     dict(name="Diamond", rarity="Epic", host="7898A8", shape="octa", pal=["3A86A6", "8DE2F2", "D6FCFF", "FFFFFF"], glow="9FF3FF"),
     dict(name="Emerald", rarity="Legendary", host="5F8B70", shape="hex", pal=["0D5434", "238553", "4CCE72", "C0FFB8"], glow="7DFF95"),
     dict(name="Amethyst", rarity="Mythic", host="806894", shape="geode", pal=["43206F", "7943B4", "B37BE8", "F4DDFF"], glow="C98CFF", matrix="5D4A70"),
@@ -224,9 +179,9 @@ def draw(face, variant):
     rng = np.random.default_rng(sum(map(ord, face["name"])) * 7919 + variant * 104729)
     host = hexrgb(face["host"]) * face.get("tones", [1.0] * 5)[variant - 1]
     t = Tex(host, DRAW)
-    # A cel shadow corner with hatching, as in the concept. Dirt and stone move it around
-    # (or leave it out) so a dug wall doesn't show the same corner on every block.
-    corner = ["bl", "tr", "br", None, "tl"][variant - 1] if face.get("variants", 1) > 1 else "bl"
+    # A cel shadow corner with hatching, as in the concept. Stone moves it around (or leaves
+    # it out) so a dug wall doesn't show the same corner on every block. Plain dirt has none.
+    corner = None if face.get("plain") else ["bl", "tr", "br", None, "tl"][variant - 1] if face.get("variants", 1) > 1 else "bl"
     if corner:
         flip = lambda pts: [((1 - x) if "r" in corner else x, (1 - y) if "t" in corner else y) for x, y in pts]
         t.poly(flip([(0, 0.7), (0.3, 1.0), (0, 1.0)]), host * 0.86)

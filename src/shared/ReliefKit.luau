@@ -277,13 +277,13 @@ function recipes.malachite(m: Model, look: Look, rng: Random)
 	end
 end
 
--- Angular metal chunks with rust stains (iron).
+-- Angular metal chunks (iron). An `accent` palette adds stains, such as rust.
 function recipes.chunks(m: Model, look: Look, rng: Random)
-	local p, rust = look.palette, look.accent or look.palette
+	local p, stain = look.palette, look.accent
 	for i, s in { { -0.5, 0.3, 1.65, 6 }, { 1.7, -1.45, 0.72, 5 }, { 1.62, 1.55, 0.6, 5 } } do
 		Kit.rim(m, s[1], s[2], s[3] * 1.1, look.ink)
 		Kit.dome(m, s[1], s[2], s[3], s[4], s[3] * 0.32, p, rng, { jitter = 0.1 })
-		for k = 1, if i == 1 then 3 else 1 do
+		for k = 1, if stain == nil then 0 elseif i == 1 then 3 else 1 do
 			local a = rng:NextNumber(-0.6, 0.6) - math.pi / 3
 			local d = s[3] * rng:NextNumber(0.25, 0.55)
 			local size = s[3] * rng:NextNumber(0.42, 0.6)
@@ -295,7 +295,7 @@ function recipes.chunks(m: Model, look: Look, rng: Random)
 				size * 0.7,
 				rng:NextNumber(0, 180),
 				0.12 + s[3] * 0.16,
-				shade(rust, (k - 1) / 2)
+				shade(stain :: Palette, (k - 1) / 2)
 			)
 		end
 	end
@@ -441,19 +441,12 @@ function recipes.star(m: Model, look: Look, _rng: Random)
 	Kit.sparkle(m, 1.85, -1.8, 0.5, 0.2)
 end
 
--- Rock decor: pebbles and a root (dirt).
-function recipes.pebbles(m: Model, look: Look, rng: Random)
+-- Rock decor: little dark specks of soil (dirt).
+function recipes.specks(m: Model, look: Look, rng: Random)
 	local p = look.palette
-	for _ = 1, 4 do
-		local x, y = rng:NextNumber(-2.3, 2.3), rng:NextNumber(-2.3, 2.3)
-		local w = rng:NextNumber(0.5, 0.85)
-		Kit.blob(m, x, y, w * 1.18, w * 0.86, rng:NextNumber(-30, 30), 0.03, look.ink)
-		Kit.blob(m, x, y, w, w * 0.7, rng:NextNumber(-30, 30), 0.08, shade(p, rng:NextNumber(0.35, 0.75)))
-	end
-	local x = rng:NextNumber(-1.5, 1.5)
-	local root = { Vector2.new(x, -3), Vector2.new(x - 0.2, -2.3), Vector2.new(x + 0.15, -1.7) }
-	for i = 1, #root - 1 do
-		Kit.bar(m, root[i], root[i + 1], 0.07, 0.05, look.ink)
+	for _ = 1, 9 do
+		local r = rng:NextNumber(0.05, 0.11)
+		Kit.disc(m, rng:NextNumber(-2.6, 2.6), rng:NextNumber(-2.6, 2.6), r, 0.04, shade(p, rng:NextNumber(0, 0.3)))
 	end
 end
 
