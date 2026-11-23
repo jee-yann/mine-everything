@@ -41,24 +41,24 @@ Looks.ink = "1A141F"
 Looks.drawn = { enabled = true, uploaded = {} :: { [string]: string } }
 
 -- Ores with a `shine` glow from their ore pieces, not the rock around them. On the nearest few
--- glowing ores, each drawn face shows its glow image (DrawnFaces: the ore pieces and a soft halo)
--- self-lit over the drawing, and a spotlight just off one face throws soft light outward onto the
--- tunnel (never back onto the ore's own rock). Both slowly breathe. Each pair runs from shine 0
--- to shine 1.
+-- glowing ores, each raised face shows its glow image (DrawnFaces: the pieces with a neon
+-- filling and a soft halo) self-lit over the pieces, and a spotlight just off one face throws
+-- light onto the tunnel (never back onto the ore's own rock). Both slowly breathe. Each pair
+-- runs from shine 0 to shine 1.
 Looks.glow = {
 	ores = 8, -- how many of the nearest glowing ores light up at once
 	range = 80, -- studs from the camera
 	pulse = 0.12,
-	pieces = { brightness = { 1, 1.7 }, transparency = { 0.7, 0.05 } }, -- the self-lit ore pieces
-	light = { brightness = { 0.2, 1 }, reach = { 5, 12 }, angle = 120, offset = 0.4 }, -- light thrown outward
+	pieces = { brightness = { 1.25, 2.3 }, transparency = { 0.45, 0 } }, -- the self-lit neon pieces
+	light = { brightness = { 0.35, 1.4 }, reach = { 6, 14 }, angle = 80, offset = 0.6 }, -- light thrown outward
 }
 
--- Gems (ores with a `crown`) show their ore pieces raised a little off every drawn face: the
--- pieces from the glow image, stacked in thin layers, darker underneath, so from an angle they
--- read as standing out of the rock. `height` is in studs, `layers` is at least 3, and `shade`
--- darkens the lower layers (the lowest sits on the face and hides the flat drawn pieces).
--- Without drawings, gems grow 3D crystals from their `crown` instead.
-Looks.raised = { height = 0.3, layers = 8, shade = { 0.1, 0.32 } }
+-- Every ore shows its ore pieces raised a little off each drawn face: its pieces image
+-- (DrawnFaces), stacked in thin layers, darker underneath, so from an angle they read as standing
+-- out of the rock. `height` is in studs, `layers` is at least 3, and `shade` darkens the lower
+-- layers (the lowest sits on the face and hides the flat drawn pieces). Without drawings, ores
+-- show a 3D relief instead, and gems grow 3D crystals from their `crown`.
+Looks.raised = { height = 0.3, layers = 6, shade = { 0.1, 0.32 } }
 
 -- Every open face gets an ink frame. The client draws the image itself when the
 -- experience allows EditableImage. Otherwise it uses `image` (an uploaded asset id)

@@ -2,15 +2,18 @@
 
 Run from the repo root:  python3 art/ore-looks/draw_faces.py
 It rewrites art/ore-looks/faces/*.png (for uploading, if ever needed) and
-src/client/OreDrawings/*.txt (what the game decodes). Ores that glow (Gold and up) also get a
-glow image: just their ore pieces plus a soft halo on a clear background, written to
-art/ore-looks/glow/*.png and src/client/OreGlow/*.txt. The game shows it self-lit over the face,
-so the glow comes from the ore and not the rock. Needs numpy and Pillow.
+src/client/OreDrawings/*.txt (what the game decodes). Every ore also gets a pieces image: just
+its ore pieces on a clear background (art/ore-looks/pieces, src/client/OrePieces), which the game
+raises a little off the face. Ores that glow (Gold and up) get a glow image too: the same pieces
+with a neon filling and a soft halo (art/ore-looks/glow, src/client/OreGlow). The game shows it
+self-lit over the raised pieces, so the glow comes from the ore and not the rock. Needs numpy
+and Pillow.
 
 Each face is drawn at 512 px, scaled to 256 px, reduced to a small palette and stored as
 run-length rows (the same tape layout as BreakerDrawings in the Starfall opening).
 """
 import base64
+import colorsys
 import json
 import math
 import struct
@@ -189,7 +192,8 @@ FACES = [
 ]
 
 
-def draw(face, variant, glow=False):
+def draw(face, variant, layer=None):
+    """A face drawing, or with `layer` "pieces" or "glow", just its ore pieces on a clear background."""
     rng = np.random.default_rng(sum(map(ord, face["name"])) * 7919 + variant * 104729)
     host = hexrgb(face["host"]) * face.get("tones", [1.0] * 5)[variant - 1]
     t = Tex(host, DRAW)
@@ -212,31 +216,55 @@ def draw(face, variant, glow=False):
                 p = np.clip(p + 0.08 * np.array([math.cos(ang), math.sin(ang)]), 0.03, 0.97)
                 pts.append(tuple(p))
             t.line(pts, INK, 0.009)
-    if glow:
+    if layer:
         # Same random draws as the face, but the ore pieces land on a key colour instead of rock.
         t.img = Image.new("RGB", (DRAW, DRAW), KEY)
         t.d = ImageDraw.Draw(t.img)
     shape = DRAWN.get(face["shape"]) or SHAPES[face["shape"]]
     face = dict(face, matrix=face.get("matrix", face["host"]), variant=variant)
-    shape(t, face, rng, GLOW_STYLE if glow else STYLE)
-    if glow:
+    shape(t, face, rng, GLOW_STYLE if layer else STYLE)
+    if layer == "pieces":
+        return pieces_layer(t.img)
+    if layer == "glow":
         return glow_layer(t.img, hexrgb(face["glow"]))
     t.d.rectangle([0, 0, DRAW - 1, DRAW - 1], outline=to255(INK), width=int(0.035 * DRAW))
     return t.img.resize((SIZE, SIZE), Image.LANCZOS)
 
 
-def glow_layer(img, color):
-    """Keep only the ore pieces, add a soft halo in the glow colour around them, clear the rest."""
-    a = np.asarray(img).astype(int)
-    piece = ~((a[..., 0] == KEY[0]) & (a[..., 1] == KEY[1]) & (a[..., 2] == KEY[2]))
-    mask = Image.fromarray((piece * 255).astype(np.uint8))
-    halo = np.asarray(mask.filter(ImageFilter.GaussianBlur(DRAW * 0.03)), float) / 255
-    halo = np.clip(halo * 1.4, 0, 1) * 0.5
-    rgb = np.where(piece[..., None], a / 255, color[None, None, :])
-    alpha = np.where(piece, 1.0, halo)
+def clear_image(rgb, alpha):
     rgba = (np.dstack([rgb, alpha]) * 255).round().astype(np.uint8)
     out = Image.fromarray(rgba).convert("RGBa").resize((SIZE, SIZE), Image.LANCZOS)
     return out.convert("RGBA")
+
+
+def piece_mask(img):
+    a = np.asarray(img).astype(int)
+    return a, ~((a[..., 0] == KEY[0]) & (a[..., 1] == KEY[1]) & (a[..., 2] == KEY[2]))
+
+
+def pieces_layer(img):
+    """Keep only the ore pieces, in their drawn colours, and clear the rest."""
+    a, piece = piece_mask(img)
+    return clear_image(a / 255, piece.astype(float))
+
+
+def glow_layer(img, color):
+    """The ore pieces with a neon filling, ink outlines kept dark, and a soft halo around them."""
+    a, piece = piece_mask(img)
+    c = a / 255
+    ink = np.abs(a - np.array(to255(INK))).sum(-1) < 40
+    # Neon: fill the pieces with a vivid version of the glow colour, keeping the drawing's light
+    # and shade inside each piece, and its brightest highlights white.
+    h, sat, _ = colorsys.rgb_to_hsv(*color)
+    vivid = np.array(colorsys.hsv_to_rgb(h, min(1.0, sat * 1.6 + 0.15), 1.0))
+    lum = c.mean(-1, keepdims=True)
+    fill = vivid * (0.45 + 0.55 * lum)
+    fill = fill + (1 - fill) * np.clip((lum - 0.78) * 3, 0, 1)
+    rgb = np.where((piece & ~ink)[..., None], fill, np.where(piece[..., None], c, color[None, None, :]))
+    mask = Image.fromarray((piece * 255).astype(np.uint8))
+    halo = np.asarray(mask.filter(ImageFilter.GaussianBlur(DRAW * 0.035)), float) / 255
+    halo = np.clip(halo * 1.4, 0, 1) * 0.65
+    return clear_image(rgb, np.where(piece, 1.0, halo))
 
 
 def tape(img, colors=COLORS):
@@ -296,16 +324,19 @@ if __name__ == "__main__":
         d.text((c * 270 + 10, r * 290 + 268), f"{key}  {pc} colours  {n // 1024} KB", fill=(30, 20, 20))
     board.save(os.path.join(root, "faces-sheet.jpg"), quality=90)
     print("faces", len(sheet), "total KB", total // 1024)
-    glow_png = os.path.join(root, "glow")
-    glow_txt = os.path.join(out_txt, "..", "OreGlow")
-    os.makedirs(glow_png, exist_ok=True)
-    os.makedirs(glow_txt, exist_ok=True)
-    glow_total = 0
-    for face in FACES:
-        if "glow" in face:
-            quant, data = tape(draw(face, 1, glow=True), colors=64)
-            quant.save(f"{glow_png}/{face['name']}.png")
+    # Pieces images for every ore, glow images for the ores that glow.
+    for layer, folder, game_folder, colors in (("pieces", "pieces", "OrePieces", 32), ("glow", "glow", "OreGlow", 64)):
+        png_dir = os.path.join(root, folder)
+        txt_dir = os.path.join(out_txt, "..", game_folder)
+        os.makedirs(png_dir, exist_ok=True)
+        os.makedirs(txt_dir, exist_ok=True)
+        layer_total = 0
+        for face in FACES:
+            if face["shape"] in ("dirt", "stone") or (layer == "glow" and "glow" not in face):
+                continue
+            quant, data = tape(draw(face, 1, layer=layer), colors=colors)
+            quant.save(f"{png_dir}/{face['name']}.png")
             text = json.dumps(data, separators=(",", ":"))
-            open(f"{glow_txt}/{face['name']}.txt", "w").write(text)
-            glow_total += len(text)
-    print("glow images total KB", glow_total // 1024)
+            open(f"{txt_dir}/{face['name']}.txt", "w").write(text)
+            layer_total += len(text)
+        print(layer, "images total KB", layer_total // 1024)

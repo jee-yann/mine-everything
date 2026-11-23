@@ -1,5 +1,5 @@
 -- Dresses every open mine block face in the Ink & Facet look. Each face shows its Storybook Ink
--- drawing (DrawnFaces), and on gems the drawing's ore pieces stand a little out of the face.
+-- drawing (DrawnFaces), and on ores the drawing's ore pieces stand a little out of the face.
 -- Without drawings, faces fall back to an ink frame plus 3D relief, gem crystals and decor.
 -- Calcite marks cave ceilings either way.
 -- The nearest 3D reliefs and crystals (shown without drawings) get ink outlines. Ores from Gold
@@ -41,12 +41,12 @@ local function crownFace(mask)
 end
 
 -- Which 3D art an open face wants: "raised", "crown", "relief", "calcite", "decor" or nil.
--- A drawn face already shows the ore or the rock, so it only adds raised gem pieces and calcite.
+-- A drawn face already shows the ore or the rock, so it only adds raised ore pieces and calcite.
 local function wanted(block, face, mask, calcite, drawn)
 	local name = block.Name
 	if Art.isMineral(name) then
 		if drawn then
-			return if Art.hasCrown(name) then "raised" else nil
+			return "raised"
 		end
 		return if Art.hasCrown(name) and crownFace(mask) == face then "crown" else "relief"
 	elseif bit32.btest(calcite, 2 ^ face.Value) then
@@ -57,7 +57,7 @@ local function wanted(block, face, mask, calcite, drawn)
 	return nil
 end
 
--- A gem's ore pieces raised off one face: thin clear layers just above the face, each showing
+-- An ore's pieces raised off one face: thin clear layers just above the face, each showing
 -- the pieces (DrawnFaces), darker underneath, so from an angle they read as standing out.
 -- The layers keep the block's orientation so their pieces line up with the face's drawing.
 local function raise(block, face)
@@ -269,7 +269,7 @@ return function()
 					-- Light shines out of one open face: the top if it is open, then a side, then the bottom.
 					local face = crownFace(mask)
 					if face then
-						-- The glow shows on each drawn face, or on its raised pieces when a gem has them.
+						-- The glow shows on each drawn face, on its raised pieces where they are shown.
 						local drawn, tops = {}, {}
 						for f, skin in skins do
 							drawn[f] = skin.drawn

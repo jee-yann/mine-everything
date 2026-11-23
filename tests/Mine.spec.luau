@@ -664,10 +664,12 @@ do
 	end
 	-- Drawn faces: every block that can be mined has one, and each drawing fills its whole face.
 	local client = game:GetService("StarterPlayer").StarterPlayerScripts.Client
-	local drawings, glowImages = client.OreDrawings, client.OreGlow
+	local drawings, pieceImages, glowImages = client.OreDrawings, client.OrePieces, client.OreGlow
 	local http, encoding = game:GetService("HttpService"), game:GetService("EncodingService")
 	local sources = drawings:GetChildren()
-	table.move(glowImages:GetChildren(), 1, #glowImages:GetChildren(), #sources + 1, sources)
+	for _, extra in { pieceImages, glowImages } do
+		table.move(extra:GetChildren(), 1, #extra:GetChildren(), #sources + 1, sources)
+	end
 	for _, value in sources do
 		local drawing = http:JSONDecode(value.Value)
 		local tape = encoding:Base64Decode(buffer.fromstring(drawing.tape))
@@ -685,6 +687,7 @@ do
 	end
 	for _, ore in Ores.list do
 		assert(drawings:FindFirstChild(ore.name) or drawings:FindFirstChild(ore.name .. "-1"), ore.name .. " needs a drawn face")
+		assert(not art.isMineral(ore.name) or pieceImages:FindFirstChild(ore.name), ore.name .. " needs a pieces image")
 		assert(not art.shine(ore.name) or glowImages:FindFirstChild(ore.name), ore.name .. " needs a glow image")
 		if art.hasCrown(ore.name) then
 			local crystals = art.crown(ore.name, CFrame.identity)

@@ -1,16 +1,19 @@
 # Ore looks: Ink & Facet
 
-Mine blocks use a Storybook Ink style (flat colour, bold ink lines, hatching). On gem ores the
-drawing's own ore pieces stand a little out of every face.
+Mine blocks use a Storybook Ink style (flat colour, bold ink lines, hatching). On every ore the
+drawing's own ore pieces stand a little out of each face, and from Gold up they glow with a neon
+filling.
 
 - `src/shared/OreLooks.luau` holds the look data for every block: palettes, crowns, glow.
 - `src/client/DrawnFaces.luau` decodes the face drawings in `src/client/OreDrawings/` and puts
   one on every open face. Stone's drawing is neutral and takes its stone grade colour.
-- Ores from Gold up glow from their ore pieces. Each has a glow image in `src/client/OreGlow/`
-  (just its ore pieces and a soft halo), which `OreFaces` shows self-lit on the nearest glowing
-  ores. How strongly each ore glows is its `shine` in `OreLooks`.
-- `OreFaces` raises a gem's ore pieces by stacking its pieces image (the glow image without the
-  halo) in thin layers just off each face, darker underneath. `Looks.raised` sets the height.
+- Every ore has a pieces image in `src/client/OrePieces/` (just its ore pieces on a clear
+  background). `OreFaces` raises the pieces by stacking that image in thin layers just off each
+  face, darker underneath. `Looks.raised` sets the height.
+- Ores from Gold up also have a glow image in `src/client/OreGlow/` (the pieces with a neon
+  filling and a soft halo), which `OreFaces` shows self-lit on the raised pieces of the nearest
+  glowing ores. How strongly each ore glows is its `shine` in `OreLooks`; `Looks.glow` holds the
+  brightness and the outward light.
 - `src/shared/ReliefKit.luau` builds a 3D fallback for every face, including gem crystals, that
   the game uses when it can't show drawings.
 
@@ -20,8 +23,9 @@ drawing's own ore pieces stand a little out of every face.
 python3 art/ore-looks/draw_faces.py
 ```
 
-This rewrites `faces/*.png`, `faces-sheet.jpg` and `src/client/OreDrawings/*.txt`, plus the glow
-images in `glow/*.png` and `src/client/OreGlow/*.txt`. It needs numpy and Pillow.
+This rewrites `faces/*.png`, `faces-sheet.jpg` and `src/client/OreDrawings/*.txt`, plus the
+pieces images (`pieces/*.png`, `src/client/OrePieces/*.txt`) and glow images (`glow/*.png`,
+`src/client/OreGlow/*.txt`). It needs numpy and Pillow.
 
 ## Add an ore later
 
@@ -35,5 +39,6 @@ images in `glow/*.png` and `src/client/OreGlow/*.txt`. It needs numpy and Pillow
 
 The game decodes drawings with EditableImage, so the experience needs the in-experience image
 APIs turned on in the Creator Dashboard. The Starfall opening needs the same setting. If that
-isn't possible, upload the PNGs in `faces/` and `glow/` and list their ids in
-`OreLooks.drawn.uploaded` (a glow image goes under `"<Ore> glow"`).
+isn't possible, upload the PNGs in `faces/`, `pieces/` and `glow/` and list their ids in
+`OreLooks.drawn.uploaded` (a pieces image goes under `"<Ore> pieces"`, a glow image under
+`"<Ore> glow"`).
