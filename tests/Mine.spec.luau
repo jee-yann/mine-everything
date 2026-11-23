@@ -688,6 +688,13 @@ do
 	for _, ore in Ores.list do
 		assert(drawings:FindFirstChild(ore.name) or drawings:FindFirstChild(ore.name .. "-1"), ore.name .. " needs a drawn face")
 		assert(not art.isMineral(ore.name) or pieceImages:FindFirstChild(ore.name), ore.name .. " needs a pieces image")
+		if art.isMineral(ore.name) then
+			local spots = http:JSONDecode(pieceImages[ore.name].Value).glints
+			assert(spots and #spots >= 1 and #spots <= 4, ore.name .. " needs one to four glint spots")
+			for _, spot in spots do
+				assert(spot[1] >= 0 and spot[1] <= 1 and spot[2] >= 0 and spot[2] <= 1, ore.name .. " glint spot off its face")
+			end
+		end
 		assert(not art.shine(ore.name) or glowImages:FindFirstChild(ore.name), ore.name .. " needs a glow image")
 		if art.hasCrown(ore.name) then
 			local crystals = art.crown(ore.name, CFrame.identity)

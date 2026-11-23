@@ -53,6 +53,13 @@ Looks.glow = {
 	light = { brightness = { 0.35, 1.4 }, reach = { 6, 14 }, angle = 80, offset = 0.6 }, -- light thrown outward
 }
 
+-- Glints: tiny sparkles on the raised pieces of the nearest ores. Each spot (picked from the
+-- drawing's highlights) is tilted a little differently and lights up only when it faces the
+-- camera, where the miner's lamp is, so glints wink on and off as you move. `window` is how
+-- close (degrees) the view must line up, `tilt` how far spots lean, `twinkle` a rare faint
+-- flash while standing still, and `size` a fraction of the face.
+Looks.glints = { faces = 16, range = 40, size = 0.09, window = 10, tilt = 0.9, twinkle = 0.45, brightness = 2 }
+
 -- Every ore shows its ore pieces raised a little off each drawn face: its pieces image
 -- (DrawnFaces), stacked in thin layers, darker underneath, so from an angle they read as standing
 -- out of the rock. `height` is in studs, `layers` is at least 3, and `shade` darkens the lower

@@ -112,7 +112,7 @@ local function build(block, face, kind)
 end
 
 return function()
-	local folders, glowing, reliefs = {}, {}, {}
+	local folders, glowing, reliefs, shiny = {}, {}, {}, {}
 	local ink = Color3.fromHex(Looks.ink)
 	local outlineFolder = Instance.new("Folder")
 	outlineFolder.Name = "Ink outlines"
@@ -127,7 +127,7 @@ return function()
 	end
 
 	local function removeArt(art)
-		reliefs[art.model] = nil
+		reliefs[art.model], shiny[art.model] = nil, nil
 		art.model:Destroy()
 	end
 
@@ -261,6 +261,8 @@ return function()
 							arts[face] = { model = model, kind = kind }
 							if kind == "relief" or kind == "crown" then
 								reliefs[model] = cf.Position
+							elseif kind == "raised" then
+								shiny[model] = { block = block, face = face, top = model:FindFirstChild("Top") }
 							end
 						end
 					end
@@ -339,7 +341,103 @@ return function()
 		watchFolder(folder)
 	end
 
-	-- Ink outlines go to the nearest ore reliefs. Only the two closest gem faces cast light.
+	-- Glints: a pool of tiny sparkles for the raised pieces of the nearest ores (OreLooks.glints).
+	local glints = Looks.glints
+	local cosWindow = math.cos(math.rad(glints.window))
+	local spotsPerFace = 4
+	local function sparkle(parent)
+		local spot = Instance.new("Frame")
+		spot.Name, spot.AnchorPoint, spot.BackgroundTransparency = "Glint", Vector2.new(0.5, 0.5), 1
+		spot.Size, spot.Visible = UDim2.fromScale(glints.size, glints.size), false
+		for _, across in { true, false } do
+			local bar = Instance.new("Frame")
+			bar.AnchorPoint, bar.Position = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5)
+			bar.Size = if across then UDim2.fromScale(1, 0.14) else UDim2.fromScale(0.14, 1)
+			bar.BackgroundColor3, bar.BorderSizePixel = Color3.new(1, 1, 1), 0
+			local fade = Instance.new("UIGradient")
+			fade.Rotation = if across then 0 else 90
+			fade.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(0.5, 0),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			fade.Parent = bar
+			bar.Parent = spot
+		end
+		spot.Parent = parent
+		return spot
+	end
+	local glinters = table.create(glints.faces)
+	for i = 1, glints.faces do
+		local gui = Instance.new("SurfaceGui")
+		gui.Name, gui.Enabled, gui.ResetOnSpawn = "Ore glints", false, false
+		gui.LightInfluence, gui.ZOffset, gui.Brightness = 0, 0.04, glints.brightness
+		gui.SizingMode, gui.CanvasSize = Enum.SurfaceGuiSizingMode.FixedSize, Vector2.new(256, 256)
+		local frame = Instance.new("Frame")
+		frame.Name, frame.Size, frame.BackgroundTransparency = "Spots", UDim2.fromScale(1, 1), 1
+		frame.Parent = gui
+		local spots = table.create(spotsPerFace)
+		for k = 1, spotsPerFace do
+			spots[k] = sparkle(frame)
+		end
+		gui.Parent = playerGui
+		glinters[i] = { gui = gui, frame = frame, spots = spots, normals = {}, phases = {} }
+	end
+	-- Points a glinter at one raised face: spots where the drawing has highlights, each tilted.
+	local function aim(glinter, entry)
+		local face, top = entry.face, entry.top
+		local normal = top.CFrame:VectorToWorldSpace(Vector3.FromNormalId(face))
+		local side = normal:Cross(if math.abs(normal.Y) > 0.9 then Vector3.xAxis else Vector3.yAxis).Unit
+		local up = normal:Cross(side)
+		local cell = (entry.block.Position / Config.Cell):Floor()
+		local rng = Random.new(cell.X * 73856093 + cell.Y * 19349663 + cell.Z * 83492791 + face.Value)
+		local points = Drawn.glints(entry.block.Name)
+		glinter.gui.Adornee, glinter.gui.Face, glinter.center = top, face, top.Position
+		-- On top and bottom faces a SurfaceGui sits a quarter turn from a Decal; turn it back.
+		glinter.frame.Rotation = if face == Enum.NormalId.Top or face == Enum.NormalId.Bottom then 270 else 0
+		for k, spot in glinter.spots do
+			local p = points[k]
+			spot.Visible = false
+			local lean = side * rng:NextNumber(-glints.tilt, glints.tilt)
+				+ up * rng:NextNumber(-glints.tilt, glints.tilt)
+			glinter.normals[k] = if p then (normal + lean).Unit else nil
+			glinter.phases[k] = rng:NextNumber(0, 2 * math.pi)
+			if p then
+				spot.Position = UDim2.fromScale(p.X, p.Y)
+			end
+		end
+		glinter.gui.Enabled, glinter.entry = true, entry
+	end
+	RunService.Heartbeat:Connect(function()
+		local camera = workspace.CurrentCamera
+		if not camera then
+			return
+		end
+		local eye, t = camera.CFrame.Position, os.clock()
+		for _, glinter in glinters do
+			if glinter.entry then
+				local toEye = (eye - glinter.center).Unit
+				for k, spot in glinter.spots do
+					local n = glinter.normals[k]
+					local lit = 0
+					if n then
+						lit = math.clamp((n:Dot(toEye) - cosWindow) / (1 - cosWindow), 0, 1) ^ 2
+						lit = math.max(lit, glints.twinkle * math.max(0, math.sin(t * 0.9 + glinter.phases[k])) ^ 60)
+					end
+					spot.Visible = lit > 0.02
+					if spot.Visible then
+						spot.Size =
+							UDim2.fromScale(glints.size * (0.55 + 0.45 * lit), glints.size * (0.55 + 0.45 * lit))
+						for _, bar in spot:GetChildren() do
+							bar.BackgroundTransparency = 1 - lit
+						end
+					end
+				end
+			end
+		end
+	end)
+
+	-- Each tick: ink outlines go to the nearest reliefs, lights and glints to the nearest ores.
 	local range = Looks.outlines.range
 	while task.wait(0.32) do
 		local camera = workspace.CurrentCamera
@@ -417,6 +515,40 @@ return function()
 			slot.light.Color, slot.light.Range = g.color, lerp(glow.light.reach, g.shine)
 			slot.light.Brightness, slot.light.Enabled = slot.light0, true
 			dress(slot, block, g)
+		end
+
+		-- Glints follow the nearest raised faces.
+		local faces = {}
+		for _, entry in shiny do
+			if entry.top then
+				local distance = (eye - entry.top.Position).Magnitude
+				if distance < glints.range then
+					table.insert(faces, { entry = entry, distance = distance })
+				end
+			end
+		end
+		table.sort(faces, function(a, b)
+			return a.distance < b.distance
+		end)
+		local chosen = {}
+		for i = 1, math.min(#glinters, #faces) do
+			chosen[faces[i].entry] = true
+		end
+		local idle = {}
+		for _, glinter in glinters do
+			if glinter.entry and chosen[glinter.entry] and glinter.entry.top.Parent then
+				chosen[glinter.entry] = nil
+			else
+				glinter.entry, glinter.gui.Enabled, glinter.gui.Adornee = nil, false, nil
+				table.insert(idle, glinter)
+			end
+		end
+		for entry in chosen do
+			local glinter = table.remove(idle)
+			if not glinter then
+				break
+			end
+			aim(glinter, entry)
 		end
 	end
 end

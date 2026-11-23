@@ -245,7 +245,31 @@ def piece_mask(img):
 def pieces_layer(img):
     """Keep only the ore pieces, in their drawn colours, and clear the rest."""
     a, piece = piece_mask(img)
-    return clear_image(a / 255, piece.astype(float))
+    out = clear_image(a / 255, piece.astype(float))
+    out.info["glints"] = glint_spots(a, piece)
+    return out
+
+
+def glint_spots(a, piece, count=4):
+    """A few spots on the ore pieces that can catch a glint: the brightest highlights, spread out.
+
+    Returned as [x, y] in 0..1 image space (x right, y down)."""
+    lum = a.mean(-1) / 255
+    ys, xs = np.nonzero(piece & (lum > 0.72))
+    if len(xs) < count:
+        ys, xs = np.nonzero(piece)
+    if len(xs) == 0:
+        return []
+    pts = np.stack([xs, ys], 1).astype(float)
+    order = np.argsort(-lum[ys, xs])
+    chosen = [pts[order[0]]]
+    while len(chosen) < count:
+        d = np.min([np.linalg.norm(pts - c, axis=1) for c in chosen], axis=0)
+        far = int(np.argmax(d))
+        if d[far] < DRAW * 0.08:
+            break
+        chosen.append(pts[far])
+    return [[round(float(x) / DRAW, 3), round(float(y) / DRAW, 3)] for x, y in chosen]
 
 
 def glow_layer(img, color):
@@ -334,7 +358,10 @@ if __name__ == "__main__":
         for face in FACES:
             if face["shape"] in ("dirt", "stone") or (layer == "glow" and "glow" not in face):
                 continue
-            quant, data = tape(draw(face, 1, layer=layer), colors=colors)
+            img = draw(face, 1, layer=layer)
+            quant, data = tape(img, colors=colors)
+            if "glints" in img.info:
+                data["glints"] = img.info["glints"]
             quant.save(f"{png_dir}/{face['name']}.png")
             text = json.dumps(data, separators=(",", ":"))
             open(f"{txt_dir}/{face['name']}.txt", "w").write(text)

@@ -138,4 +138,25 @@ function Drawn.pieces(name)
 	return content(piecesFolder, name)
 end
 
+local glintSpots = {} -- ore name -> its glint spots
+-- Spots on ore `name`'s pieces that can catch a glint, as Vector2s in 0..1 image space
+-- (x right, y down), or an empty list.
+function Drawn.glints(name)
+	if glintSpots[name] == nil then
+		local spots = {}
+		local value = piecesFolder and piecesFolder:FindFirstChild(name)
+		local ok, art = false, nil
+		if value then
+			ok, art = pcall(Http.JSONDecode, Http, value.Value)
+		end
+		if ok and art.glints then
+			for _, p in art.glints do
+				table.insert(spots, Vector2.new(p[1], p[2]))
+			end
+		end
+		glintSpots[name] = spots
+	end
+	return glintSpots[name]
+end
+
 return Drawn

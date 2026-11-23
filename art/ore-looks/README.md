@@ -10,6 +10,9 @@ filling.
 - Every ore has a pieces image in `src/client/OrePieces/` (just its ore pieces on a clear
   background). `OreFaces` raises the pieces by stacking that image in thin layers just off each
   face, darker underneath. `Looks.raised` sets the height.
+- Each pieces image also lists up to four glint spots (its brightest highlights). `OreFaces`
+  puts a tiny sparkle on each spot of the nearest ores, tilted a little differently, that only
+  lights up when it faces the camera, so glints wink as you move. `Looks.glints` tunes them.
 - Ores from Gold up also have a glow image in `src/client/OreGlow/` (the pieces with a neon
   filling and a soft halo), which `OreFaces` shows self-lit on the raised pieces of the nearest
   glowing ores. How strongly each ore glows is its `shine` in `OreLooks`; `Looks.glow` holds the
