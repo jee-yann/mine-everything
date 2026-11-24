@@ -45,6 +45,7 @@ function Data.snapshot(p)
 		petName = p.petName,
 		bestDepth = p.bestDepth,
 		levels = table.clone(p.levels),
+		progression = p.progression,
 		preferences = table.clone(p.preferences),
 		bag = table.clone(p.bag),
 		grades = grades,

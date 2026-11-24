@@ -157,7 +157,7 @@ do
 	assert(Profile.expeditionStep(starter) == "Sell" and starter.xp == 0)
 	assert(Profile.sell(starter) == 8 and Profile.expeditionStep(starter) == "Upgrade")
 	assert(Upgrades.onboardingPick(starter.gold) == "Capacity" and Profile.buy(starter, "Capacity"))
-	assert(starter.gold == 0 and Upgrades.price("Capacity", 2) == 60 and Profile.expeditionStep(starter) == "Return")
+	assert(starter.gold == 0 and Upgrades.price("Capacity", 2) == 36 and Profile.expeditionStep(starter) == "Return")
 	Profile.recordCut(starter, "Dirt")
 	assert(Profile.expeditionStep(starter) == "Done")
 
@@ -179,8 +179,9 @@ do
 		local oldSlots = skills.capacity(oldBase, veteran.skills)
 		veteran.bag = { Dirt = oldSlots - 1, Coal = 1 }
 		local loaded = Data.claim({ profile = veteran }, "veteran", 50).profile
-		assert(Upgrades.items.Capacity.values[level] == level * 8)
-		assert(Profile.stat(loaded, "Capacity") == skills.capacity(level * 8, veteran.skills))
+		local newSlots = 8 + 6 * (level - 1) + 2 * (level - 1) ^ 2
+		assert(Upgrades.items.Capacity.values[level] == newSlots)
+		assert(Profile.stat(loaded, "Capacity") == skills.capacity(newSlots, veteran.skills))
 		assert(Profile.sell(loaded, 1, "Coal", "Stack") == 5)
 		local rejoined = Data.claim({ profile = Data.snapshot(loaded) }, "again", 51).profile
 		assert(Profile.sell(rejoined) == oldSlots - 1 and Profile.used(rejoined) == 0)
@@ -716,11 +717,15 @@ do
 	oldSave.bag = { Coal = 10, Emerald = 2, Starfall = 1 }
 	oldSave.counts = { Coal = 400, Emerald = 3, Starfall = 1, Amethyst = 2 }
 	oldSave.discoveries = { Coal = true, Emerald = true, Starfall = true, Amethyst = true }
+	oldSave.progression = nil
 	assert(Profile.valid(oldSave), "a save from before the expansion is still valid")
 	local reloaded = Data.claim({ profile = oldSave }, "oldSave-expansion", 60).profile
 	assert(reloaded.levels.Power == 6 and Profile.stat(reloaded, "Power") == 6 and Upgrades.pickNames[6] == "Prismheart Pick", "old pick kept")
-	assert(Profile.stat(reloaded, "Speed") == 0.20 and Profile.stat(reloaded, "Capacity") == 64, "old gear kept")
-	assert(Upgrades.price("Power", 6) and Upgrades.price("Speed", 7) and Upgrades.price("Capacity", 8), "old top gear upgrades further")
+	-- Old Speed 7 (0.20 s) and Capacity 8 (64 slots) move to the first long-curve level as good.
+	assert(reloaded.progression == 2 and reloaded.levels.Speed == 100 and reloaded.levels.Capacity == 5, "old gear migrated")
+	assert(Profile.stat(reloaded, "Speed") == 0.2 and Profile.stat(reloaded, "Capacity") == 64, "old gear kept")
+	assert(Upgrades.migrateLevel("Speed", 1) == 1 and Upgrades.migrateLevel("Capacity", 2) == 2, "starter levels unchanged")
+	assert(Upgrades.price("Power", 6) and not Upgrades.price("Speed", 100) and Upgrades.price("Capacity", 5), "migrated gear upgrades further")
 	Profile.recordCut(reloaded, "Sunstone", 5)
 	Profile.recordCut(reloaded, "Voidshard", 600)
 	assert(reloaded.discoveries.Sunstone and reloaded.bag.Voidshard == 1 and Profile.valid(reloaded), "new ores save")

@@ -14,6 +14,7 @@ local Profile = {}
 function Profile.new()
 	return {
 		version = 1,
+		progression = 2,
 		introSeen = false,
 		firstTrip = {},
 		gold = 0,
@@ -316,6 +317,13 @@ function Profile.upgradeSave(p)
 		p.gold += math.floor(24 * 2.5 ^ (level - 1) + 0.5)
 	end
 	p.levels.Radius = nil
+	-- Move workshop levels from the short pre-expansion tables onto the long curves.
+	if (p.progression or 1) < 2 then
+		for _, key in { "Speed", "Capacity" } do
+			p.levels[key] = Upgrades.migrateLevel(key, p.levels[key])
+		end
+		p.progression = 2
+	end
 	if p.xp == nil then
 		p.xp = 0
 		for name, count in p.bag do
