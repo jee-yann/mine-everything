@@ -2,6 +2,8 @@ local Island = require(script.Parent.Island)
 local Impact = require(script.Parent.Impact)
 local Arrival = require(script.Parent.Arrival)
 local LivingRoom = require(script.Parent.LivingRoom)
+local StarDeposit = require(script.Parent.StarDeposit)
+local glide = require(script.Parent.PlayerCamera).glide
 local MineFace = require(script.Parent.MineFace)
 local Daylight = require(script.Parent.Daylight)
 local MeteorLight = require(script.Parent.MeteorLight)
@@ -17,8 +19,9 @@ Film.duration = frames.duration / sheet.fps
 
 local captions = {
 	{ 1, 52, "Millions of years ago" },
-	{ frames.seam + 4, frames.dark - 4, "Deep in the rock, the star took root." },
-	{ frames.dark + 2, frames.match + 40, "Millions of years later" },
+	{ frames.seam + 3, frames.dark - 4, "Deep in the rock, the star took root." },
+	{ frames.match + 4, frames.match + 50, "Millions of years later" },
+	{ frames.secondHit + 4, frames.living - 4, "A trace of it." },
 }
 function Film.caption(t)
 	local picture = sheet.frameForScene(t)
@@ -64,16 +67,11 @@ function Film.new(stage, screen, camera, handoff, motion, continueSetup, nightLo
 		-- Interior sets wait above and behind the cameras that cut to them. The
 		-- engine lights the region around the lens, so a set this close is
 		-- already lit on its first exposure. A distant one opens in the dark.
-		self.mine = MineFace.new(stage, (live * CF(-70, 96, 60)).Position, sun)
-		self.room = LivingRoom.new(stage, (live * CF(20, 96, 70)).Position, sun, screen.Parent)
-		self.embers = {}
-		for _, part in self.island.hot:GetDescendants() do
-			if part:IsA("BasePart") and part.Material == Enum.Material.Neon then
-				table.insert(self.embers, { part = part, color = part.Color })
-			elseif part:IsA("PointLight") then
-				self.emberLight, self.emberPower = part, part.Brightness
-			end
-		end
+		self.mine = MineFace.new(stage, (live * CF(-34, 72, 30)).Position, sun)
+		self.room = LivingRoom.new(stage, (live * CF(30, 78, 66)).Position, sun, screen.Parent)
+		self.arrival.mine = self.mine
+		self.deposit = StarDeposit.new()
+		self.deposit:place(base)
 		self.impact = Impact.new(stage, screen, base, motion)
 	end, debug.traceback)
 	if not ok then
@@ -199,45 +197,41 @@ local function mix(a, b, u)
 	return a + (b - a) * u
 end
 
--- The star in the rock burns down until only the dark is left.
-function Film:burnDown(frame)
-	local low = if frame < frames.seam then 0 else ease(frame, frames.seam + 20, frames.dark - 4)
-	if low == self.emberLevel then
-		return
-	end
-	self.emberLevel = low
-	for _, e in self.embers do
-		e.part.Color = e.color:Lerp(Color3.fromHex("120A1E"), low)
-	end
-	if self.emberLight then
-		self.emberLight.Brightness = self.emberPower * (1 - low)
-	end
-end
-
--- One descending crane from above the bowl to the fork at its lip.
+-- Over the rim and down into the bowl. The move finds the fracture at the
+-- bottom of it, and the crystal the fracture holds.
 local function craterCrane(frame, move)
-	local u = if move then ease(frame, frames.aftermath - 6, frames.seam + 16) else 0.35
-	local eye = V(44, 86, 88):Lerp(V(27, 44, 70), u) + V(5, -5, 2) * math.sin(u * math.pi)
-	return eye, V(3, 29, -8):Lerp(V(9.4, 32.6, 6), u), mix(41, 24, u), 0
+	local u = if move then glide(frame, frames.aftermath - 4, frames.seam, 0.2) else 0.6
+	local eye = V(40, 80, 62):Lerp(V(12.5, 40.5, 1.0), u) + V(6, -4, 4) * math.sin(u * math.pi)
+	return eye, V(2, 31, -24):Lerp(V(0.2, 28.2, -32), u), mix(40, 30, u), 0
 end
 
-local function craterFork(frame, move)
-	local u = if move then ease(frame, frames.seam - 10, frames.dark + 10) else 0.5
-	return V(mix(4.2, 8.0, u), mix(27.4, 27.9, u), mix(22.6, 21.0, u)), V(mix(10.0, 10.9, u), 31.9, 8), 34, 0
+-- On the floor of the crater, moving round the deposit as its light goes.
+local function craterFloor(frame, move)
+	local u = if move then glide(frame, frames.seam, frames.dark + 4, 0) else 0.5
+	return V(mix(9.4, 4.6, u), mix(29.2, 28.4, u), mix(-20.6, -19.2, u)), V(mix(-0.2, 0.3, u), mix(28.6, 28.8, u), -32), 36, 0
 end
 
 -- The same mark at sea the impact was watched from. Hold a breath so the
 -- match registers, then crane down and in toward the settled cove.
 local function islandToday(frame, move)
-	local u = if move then ease(frame, frames.match + 8, frames.boulevard + 14) else 0
-	local eye = clock.breakerEye:Lerp(V(84, 52, 124), u) + V(-6, -12, 18) * math.sin(u * math.pi)
-	return eye, V(-7, 34, -21):Lerp(V(1, 42, 2), u), mix(50, 40, u), 0
+	-- Already under way behind the fade.
+	local u = if move then glide(frame, frames.match - 10, frames.boulevard, 0.1) else 0.12
+	local eye = clock.breakerEye:Lerp(V(66, 48, 118), u) + V(-6, -12, 18) * math.sin(u * math.pi)
+	return eye, V(-7, 34, -21):Lerp(V(0.5, 40, 4), u), mix(50, 38, u), 0
 end
 
 local function boulevard(frame, move)
-	local u = if move then math.clamp((frame - frames.boulevard) / (frames.dig - 11 - frames.boulevard), 0, 1) else 0.3
-	local run = 0.35 * u + 0.65 * u * u
-	return V(mix(3.4, 0, ease(u, 0, 0.8)), mix(32.4, 29.6, run), mix(60, 5, run)), V(mix(0.5, 0, u), mix(36.5, 29.8, ease(u, 0, 0.75)), -24), 46, 0
+	-- One accelerating line down the middle of the road, under the sign and
+	-- in. It is at full speed when the dark takes it.
+	local u = if move then math.clamp((frame - frames.boulevard) / (frames.dig - frames.boulevard), 0, 1.2) else 0.3
+	local run = 0.55 * u + 0.45 * u * u
+	return V(mix(6.5, 0, ease(u, 0, 0.9)), mix(30.6, 30.2, run), mix(62, 2, run)), V(mix(0.2, 0, u), mix(35.2, 30.4, ease(u, 0, 0.85)), -26), 40, 0
+end
+
+-- The engine takes a few exposures to light a place the lens has just cut to.
+-- The crater's own light swells from the cut, so it never switches on.
+local function craterLight(frame)
+	return ease(frame, frames.aftermath + 3, frames.aftermath + 30)
 end
 
 function Film:draw(t, liveReady, frame)
@@ -251,7 +245,7 @@ function Film:draw(t, liveReady, frame)
 	local far = (self.handoff.root.Position - self.handoff.landing).Magnitude >= 38
 	-- A player deep underground keeps the prepared copy for the whole film.
 	-- Everyone else moves to the real cove before their own scenes.
-	local replica = modern and not self.matchLive and (frame < frames.dig or far)
+	local replica = modern and not self.matchLive and (frame < frames.dig - 8 or far)
 	if replica and far then
 		self.arrival.replayLanding = self.handoff.landing + self.base.Position - self.live.Position
 		self.arrival.replica = self.island.replaySite
@@ -262,7 +256,14 @@ function Film:draw(t, liveReady, frame)
 	self.mine:draw(frame, move)
 	self.room:draw(frame, move)
 	self.daylight:draw(t, move, self.base, frame)
-	self:burnDown(frame)
+	-- The approved opening keeps its own outcrop. From the first crater
+	-- exposure the star is where it landed.
+	local crater = frame >= frames.aftermath and not modern
+	self.deposit.root.Parent = if crater then self.island.set else nil
+	if frame >= frames.aftermath then
+		self.island.hot.Parent = nil
+		self.deposit:burn(craterLight(frame) * (1 - if frame < frames.seam then 0 else ease(frame, frames.seam + 14, frames.dark - 2)))
+	end
 	local base = self.base
 	local black = 0
 	if t < clock.entry then
@@ -279,25 +280,21 @@ function Film:draw(t, liveReady, frame)
 		self:frame(base, eye, look, 54 + open, math.rad(roll), "offshore")
 	elseif frame < frames.seam then
 		self:frame(base, craterCrane(frame, move))
+		-- A quarter of a second, over the exposures the engine needs to relight.
+		black = 0.92 * (1 - ease(frame, frames.aftermath + 1, frames.aftermath + 7))
 	elseif frame < frames.match then
-		self:frame(base, craterFork(frame, move))
-		black = if frame >= frames.dark then 1 else ease(frame, frames.dark - 14, frames.dark)
+		self:frame(base, craterFloor(frame, move))
+		black = ease(frame, frames.dark - 14, frames.dark)
 	elseif frame < frames.boulevard then
 		self:frame(if replica then base else self.live, islandToday(frame, move))
-		black = 1 - ease(frame, frames.match, frames.match + 7)
+		black = 1 - ease(frame, frames.match + 1, frames.match + 12)
 	elseif frame < frames.dig then
-		-- Daylight gives out inside the arch. The lens is already in the gallery
-		-- during the dark beat, so its lamps are steady when we see it.
-		if frame < frames.dig - 11 then
-			self:frame(if replica then base else self.live, boulevard(frame, move))
-		else
-			self:frame(self.mine.at, self.mine:camera(frames.dig, move))
-		end
-		black = ease(frame, frames.dig - 20, frames.dig - 12)
+		self:frame(if replica then base else self.live, boulevard(frame, move))
+		black = ease(frame, frames.dig - 9, frames.dig - 1)
 	elseif frame < frames.living then
 		self:frame(self.mine.at, self.mine:camera(frame, move))
-		black = 1 - ease(frame, frames.dig, frames.dig + 8)
-	elseif frame < frames.witness then
+		black = 1 - ease(frame, frames.dig, frames.dig + 9)
+	elseif frame < frames.witness and frame >= frames.living then
 		self:frame(self.room.at, self.room:camera(frame, move))
 	elseif frame < frames.handoff then
 		self:frame(CFrame.identity, self.arrival:camera(frame, move))
@@ -310,6 +307,32 @@ function Film:draw(t, liveReady, frame)
 	self.impact:draw(t, self.camera, frame)
 	self.illumination:draw(t, Impact.position(t, frame), self.camera, move, frame)
 	self.daylight:focus(self.camera, base, frame, move)
+	-- The dust thins as the lens drops under it, so the crane arrives on the
+	-- crystal and not on a wall of smoke.
+	if frame >= frames.aftermath and frame < frames.seam then
+		local clear = ease(frame, frames.aftermath + 10, frames.seam - 14)
+		for _, e in self.impact.plume.craterAir.eddies do
+			local image = e.puff.image
+			image.ImageTransparency = 1 - (1 - image.ImageTransparency) * (1 - (if e.near then 0.94 else 0.62) * clear)
+		end
+		for _, root in { self.illumination.root, self.impact.plume.craterAir.anchor } do
+			for _, light in root:GetDescendants() do
+				if light:IsA("Light") then
+					light.Brightness *= craterLight(frame) * (1 - 0.55 * clear)
+				end
+			end
+		end
+	end
+	-- On the crater floor the deposit is the light. The fires and dust that lit
+	-- the rim are behind and above the lens.
+	if frame >= frames.seam and frame < frames.match then
+		self.impact.plume.craterAir.anchor.Parent = nil
+		for _, light in self.illumination.root:GetDescendants() do
+			if light:IsA("Light") then
+				light.Brightness *= 0.3
+			end
+		end
+	end
 	return black
 end
 
@@ -330,7 +353,7 @@ function Film:holdCamera()
 end
 
 function Film:Destroy()
-	for _, name in { "room", "mine", "daylight", "illumination", "impact", "arrival", "tide", "island" } do
+	for _, name in { "deposit", "room", "mine", "daylight", "illumination", "impact", "arrival", "tide", "island" } do
 		if self[name] then
 			self[name]:Destroy()
 		end

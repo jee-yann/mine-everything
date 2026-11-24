@@ -3,7 +3,8 @@ local sheet = require(script.Parent.ExposureSheet)
 local fps, frame = sheet.fps, sheet.frames
 local contact, ignition, eruption, breaker = frame.contact / fps, frame.ignition / fps, frame.eruption / fps, frame.breaker / fps
 local chooseScoreAt = frame.seam / fps
-local scoreIn, scoreOut = (frame.match - 2) / fps, (frame.duration - 1) / fps
+local scoreIn, scoreOut = (frame.match + 2) / fps, (frame.duration - 1) / fps
+local blowAt = frame.contact2 / fps
 local aftermath = frame.aftermath / fps
 local passStart, passEnd = frame.flyby / fps, frame.coast / fps
 
@@ -18,9 +19,21 @@ local function instrument(name, file, first, last, level, attack, release, decay
 	return voice
 end
 
--- 2nd Foundation Music, "The Final Push 30B", courtesy of APM Music on Roblox.
--- https://create.roblox.com/store/asset/1848015198
-local scoreId = "rbxassetid://1848015198"
+-- Tim Besamusca, "Rising Hope", APM Music on Roblox. The underscore runs below
+-- ground. On the bar the player breaks the rock, the full recording takes over
+-- from a downbeat of its own. Both are 121.9 bpm, so one bar is 1.97 s, and the
+-- last hit of the full version falls on the handoff.
+-- https://create.roblox.com/store/asset/1842797951
+-- https://create.roblox.com/store/asset/1842797920
+local scoreId, themeId = "rbxassetid://1842797951", "rbxassetid://1842797920"
+local underscoreBar, themeBar = 29.72, 18.397
+
+-- Recorded effects from Pro Sound Effects and APM in the Creator Store.
+local function recorded(name, id, first, last, level, attack, release)
+	local v = timbre(name, "", first, last, level, attack, release)
+	v.id = "rbxassetid://" .. id
+	return v
+end
 
 local bank = {
 	glass = instrument("Star harmonics", "volume_slider.ogg", 0.154422, 0.157030, 4.5, 0.008, 0.31, 1.65),
@@ -72,16 +85,40 @@ local bank = {
 }
 bank.step = timbre("Boots on the court", "action_footsteps_plastic.mp3", 0.049, 0.16, 1.1, 0.003, 0.05)
 bank.step.eq = { 3, -5, -16 }
-bank.chime = instrument("Cut glass", "volume_slider.ogg", 0.154422, 0.157030, 2.5, 0.004, 0.62, 2.1)
-bank.chime.room, bank.chime.effect = { 1.5, -9 }, true
-bank.pad = instrument("Glass pad", "volume_slider.ogg", 0.154422, 0.157030, 1.7, 0.30, 0.80, 0.28)
-bank.pad.room = { 1.8, -8 }
-bank.sub = timbre("Weight of the blow", "impact_explosion_03.mp3", 0.075, 1.10, 0.60, 0.004, 0.45)
-bank.sub.eq = { 6, -10, -26 }
-bank.shatter = timbre("Crystal breaking", "impact_water.mp3", 0.055, 0.40, 1.15, 0.002, 0.16)
-bank.shatter.eq, bank.shatter.room = { -22, 1, 8 }, { 0.8, -12 }
-bank.air = timbre("Air moving past glass", "action_falling.ogg", 2.37, 3.25, 5.4, 0.10, 0.14)
-bank.air.eq, bank.air.room = { -20, -4, 4 }, { 0.6, -16 }
+bank.tone = instrument("Resonance in the crystal", "volume_slider.ogg", 0.154422, 0.157030, 1.9, 0.30, 0.90, 0.22)
+bank.tone.room, bank.tone.effect = { 2.2, -7 }, true
+bank.facet = instrument("Cut glass", "volume_slider.ogg", 0.154422, 0.157030, 2.2, 0.004, 0.7, 2.4)
+bank.facet.room, bank.facet.effect = { 1.8, -8 }, true
+bank.under = instrument("Sub under the rock", "impact_water.mp3", 0.132698, 0.135306, 0.52, 0.9, 1.0)
+bank.under.eq, bank.under.room, bank.under.effect = { 4, -16, -40 }, { 1.4, -14 }, true
+bank.low = recorded("Wind over the rim", 9113286969, 2.0, 30, 9.0, 1.2, 1.2)
+bank.ice = recorded("Rock cooling", 9114858767, 1.0, 6.4, 2.2, 0.02, 0.3)
+bank.ice.eq = { -4, 0, -8 }
+bank.lap = recorded("Water on the rocks", 9120571708, 0.2, 36, 0.62, 0.5, 0.8)
+bank.lap.eq = { -2, -2, -6 }
+bank.surf = recorded("Surf below the headland", 9119677145, 2.4, 9.4, 0.95, 0.5, 1.0)
+bank.gull = recorded("Gulls over the harbor", 9118858259, 0.0, 1.9, 1.6, 0.05, 0.3)
+bank.gull.eq, bank.gull.room = { -10, -2, 0 }, { 1.6, -12 }
+bank.drone = recorded("Air in the deep workings", 9043359885, 4, 46, 0.34, 1.0, 1.0)
+bank.drone.eq = { 2, -8, -20 }
+bank.drip = recorded("Water far off", 9126183577, 0, 0.5, 9, 0.002, 0.1)
+bank.drip.room = { 2.4, -4 }
+bank.crack = recorded("Rock gives", 9118582938, 0.18, 0.85, 1.35, 0.002, 0.2)
+bank.run = recorded("Fracture running", 9114858583, 0.12, 1.30, 0.62, 0.02, 0.3)
+bank.run.eq = { 2, 0, -6 }
+bank.tumble = recorded("Slabs coming down", 9118693443, 0.56, 3.0, 0.62, 0.005, 0.5)
+bank.rubble = recorded("Rubble settling", 9118586292, 1.4, 4.2, 0.8, 0.05, 0.9)
+bank.rubble.eq = { -2, 0, -4 }
+bank.boom = recorded("Body of the break", 9043340902, 0.0, 3.4, 0.62, 0.004, 1.2)
+bank.boom.eq = { 3, -6, -18 }
+bank.tinkle = recorded("Crystal fragments", 9114601216, 1.0, 3.9, 0.26, 0.04, 0.8)
+bank.tinkle.eq, bank.tinkle.room = { -22, -2, 2 }, { 1.4, -10 }
+bank.sparkle = recorded("Light on the facets", 9119448154, 1.6, 4.0, 2.6, 0.02, 0.8)
+bank.sparkle.eq, bank.sparkle.room = { -14, -2, 2 }, { 2.0, -8 }
+bank.pass2 = recorded("Glass crossing the lens", 9120718279, 0.22, 1.2, 0.5, 0.06, 0.2)
+bank.pass2.eq = { -8, -2, 2 }
+bank.drum = recorded("Something moving below", 9113343298, 0.0, 1.2, 1.0, 0.004, 0.5)
+bank.drum.eq, bank.drum.room = { 5, -8, -24 }, { 2.4, -6 }
 bank.body.eq = { 5, -7, -22 }
 bank.echo.eq = { -5, -2, -13 }
 bank.steam.eq = { -18, 1, 3 }
@@ -188,36 +225,34 @@ local function arrange()
 	play("ear", breaker + 0.65, 1.96, 2.22, 0.69, 1.70)
 	play("shudder", 356 / fps, 0.61, 0.47, 0.66, 0.34, "right")
 	play("shudder", 402 / fps, 0.48, 0.41, 0.48, 0.32, "left")
-	-- The pressure exhausts itself. Every voice of the fire is gone by the dark.
 	play("flame", aftermath - 0.35, 2.10, 0.94, 0.88, 1.12, "left")
-	local dark, seamAt = frame.dark / fps, frame.seam / fps
-	play("cinder", aftermath + 0.12, dark - aftermath - 0.3, 0.93, 0.92, 0.62)
-	play("wind", aftermath + 0.64, dark - aftermath - 0.35, 0.68, 0.72, 0.40)
-	play("steam", aftermath + 1.3, dark - aftermath - 1.5, 0.73, 0.46, 0.38, "left")
-	play("boulder", aftermath + 0.51, 1.32, 0.58, 0.76, 0.40, "left")
-	play("sand", aftermath + 1.19, 0.38, 0.91, 0.59, 0.69, "left")
-	play("boulder", aftermath + 2.35, 0.9, 0.46, 0.40, 0.34, "right")
-	for i, tick in { 0.21, 0.78, 1.93, 2.10, 3.05, 3.9 } do
-		local side = if i % 4 < 2 then "right" else "left"
-		play("pop", aftermath + tick, 0.047, 1.21 + (i % 5) * 0.26, (0.69 + (i % 4) * 0.13) * (if i > 4 then 0.6 else 1), nil, side)
-		if i % 3 == 1 then
-			play("ember", aftermath + tick + 0.08, 0.074, 1.48 + (i % 4) * 0.16, 0.93)
-		end
+	local dark = frame.dark / fps
+	-- The crater empties out. Wind, the last of the fire, rock ticking as it
+	-- cools, and one low tone that belongs to the thing on the floor.
+	play("low", aftermath + 0.10, dark - aftermath + 0.1, 0.92, 0.42, 0.80)
+	play("cinder", aftermath + 0.12, dark - aftermath - 0.6, 0.93, 0.80, 0.60)
+	play("ground", aftermath + 0.05, 3.0, 0.42, 0.26, 0.32)
+	play("boulder", aftermath + 0.60, 1.2, 0.55, 0.55, 0.40, "left")
+	play("sand", aftermath + 1.5, 0.38, 0.85, 0.5, 0.66, "right")
+	for i, tick in { 0.30, 1.05, 1.9, 2.75, 3.4 } do
+		play("pop", aftermath + tick, 0.047, 1.2 + (i % 3) * 0.3, 0.62, nil, if i % 2 == 0 then "right" else "left")
 	end
-	-- The mineral sings an open fifth and burns out with its light.
-	note("vein", seamAt + 0.10, 76, dark - seamAt - 0.35, 0.66, "left")
-	note("vein", seamAt + 0.45, 69, dark - seamAt - 0.80, 0.40, "right")
-	note("cello", seamAt + 0.05, 40, dark - seamAt - 0.25, 0.62)
+	play("ice", frame.seam / fps - 0.2, 2.1, 0.62, 0.9, 0.58, "right")
+	note("under", aftermath + 1.2, 30, dark - aftermath - 1.4, 0.75)
+	note("tone", frame.seam / fps + 0.05, 66, dark - frame.seam / fps - 0.25, 0.55, "left")
+	note("tone", frame.seam / fps + 0.55, 73, dark - frame.seam / fps - 0.80, 0.34, "right")
 
-	-- Present day. The sea is heard just before it is seen.
+	-- Present day. Water, then light, then the score.
 	local now = frame.match / fps
-	play("tide", now - 0.34, 2.9, 0.54, 0.62, 0.58, "left")
-	play("tide", now + 1.7, 2.6, 0.50, 0.50, 0.55, "right")
-	play("wind", now - 0.1, 3.4, 0.52, 0.26, 0.46, "right")
-	play("tide", frame.boulevard / fps - 0.2, 1.6, 0.6, 0.30, 0.52, "left")
-	-- Into the rock. The outside closes off and the gallery opens around us.
-	play("drift", frame.dig / fps - 0.42, 2.0, 0.60, 0.62, 0.52)
-	play("drift", frame.dig / fps + 1.35, 1.9, 0.56, 0.50, 0.50)
+	play("lap", now - 0.15, 5.0, 0.95, 0.85, 1.0, "left")
+	play("surf", now + 0.05, 4.6, 0.92, 0.75, 0.96, "right")
+	play("gull", now + 1.15, 1.5, 0.92, 0.6, nil, "right")
+	play("gull", now + 2.6, 1.2, 0.84, 0.35, nil, "left")
+	-- The arch closes the sky off.
+	local dig = frame.dig / fps
+	play("drone", dig - 0.5, frame.living / fps - dig + 0.7, 1.0, 1.0)
+	play("drip", dig + 0.95, 0.5, 0.92, 0.7, nil, "right")
+	play("drip", dig + 3.3, 0.5, 1.12, 0.5, nil, "left")
 
 	local function blow(at, weight)
 		play("cloth", (at - 15) / fps, 0.34, 0.80, 0.42 * weight)
@@ -230,111 +265,93 @@ local function arrange()
 	end
 	blow(frame.firstHit, 0.85)
 	blow(frame.secondHit, 1.0)
-	-- The vein opens: rock first, then the note we left in the crater.
-	local open = frame.secondHit
-	play("sub", open / fps, 0.8, 0.8, 0.75, 0.55)
-	play("split", (open + 1) / fps, 0.24, 0.80, 0.62, 0.52)
-	play("fault", (open + 3) / fps, 0.24, 0.90, 0.80, 0.62, "right")
-	note("ring", (open + 2) / fps, 76, 1.5, 0.80, "left")
-	note("ring", (open + 4) / fps, 83, 1.2, 0.46, "right")
-	note("vein", (open + 2) / fps, 76, (frame.living - open + 6) / fps, 0.62, "left")
-	note("vein", (open + 10) / fps, 69, (frame.living - open - 4) / fps, 0.42, "right")
-	play("cloth", (open + 8) / fps, 0.34, 0.78, 0.46)
-	-- A living room: cloth, a cushion, and the same note thin and small
-	-- through a television speaker.
-	note("glass", frame.living / fps, 76, 1.5, 0.22, "left")
+	local trace = frame.secondHit
+	play("crack", (trace + 1) / fps, 0.5, 0.92, 0.55)
+	play("run", (trace + 3) / fps, 0.9, 1.2, 0.45, 1.05, "right")
+	note("facet", (trace + 3) / fps, 78, 1.4, 0.50, "left")
+	note("facet", (trace + 6) / fps, 85, 1.1, 0.28, "right")
+	note("tone", (trace + 3) / fps, 66, (frame.living - trace + 2) / fps, 0.46, "left")
+	play("cloth", (trace + 9) / fps, 0.34, 0.78, 0.46)
+
+	-- A quiet room. The same tone, small, in a television speaker.
+	note("facet", frame.living / fps + 0.1, 78, 1.4, 0.14, "left")
 	play("cloth", (frame.living + 19) / fps, 0.30, 0.95, 0.40)
-	play("cloth", (frame.living + 31) / fps, 0.42, 0.74, 0.36, nil, "right")
-	play("cloth", (frame.livingReverse + 9) / fps, 0.30, 0.90, 0.36, nil, "left")
-	-- Outside again.
+	play("cloth", (frame.living + 30) / fps, 0.40, 0.74, 0.34, nil, "right")
+	play("cloth", (frame.livingReverse + 8) / fps, 0.30, 0.90, 0.34, nil, "left")
+
+	-- Outside: boots go past the lens and away toward it.
 	local plaza = frame.witness / fps
-	play("tide", plaza - 0.25, 3.0, 0.52, 0.46, 0.57, "left")
-	play("wind", plaza, 2.7, 0.50, 0.24, 0.44, "right")
-	note("vein", plaza + 0.1, 64, 2.6, 0.40)
-	for i = 1, 8 do
-		local at = frame.witness - 4 + i * 10
+	play("lap", plaza - 0.15, 2.5, 0.92, 0.62, 0.95, "left")
+	for i = 1, 7 do
+		local at = frame.witness - 10 + i * 10
 		if at >= frame.witness then
-			play("step", at / fps, 0.13, 0.78 + 0.05 * (i % 3), 0.34 + 0.05 * math.min(i, 6), 0.72)
+			play("step", at / fps, 0.13, 0.78 + 0.05 * (i % 3), 0.62 - 0.06 * i, 0.72, if i > 3 then "right" else nil)
 		end
 	end
-	-- The light travels toward the player and arrives under their feet.
-	play("tunnel", (frame.arrive - 16) / fps, 38 / fps, 0.62, 0.42, 1.25, "inbound")
-	play("shudder", (frame.arrive + 20) / fps, 1.1, 0.40, 0.60, 0.52)
-	note("chime", (frame.arrive + 22) / fps, 64, 1.1, 0.44)
-	note("chime", (frame.arrive + 25) / fps, 71, 1.0, 0.34, "right")
-	play("shudder", (frame.sprout - 8) / fps, 0.62, 0.46, 0.72, 0.6)
-	local up = frame.sprout + 6
-	play("sub", up / fps, 0.7, 0.9, 0.55, 0.6)
-	play("split", up / fps, 0.22, 0.92, 0.85, 0.55)
-	play("fault", (up + 2) / fps, 0.24, 1.0, 0.75, 0.66, "left")
-	play("boulder", (up + 4) / fps, 0.5, 0.75, 0.55, 0.5, "right")
-	play("chip", (up + 5) / fps, 0.12, 1.5, 0.6, 1.1, "left")
-	for i, pitch in { 64, 71, 76, 80, 83, 88 } do
-		note("chime", (up + ({ 0, 2, 3, 5, 6, 7 })[i]) / fps, pitch, 0.95, 0.56 - 0.05 * i, if i % 2 == 0 then "right" else "left")
+	note("tone", plaza + 0.2, 66, 1.9, 0.30, "right")
+	-- Back below.
+	local gallery = frame.enter / fps
+	play("drone", gallery - 0.25, frame.reveal / fps - gallery + 0.2, 0.96, 1.1)
+	for i = 1, 4 do
+		play("step", (frame.enter - 8 + i * 10) / fps, 0.13, 0.62 + 0.04 * (i % 2), 0.52, 0.58)
 	end
-	note("vein", (up + 8) / fps, 76, (frame.contact2 - up - 8) / fps, 0.34)
+	play("drip", gallery + 1.2, 0.5, 1.0, 0.6, nil, "left")
+	note("tone", gallery + 0.2, 66, (frame.contact2 - frame.enter) / fps - 0.1, 0.44, "right")
+	note("tone", (frame.strike + 4) / fps, 73, (frame.contact2 - frame.strike) / fps - 0.2, 0.30, "left")
 
-	-- The strike, and one breath later the glass.
+	-- The break: contact, the crack running, the weight letting go, the dust.
 	local hit = frame.contact2
-	play("cloth", (hit - 9) / fps, 0.30, 0.72, 0.60)
-	play("swing", (hit - 5) / fps, 5 / fps, 0.62, 0.95, 2.1, "right")
-	play("chisel", hit / fps, 0.24, 1.45, 0.50, 0.70)
-	play("sub", hit / fps, 1.0, 0.66, 0.72, 0.42)
-	play("shatter", hit / fps, 0.30, 1.35, 0.62, 1.0)
-	play("shatter", (hit + 2) / fps, 0.26, 1.9, 0.55, 1.5, "right")
+	play("cloth", (hit - 10) / fps, 0.30, 0.72, 0.62)
+	play("swing", (hit - 5) / fps, 5 / fps, 0.66, 0.85, 2.0, "left")
+	play("iron", hit / fps, 0.10, 1.50, 0.58, 1.18)
+	play("chisel", hit / fps, 0.24, 1.22, 0.52, 0.70)
+	play("crack", hit / fps, 0.6, 0.88, 0.95)
+	play("chip", (hit + 2) / fps, 0.13, 1.2, 0.8, 0.9, "right")
+	play("run", (hit + 2) / fps, 0.75, 1.05, 0.85, 0.92, "left")
+	play("run", (hit + 7) / fps, 0.55, 1.35, 0.5, 1.2, "right")
+	play("crack", (hit + 11) / fps, 0.6, 0.72, 0.58, 0.68, "left")
+	play("boom", (hit + 12) / fps, 2.6, 0.92, 0.70, 0.84)
+	play("tumble", (hit + 13) / fps, 2.0, 0.92, 0.66, 0.88)
+	play("tinkle", (hit + 16) / fps, 2.2, 1.12, 0.8, 1.05, "right")
+	play("rubble", (hit + 24) / fps, 2.2, 0.95, 0.7, 0.90, "left")
+	-- The pocket opens upward into the reveal.
+	for i, pitch in { 54, 66, 70, 73 } do
+		note("tone", (frame.inside - 4 + i * 2) / fps, pitch, (frame.reveal - frame.inside) / fps + 1.5, 0.30 + 0.05 * i, if i % 2 == 0 then "right" else "left")
+	end
 	local glassAt = frame.reveal
-	play("air", (hit + 1) / fps, 0.50, 1.15, 0.72, 0.62, "left")
-	play("sub", glassAt / fps, 0.95, 0.95, 0.62, 0.50)
-	-- A rising E major spread, one facet at a time, then held.
-	for i, pitch in { 52, 64, 71, 76, 80, 83, 88, 92 } do
-		note("chime", (glassAt + (i - 1) * 1.25) / fps, pitch, 1.7, 0.78 - 0.06 * i, ({ "left", "right" })[i % 2 + 1])
+	play("sparkle", (glassAt - 2) / fps, 2.2, 1.0, 0.9)
+	play("tinkle", (glassAt - 3) / fps, 1.3, 1.5, 0.55, 1.35, "left")
+	for i, pitch in { 66, 70, 73, 78, 82, 85 } do
+		note("facet", (glassAt + (i - 1) * 2.95) / fps, pitch, 1.4, 0.40 - 0.035 * i, ({ "left", "right" })[i % 2 + 1])
 	end
-	for i, pitch in { 64, 71, 76, 80 } do
-		note("pad", (glassAt + 4) / fps, pitch, 2.75, 0.34 - 0.04 * i, if i % 2 == 0 then "right" else "left")
+	-- One pass, one direction, then air.
+	play("pass2", (frame.answer - 9) / fps, 0.9, 0.82, 0.9, 0.74, "pass")
+	play("tinkle", (frame.answer - 6) / fps, 1.6, 1.25, 0.45, 1.1, "pass")
+	local road = frame.answer / fps
+	play("lap", road - 0.15, 4.2, 0.95, 0.72, 1.0, "left")
+	play("lap", road + 2.9, (frame.duration - frame.answer) / fps - 2.7, 1.02, 0.9, 0.98, "right")
+	play("gull", road + 0.7, 1.4, 0.9, 0.35, nil, "left")
+	for i = 2, 6 do
+		play("step", (frame.answer - 14 + i * 10) / fps, 0.13, 0.80 + 0.05 * (i % 3), 0.50, 0.72)
 	end
-	note("chime", (glassAt + 13) / fps, 95, 0.9, 0.24, "right")
-	note("chime", (glassAt + 50) / fps, 83, 1.0, 0.34, "left")
-	note("chime", (glassAt + 53) / fps, 88, 1.1, 0.30, "right")
-	play("air", (frame.answer - 9) / fps, 0.46, 0.80, 0.50, 1.45, "right")
-	play("chip", (frame.answer - 1) / fps, 0.13, 1.9, 0.42, 1.5, "left")
-	play("chip", (frame.answer + 2) / fps, 0.10, 2.2, 0.30, 1.8, "right")
-	-- The light runs home down the path and the mine rings once.
-	play("tunnel", (frame.answer + 1) / fps, 36 / fps, 1.15, 0.50, 0.58, "outbound")
-	note("chime", (frame.answer + 34) / fps, 76, 1.2, 0.46)
-	note("chime", (frame.answer + 36) / fps, 83, 1.0, 0.28, "right")
-	-- The shore keeps breathing under the handoff, so play never starts in a hole.
-	for i = 0, 2 do
-		play("tide", (frame.answer + 8) / fps + i * 1.55, 2.75, 0.54 + 0.02 * i, 1.3 + 0.6 * i, 0.58, if i % 2 == 0 then "left" else "right")
-	end
-	play("wind", (frame.answer + 16) / fps, (frame.duration - frame.answer - 15) / fps, 0.48, 0.85, 0.46, "right")
+	-- Below, once.
+	play("drum", (frame.turn - 1) / fps, 1.2, 0.72, 0.9, 0.66)
+	play("boom", (frame.turn - 1) / fps, 2.0, 0.62, 0.42, 0.56)
+	note("tone", (frame.turn + 1) / fps, 66, 2.2, 0.40)
+	play("cloth", (frame.turn + 12) / fps, 0.36, 0.84, 0.34)
 
-	-- If the recording is unavailable the same scenes have a local score.
+	-- With no recordings at all, a plain pulse and pad keep the shape.
 	local function alternate(key, exposure, pitch, count, gain)
 		note(key, exposure / fps, pitch, count / fps, gain)
 		cues[#cues].alternate = true
 	end
-	local scoreStart = frame.match
-	local bass = { 40, 43, 38, 43, 40, 36, 43, 38 }
-	for beat = scoreStart, frame.handoff - 16, 24 do
-		local bar = math.floor((beat - scoreStart) / 48)
-		local root = bass[bar % #bass + 1]
-		local offbeat = (beat - scoreStart) % 48 == 24
-		local gain = if beat < frame.dig then 0.57 elseif beat < frame.arrive then 0.72 else 1.0
-		alternate("pulse", beat, if offbeat then root + 7 else root, if offbeat then 8 else 13, gain)
+	for beat = frame.match, frame.handoff, 24 do
+		local bar = math.floor((beat - frame.match) / 48)
+		alternate("pulse", beat, ({ 42, 42, 39, 37 })[bar % 4 + 1], 11, if beat < frame.contact2 then 0.5 else 0.95)
 	end
-	local function phrase(start, notes, gain)
-		for _, n in notes do
-			alternate("horn", start + n[1], n[2], n[3], gain)
-		end
+	for _, h in { { frame.match + 10, 66, 40, 0.5 }, { frame.reaction, 70, 30, 0.6 }, { frame.witness, 73, 40, 0.6 }, { frame.reveal, 78, 44, 1.0 }, { frame.reveal + 46, 82, 30, 0.9 }, { frame.turn + 10, 78, 50, 0.9 } } do
+		alternate("horn", h[1], h[2] - 12, h[3], h[4])
 	end
-	phrase(frame.match, { { 12, 59, 18 }, { 36, 64, 34 } }, 0.65)
-	phrase(frame.reaction, { { 2, 66, 12 }, { 18, 67, 16 } }, 0.66)
-	phrase(frame.living, { { 8, 67, 16 }, { 32, 69, 22 } }, 0.62)
-	phrase(frame.witness, { { 6, 64, 18 }, { 32, 67, 22 } }, 0.70)
-	phrase(frame.arrive, { { 4, 69, 18 }, { 30, 71, 22 } }, 0.80)
-	phrase(frame.reveal, { { 2, 76, 12 }, { 16, 74, 10 }, { 30, 79, 36 } }, 1.05)
-	phrase(frame.answer, { { 2, 74, 14 }, { 18, 79, 30 } }, 1.0)
-	alternate("cello", frame.handoff + 2, 43, 31, 0.65)
 	table.sort(cues, function(a, b)
 		return a.at < b.at
 	end)
@@ -344,7 +361,7 @@ end
 local function makeVoice(preset, parent, channel)
 	local s = Instance.new("Sound")
 	s.Name, s.SoundGroup = preset.name, channel
-	s.SoundId = "rbxasset://sounds/" .. preset.file
+	s.SoundId = preset.id or "rbxasset://sounds/" .. preset.file
 	s.PlaybackRegionsEnabled = true
 	s.PlaybackRegion = NumberRange.new(preset.first, preset.last)
 	s.Looped = preset.hz ~= nil or preset.loop == true
@@ -381,7 +398,7 @@ return function(parent, musicGroup, effectsGroup)
 	local rig = Instance.new("Folder")
 	rig.Name, rig.Parent = "Cinematic sound sources", workspace.CurrentCamera
 	local anchors = {}
-	for _, side in { "left", "right", "outbound", "inbound", "signal" } do
+	for _, side in { "left", "right", "outbound", "inbound", "pass" } do
 		local point = Instance.new("Part")
 		point.Name, point.Anchored, point.Transparency = side, true, 1
 		point.CanQuery, point.CanTouch, point.CanCollide, point.CastShadow = false, false, false, false
@@ -394,9 +411,12 @@ return function(parent, musicGroup, effectsGroup)
 
 	local events = arrange()
 	local score = Instance.new("Sound")
-	score.Name, score.SoundId = "The Final Push 30B", scoreId
+	score.Name, score.SoundId = "Rising Hope underscore", scoreId
 	score.SoundGroup, score.Volume, score.Parent = musicGroup, 0, parent
-	local slots, voices = {}, { score }
+	local theme = Instance.new("Sound")
+	theme.Name, theme.SoundId = "Rising Hope", themeId
+	theme.SoundGroup, theme.Volume, theme.Parent = musicGroup, 0, parent
+	local slots, voices = {}, { score, theme }
 	local fixed = {}
 	for _, event in events do
 		local preset = bank[event.key]
@@ -455,36 +475,44 @@ return function(parent, musicGroup, effectsGroup)
 		end
 		return index
 	end
-	local function duck(t, reach)
-		return math.clamp(math.min((t - reach + 0.09) / 0.09, (reach + 0.30 - t) / 0.26), 0, 1)
+	local themeStarted
+	local function smooth(u)
+		u = math.clamp(u, 0, 1)
+		return u * u * (3 - 2 * u)
 	end
-	local began
 	return function(t)
 		-- Commit to one arrangement for this screening. A late network load must
 		-- never replace the live arrangement halfway through a phrase.
 		if useRecording == nil and t >= chooseScoreAt then
-			useRecording = score.IsLoaded and score.TimeLength >= 18
-			-- Play it at its own speed and let its ending be our ending.
-			began = math.max(scoreIn, scoreOut - score.TimeLength)
+			useRecording = score.IsLoaded and theme.IsLoaded
 		end
-		if useRecording and t >= began and t < scoreOut then
-			local age = t - began
+		local f = t * fps
+		if useRecording and t >= scoreIn and t < blowAt + 0.25 then
 			if not scoreStarted then
-				score.TimePosition = age
+				score.TimePosition = math.max(0, underscoreBar - (blowAt - t))
 				score:Play()
 				scoreStarted = true
 			end
-			local emphasis = math.max(duck(t, frame.secondHit / fps), duck(t, (frame.sprout + 6) / fps),
-				duck(t, frame.contact2 / fps), 0.8 * duck(t, frame.firstHit / fps))
-			-- Quieter under the gallery and the living room, full for the reveal.
-			local f = t * fps
-			local indoors = math.clamp(math.min((f - frame.dig + 10) / 18, (frame.witness + 4 - f) / 18), 0, 1)
-			local held = math.clamp(math.min((f - frame.sprout) / 12, (frame.contact2 - f) / 4), 0, 1)
-			local entrance = math.clamp(age / 2.4, 0, 1)
-			local envelope = entrance * entrance * (3 - 2 * entrance) * math.clamp((scoreOut - t) / 1.1, 0, 1)
-			score.Volume = (1.24 - 0.36 * indoors - 0.30 * held - 0.30 * emphasis) * envelope
+			-- In under the sea, back behind the pick and the rooms, up again as the
+			-- player winds up, and out from under the blow.
+			local enter = smooth((t - scoreIn) / 2.0)
+			local rock = smooth((f - frame.dig + 8) / 20) * (1 - smooth((f - frame.witness + 6) / 18))
+			local build = smooth((f - frame.enter) / 60)
+			score.Volume = (1.45 - 0.45 * rock + 0.10 * build) * enter * (1 - smooth((t - blowAt) / 0.2))
 		elseif scoreStarted and score.IsPlaying then
 			score:Stop()
+		end
+		if useRecording and t >= blowAt and t < scoreOut then
+			if not themeStarted then
+				theme.TimePosition = themeBar + (t - blowAt)
+				theme:Play()
+				themeStarted = true
+			end
+			-- Under the break for its one bar, open on the reveal.
+			local open = smooth((f - frame.reveal + 10) / 12)
+			theme.Volume = (0.46 + 0.38 * open) * smooth((t - blowAt) / 0.04 + 0.2) * (1 - smooth((t - scoreOut + 1.4) / 1.4))
+		elseif themeStarted and theme.IsPlaying then
+			theme:Stop()
 		end
 		local camera = workspace.CurrentCamera
 		if camera then
@@ -497,12 +525,9 @@ return function(parent, musicGroup, effectsGroup)
 			elseif t >= breaker - 0.14 and t <= breaker + 0.85 then
 				local pass = math.clamp((t - breaker) / 0.62, 0, 1)
 				anchors.inbound.Position = view * Vector3.new(20 - 46 * pass, 2, -24 + 31 * pass)
-			elseif t >= (frame.arrive - 16) / fps and t < frame.sprout / fps then
-				local rush = math.clamp((t * fps - frame.arrive + 16) / 38, 0, 1)
-				anchors.inbound.Position = view * Vector3.new(-4 + 4 * rush, 0, -26 + 24 * rush)
-			elseif t >= frame.answer / fps then
-				local rush = math.clamp((t * fps - frame.answer) / 34, 0, 1)
-				anchors.outbound.Position = view * Vector3.new(0, 0, -5 - 34 * rush)
+			elseif f >= frame.answer - 12 and f <= frame.answer + 24 then
+				local go = math.clamp((f - frame.answer + 10) / 24, 0, 1)
+				anchors.pass.Position = view * Vector3.new(14 - 28 * go, 0, -6)
 			end
 		end
 		for i = #active, 1, -1 do

@@ -19,7 +19,7 @@ local function smooth(u)
 	return 1 - (1 - u) ^ 3
 end
 
-function Titles.new(safe)
+function Titles.new(safe, screen)
 	local viewer = game:GetService("Players").LocalPlayer
 	local name = if viewer then viewer.DisplayName else "Miner"
 
@@ -74,8 +74,14 @@ function Titles.new(safe)
 	closing.AnchorPoint, closing.Size, closing.Parent = Vector2.new(0, 1), UDim2.fromOffset(760, 120), safe
 	local fit = Instance.new("UIScale")
 	fit.Parent = closing
+	-- A fall of shade along the foot of the picture, with no edge to see.
+	local shade = Instance.new("Frame")
+	shade.Name, shade.BorderSizePixel, shade.BackgroundColor3 = "Closing shade", 0, hex("0E0A24")
+	shade.AnchorPoint, shade.Visible, shade.ZIndex, shade.Parent = Vector2.new(0.5, 1), false, 1, screen
+	local fall = Instance.new("UIGradient")
+	fall.Rotation, fall.Transparency, fall.Parent = 90, NumberSequence.new(1, 0.2), shade
 	local small = text(closing, medium, hex("FFFFFF"), 25)
-	small.Text, small.Size, small.TextXAlignment = "THE RAREST ORE IS STILL DOWN THERE", UDim2.fromOffset(760, 34), Enum.TextXAlignment.Left
+	small.Text, small.Size, small.TextXAlignment = "THE STAR ITSELF IS STILL BELOW", UDim2.fromOffset(760, 34), Enum.TextXAlignment.Left
 	local large = text(closing, heavy, hex("FFFFFF"), 66)
 	large.Text, large.Position, large.Size = "FIND STARFALL", UDim2.fromOffset(0, 36), UDim2.fromOffset(760, 80)
 	large.TextXAlignment = Enum.TextXAlignment.Left
@@ -90,7 +96,7 @@ function Titles.new(safe)
 		top, bottom = top or 0, bottom or size.Y
 		local picture = math.max(1, bottom - top)
 		local tall = size.X < size.Y
-		local age, left = frame - (F.reveal + 6), F.answer - 4 - frame
+		local age, left = frame - (F.reveal + 8), F.answer - 4 - frame
 		group.Visible = age >= 0 and left >= 0
 		if group.Visible then
 			local k = math.min(size.X * (if tall then 0.84 else 0.40) / 620, picture * 0.26 / 190)
@@ -107,12 +113,15 @@ function Titles.new(safe)
 			bar.Position, bar.Size = UDim2.new(0, 0, 0.5 - 0.5 * late, 0), UDim2.new(0, 6, late, 0)
 			sweep.Offset = Vector2.new(if motion then math.clamp((age - 8) / 16, 0, 1) * 2.4 - 1.2 else -1.2, 0)
 		end
-		local a, b = frame - (F.answer + 14), F.handoff + 18 - frame
+		local a, b = frame - (F.turn + 16), F.handoff + 22 - frame
 		closing.Visible = a >= 0 and b >= 0
+		shade.Visible = closing.Visible
 		if closing.Visible then
 			fit.Scale = math.max(0.01, math.min(size.X * (if tall then 0.9 else 0.46) / 760, picture * 0.17 / 120))
 			local alpha = (if motion then smooth(a / 10) else 1) * math.clamp(b / 12, 0, 1)
 			closing.Position = UDim2.new(0.06, 0, 0, bottom - picture * 0.075 + (if motion then 10 * (1 - smooth(a / 10)) else 0))
+			shade.Size, shade.Position = UDim2.new(1, 0, 0, picture * 0.36), UDim2.new(0.5, 0, 0, safe.AbsolutePosition.Y - screen.AbsolutePosition.Y + bottom)
+			shade.BackgroundTransparency = 1 - 0.75 * alpha
 			for _, t in { small, large } do
 				t.TextTransparency, t.TextStrokeTransparency = 1 - alpha, 1 - 0.8 * alpha
 			end

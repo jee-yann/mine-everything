@@ -6,9 +6,8 @@ local Acting = require(script.Parent.Acting)
 local S = require(script.Parent.Scenery)
 local Clip = require(script.Parent.PlayerClip)
 local Glass = require(script.Parent.GlassReveal)
-local LightPath = require(script.Parent.LightPath)
 local MineFace = require(script.Parent.MineFace)
-local StarRoot = require(script.Parent.StarRoot)
+local MouthGlow = require(script.Parent.MouthGlow)
 local Witness = require(script.Parent.Witness)
 local Camera = require(script.Parent.PlayerCamera)
 local sheet = require(script.Parent.ExposureSheet)
@@ -18,12 +17,11 @@ local Arrival = {}
 Arrival.__index = Arrival
 -- Beyond this the live character is somewhere else, so the film ends on a fade.
 Arrival.nearby = 12
-local stageLift = 96
 
 function Arrival.new(stage, h)
 	return setmetatable({
 		stage = stage, handoff = h,
-		path = LightPath.new(stage), root3 = StarRoot.new(stage), glass = Glass.new(stage), witness = Witness.new(stage),
+		mouth = MouthGlow.new(stage), glass = Glass.new(stage), witness = Witness.new(stage),
 	}, Arrival)
 end
 
@@ -111,28 +109,31 @@ function Arrival:start()
 	self.mark = CF(position) * (if self.remote then self.mineBearing.Rotation else h.root.CFrame.Rotation)
 	self.floor = position.Y - rig.stand
 	self.entrance = entrance
+	self.roadStand = self.mineBearing * CFrame.Angles(0, math.pi, 0)
 	self:block()
 	local site = self:site()
 	local post = self.mineBearing * CF(-2.6, -rig.stand, 11.8)
 	local y = floorAt(site, post.Position) or self.floor
 	self.witness:place(CF(post.X, y, post.Z) * self.mineBearing.Rotation * CFrame.Angles(0, math.rad(-22), 0))
-	self.path:place(V(position.X, self.floor, position.Z), entrance, site, math.clamp(self.unit, 0.8, 1.3))
+	self.mouth:place(entrance)
 	self.lens = Instance.new("DepthOfFieldEffect")
 	self.lens.Name, self.lens.NearIntensity, self.lens.FarIntensity = "Expedition focus", 0, 0.4
 	self.lens.Parent = self.stage.Parent
 end
 
--- Play the blow once, offstage, and grow the crystal to where the steel stops.
+-- Play the blow once, offstage, and stand the player where the steel stops on
+-- the rock. Long arms and short arms all land on the same spot.
 function Arrival:block()
-	local rig, u = self.rig, self.unit
-	rig:place(Acting.perform(rig, Clip.ground, F.contact2, self.mineBearing, u))
-	if self.handle then
-		self.tip = MineFace.tipOf(rig, self.handle, self.mineBearing.LookVector * 0.45 - Vector3.yAxis)
-	else
-		self.tip = nil
-	end
+	local rig, u, mine = self.rig, self.unit, self.mine
+	local at = mine.at
+	self.faceAt, self.hole = at, mine.contact
+	local stand = at * CF(mine.point.X, rig.stand, 3)
+	rig:place(Acting.perform(rig, Clip.gallery, F.contact2, stand, u))
+	self.tip = if self.handle then MineFace.tipOf(rig, self.handle, at.LookVector) else nil
+	local hit = at:PointToObjectSpace(self:tipAt())
+	self.galleryStand = at * CF(2 * mine.point.X - hit.X, rig.stand, 3 + (0.02 - hit.Z))
+	rig:place(Acting.perform(rig, Clip.gallery, F.contact2, self.galleryStand, u))
 	self.strikePoint = self:tipAt()
-	self.root3:place(self.strikePoint, self.floor, self.mineBearing, u)
 end
 
 function Arrival:tipAt()
@@ -152,18 +153,22 @@ end
 
 function Arrival:pose(frame)
 	local rig, u = self.rig, self.unit
-	local heroic = frame >= F.reveal and frame < F.answer
+	local clip, stand = Clip.road, self.roadStand
+	if frame < F.enter then
+		clip, stand = Clip.plaza, self.mineBearing
+	elseif frame < F.answer then
+		clip, stand = Clip.gallery, self.galleryStand
+	end
 	local f = frame
 	if not self.motion then
 		-- Reduced motion holds one clear drawing for each beat of the story.
-		f = if heroic then F.reveal + 30 elseif frame < F.arrive then frame elseif frame < F.sprout then F.arrive + 40
-			elseif frame < F.strike then F.sprout + 24 elseif frame < F.autoStrike then F.strike + 18 else frame
+		f = if frame < F.enter then F.witness + 40 elseif frame < F.strike then F.strike - 2 elseif frame < F.autoStrike then F.strike + 18
+			elseif frame < F.inside then frame elseif frame < F.reveal then F.reveal - 4 elseif frame < F.answer then F.reveal + 30
+			elseif frame < F.turn + 20 then F.turn else F.turn + 44
 	end
-	local stand = if heroic then self.mineBearing * CF(0, stageLift, 0) else self.mineBearing
-	local base = Acting.perform(rig, if heroic then Clip.hero else Clip.ground, f, stand, u)
-	local blend = if self.remote then 0 else S.ease(frame, F.handoff - 6, F.endBlend - 2)
+	local base = Acting.perform(rig, clip, f, stand, u)
+	local blend = if self.remote then 0 else S.ease(frame, F.handoff - 4, F.endBlend - 2)
 	rig:place(base, blend, Vector3.zero)
-	self.heroStand = self.mineBearing * CF(0, stageLift, 0)
 end
 
 -- One strike per screening. The clock then jumps straight to the wind-up.
@@ -218,20 +223,13 @@ function Arrival:draw(frame)
 		self.unmask, self.visibleAlpha = nil, nil
 	end
 	self.witness:draw(frame, self.motion)
-	self.path:draw(frame, self.motion)
-	self.root3:draw(frame, F.contact2)
-	if frame >= F.prompt and frame < F.answer then
-		if not self.glass.at then
-			self.glass:place(Camera.glassFrame(self), self.unit, self.unit * self.portraitDistance)
-		end
+	self.mouth:draw(frame, self.motion)
+	if frame >= F.prompt and not self.glass.at then
+		self.glass:place(Camera.glassFrame(self), self.unit, self.unit * self.portraitDistance)
 	end
-	self.glass:erupt(frame, self.motion, self.strikePoint, (Camera.frame(self, math.min(frame, F.reveal - 1), self.motion)), self.unit)
-	if frame >= F.answer then
-		local eye, aim = Camera.frame(self, frame, self.motion)
-		self.glass:shed(frame, self.motion, eye, aim)
-	end
-	self.glass:draw(frame, self.motion, if frame >= F.reveal and frame < F.answer then self:palmAt() else nil)
-	self.lens.Enabled = frame >= F.witness and frame < F.answer
+	local eye, aim = Camera.frame(self, math.max(frame, F.witness), self.motion)
+	self.glass:draw(frame, self.motion, if frame >= F.reveal and frame < F.answer then self:palmAt() else nil, CFrame.lookAt(eye, aim))
+	self.lens.Enabled = frame >= F.witness and frame < F.handoff
 end
 
 function Arrival:camera(frame, motion)
@@ -240,8 +238,7 @@ end
 
 function Arrival:dismiss()
 	self.witness.rig.model.Parent = nil
-	self.path:hide()
-	self.root3:hide()
+	self.mouth:hide()
 	self.glass:hide()
 	self.glass.at = nil
 	if self.added then
@@ -270,8 +267,7 @@ end
 function Arrival:Destroy()
 	self:release()
 	self.witness:Destroy()
-	self.path:Destroy()
-	self.root3:Destroy()
+	self.mouth:Destroy()
 	self.glass:Destroy()
 end
 

@@ -42,7 +42,7 @@ assert(button.Position.Y.Offset > restingY, "spring return lands on the socket")
 expose(press + 16, true, press)
 assert(button.Visible and button.Position.Y.Offset == restingY and button.Size == restSize)
 expose(press + 8, false, press)
-assert(button.Visible and button.Action.Text == "Strike!" and button.Position.Y.Offset == restingY and button.Size == restSize)
+assert(button.Visible and button.Action.Text == "Break it!" and button.Position.Y.Offset == restingY and button.Size == restSize)
 for i = 1, 3 do assert(not screen["Strike outline " .. i].Visible) end
 expose(press + 19, true, press)
 assert(not button.Visible and not button.Interactable and not socket.Visible)

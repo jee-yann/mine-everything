@@ -16,8 +16,7 @@ local clip = Acting.clip({
 	-- The player goes by. A glance over the top of the phone, then back to it.
 	{ F.witness + 36, { Body = { 0.02, -0.05, 0 }, Waist = { 0, 5, 0 }, Neck = { -4, 4, -3 }, LeftShoulder = { 6, 0, -9 }, LeftElbow = { 20 }, Hold = { -0.03, -0.14, 0 } } },
 	{ F.witness + 48, { Body = { 0, -0.06, -0.03 }, Waist = { -2, 3, 0 }, Neck = { -2, -14, -1 }, Hold = { -0.02, -0.10, 0 } } },
-	{ F.arrive + 10, { Body = { 0, -0.02, 0.04 }, Waist = { 4, 2, 0 }, Neck = { 4, 2, 0 }, Hold = { 0, -0.02, 0 } } },
-	{ F.sprout, { Body = { 0, -0.04, 0.02 }, Waist = { 2, 1, 0 }, Neck = { 2, 2, 0 }, Hold = { 0, 0, 0 } } },
+	{ F.enter - 6, { Body = { 0, -0.02, 0.04 }, Waist = { 4, 2, 0 }, Neck = { 4, 2, 0 }, Hold = { 0, -0.02, 0 } } },
 })
 
 local function label(parent, str, x, y, w, h)
@@ -70,7 +69,7 @@ end
 
 function Witness:draw(f, motion)
 	-- Dressed and posed while the interiors play, so nothing loads on the cut.
-	if not self.stand or f < F.dig or f >= F.sprout then
+	if not self.stand or f < F.dig or f >= F.enter then
 		self.rig.model.Parent = nil
 		return
 	end
@@ -87,10 +86,8 @@ function Witness:draw(f, motion)
 	rig:carry("RightShoulder", "RightElbow", "RightWrist", phone * seat, pole, base)
 	rig:place(base)
 	rig:show(self.stage)
-	-- The lens side is only in view once we are facing them.
-	local away = if f >= F.arrive then 0 else 1
 	for _, part in self.behind do
-		part.Transparency = away
+		part.Transparency = 1
 	end
 	self.dot.BackgroundTransparency = if f % 24 < 14 then 0 else 0.6
 end

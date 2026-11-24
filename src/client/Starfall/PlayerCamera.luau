@@ -1,5 +1,7 @@
 -- Every shot that has the player in it. Distances are in character units, so
--- tall, small, R6 and R15 avatars are framed the same way.
+-- tall, small, R6 and R15 avatars are framed the same way. Moving shots use
+-- `glide`: they are already travelling on their first exposure and still
+-- travelling on their last.
 local S = require(script.Parent.Scenery)
 local F = require(script.Parent.ExposureSheet).frames
 local V, CF = Vector3.new, CFrame.new
@@ -9,22 +11,24 @@ local function mix(a, b, u)
 	return a + (b - a) * u
 end
 
+function Camera.glide(frame, a, b, lean)
+	local u = math.clamp((frame - a) / (b - a), 0, 1)
+	return u + (lean or -0.25) * math.sin(2 * math.pi * u) / (2 * math.pi)
+end
+
 local function aspectOf(actor)
 	local size = actor.stage.Parent.ViewportSize
 	return size.X / math.max(1, size.Y)
 end
 
-local function heroHead(actor)
-	-- The face in the hero pose before any performance is applied.
-	return (actor.mineBearing * CF(0, 96, 0) * CF(actor.rig.rest[actor.head or actor.root].Position)).Position
+local function restHead(actor)
+	return (actor.galleryStand * CF(0, 0, 0.3 * actor.unit) * CF(actor.rig.rest[actor.head or actor.root].Position)).Position
 end
 
 local function heroEye(actor, u)
-	local head = heroHead(actor)
-	local tall = if aspectOf(actor) < 1 then 1.18 else 1
-	local d = actor.unit * actor.portraitDistance * tall
-	local eye = head + actor.mineBearing:VectorToWorldSpace(V(mix(-3.1, -0.95, u) * d, mix(-1.9, -1.15, u) * d, mix(-7.6, -6.7, u) * d))
-	return eye, head
+	local head = restHead(actor)
+	local d = actor.unit * actor.portraitDistance * (if aspectOf(actor) < 1 then 1.18 else 1)
+	return head + actor.galleryStand:VectorToWorldSpace(V(mix(-1.9, -1.0, u) * d, mix(-1.55, -1.05, u) * d, mix(-7.2, -6.6, u) * d)), head
 end
 
 function Camera.glassFrame(actor)
@@ -32,97 +36,105 @@ function Camera.glassFrame(actor)
 	return CFrame.lookAt(head, eye)
 end
 
+-- From inside the pocket, through the hole, at the person who made it.
+local function pocketEye(actor, u)
+	return actor.hole * V(mix(0.35, 0.05, u), mix(-0.55, -0.35, u), mix(-3.3, -2.3, u))
+end
+
 function Camera.frame(actor, frame, motion)
-	local u, bearing = actor.unit, actor.mineBearing
-	local function at(v)
-		return bearing * (v * u)
+	local u = actor.unit
+	local function n(a, b, lean)
+		return if motion then Camera.glide(frame, a, b, lean) else 0.6
 	end
-	local function n(a, b)
-		return if motion then S.ease(frame, a, b) else 0.6
-	end
-	local face = if actor.head then actor.head.Position else at(V(0, 1.55, 0))
+	local face = if actor.head then actor.head.Position else actor.galleryStand.Position
 	local portrait = aspectOf(actor) < 1
 	local eye, aim, lens, roll = nil, nil, 40, 0
-	if frame < F.arrive then
-		-- Over the witness's shoulder. Their screen holds the mine, and the
-		-- player walks out of the crowd and into it.
+	local focus, radius, far, near = nil, 30, 0, 0
+	if frame < F.enter then
 		local w = actor.witness.stand
-		local k = n(F.witness - 4, F.arrive + 8)
-		eye = w * V(mix(2.95, 2.75, k), mix(1.75, 1.68, k), mix(1.75, 1.4, k))
-		aim = w * V(mix(0.35, 0.45, k), mix(1.42, 1.45, k), -2.2)
+		local k = n(F.witness, F.enter)
+		eye = w * V(mix(3.05, 2.65, k), mix(1.78, 1.66, k), mix(1.95, 1.35, k))
+		aim = w * V(mix(0.30, 0.50, k), mix(1.42, 1.45, k), -2.2)
 		lens = if portrait then 64 else 47
-	elseif frame < F.sprout then
-		-- Meet them head on, a little below the eyes, backing away as they come.
-		local k = n(F.arrive, F.arrive + 26)
-		local body = actor.root.Position
-		local d = u * actor.portraitDistance
-		eye = body + bearing:VectorToWorldSpace(V(mix(2.9, 2.4, k) * d, mix(-0.6, 0.0, k) * u, mix(-7.6, -6.9, k) * d))
-		aim = body + V(0, 0.72 * u + actor.headroom * 0.6, 0) + bearing:VectorToWorldSpace(V(mix(-0.4, -0.2, k), 0, 0) * u)
-		lens = 40
-		if motion then
-			local rumble = S.ease(frame, F.arrive + 22, F.arrive + 30) * 0.02
-			eye += V(math.sin(frame * 2.1), math.sin(frame * 2.9 + 1), 0) * rumble * u
-		end
 	elseif frame < F.strike then
-		-- Ground level. The root breaks the compass between us and the player.
-		local k = n(F.sprout, F.strike + 4)
-		local tip = actor.strikePoint
-		local floor = V(tip.X, actor.floor, tip.Z)
-		eye = floor + bearing:VectorToWorldSpace(V(mix(3.3, 2.9, k), 0.6 + 0.1 * k, mix(-4.9, -4.4, k)) * u)
-		aim = floor:Lerp(face, 0.5) + bearing:VectorToWorldSpace(V(0.1, mix(-0.1, 0.1, k), 0) * u)
-		lens = 50
-		local age = frame - F.sprout - 6
-		if motion and age >= 0 then
-			local jolt = math.exp(-age / 3.2) * math.cos(age * 2.2)
-			eye += V(0, 0.07, 0) * jolt * u
-			roll = 1.3 * jolt
-		end
-	elseif frame < F.reveal then
-		-- Side on, so the whole arc of the swing is readable.
-		local k = n(F.strike, F.autoStrike)
-		local tip = actor.strikePoint
-		local mid = face:Lerp(tip, 0.5)
-		local back = if portrait then 1.25 else 1
-		eye = mid + bearing:VectorToWorldSpace(V(mix(8.8, 8.0, k) * back, mix(0.15, 0.05, k), mix(-2.4, -2.0, k)) * u * mix(1, actor.portraitDistance, 0.6))
-		aim = mid + bearing:VectorToWorldSpace(V(0, -0.72, -0.2) * u)
-		lens = 40
+		-- Beside the rock, looking back along the gallery. The player walks into
+		-- the light of the thing they came to see.
+		local at = actor.faceAt
+		local k = n(F.enter, F.strike)
+		local body = at:PointToObjectSpace(face)
+		eye = at * V(mix(4.6, 4.0, k), mix(2.5, 2.6, k), mix(0.55, 0.8, k))
+		aim = at * V(mix(-0.4, body.X - 0.35, 0.55 + 0.35 * k), body.Y - 0.35 * u, mix(5.4, body.Z, 0.5 + 0.5 * k))
+		lens = if portrait then 56 else 46
+		focus, radius, far = (face - eye).Magnitude, 4, 0.3
+	elseif frame < F.break2 then
+		-- Side on. The whole arc of the swing is readable and ends on the rock.
+		local at = actor.faceAt
+		local k = n(F.strike, F.contact2 + 4, -0.1)
+		local tip = at:PointToObjectSpace(actor.strikePoint)
+		local back = if portrait then 1.3 else 1
+		local d = u * mix(1, actor.portraitDistance, 0.6)
+		eye = at * V(tip.X + mix(8.8, 7.9, k) * back * d, tip.Y + mix(0.15, -0.05, k), mix(5.0, 4.5, k) * d)
+		aim = at * V(tip.X - 0.1, tip.Y - 0.12 * u, 2.1 * d)
+		lens = 38
 		local wind = frame - F.contact2
 		if motion and wind >= -7 then
-			-- A breath in with the wind-up, then the lens takes the hit.
-			local lean = S.ease(wind, -7, -2)
-			lens -= 2.5 * lean
+			lens -= 2 * S.ease(wind, -7, -2)
 			if wind >= 0 then
-				eye += V(0, -0.10, 0) * u * math.cos(wind * 2.4) * math.exp(-wind / 2)
-				roll = 1.6 * math.cos(wind * 2) * math.exp(-wind / 2)
+				local jolt = math.exp(-wind / 2)
+				eye += V(0, -0.09 * u * math.cos(wind * 2.4) * jolt, 0)
+				roll = 1.4 * math.cos(wind * 2) * jolt
 			end
 		end
+		focus, radius, far = (actor.strikePoint - eye).Magnitude, 6, 0.28
+	elseif frame < F.inside then
+		-- On the rock. The crack runs, the slab lets go.
+		local hole = actor.hole
+		local k = n(F.break2, F.inside)
+		local age = frame - F.contact2
+		local shake = if motion then 0.06 * S.ease(age, 8, 14) * math.exp(-math.max(0, age - 14) / 7) else 0
+		eye = hole * V(mix(-5.0, -4.3, k) + shake * math.sin(age * 2.7), mix(1.0, 0.7, k) + shake * math.cos(age * 3.3), mix(3.3, 3.0, k))
+		aim = hole * V(mix(0.35, 0.2, k), -0.1, 0.35)
+		lens = 42
+		focus, radius, far = (hole.Position - eye).Magnitude, 4, 0.2
+	elseif frame < F.reveal then
+		local k = n(F.inside, F.reveal)
+		eye = pocketEye(actor, k)
+		aim = face + V(0, -0.1 * u, 0)
+		lens = if portrait then 66 else 52
+		focus, radius, near = (face - eye).Magnitude, 2.6, 0.2
 	elseif frame < F.answer then
+		-- The same lens keeps coming out of the rock and settles into the
+		-- portrait, then drifts with the glass until it carries us away.
 		local age = frame - F.reveal
-		-- A fast arrival, a held slow push, a last lift with the chin.
-		local k = if motion then 1 - math.exp(-age / 5.5) else 0.9
-		local push = if motion then S.ease(frame, F.reveal + 8, F.answer) else 0.5
-		local head
-		eye, head = heroEye(actor, k * 0.55 + push * 0.45)
+		local k = if motion then math.clamp(1 - math.exp(-age / 6.5) * (1 + age / 40), 0, 1) else 0.95
+		local drift = if motion then math.clamp(age / (F.answer - F.reveal), 0, 1) else 0.5
+		local start = pocketEye(actor, 1)
+		local goal, head = heroEye(actor, drift)
+		local carry = if motion then S.ease(frame, F.answer - 12, F.answer + 10) else 0
+		eye = start:Lerp(goal, k) + actor.galleryStand:VectorToWorldSpace(V(1.3 * carry * u, 0, 0))
 		local right = if portrait then 0.05 else 0.95
-		aim = head + bearing:VectorToWorldSpace(V(right, -0.80 + actor.headroom * 0.75 / u, 0) * u)
+		aim = face:Lerp(head, k) + actor.galleryStand:VectorToWorldSpace(V(right * k, (-0.1 - 0.68 * k) + actor.headroom * 0.75 / u * k, 0) * u)
 		lens = mix(52, 40, k)
-		roll = mix(-11, -3.2, k) + 1.4 * push
+		roll = mix(0, -3.4, k) + 1.6 * drift
+		focus, radius, near, far = (face - eye).Magnitude, 7 * u, 0.6, 0.1
 	else
-		-- Behind the shoulder as the light goes home, rising toward the view
-		-- the player is about to have.
-		local k = if motion then S.ease(frame, F.answer, F.handoff + 20) else 0.7
-		local d = actor.portraitDistance
-		eye = at(V(mix(1.9, 0.9, k), mix(1.25, 2.6, k), mix(5.2, 9.0, k) * (0.6 + 0.4 * d)))
-		aim = at(V(mix(-1.9, -0.6, k), mix(1.0, 0.9, k), -12))
-		lens = mix(46, 52, k)
-		roll = 0
+		-- On the boulevard, where the glass leaves us: in front of the player,
+		-- with the mine they came out of behind them. They turn back to it, and
+		-- the lens is already where the player's own camera will be.
+		local road = actor.roadStand
+		local d = u * actor.portraitDistance
+		local walkIn = n(F.answer - 8, F.turn + 8, 0)
+		local rise = if motion then S.ease(frame, F.turn - 2, F.handoff + 24) else 0.8
+		local bodyZ = road:PointToObjectSpace(actor.root.Position).Z * (1 - rise)
+		local reach = mix(mix(8.6, 8.4, walkIn) * d, 10.5 * u * (0.6 + 0.4 * actor.portraitDistance), rise)
+		eye = road * V(mix(-3.4, -2.9, walkIn) * d * (1 - rise), mix(mix(-0.2, 0.3, walkIn) * u, 3.0 * u, rise), bodyZ - reach)
+		aim = road * V(mix(-0.75, 0, rise) * u, mix(0.75 * u + actor.headroom * 0.5, 0.75 * u, rise), bodyZ + 2)
+		lens = mix(40, 52, rise)
+		focus, radius, far = (face - eye).Magnitude, mix(9, 60, rise), mix(0.18, 0, rise)
 	end
 	if actor.lens then
-		local subject = if frame < F.arrive then 20 elseif frame >= F.reveal then (face - eye).Magnitude else (face - eye).Magnitude
-		actor.lens.FocusDistance = subject
-		actor.lens.InFocusRadius = if frame < F.arrive then 30 elseif frame < F.sprout then 4 * u elseif frame < F.reveal then 8 * u else 7 * u
-		actor.lens.FarIntensity = if frame < F.arrive then 0 elseif frame >= F.reveal then 0.12 else 0.4
-		actor.lens.NearIntensity = if frame >= F.reveal and frame < F.answer then 0.75 else 0
+		actor.lens.FocusDistance = focus or 20
+		actor.lens.InFocusRadius, actor.lens.FarIntensity, actor.lens.NearIntensity = radius, far, near
 	end
 	return eye, aim, lens, if motion then math.rad(roll) else 0
 end

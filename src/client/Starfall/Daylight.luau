@@ -218,8 +218,11 @@ function Daylight:draw(t, motion, base, masterFrame)
 			- 0.075 * ancient
 		local haze = self.haze + (1.38 - 0.60 * offshore) * ash + 0.28 * hot + 1.67 * veil + 1.15 * basin
 		-- Open air has haze. A room does not.
-		local indoors = frame >= sheet.frames.dig - 11 and frame < sheet.frames.witness
-		self.air.Density, self.air.Haze = if indoors then 0 else density, if indoors then 0 else haze
+		local F = sheet.frames
+		local indoors = (frame >= F.dig - 2 and frame < F.witness) or (frame >= F.enter and frame < F.answer)
+		-- Ash hangs over the rim. Down on the crater floor it is above us.
+		local clear = if frame >= F.aftermath and frame < F.match then 1 - 0.75 * S.ease(frame, F.aftermath + 30, F.seam) else 1
+		self.air.Density, self.air.Haze = if indoors then 0 else density * clear, if indoors then 0 else haze * clear
 		self.air.Glare = self.glare + 0.24 * hot + 0.18 * ash
 		self.air.Offset = self.offset - 0.085 * ash
 	end
@@ -263,6 +266,15 @@ end
 -- screen can light it, and the glass stage is clean and cool.
 function Daylight:scene(frame, want)
 	local F = sheet.frames
+	if frame >= F.aftermath and frame < F.match then
+		local floor = S.ease(frame, F.aftermath + 24, F.seam)
+		want.ExposureCompensation -= 0.30 + 0.12 * floor
+		want.Brightness *= 0.55 - 0.25 * floor
+		self.grade.TintColor = self.grade.TintColor:Lerp(hex("B9C6F2"), 0.55)
+		self.grade.Contrast += 0.14 + 0.06 * floor
+		self.grade.Saturation += 0.10 * floor
+		return
+	end
 	if frame < F.match or frame >= F.endBlend then
 		return
 	end
@@ -273,23 +285,23 @@ function Daylight:scene(frame, want)
 		self.grade.Contrast, self.grade.Saturation = contrast, saturation
 	end
 	local white = Color3.new(1, 1, 1)
-	if frame < F.dig - 11 then
-		return
-	elseif frame < F.living then
+	local gallery = (frame >= F.dig - 2 and frame < F.living) or (frame >= F.enter and frame < F.reveal)
+	if gallery then
+		-- Night blue down the open shaft, over the miner's shoulder. It is the one
+		-- source here with a shadow map, so the pick and the body throw their
+		-- shadows on the rock. The lamps warm only what they reach.
 		local shine = MineFace.shine(frame)
-		local dim = hex("3E3C48"):Lerp(hex("6C52AE"), 0.55 * shine)
-		light(0, dim, dim, hex("FFFFFF"), 0.12 - 0.1 * shine, white:Lerp(hex("F3E9FF"), shine), 0.10, 0.0)
+		local dim = hex("1D2540"):Lerp(hex("4A3F86"), 0.16 * shine)
+		light(2.2, dim, dim, hex("4A78E6"), -0.04 + 0.04 * shine, hex("DCE6FF"):Lerp(hex("EAE2FF"), shine), 0.16, 0.06)
+		want.EnvironmentDiffuseScale, want.ShadowSoftness = 0.22, 0.12
+	elseif frame < F.dig then
+		return
 	elseif frame < F.witness then
-		light(1.15, hex("605C66"), hex("605C66"), hex("FFDDB4"), -0.16, hex("FFF8F0"), 0.06, -0.02)
+		light(0.62, hex("4C4A5C"), hex("4C4A5C"), hex("FFD9AE"), -0.10, hex("FFF8F2"), 0.10, 0.0)
+	elseif frame < F.enter then
+		self.grade.TintColor = self.grade.TintColor:Lerp(hex("F4ECFF"), 0.3)
 	elseif frame >= F.reveal and frame < F.answer then
 		light(0.95, hex("98A0AE"), hex("98A0AE"), hex("F4FAFF"), -0.2, white, 0.09, 0.03)
-	elseif frame >= F.arrive and frame < F.reveal then
-		local glow = S.ease(frame, F.arrive + 18, F.arrive + 30)
-		self.grade.TintColor = self.grade.TintColor:Lerp(hex("F0E6FF"), 0.6 * glow)
-		-- The player faces away from the low sun. Open the shade on their face.
-		want.OutdoorAmbient = hex("9A96A4")
-		want.Ambient = hex("88849A")
-		want.ExposureCompensation += 0.06
 	end
 end
 
@@ -301,7 +313,7 @@ function Daylight:focus(camera, base, frame, motion)
 	local close = frame >= sheet.frames.seam
 	local distance = (camera.Focus.Position - camera.CFrame.Position).Magnitude
 	depth.FocusDistance = distance
-	depth.InFocusRadius = if close then 2.7 else 26
+	depth.InFocusRadius = if close then 6 else 26
 	depth.FarIntensity = if close then 0.38 else 0.18
 	depth.NearIntensity = if close then 0.25 else 0.2
 end

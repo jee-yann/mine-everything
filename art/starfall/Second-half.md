@@ -2,29 +2,31 @@
 
 **Locked:** frames 0–383 (0–16.000 s). Frame 383 is the last offshore exposure. The cut into the crater on frame 384 is the first editable picture.
 
-**Idea.** The star that fell took root. A miner opens its vein, the whole cove watches a screen, and the player is the one who walks toward it. The root answers under the player's feet. Their strike is the reveal, and the light it frees runs back down the path into the mine they are about to enter.
+**Idea.** The star broke into the rock at the bottom of its own crater. Millions of years later the mine digs that rock. A miner uncovers a trace, the cove hears about it, and the player walks in and breaks the face open. What they find is a pocket of it. The star itself is still further down, and that is the goal of the game.
 
 | Frames | Shot | Camera | Why it is here |
 | --- | --- | --- | --- |
-| 384–463 | Crater from above | One descending crane, 40° to 26°, ending on the fork in front of the burning bowl | Replaces the zoom. The move itself finds the star. |
-| 464–515 | The fork | Low tripod, slow lateral dolly. The glow dies | "Deep in the rock, the star took root." The light going out is the fade. |
-| 516–529 | Black | – | Time passes in silence. |
-| 530–613 | The island today | Begins on the exact offshore mark of the impact, then cranes down into the settled cove | Same place, same lens position, millions of years later. |
-| 614–653 | Boulevard | Accelerating dolly into the dark arch | Carries us into the mine. |
-| 654–717 | Working face | Three-quarter wide, miner swings, contact 680 | A person at work. Pick welded in hand. |
-| 718–749 | The blow | Close on the rock, contact 722 | The vein opens. |
-| 750–785 | Reaction | Close three-quarter, violet light rises on the miner's face | The find matters to someone. |
-| 786–833 | Living room | Over the shoulders toward the TV, slow push | The news travels. |
-| 834–865 | Living room reverse | From under the TV. Two different reactions | Why people care. |
-| 866–925 | Phone in the plaza | Over the shoulder of someone filming. The player walks into their frame | Everyone watches. The player goes. |
-| 926–973 | Arrival | Low three-quarter front, the light reaches the player's feet | First full look at the player. |
-| 974–1011 | The root | Ground-level insert, crystals break through the compass | The mystery comes to the player. |
-| 1012–1083 | The strike | Side three-quarter, prompt, wind-up | The player acts. An early press jumps straight to the swing. |
-| 1084–1163 | Glass reveal | Low hero angle, push, radial glass | The player's introduction. |
-| 1164–1215 | The answer | Behind the shoulder, light races to the mine | Goal of the game. |
-| 1216–1266 | Handoff | Blend into the gameplay camera | Play. |
+| 384–451 | Crater | One crane over the rim and into the bowl, ending on the deposit | The crystal is in the wound it made, held by broken beds of rock. |
+| 452–505 | Crater floor | Low move round the deposit. Its light dies | The light going out is the fade. |
+| 506–581 | The island today | Already travelling when the picture arrives, from the offshore mark of the impact | Same place, same lens position, millions of years later. |
+| 582–623 | Mine entrance | Accelerating dolly under the sign. The dark takes it at full speed | Carries us in. |
+| 624–679 | Working face | The same forward line, still travelling. Contact 648 | A person at work. Pick welded in hand. |
+| 680–705 | The blow | Close on the rock, contact 684 | A trace of it. |
+| 706–727 | Reaction | Close, violet light rises on the miner | The find matters to someone. |
+| 728–781 | Living room and reverse | Push to the TV, then the two faces it lights | The news travels. |
+| 782–829 | Phone in the plaza | Over a witness. The player walks through their frame toward the mine | The player goes. |
+| 830–871 | Gallery | From beside the rock, the player walks into its light | They are where the miner was. |
+| 872–951 | Strike | Side on. Prompt 880, automatic swing 934, contact 944 | The player acts. A press jumps to the swing. |
+| 952–969 | The break | On the rock. The cracks run and the slabs let go | Something visibly gives before anyone is introduced. |
+| 970–990 | Inside | From the pocket, through the hole, at the person who made it | The lens is in what they opened. |
+| 991–1061 | Glass | The same lens comes out of the rock into the portrait | The introduction. |
+| 1062–1107 | Road | A pane crosses the lens. The player walks out of the mine | No teleport back to spawn. |
+| 1108–1155 | Turn | It sounds behind them. Head, torso, feet, and they face the mine | Find Starfall. |
+| 1156–1207 | Handoff | Blend into the gameplay camera | Play. |
 
-**Removed:** the stationary-fork era cut, the bedroom phone, the computer room, the emerald trial, the printed dispatch, the beacon post and route vanes, the guided dive and the buried lode.
+**One trajectory.** Every glass slab has a single path from its entrance to its exit (`GlassReveal.luau`). The entrance decays into a drift and the exit is that drift gathering speed. `Origins.spec` fails if a slab stops or loses speed between them.
+
+**Light.** This place renders local lights on a coarse grid with no shadow maps, so a headlamp spotlight next to a wall lights nothing. In the gallery the sun is the shaft: night blue, low, and it casts the shadow of the pick and the body on the rock. The headlamp throws its pool with a point light placed where the miner is looking.
 
 **Tools.** Characters are Roblox R15 rigs baked in Studio with their tools welded to the hand (`bake_cast.py`). Performances are authored as keyed curves (`Acting.luau`) with planted feet and solved limbs. The player keeps their own rig, accessories and welded pick. Glass and crystal pieces are native geometry so they render before any network asset arrives.
 
@@ -32,5 +34,6 @@
 
 - Everything in the film is owned by Rojo. Edit scripts on disk. `CoveCast.rbxm` is rebuilt with `python art/starfall/bake_cast.py`. Nothing lives only in Studio.
 - Keep interior sets close to the camera position that cuts to them (see `Film.new`). Roblox lights the region around the lens, and a set hundreds of studs away opens in the dark.
+- A cut to a far place takes two or three exposures to relight. Frames 384–391 hide that behind a quarter second of dark and a swell of the crater lights.
 - Write each `Lighting` property once per exposure (`Daylight:draw`). Setting a value twice restarts the engine's settling.
 - Frames 0–383 are approved. `vibration` in `Film.luau` keeps the literal 420 that the approved tremor used.

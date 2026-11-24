@@ -126,7 +126,7 @@ local function test()
 		assert(acousticRig.outbound["Ablation flypast"].SoundGroup == effects)
 		assert(acousticRig.inbound["Shale through the air"].SoundGroup == effects)
 		assert(acousticRig.inbound["Debris at the lens"].SoundGroup == effects)
-		assert(acousticRig.left["Resonance in the seam"].SoundGroup == effects)
+		assert(acousticRig.left["Resonance in the crystal"].SoundGroup == effects)
 		assert(opening["Iron pick at the working mine"].SoundGroup == effects)
 		if r:GetAttribute("CheckSwing") then
 			local mix = song.SoundGroup.Volume
@@ -214,7 +214,7 @@ local function test()
 		else
 			local spawnAt = p.Character.HumanoidRootPart.Position
 			local orchestraStarts, fallbackNotes = 0, 0
-			opening["The Final Push 30B"].Played:Connect(function() orchestraStarts += 1 end)
+			opening["Rising Hope underscore"].Played:Connect(function() orchestraStarts += 1 end)
 			for _, voice in opening:GetChildren() do
 				if voice.Name == "Expedition horns" or voice.Name == "Ostinato bass" then
 					voice.Played:Connect(function() fallbackNotes += 1 end)
@@ -222,7 +222,7 @@ local function test()
 			end
 			local landed, eruption, breaker, fire, rock, collapse, bow, debris
 			local seamHeard, modernPick
-			acousticRig.left["Resonance in the seam"].Played:Once(function() seamHeard = os.clock() end)
+			acousticRig.left["Resonance in the crystal"].Played:Once(function() seamHeard = os.clock() end)
 			opening["Iron pick at the working mine"].Played:Once(function() modernPick = os.clock() end)
 			opening.Landfall.Played:Once(function() landed = os.clock() end)
 			opening["Collapsing crater wall"].Played:Once(function() collapse = os.clock() end)
@@ -270,7 +270,7 @@ local function test()
 			local strike = titles:WaitForChild("Strike sample", 2)
 			waitFor(function() return strike.Visible end, 16, "strike control opens")
 			local struck
-			opening["Weight of the blow"].Played:Connect(function() struck = struck or os.clock() end)
+			opening["Body of the break"].Played:Connect(function() struck = struck or os.clock() end)
 			struck = nil
 			local tappedAt = os.clock()
 			local input = game.UserInputService:CreateVirtualInput()
@@ -278,16 +278,16 @@ local function test()
 			task.wait(0.06)
 			input:SendKey(false, Enum.KeyCode.Space)
 			waitFor(function() return strike.Visible and not strike.Interactable end, 0.4, "control shows the accepted press")
-			waitFor(function() return struck end, 1.2, "input causes the player strike")
-			assert(struck - tappedAt < 0.75, "the swing waited for the automatic beat")
+			waitFor(function() return struck end, 1.9, "input causes the break")
+			assert(struck - tappedAt < 1.35, "the swing waited for the automatic beat")
 			local card = titles:WaitForChild("Player introduction", 2)
-			waitFor(function() return card.Visible and stage:FindFirstChild("Glass stage") end, 3, "the glass reveal")
+			waitFor(function() return card.Visible and stage:FindFirstChild("Glass stage") end, 5, "the glass reveal")
 			local named = false
 			for _, label in card:GetDescendants() do
 				named = named or (label:IsA("TextLabel") and label.Text == p.DisplayName)
 			end
 			assert(named, "the reveal carries the player's own name")
-			waitFor(function() return titles["Closing line"].Visible end, 6, "the goal")
+			waitFor(function() return titles["Closing line"].Visible end, 8, "the goal")
 			assert((orchestraStarts == 1 and fallbackNotes == 0) or (orchestraStarts == 0 and fallbackNotes > 0),
 				"the screening keeps one score")
 			local sheet = require(p.PlayerScripts.Client.Starfall.ExposureSheet)

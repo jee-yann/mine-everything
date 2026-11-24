@@ -64,7 +64,7 @@ return function(safe)
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft, pad.PaddingRight = UDim.new(0.08, 0), UDim.new(0.08, 0)
 	pad.PaddingTop, pad.PaddingBottom, pad.Parent = UDim.new(0.08, 0), UDim.new(0.08, 0), key
-	local action = W.title(button, "Strike the star", 0, 0, 1, 1, 26, Color3.fromHex("FFF8E5"))
+	local action = W.title(button, "Break it open", 0, 0, 1, 1, 26, Color3.fromHex("FFF8E5"))
 	action.Name, action.TextScaled, action.ZIndex = "Action", true, 12
 	action.AnchorPoint, action.Position, action.Size = Vector2.new(0, 0.5), UDim2.fromScale(0.35, 0.48), UDim2.fromScale(0.60, 0.60)
 	W.outlineText(action, 1.2)
@@ -124,7 +124,7 @@ return function(safe)
 		button.Size = UDim2.fromOffset(leadWidth, leadHeight)
 		button.Position = UDim2.new(0.5, 0, 0, leadY)
 		key.BackgroundColor3 = if confirming then Color3.fromHex("B6F0CC") else Color3.fromHex("D9F7FF")
-		action.Text = if not confirming then "Strike the star" else "Strike!"
+		action.Text = if not confirming then "Break it open" else "Break it!"
 		rim.Color = if confirming then Color3.fromHex("C4FFE2") else Color3.fromHex("8FE9FF")
 		glint.Offset = Vector2.new(if motion then math.clamp((waiting % 36) / 21, 0, 1) * 2 - 1 else 0, 0)
 		if motion and (confirming or waiting < 12) then

@@ -134,7 +134,7 @@ function Acting.perform(rig, clip, frame, stand, unit)
 		rig:turn("RightShoulder", sx + elbow * 0.45, sy, sz)
 		for _, side in { "Left", "Right" } do
 			local _, _, fz = Acting.read(clip, side .. "Foot", frame)
-			local swing = math.deg(math.atan2(z - fz, 2))
+			local swing = math.deg(math.atan2((z - fz) * math.cos(rad(yaw)), 2))
 			rig:turn(side .. "Hip", math.clamp(swing, -42, 42) - pitch * 0.85, 0, 0)
 		end
 	end
