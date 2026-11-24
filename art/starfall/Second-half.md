@@ -27,3 +27,10 @@
 **Removed:** the stationary-fork era cut, the bedroom phone, the computer room, the emerald trial, the printed dispatch, the beacon post and route vanes, the guided dive and the buried lode.
 
 **Tools.** Characters are Roblox R15 rigs baked in Studio with their tools welded to the hand (`bake_cast.py`). Performances are authored as keyed curves (`Acting.luau`) with planted feet and solved limbs. The player keeps their own rig, accessories and welded pick. Glass and crystal pieces are native geometry so they render before any network asset arrives.
+
+## Workflow
+
+- Everything in the film is owned by Rojo. Edit scripts on disk. `CoveCast.rbxm` is rebuilt with `python art/starfall/bake_cast.py`. Nothing lives only in Studio.
+- Keep interior sets close to the camera position that cuts to them (see `Film.new`). Roblox lights the region around the lens, and a set hundreds of studs away opens in the dark.
+- Write each `Lighting` property once per exposure (`Daylight:draw`). Setting a value twice restarts the engine's settling.
+- Frames 0–383 are approved. `vibration` in `Film.luau` keeps the literal 420 that the approved tremor used.

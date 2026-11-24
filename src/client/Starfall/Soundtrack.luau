@@ -304,9 +304,9 @@ local function arrange()
 	note("chime", (frame.answer + 36) / fps, 83, 1.0, 0.28, "right")
 	-- The shore keeps breathing under the handoff, so play never starts in a hole.
 	for i = 0, 2 do
-		play("tide", (frame.answer + 8) / fps + i * 1.55, 2.55, 0.54 + 0.02 * i, 0.46, 0.58, if i % 2 == 0 then "left" else "right")
+		play("tide", (frame.answer + 8) / fps + i * 1.55, 2.75, 0.54 + 0.02 * i, 1.3 + 0.6 * i, 0.58, if i % 2 == 0 then "left" else "right")
 	end
-	play("wind", (frame.answer + 16) / fps, (frame.duration - frame.answer - 17) / fps, 0.48, 0.30, 0.46, "right")
+	play("wind", (frame.answer + 16) / fps, (frame.duration - frame.answer - 15) / fps, 0.48, 0.85, 0.46, "right")
 
 	-- If the recording is unavailable the same scenes have a local score.
 	local function alternate(key, exposure, pitch, count, gain)

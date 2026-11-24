@@ -146,7 +146,7 @@ local function vibration(frame)
 			+ 0.95 * pulse(frame, 300, 336, 24)
 			+ 2.35 * pulse(frame, 324, 366, 3)
 			+ 1.18 * pulse(frame, 353, 382, 3)
-			+ 0.24 * ease(frame, 325, 352) * (1 - ease(frame, 355, frames.seam))
+			+ 0.24 * ease(frame, 325, 352) * (1 - ease(frame, 355, 420)) -- part of the approved opening
 	end
 	local lift = math.sin(2 * math.pi * 3.1 * t + 0.35) + 0.31 * math.sin(2 * math.pi * 6.7 * t)
 	local sway = math.sin(2 * math.pi * 1.7 * t) + 0.23 * math.sin(2 * math.pi * 4.3 * t + 0.8)
