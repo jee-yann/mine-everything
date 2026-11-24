@@ -2,6 +2,7 @@ local Shared = game.ReplicatedStorage.Shared
 local E, Guide, Ores, Config =
 	require(Shared.Expeditions), require(Shared.FieldGuide), require(Shared.Ores), require(Shared.GameConfig)
 local W = require(script.Parent.Widgets)
+local Purity = require(Shared.OrePurity)
 local companion = require(script.Parent.CompanionModel)
 local Pages = {}
 function Pages.titles(menu)
@@ -176,7 +177,7 @@ function Pages.index(menu)
 			local found = menu.player:GetAttribute("Found" .. ore.name)
 			local hidden = ore.secret and not found
 			local best = menu.player:GetAttribute("BestPurity" .. ore.name) or 0
-			record.Text = if best > 0 and found then "Best purity  " .. best .. "%"
+			record.Text = if best > 0 and found then "Personal best  " .. Purity.text(best) .. "  ·  " .. Purity.multiplierText(best)
 				elseif found then "Discovered" elseif not hidden then "Still to find" else ""
 			bar.BackgroundColor3 = if hidden then W.muted else ore.color
 			name.Text = if hidden then "???" else ore.name .. (if found then "   ✓" else "")

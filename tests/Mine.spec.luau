@@ -10,19 +10,31 @@ local Data = require(Server.DataService)
 do
 	local Purity = require(Shared.OrePurity)
 	local function sample(roll, extra)
-		return { NextInteger = function(_, _, limit) return if limit == 10 then extra or 10 else roll end }
+		return { NextInteger = function(_, _, limit) return if limit == 10 then extra or 10 elseif limit == 100 then roll else 0 end }
+	end
+	-- The band comes from the 1-100 roll; the exact value inside it from a second roll.
+	local function exact(band, step)
+		return { NextInteger = function(_, _, limit) return if limit == 100 then band else step end }
 	end
 	for roll, percent in { [1] = 50, [30] = 50, [31] = 65, [63] = 80, [86] = 90, [96] = 98, [100] = 100 } do
-		assert(Purity.roll(sample(roll)) == percent)
+		assert(Purity.roll(exact(roll, 0)) == percent)
 	end
+	assert(Purity.roll(exact(31, 5432)) == 70.432 and Purity.roll(exact(1, 14999)) == 64.999)
+	assert(Purity.roll(exact(100, 999)) == 100 and Purity.valid(70.432) and not Purity.valid(70.4321))
+	assert(Purity.bonus(50) == 0 and Purity.bonus(65) == 10 and Purity.bonus(98) == 50 and Purity.bonus(100) == 100)
+	assert(math.abs(Purity.bonus(72.5) - 15) < 1e-9 and Purity.text(70.432) == "70.432%" and Purity.text(100) == "100%")
+	assert(Purity.multiplierText(65) == "×1.10" and Purity.validGrade("65") and Purity.validGrade("70.432"))
+	assert(not Purity.validGrade("70.4320") and not Purity.validGrade("49.999") and not Purity.validGrade("x"))
+	local mixed = Purity.decode(Purity.encode({ ["70.432"] = 2, ["65"] = 1 }))
+	assert(mixed["70.432"] == 2 and mixed["65"] == 1 and select(1, Purity.range(mixed)) == 65)
 
 	local old = Profile.new()
 	old.grades, old.bestPurity, old.bag = nil, nil, { Gold = 1 }
 	local miner = Data.claim({profile = old}, "assay", 1000).profile
 	local awards, grade, units, record = Profile.recordCut(miner, "Gold", 30, sample(99))
-	assert(table.find(awards, "First Gold") and grade == 98 and units == 1 and record)
+	assert(#awards == 0 and grade == 98 and units == 1 and record)
 	awards, grade, units, record = Profile.recordCut(miner, "Gold", 30, sample(100))
-	assert(not table.find(awards, "First Gold") and record and miner.bestPurity.Gold == 100)
+	assert(#awards == 0 and record and miner.bestPurity.Gold == 100)
 	local stock = Purity.decode(Purity.encode(miner.grades.Gold))
 	local low, high = Purity.range(stock)
 	assert(low == 98 and high == 100 and stock["98"] == 1 and stock["100"] == 1)
@@ -238,6 +250,9 @@ assert(
 	not Profile.markViewed(upgraded, "Book", "Starfall")
 		and not Profile.markViewed(upgraded, "Achievements", "LuckAndSkill")
 )
+-- Pocket Change now asks for ten coal.
+assert(not Profile.markViewed(upgraded, "Achievements", "PocketChange"))
+upgraded.counts.Coal = 10
 assert(Profile.markViewed(upgraded, "Achievements", "PocketChange"))
 local snapshot = Data.commit({ owner = "harbor" }, "harbor", upgraded, 100, true)
 local loaded = Data.claim(snapshot, "again", 101).profile
@@ -379,9 +394,7 @@ assert(hiddenTitle == "Copper Collector" and hiddenDetail == "Mine 50 Copper.")
 reader:SetAttribute("FoundDirt", true)
 local _, sequenceText = Guide.awardText(scales, reader)
 assert(sequenceText == "Dirt → Stone → Coal → Copper → Iron → Gold → Diamond")
-assert(Guide.awardText(awards.FirstStarfall, reader) == "First ???")
-reader:SetAttribute("FoundStarfall", true)
-assert(Guide.awardText(awards.FirstStarfall, reader) == "First Starfall")
+assert(awards.FirstStarfall == nil and awards.FirstGold == nil and awards.PocketChange.goal == 10)
 reader:Destroy()
 do
 	local Skills = require(Shared.Skills)

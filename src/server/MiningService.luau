@@ -182,10 +182,7 @@ function Mining.start(world, net, sessions, sync)
 		end
 		sync(player, profile)
 		for _, award in awards do
-			-- The first-find card announces this same unlock with the ore's name.
-			if not (discovery and (award == "First " .. name or award == "Pocket Change")) then
-				net.Feedback:FireClient(player, "achievement", award)
-			end
+			net.Feedback:FireClient(player, "achievement", award)
 		end
 		local level = Expeditions.level(profile.xp)
 		for _, rank in Expeditions.ranks do

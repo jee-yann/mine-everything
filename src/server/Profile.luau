@@ -177,7 +177,7 @@ function Profile.valid(p)
 		if type(p.bestPurity) ~= "table" then return false end
 		for name, percent in p.bestPurity do
 			local ore = Ores.byName[name]
-			if not ore or ore.host or not integer(percent, 100) or not Purity.validGrade(tostring(percent)) then return false end
+			if not ore or ore.host or type(percent) ~= "number" or not Purity.valid(percent) then return false end
 		end
 	end
 	if p.grades ~= nil then
@@ -422,7 +422,7 @@ function Profile.recordCut(p, name, depth, random)
 			units = 2
 		end
 		local stock = p.grades[name] or {}
-		local key = tostring(grade)
+		local key = Purity.key(grade)
 		stock[key] = (stock[key] or 0) + units
 		p.grades[name] = stock
 		record = grade > (p.bestPurity[name] or 0)

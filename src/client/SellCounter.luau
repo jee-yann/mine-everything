@@ -41,7 +41,7 @@ local function makeRow(menu, ore, slot)
 		less.TextTransparency = if less.Interactable then 0 else 0.55
 		more.TextTransparency = if more.Interactable then 0 else 0.55
 		local low, high = Purity.range(grades)
-		local gradeText = if low then (if low == high then low .. "%" else low .. "–" .. high .. "%") .. " pure · low sells first"
+		local gradeText = if low then (if low == high then Purity.text(low) .. " pure · " .. Purity.multiplierText(low) .. " value" else Purity.text(low) .. "–" .. Purity.text(high) .. " pure · low sells first")
 			else W.unitPrice(Purity.quote(ore, stock, grades, math.min(stock, 1), menu.player:GetAttribute("SkillBroker")) * multiplier)
 		detail.Text = gradeText .. "\n" .. W.goldAmount(stock - quantity) .. " left after sale"
 		paint(if stock > 1 then (quantity - 1) / (stock - 1) else 0, stock > 1)

@@ -427,7 +427,7 @@ function Menu:pack()
 			local value = Purity.quote(entry.ore, entry.amount, grades, entry.amount, self.player:GetAttribute("SkillBroker")) * multiplier
 			item.row.Position, item.row.Visible = UDim2.fromOffset(1, 1 + (i - 1) * 69), true
 			item.count.Text = "×" .. entry.amount
-			local grade = if low then (if low == high then low .. "%" else low .. "–" .. high .. "%") .. " pure"
+			local grade = if low then (if low == high then Purity.text(low) else Purity.text(low) .. "–" .. Purity.text(high)) .. " pure"
 				else W.unitPrice(value / entry.amount)
 			item.detail.Text = grade .. "  ·  " .. W.goldAmount(value) .. " G in pack"
 		end
