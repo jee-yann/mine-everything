@@ -106,7 +106,12 @@ function Drawn.apply(part, face, key)
 	end
 	local rock = Looks.rock[part.Name]
 	if rock and rock.tint then
-		decal.Color3 = part.Color
+		-- The tint multiplies the drawing, so the darkest grades (Shadowslate, Abyssal Basalt,
+		-- Voidglass, Starbound Rock) would turn it nearly black and no lamp could show it. Dark
+		-- tints keep their hue but are drawn at 0.54 to 0.56 brightness; grades from 0.45 up are
+		-- unchanged. The region's ambient palette still makes the deep mine feel dark.
+		local h, s, v = part.Color:ToHSV()
+		decal.Color3 = if v < 0.45 then Color3.fromHSV(h, s * 0.85, 0.54 + 0.1 * (v - 0.25)) else part.Color
 	end
 	decal.Parent = part
 	return decal
