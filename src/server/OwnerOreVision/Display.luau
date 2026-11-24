@@ -28,20 +28,29 @@ function Display.new(location, onToggle, onFilter, onClear)
 	end
 	surface:GetPropertyChangedSignal("Visible"):Connect(place)
 	place()
-	local panel = W.frame(safe, "X-ray ore filters", 0, 0, 252, 294, W.panel, 12)
+	-- Four columns of ore buttons; the panel grows with the catalog and stays short enough for phones.
+	local columns, minerals = 4, 0
+	for _, ore in Ores.list do
+		if not ore.host then
+			minerals += 1
+		end
+	end
+	local rows = math.ceil(minerals / columns)
+	local width, height = 20 + columns * 114 - 6, 84 + rows * 34 + 42
+	local panel = W.frame(safe, "X-ray ore filters", 0, 0, width, height, W.panel, 12)
 	panel.AnchorPoint, panel.Position, panel.ZIndex = Vector2.one * 0.5, UDim2.fromScale(0.5, 0.5), 20
 	panel.Visible, panel.Active = false, true
 	W.stroke(panel, W.line, 2)
 	W.title(panel, "X-ray ores", 12, 5, 150, 32, 19, W.white, true)
-	local close = W.closeButton(panel, 213, 6, 30)
+	local close = W.closeButton(panel, width - 39, 6, 30)
 	close.Modal = true
 	close.Activated:Connect(function()
 		panel.Visible = false
 	end)
-	W.button(panel, "All", 10, 45, 114, 30, W.aqua, "Select all", "Select").Activated:Connect(function()
+	W.button(panel, "All", 10, 45, (width - 26) / 2, 30, W.aqua, "Select all", "Select").Activated:Connect(function()
 		onFilter(Ores.visionMask)
 	end)
-	W.button(panel, "None", 128, 45, 114, 30, W.muted, "Clear all", "Select").Activated:Connect(function()
+	W.button(panel, "None", 16 + (width - 26) / 2, 45, (width - 26) / 2, 30, W.muted, "Clear all", "Select").Activated:Connect(function()
 		onFilter(0)
 	end)
 	local index = 0
@@ -53,9 +62,9 @@ function Display.new(location, onToggle, onFilter, onClear)
 		local button = W.button(
 			panel,
 			ore.name,
-			10 + (index % 2) * 118,
-			84 + math.floor(index / 2) * 34,
-			114,
+			10 + (index % columns) * 114,
+			84 + math.floor(index / columns) * 34,
+			108,
 			30,
 			W.card,
 			ore.name,
@@ -68,7 +77,7 @@ function Display.new(location, onToggle, onFilter, onClear)
 		self.options[ore] = button
 		index += 1
 	end
-	W.button(panel, "Clear stone", 10, 254, 232, 32, W.orange, "Clear nearby stone  [Shift+C]", "Select").Activated:Connect(onClear)
+	W.button(panel, "Clear stone", 10, height - 40, width - 20, 32, W.orange, "Clear nearby stone  [Shift+C]", "Select").Activated:Connect(onClear)
 	toggle.Activated:Connect(onToggle)
 	filters.Activated:Connect(function()
 		panel.Visible = not panel.Visible

@@ -51,7 +51,7 @@ function Roster.new(root, relayout)
 		local row = { frame = frame, player = player, name = name, level = level, title = title, gold = gold }
 		self.rows[player] = row
 		row.change = player.AttributeChanged:Connect(function(key)
-			if key == "Level" or key == "EquippedTitle" or key == "Gold" then
+			if key == "Level" or key == "EquippedTitle" or key == "Gold" or key == "LifetimeStarfall" then
 				self:refresh()
 			end
 		end)
@@ -85,7 +85,9 @@ function Roster:refresh()
 	for i, row in ordered do
 		local player = row.player
 		row.frame.Position = UDim2.fromOffset(0, (i - 1) * rowHeight)
-		row.name.Text = i .. ". " .. player.DisplayName
+		-- A star marks anyone who has ever mined Starfall.
+		local star = if (player:GetAttribute("LifetimeStarfall") or 0) > 0 then "★ " else ""
+		row.name.Text = i .. ". " .. star .. player.DisplayName
 		row.title.Text = (E.ranks[player:GetAttribute("EquippedTitle") or 1] or E.ranks[1]).name
 		row.level.Text = tostring(player:GetAttribute("Level") or 1)
 		row.gold.Text = W.goldAmount(player:GetAttribute("Gold") or 0)

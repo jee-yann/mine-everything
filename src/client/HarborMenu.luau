@@ -263,10 +263,13 @@ function Menu:gear()
 			title.Text = if key == "Power" and price then Upgrades.pickNames[nextLevel]
 				elseif key == "Capacity" and price then "Backpack  ·  Lv " .. nextLevel
 				else (item.label or key) .. "  ·  Lv " .. level
-			benefit.Text = if key == "Power" then "Mines " .. describe(key, nextLevel)
-				elseif key == "Capacity" then describe(key, nextLevel) .. " capacity"
-				elseif price then describe(key, level) .. " → " .. describe(key, nextLevel)
-				else describe(key, nextLevel)
+			if key == "Power" then
+				W.fitText(benefit, Upgrades.unlockTexts(nextLevel), "Mines ")
+			else
+				benefit.Text = if key == "Capacity" then describe(key, nextLevel) .. " capacity"
+					elseif price then describe(key, level) .. " → " .. describe(key, nextLevel)
+					else describe(key, nextLevel)
+			end
 			if not price then
 				detail.Text, savings.Text = "", ""
 				setButton(b, "Max level", W.muted, false)

@@ -768,7 +768,9 @@ function Hud:workshop(key, level)
 		elseif key == "Capacity" then "Field pack expanded"
 		else "Faster pick swing"
 	W.title(panel, headline, 8, 7, 262, 29, 22, W.white)
-	W.text(panel, key .. "  Lv " .. level .. "   ·   " .. Upgrades.describe(key, level), 8, 37, 262, 22, 15, W.gold)
+	local detail = W.text(panel, "", 8, 37, 262, 22, 15, W.gold)
+	local prefix = key .. "  Lv " .. level .. "   ·   "
+	W.fitText(detail, if key == "Power" then Upgrades.unlockTexts(level) else { Upgrades.describe(key, level) }, prefix)
 	self.workshopCard = panel
 	if self.player:GetAttribute("MenuMotion") ~= false then
 		local scale = W.scale(panel)

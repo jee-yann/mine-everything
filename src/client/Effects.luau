@@ -349,7 +349,7 @@ function Effects:burst(point, spread, ore, quiet)
 	local outward = if camera and (camera.CFrame.Position - point).Magnitude > 0.1
 		then (camera.CFrame.Position - point).Unit
 		else Vector3.yAxis
-	local rare = ore.hardness >= 4
+	local rare = Ores.rarityRank[ore.rarity] >= Ores.rarityRank.Rare
 	if rare then
 		self.sparkOrigin.WorldPosition = point + outward * (Config.Cell / 2 + 0.5)
 		self.glints.Color = ColorSequence.new(ore.color, Color3.new(1, 1, 1))

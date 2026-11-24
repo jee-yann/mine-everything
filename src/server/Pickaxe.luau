@@ -1,6 +1,8 @@
 local Ores = require(game.ReplicatedStorage.Shared.Ores)
 local Pickaxe = {}
-local socketOres = { "Coal", "Copper", "Iron", "Gold", "Diamond", "Emerald" }
+-- The pick's socket takes the colour of the ore its Power level is named for.
+local socketOres = { "Coal", "Copper", "Iron", "Gold", "Diamond", "Emerald", "Platinum", "Obsidian", "Ruby",
+	"Aquamarine", "Emberglass", "Moonstone", "Adamantite", "Starfall" }
 -- RightGripAttachment points along the hand's tool axis. Match it at the wrapped
 -- part of the shaft, with the steel head reaching forward from the palm at rest.
 local tapeY = -0.54
@@ -136,11 +138,11 @@ function Pickaxe.equip(player, char)
 	end
 	local function update()
 		local level = player:GetAttribute("Power") or 1
-		local tint = if level == 1 then pale else Ores.byName[socketOres[level]].color
+		local tint = if level == 1 then pale else Ores.byName[socketOres[math.min(level, #socketOres)]].color
 		socket.Color = if level == 1 then Color3.fromRGB(237, 181, 82) else tint
 		for i, facet in crystals do
-			facet.Transparency = if level >= 5 and (level == 6 or i % 2 == 1) then 0 else 1
-			facet.Color = if level == 6 and i % 2 == 0 then Color3.fromRGB(201, 156, 255) else tint:Lerp(pale, 0.38)
+			facet.Transparency = if level >= 5 and (level >= 6 or i % 2 == 1) then 0 else 1
+			facet.Color = if level >= 6 and i % 2 == 0 then Color3.fromRGB(201, 156, 255) else tint:Lerp(pale, 0.38)
 		end
 		for _, blade in model:GetChildren() do
 			if blade.Name == "Steel" or blade.Name == "Beak" then
