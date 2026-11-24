@@ -1143,17 +1143,17 @@ for _, x in { -41, 41 } do
 end
 assert(not mapCopy["Harbor Plaza"]:FindFirstChild("Core samples"))
 local exhibit = mapCopy["Harbor Plaza"].Book
--- The shelf holds eight specimens from the opening regions; the Ore Index page lists every ore.
-local shelved = 0
+-- The stall shows a heap of ore chunks (one per ore, in its colour); the Ore Index page lists every ore.
+local heap = 0
 for _, part in exhibit:GetChildren() do
-	local shown = Ores.byName[part.Name:match("^(.+) sample$") or ""]
-	if part.Name:match(" sample$") then
-		assert(shown and not shown.secret, part.Name)
-		assert(exhibit:FindFirstChild(shown.name .. " label"), shown.name .. " label")
-		shelved += 1
+	local shown = Ores.byName[part.Name:match("^(.+) chunk$") or ""]
+	if shown then
+		assert(not shown.secret and part.Color == shown.color, part.Name)
+		heap += 1
 	end
+	assert(not part.Name:match(" sample$") and not part.Name:match(" label$"), "Old labelled shelf left behind")
 end
-assert(shelved == 8, "The specimen shelf should keep its eight samples")
+assert(heap >= 15, "The ore heap should hold at least fifteen chunks")
 assert(not floorAt(10, 32), "The inlet should pass completely under the bridge")
 for z = 2, Config.HallBack + 1, -0.5 do
 	for _, x in { -6, 0, 6 } do
@@ -1306,7 +1306,7 @@ local terraceCheck = OverlapParams.new()
 terraceCheck.FilterType, terraceCheck.FilterDescendantsInstances = Enum.RaycastFilterType.Include, obstructions
 for _, piece in highlands["Turquoise cascade"]:GetChildren() do
 	if piece.Name == "Meadow cap" then
-		assert(piece.Color == Color3.fromRGB(116, 212, 79), "Waterfall turf palette")
+		assert(piece.Color == Color3.fromRGB(134, 202, 103), "Hill turf matches the lawn")
 	end
 	if piece.Name == "Meadow cap" or piece.Name == "Mesa face" then
 		assert(#workspace:GetPartsInPart(piece, terraceCheck) == 0, "Waterfall intersects a hill or tower")
