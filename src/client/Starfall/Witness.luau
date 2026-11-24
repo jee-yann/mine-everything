@@ -69,7 +69,8 @@ function Witness:place(at)
 end
 
 function Witness:draw(f, motion)
-	if not self.stand or f < F.witness or f >= F.sprout then
+	-- Dressed and posed while the interiors play, so nothing loads on the cut.
+	if not self.stand or f < F.dig or f >= F.sprout then
 		self.rig.model.Parent = nil
 		return
 	end

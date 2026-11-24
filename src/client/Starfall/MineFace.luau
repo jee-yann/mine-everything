@@ -51,9 +51,9 @@ end
 
 local keys = {
 	{ F.living - 1, {
-		Body = { 0.1, 0, 0.95 }, Turn = { 0, -6, 0 }, Waist = { 3, -8, 0 }, Neck = { 2, 10, 2 },
-		RightShoulder = { 18, 0, 10 }, RightElbow = { 22 }, RightWrist = { 0 },
-		LeftShoulder = { 88, 0, 8 }, LeftElbow = { 78 }, LeftFoot = { -0.1, 0, 0.62 }, RightFoot = { 0.2, 0, 1.15 },
+		Body = { 0.06, -0.10, 0.50 }, Turn = { -3, -6, 0 }, Waist = { -7, -4, 0 }, Neck = { 5, 8, 3 },
+		RightShoulder = { 13, 0, 9 }, RightElbow = { 18 }, RightWrist = { 0 },
+		LeftShoulder = { 30, 0, -12 }, LeftElbow = { 44 }, LeftFoot = { -0.1, 0, 0.5 }, RightFoot = { 0.2, 0, 1.15 },
 	} },
 }
 for _, key in blow(F.firstHit, false) do table.insert(keys, key) end
@@ -63,7 +63,7 @@ for _, key in blow(F.secondHit, true) do table.insert(keys, key) end
 for _, key in {
 	{ F.secondHit + 11, {
 		Body = { 0.05, -0.12, 0.05 }, Turn = { 4, -10, 0 }, Waist = { 8, -8, 0 }, Neck = { 6, 6, -4 },
-		RightShoulder = { 40, 0, 16 }, RightElbow = { 40 }, LeftShoulder = { 74, 0, -24 }, LeftElbow = { 92 },
+		RightShoulder = { 40, 0, 16 }, RightElbow = { 40 }, LeftShoulder = { -14, 0, -26 }, LeftElbow = { 40 },
 		LeftFoot = { -0.10, 0.10, -0.3 }, RightFoot = { 0.16, 0, 0.42 },
 	}, "settle" },
 	{ F.reaction + 2, {

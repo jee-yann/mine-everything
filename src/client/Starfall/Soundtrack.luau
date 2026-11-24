@@ -222,8 +222,8 @@ local function arrange()
 	local function blow(at, weight)
 		play("cloth", (at - 15) / fps, 0.34, 0.80, 0.42 * weight)
 		play("swing", (at - 5) / fps, 5 / fps, 0.82, 0.62 * weight, 1.85, "left")
-		play("iron", at / fps, 0.10, 1.62, 0.90 * weight, 1.25)
-		play("chisel", at / fps, 0.22, 1.30, 0.85 * weight, 0.72)
+		play("iron", at / fps, 0.10, 1.62, 0.50 * weight, 1.25)
+		play("chisel", at / fps, 0.22, 1.30, 0.42 * weight, 0.72)
 		play("chip", (at + 2) / fps, 0.13, 1.25, 0.70 * weight, 0.95, "right")
 		play("chip", (at + 6) / fps, 0.10, 1.6, 0.42 * weight, 1.2, "left")
 		play("sand", (at + 5) / fps, 0.26, 0.85, 0.6 * weight, 0.62, "left")
@@ -233,7 +233,7 @@ local function arrange()
 	-- The vein opens: rock first, then the note we left in the crater.
 	local open = frame.secondHit
 	play("sub", open / fps, 0.8, 0.8, 0.75, 0.55)
-	play("split", (open + 1) / fps, 0.24, 0.80, 0.95, 0.52)
+	play("split", (open + 1) / fps, 0.24, 0.80, 0.62, 0.52)
 	play("fault", (open + 3) / fps, 0.24, 0.90, 0.80, 0.62, "right")
 	note("ring", (open + 2) / fps, 76, 1.5, 0.80, "left")
 	note("ring", (open + 4) / fps, 83, 1.2, 0.46, "right")
@@ -278,9 +278,9 @@ local function arrange()
 	local hit = frame.contact2
 	play("cloth", (hit - 9) / fps, 0.30, 0.72, 0.60)
 	play("swing", (hit - 5) / fps, 5 / fps, 0.62, 0.95, 2.1, "right")
-	play("chisel", hit / fps, 0.24, 1.45, 1.05, 0.70)
-	play("sub", hit / fps, 1.0, 0.66, 1.05, 0.42)
-	play("shatter", hit / fps, 0.30, 1.35, 0.95, 1.0)
+	play("chisel", hit / fps, 0.24, 1.45, 0.50, 0.70)
+	play("sub", hit / fps, 1.0, 0.66, 0.72, 0.42)
+	play("shatter", hit / fps, 0.30, 1.35, 0.62, 1.0)
 	play("shatter", (hit + 2) / fps, 0.26, 1.9, 0.55, 1.5, "right")
 	local glassAt = frame.reveal
 	play("air", (hit + 1) / fps, 0.50, 1.15, 0.72, 0.62, "left")
@@ -302,8 +302,11 @@ local function arrange()
 	play("tunnel", (frame.answer + 1) / fps, 36 / fps, 1.15, 0.50, 0.58, "outbound")
 	note("chime", (frame.answer + 34) / fps, 76, 1.2, 0.46)
 	note("chime", (frame.answer + 36) / fps, 83, 1.0, 0.28, "right")
-	play("tide", (frame.answer + 10) / fps, (frame.duration - frame.answer - 10) / fps, 0.52, 0.40, 0.56, "left")
-	play("wind", (frame.answer + 16) / fps, (frame.duration - frame.answer - 18) / fps, 0.48, 0.20, 0.44, "right")
+	-- The shore keeps breathing under the handoff, so play never starts in a hole.
+	for i = 0, 2 do
+		play("tide", (frame.answer + 8) / fps + i * 1.55, 2.55, 0.54 + 0.02 * i, 0.46, 0.58, if i % 2 == 0 then "left" else "right")
+	end
+	play("wind", (frame.answer + 16) / fps, (frame.duration - frame.answer - 17) / fps, 0.48, 0.30, 0.46, "right")
 
 	-- If the recording is unavailable the same scenes have a local score.
 	local function alternate(key, exposure, pitch, count, gain)
@@ -478,8 +481,8 @@ return function(parent, musicGroup, effectsGroup)
 			local indoors = math.clamp(math.min((f - frame.dig + 10) / 18, (frame.witness + 4 - f) / 18), 0, 1)
 			local held = math.clamp(math.min((f - frame.sprout) / 12, (frame.contact2 - f) / 4), 0, 1)
 			local entrance = math.clamp(age / 2.4, 0, 1)
-			local envelope = entrance * entrance * (3 - 2 * entrance) * math.clamp((scoreOut - t) / 1.6, 0, 1)
-			score.Volume = (1.12 - 0.34 * indoors - 0.30 * held - 0.30 * emphasis) * envelope
+			local envelope = entrance * entrance * (3 - 2 * entrance) * math.clamp((scoreOut - t) / 1.1, 0, 1)
+			score.Volume = (1.24 - 0.36 * indoors - 0.30 * held - 0.30 * emphasis) * envelope
 		elseif scoreStarted and score.IsPlaying then
 			score:Stop()
 		end

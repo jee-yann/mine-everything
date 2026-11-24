@@ -155,14 +155,14 @@ local function set(root)
 	S.light(shade, "FFCB86", 16, 0.8)
 	-- Sofa and footstool
 	local sofa, deep = "D8A83F", "BE8F2E"
-	S.part(root, "Sofa base", CF(1.1, 0.62, 9.6), V(7.6, 0.75, 3.0), deep, M.Fabric)
-	S.part(root, "Sofa back", CF(1.1, 2.15, 11.0), V(7.6, 2.5, 0.9), sofa, M.Fabric)
+	S.part(root, "Sofa base", CF(1.1, 0.62, 9.6), V(7.6, 0.75, 3.0), deep)
+	S.part(root, "Sofa back", CF(1.1, 2.15, 11.0), V(7.6, 2.5, 0.9), sofa)
 	for _, x in { -1, 1 } do
-		S.part(root, "Sofa arm", CF(1.1 + x * 3.6, 1.35, 9.6), V(0.8, 1.7, 3.1), sofa, M.Fabric)
-		S.part(root, "Cushion", CF(1.1 + x * 1.62, 1.14, 9.35), V(3.1, 0.5, 2.5), sofa, M.Fabric)
+		S.part(root, "Sofa arm", CF(1.1 + x * 3.6, 1.35, 9.6), V(0.8, 1.7, 3.1), sofa)
+		S.part(root, "Cushion", CF(1.1 + x * 1.62, 1.14, 9.35), V(3.1, 0.5, 2.5), sofa)
 	end
-	S.part(root, "Throw pillow", CF(-1.0, 1.9, 10.2) * A(math.rad(-18), math.rad(20), 0), V(1.3, 1.2, 0.45), "4F8F8A", M.Fabric)
-	S.part(root, "Footstool", CF(-2.1, 0.55, 6.45), V(1.9, 0.9, 1.7), "4F8F8A", M.Fabric)
+	S.part(root, "Throw pillow", CF(-1.0, 1.9, 10.2) * A(math.rad(-18), math.rad(20), 0), V(1.3, 1.2, 0.45), "4F8F8A")
+	S.part(root, "Footstool", CF(-2.1, 0.55, 6.45), V(1.9, 0.9, 1.7), "4F8F8A")
 	S.part(root, "Footstool feet", CF(-2.1, 0.08, 6.45), V(1.6, 0.16, 1.4), walnut, M.Wood)
 	S.part(root, "Back print", CF(-5.4, 5.6, 15.05), V(2.6, 3.2, 0.14), "F0E6D0")
 	S.part(root, "Back motif", CF(-5.4, 5.6, 14.96) * A(0, 0, math.rad(45)), V(1.1, 1.1, 0.06), "7C63C7")

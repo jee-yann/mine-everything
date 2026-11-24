@@ -233,13 +233,13 @@ function Glass:build()
 		tri(self.star, ring[k], ring[j], V(0.02, 0.64, 0), if k % 2 == 0 then "EAFBFF" else "9FE3F5")
 		tri(self.star, ring[k], ring[j], V(-0.02, -0.46, 0), if k % 2 == 0 then "A58CE8" else "6CC4EA")
 	end
-	self.glow = S.light(core, "8FEFFF", 8, 2)
+	self.glow = S.light(core, "8FEFFF", 8, 0.3)
 	-- Cool rim from behind, so any outfit separates from the field.
 	self.rims = {}
 	for _, p in { V(-3.2, 1.6, 2.6), V(3.4, 0.8, 2.4) } do
 		local part = S.part(self.root, "Rim", CF(p), Vector3.one * 0.05, "FFFFFF")
 		part.Transparency = 1
-		table.insert(self.rims, S.light(part, "7FE4FF", 9, 2.4))
+		table.insert(self.rims, S.light(part, "7FE4FF", 9, 0.3))
 	end
 end
 
@@ -276,7 +276,7 @@ function Glass:erupt(frame, motion, tip, eye, unit)
 	local size = (2.2 + age * 2.6) * unit
 	self.flashBoard.Size = UDim2.fromScale(size, size)
 	self.flashImage.ImageTransparency = if motion then 0.05 + 0.1 * age else 0.5
-	self.flashLight.Brightness = if motion then 3 else 1
+	self.flashLight.Brightness = if motion then 1.6 else 0.6
 	local t = age / (first - F.contact2)
 	for _, p in self.eruption do
 		if p.model.Parent then
@@ -297,7 +297,7 @@ function Glass:shed(frame, motion, eye, aim)
 	for i, p in self.eruption do
 		local u = age / 10
 		p.model.Parent = if age < 10 then self.stage else nil
-		local out = 0.55 + 3.4 * u * u + 0.5 * u
+		local out = 0.85 + 3.4 * u * u + 0.7 * u
 		p.model:PivotTo(view * CF(p.dir.X * 2.6 * out, p.dir.Y * 1.7 * out, -4.6 + 1.6 * u * p.speed)
 			* A(p.spin.X * age * 1.6, p.spin.Y * age * 1.6, p.spin.Z * age * 1.6 + i))
 	end
@@ -324,12 +324,12 @@ function Glass:draw(frame, motion, palm)
 	for group, list in { self.panels, self.near } do
 		for i, p in list do
 			local n = arrive(age - p.delay)
-			local drift = age * 0.006 * (if group == 1 then (19 - p.z) / 19 else 1.2)
+			local drift = age * 0.011 * (if group == 1 then (19 - p.z) / 19 else 1.2)
 			local off = p.out * ((1 - n) * 11 + drift * 0.6 + exit * exit * 12)
 			local toward = -(1 - n) * 4 - exit * exit * (p.z + 5)
 			local rest = p.rest.Rotation + p.rest.Position * self.reach
 			p.model:PivotTo(at * CF(off + V(0, 0, toward)) * rest
-				* A(p.spin.X * age / 9 + (1 - n) * 1.4, p.spin.Y * age / 9 + (1 - n) * 1.8, p.spin.Z * age / 9 + exit * (if i % 2 == 0 then 1 else -1)))
+				* A(p.spin.X * age / 6 + (1 - n) * 1.4, p.spin.Y * age / 6 + (1 - n) * 1.8, p.spin.Z * age / 9 + exit * (if i % 2 == 0 then 1 else -1)))
 			p.glint.Transparency = 0.68 + 0.3 * math.sin(age / 8 + i * 1.7) ^ 2
 		end
 	end
@@ -350,10 +350,10 @@ function Glass:draw(frame, motion, palm)
 		local n = arrive(age - 9)
 		local bob = if motion then math.sin(age / 7) * 0.05 else 0
 		self.star:PivotTo(CF(palm + V(0, (0.8 + bob) * self.unit, 0)) * at.Rotation * A(0.2, age * 0.09, 0.15) * CF(0, (1 - n) * 1.5, 0))
-		self.glow.Brightness = 2.2 * math.clamp(n, 0, 1)
+		self.glow.Brightness = 0.3 * math.clamp(n, 0, 1)
 	end
 	for i, rim in self.rims do
-		rim.Brightness = 2.2 + 0.5 * math.sin(age / 6 + i)
+		rim.Brightness = 0.3
 	end
 end
 

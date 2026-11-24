@@ -138,24 +138,24 @@ local hero = {
 	} },
 	{ r + 5, {
 		Body = { 0.02, -0.02, 0 }, Turn = { 4, 8, 0 }, Waist = { 6, -8, 2 }, Neck = { 2, 6, 3 },
-		RightShoulder = { 34, 0, 52 }, RightElbow = { 112 }, RightWrist = { 10 }, LeftShoulder = { 50, 0, -22 }, LeftElbow = { 20 },
+		RightShoulder = { 64, 0, 56 }, RightElbow = { 70 }, RightWrist = { 6 }, LeftShoulder = { 50, 0, -22 }, LeftElbow = { 20 },
 	} },
 	{ r + 12, {
 		Body = { 0, -0.14, -0.02 }, Turn = { -2, 14, 0 }, Waist = { -4, 4, -2 }, Neck = { 2, -14, -4 },
-		RightShoulder = { 18, 0, 34 }, RightElbow = { 104 }, RightWrist = { 0 }, LeftShoulder = { 44, 0, -30 }, LeftElbow = { 62 }, LeftWrist = { -14 },
+		RightShoulder = { 36, 0, 44 }, RightElbow = { 52 }, RightWrist = { 0 }, LeftShoulder = { 44, 0, -30 }, LeftElbow = { 62 }, LeftWrist = { -14 },
 	}, "settle" },
 	{ r + 34, {
 		Body = { 0, -0.12, -0.04 }, Turn = { -2, 12, 0 }, Waist = { -5, 4, -2 }, Neck = { 3, -13, -4 },
-		RightShoulder = { 19, 0, 35 }, RightElbow = { 105 }, LeftShoulder = { 46, 0, -30 }, LeftElbow = { 62 },
+		RightShoulder = { 37, 0, 45 }, RightElbow = { 53 }, LeftShoulder = { 46, 0, -30 }, LeftElbow = { 62 },
 	} },
 	-- A lift of the chin and the palm as the light is let go.
 	{ r + 50, {
 		Body = { 0, -0.10, -0.04 }, Turn = { -2, 10, 0 }, Waist = { -2, 3, -2 }, Neck = { 7, -11, -5 },
-		RightShoulder = { 19, 0, 36 }, RightElbow = { 106 }, LeftShoulder = { 53, 0, -30 }, LeftElbow = { 60 }, LeftWrist = { -18 },
+		RightShoulder = { 40, 0, 46 }, RightElbow = { 54 }, LeftShoulder = { 53, 0, -30 }, LeftElbow = { 60 }, LeftWrist = { -18 },
 	} },
 	{ F.answer, {
 		Body = { 0, -0.10, -0.05 }, Turn = { -2, 9, 0 }, Waist = { -2, 2, -2 }, Neck = { 8, -10, -5 },
-		RightShoulder = { 20, 0, 36 }, RightElbow = { 106 }, LeftShoulder = { 60, 0, -30 }, LeftElbow = { 56 },
+		RightShoulder = { 42, 0, 46 }, RightElbow = { 55 }, LeftShoulder = { 60, 0, -30 }, LeftElbow = { 56 },
 	} },
 }
 for _, k in hero do

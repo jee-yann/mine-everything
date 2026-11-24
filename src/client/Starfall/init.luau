@@ -85,6 +85,8 @@ local function compose(screen, safe)
 				text, 1 - opacity, 1 - 0.62 * opacity
 			shade.BackgroundTransparency = 1 - 0.78 * opacity
 			fade.BackgroundTransparency = 1 - black
+			-- Second-half fades are true black, continuous with the mattes.
+			fade.BackgroundColor3 = if frame >= sheet.frames.aftermath then Color3.new() else ink
 			title(frame, motion, pictureTop, pictureBottom)
 		end,
 		fade,

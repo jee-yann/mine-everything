@@ -124,7 +124,7 @@ function Root:draw(frame, contact)
 	end
 	self.anchor.Parent = if visible then self.stage else nil
 	local breath = 0.75 + 0.25 * math.sin(frame / 5)
-	self.light.Brightness = if visible then 2.4 * S.ease(age, 2, 12) * breath else 0
+	self.light.Brightness = if visible then 1.1 * S.ease(age, 2, 12) * breath else 0
 	local up = CF(self.at.Position + Vector3.yAxis * 0.1) * A(-math.pi / 2, 0, 0)
 	self.chips:draw(self.stage, up, age - 6, 0.62 * self.unit, self.floor)
 	self.burst:draw(self.stage, CF(self.tip) * A(-math.pi / 2, 0, 0), gone, 0.9 * self.unit, self.floor)

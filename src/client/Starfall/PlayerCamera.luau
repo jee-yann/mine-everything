@@ -23,7 +23,7 @@ local function heroEye(actor, u)
 	local head = heroHead(actor)
 	local tall = if aspectOf(actor) < 1 then 1.18 else 1
 	local d = actor.unit * actor.portraitDistance * tall
-	local eye = head + actor.mineBearing:VectorToWorldSpace(V(mix(-2.6, -1.35, u) * d, mix(-1.9, -1.15, u) * d, mix(-7.2, -6.3, u) * d))
+	local eye = head + actor.mineBearing:VectorToWorldSpace(V(mix(-3.1, -0.95, u) * d, mix(-1.9, -1.15, u) * d, mix(-7.6, -6.7, u) * d))
 	return eye, head
 end
 
@@ -84,7 +84,7 @@ function Camera.frame(actor, frame, motion)
 		local mid = face:Lerp(tip, 0.5)
 		local back = if portrait then 1.25 else 1
 		eye = mid + bearing:VectorToWorldSpace(V(mix(8.8, 8.0, k) * back, mix(0.15, 0.05, k), mix(-2.4, -2.0, k)) * u * mix(1, actor.portraitDistance, 0.6))
-		aim = mid + bearing:VectorToWorldSpace(V(0, -0.45, -0.1) * u)
+		aim = mid + bearing:VectorToWorldSpace(V(0, -0.72, -0.2) * u)
 		lens = 40
 		local wind = frame - F.contact2
 		if motion and wind >= -7 then
@@ -102,9 +102,9 @@ function Camera.frame(actor, frame, motion)
 		local k = if motion then 1 - math.exp(-age / 5.5) else 0.9
 		local push = if motion then S.ease(frame, F.reveal + 8, F.answer) else 0.5
 		local head
-		eye, head = heroEye(actor, k * 0.8 + push * 0.2)
+		eye, head = heroEye(actor, k * 0.55 + push * 0.45)
 		local right = if portrait then 0.05 else 0.95
-		aim = head + bearing:VectorToWorldSpace(V(right, -0.80 + actor.headroom * 0.35 / u, 0) * u)
+		aim = head + bearing:VectorToWorldSpace(V(right, -0.80 + actor.headroom * 0.75 / u, 0) * u)
 		lens = mix(52, 40, k)
 		roll = mix(-11, -3.2, k) + 1.4 * push
 	else

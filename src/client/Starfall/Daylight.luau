@@ -282,14 +282,14 @@ function Daylight:scene(frame, want)
 	elseif frame < F.witness then
 		light(1.15, hex("605C66"), hex("605C66"), hex("FFDDB4"), -0.16, hex("FFF8F0"), 0.06, -0.02)
 	elseif frame >= F.reveal and frame < F.answer then
-		light(1.5, hex("AEB8C8"), hex("AEB8C8"), hex("F4FAFF"), -0.02, white, 0.06, 0.0)
+		light(0.95, hex("98A0AE"), hex("98A0AE"), hex("F4FAFF"), -0.2, white, 0.09, 0.03)
 	elseif frame >= F.arrive and frame < F.reveal then
 		local glow = S.ease(frame, F.arrive + 18, F.arrive + 30)
 		self.grade.TintColor = self.grade.TintColor:Lerp(hex("F0E6FF"), 0.6 * glow)
 		-- The player faces away from the low sun. Open the shade on their face.
-		want.OutdoorAmbient = hex("B3AEBC")
-		want.Ambient = hex("9A95A6")
-		want.ExposureCompensation += 0.2
+		want.OutdoorAmbient = hex("9A96A4")
+		want.Ambient = hex("88849A")
+		want.ExposureCompensation += 0.06
 	end
 end
 

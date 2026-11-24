@@ -191,11 +191,11 @@ function Arrival:draw(frame)
 	if not away and frame < F.endBlend and not self.unmask then
 		self.unmask, self.visibleAlpha = Avatar.mask(self.handoff.root.Parent)
 	end
-	if frame < F.witness - 30 then
-		-- Spread the one-time build across a shot that is already on screen.
-		if frame == F.dig - 4 or frame == F.living - 6 then
-			self.glass:build()
-		end
+	-- One-time construction happens in the two dark beats.
+	if frame >= F.dark + 3 and frame < F.reveal then
+		self.glass:build()
+	end
+	if frame < F.dig - 7 then
 		if self.rig then
 			self:dismiss()
 		end
@@ -208,7 +208,7 @@ function Arrival:draw(frame)
 		self:block()
 	end
 	self:pose(frame)
-	if frame >= F.witness and (self.remote or frame < F.endBlend) then
+	if frame >= F.dig and (self.remote or frame < F.endBlend) then
 		self.rig:show(self.stage)
 	else
 		self.copy.Parent = nil
