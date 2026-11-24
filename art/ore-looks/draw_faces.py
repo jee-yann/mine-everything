@@ -22,6 +22,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 from core import Tex, pal_at, hexrgb, LIGHT, to255, blob
 from shapes import SHAPES, glowcol
+from new_shapes import NEW_SHAPES
 
 INK = hexrgb("1A141F")
 DRAW = 512
@@ -172,6 +173,7 @@ def hexes(t, ore, rng, style):
 
 
 DRAWN = {"hex": hexes, "chunks": chunks, "dirt": dirt, "stone": stone, "malachite": malachite, "nugget": nugget}
+DRAWN.update(NEW_SHAPES)
 
 # Warm, ore-coloured rock like the Storybook Ink concept (Copper sits in cool grey-green rock so it
 # stands apart from Dirt and Gold). Stone is drawn light and neutral:
@@ -189,6 +191,27 @@ FACES = [
     dict(name="Sapphire", rarity="Mythic", host="6176A6", shape="barrel", pal=["16287A", "3050B0", "6A9DFF", "D6E5FF"], glow="7FA8FF"),
     dict(name="Emberglass", rarity="Mythic", host="7E5866", shape="shards", pal=["1E1219", "492F47", "BD5266", "FFC0A0"], glow="FF7A6B"),
     dict(name="Starfall", rarity="Celestial", host="6C5E98", shape="star", pal=["5A3FA0", "9577D4", "DDB4FF", "FFF7EC"], glow="EBCBFF"),
+    # Ores added in the region expansion.
+    dict(name="Pyrite", rarity="Common", host="8F8774", shape="cubes", pal=["5E4A1A", "A88A3A", "DCC06A", "FFF3C2"]),
+    dict(name="Quartz", rarity="Common", host="7E8796", shape="points", pal=["9AA3B0", "C9D0D9", "EEF2F6", "FFFFFF"]),
+    dict(name="Sunstone", rarity="Epic", host="A8805A", shape="sunburst", pal=["7A2E0A", "D2601E", "FF9A48", "FFE2B0"], glow="FFB066", extra=["FFD27A"]),
+    dict(name="Garnet", rarity="Uncommon", host="8C6F72", shape="dodeca", pal=["4A0A16", "8E1A2C", "D23A4E", "FFB0B8"]),
+    dict(name="Silver", rarity="Uncommon", host="7F848C", shape="beads", pal=["4A525E", "8E98A6", "CDD5DF", "FFFFFF"]),
+    dict(name="Opal", rarity="Rare", host="7E8F94", shape="opal", pal=["5E7C86", "A6D6D8", "E2F6F2", "FFFFFF"], glow="B8FFF4"),
+    dict(name="Selenite", rarity="Rare", host="A39C8C", shape="blades", pal=["8E8676", "C9C2AE", "EEE9D8", "FFFFFF"]),
+    dict(name="Jade", rarity="Rare", host="6E8270", shape="pebbles", pal=["1E5A3A", "3A8A5C", "7CC08E", "D8F2DC"]),
+    dict(name="Platinum", rarity="Epic", host="8A8F98", shape="plates", pal=["5A6170", "9EA6B4", "D8DEE8", "FFFFFF"]),
+    dict(name="Lumenite", rarity="Legendary", host="4E6A5E", shape="glowcaps", pal=["0E6A54", "22B08C", "7DFFD6", "E0FFF6"], glow="7DFFD6"),
+    dict(name="Obsidian", rarity="Rare", host="6E6878", shape="flakes", pal=["0C0812", "241C30", "4C4060", "C8C0E0"]),
+    dict(name="Ruby", rarity="Epic", host="7E5A66", shape="cushion", pal=["5A0618", "A8102E", "F0405E", "FFC0CC"], glow="FF5C7A"),
+    dict(name="Mithril", rarity="Epic", host="6E7E8E", shape="lattice", pal=["3E5A72", "7AA6C6", "C6E4F6", "FFFFFF"]),
+    dict(name="Brimstone", rarity="Uncommon", host="8A6A4A", shape="crust", pal=["8A6A08", "D0A818", "FFE04A", "FFF8C2"]),
+    dict(name="Aquamarine", rarity="Legendary", host="6A8A96", shape="columns", pal=["1E6A80", "4CB0CC", "9CEAF8", "EAFDFF"], glow="8FEFFF"),
+    dict(name="Meteorite", rarity="Epic", host="5E5A62", shape="pitted", pal=["2E2A2E", "5E5862", "9E98A2", "E6E2E8"]),
+    dict(name="Moonstone", rarity="Legendary", host="5E6A86", shape="cabochon", pal=["7A8AB0", "B8C6E8", "E6EEFF", "FFFFFF"], glow="DDE8FF", extra=["9CC8FF"]),
+    dict(name="Adamantite", rarity="Legendary", host="4A5A62", shape="prism", pal=["0A3A36", "1E7A70", "4CC6B4", "C8FFF4"]),
+    dict(name="Resonite", rarity="Mythic", host="4E5E7E", shape="rings", pal=["2A4A8A", "5A8ACE", "A6CCFF", "EAF4FF"], glow="9CCBFF"),
+    dict(name="Voidshard", rarity="Mythic", host="3E3654", shape="void", pal=["0A0614", "2A1650", "6A3CC4", "D6C2FF"], glow="B07CFF"),
 ]
 
 

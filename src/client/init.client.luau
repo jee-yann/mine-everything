@@ -297,6 +297,14 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		)
 	elseif kind == "milestone" then
 		if a == "ORE DISCOVERED" then hud.unlocks:show("discovery", point) else hud:milestone(a, point, spread) end
+	elseif kind == "starfall" then
+		-- a = finder's name, point = their lifetime Starfall count, spread = this player found it
+		fx:chime(1.9)
+		hud:notice(
+			if spread then "★ You unearthed Starfall!" else "★ " .. a .. " unearthed Starfall!",
+			if point > 1 then "Their Starfall number " .. point .. ". The rarest ore in the mine." else "The rarest ore in the mine, found only in the crater.",
+			Ores.byName.Starfall.color
+		)
 	elseif kind == "depart" then
 		release()
 		passage:depart(a, point)
@@ -567,7 +575,8 @@ RunService.RenderStepped:Connect(function(dt)
 		player:GetAttribute("TemperCharges"),
 		owned,
 		player:GetAttribute("HasteCuts"),
-		player:GetAttribute("StoneChips")
+		player:GetAttribute("StoneChips"),
+		Upgrades.items.Power.values[player:GetAttribute("Power") or 1]
 	)
 	if rig and not rig.shoulder:IsDescendantOf(workspace) then
 		rig:destroy()

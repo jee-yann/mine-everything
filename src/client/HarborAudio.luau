@@ -1,6 +1,7 @@
 local SoundService = game:GetService("SoundService")
 local Input = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local Ores = require(game:GetService("ReplicatedStorage").Shared.Ores)
 
 local Audio = {}
 local bus = Instance.new("Folder")
@@ -86,14 +87,34 @@ end
 local signatures = {
 	{ "Stone", 9118628948, 0.15, 0.98, 0.18 },
 	{ "Coal", 9125869505, 0.13, 0.94, 0.22 },
+	{ "Pyrite", 9113849492, 0.15, 1.35, 0.30 },
 	{ "Copper", 9118608006, 0.19, 1.45, 0.33 },
+	{ "Quartz", 9116394545, 0.16, 1.60, 0.50 },
 	{ "Iron", 9116673915, 0.14, 0.95, 0.40 },
+	{ "Garnet", 9116395089, 0.18, 1.30, 0.60 },
+	{ "Silver", 9116673915, 0.16, 1.25, 0.40 },
 	{ "Gold", 9113849492, 0.19, 1.18, 0.48 },
+	{ "Sunstone", 9113849492, 0.20, 1.00, 0.60 },
+	{ "Opal", 9116394545, 0.19, 1.20, 0.70 },
+	{ "Selenite", 9116395089, 0.17, 1.50, 0.60 },
 	{ "Diamond", 9116394545, 0.20, 1.34, 0.70 },
+	{ "Jade", 9116395089, 0.20, 0.95, 0.75 },
 	{ "Emerald", 9116395089, 0.22, 1.08, 0.85 },
+	{ "Platinum", 9116673915, 0.17, 1.10, 0.45 },
+	{ "Lumenite", 9116395089, 0.22, 1.36, 0.85 },
+	{ "Obsidian", 9116394545, 0.20, 0.80, 0.70 },
 	{ "Amethyst", 9116394545, 0.20, 1.18, 0.74 },
+	{ "Ruby", 9116395089, 0.21, 1.25, 0.80 },
+	{ "Mithril", 9116673915, 0.18, 1.40, 0.50 },
 	{ "Sapphire", 9116395089, 0.20, 1.42, 0.77 },
+	{ "Brimstone", 9125869505, 0.17, 1.10, 0.40 },
+	{ "Aquamarine", 9116394545, 0.21, 1.50, 0.80 },
+	{ "Meteorite", 9116673915, 0.20, 0.70, 0.55 },
+	{ "Moonstone", 9116395089, 0.22, 1.15, 0.85 },
 	{ "Emberglass", 9116394545, 0.23, 0.90, 0.75 },
+	{ "Adamantite", 9116673915, 0.22, 0.85, 0.60 },
+	{ "Resonite", 9116395089, 0.23, 0.80, 0.90 },
+	{ "Voidshard", 9116394545, 0.24, 0.70, 0.90 },
 	{ "Starfall", 9116395089, 0.24, 1.6, 0.90 },
 }
 -- A padded landing gives loose earth a short, low thud.
@@ -130,6 +151,18 @@ local digSounds = {
 	Emberglass = { tap(oreVoices.Coal, 0.38, 0.51, 1.22, 0.17), tap(oreVoices.Emberglass, 0.66, 0.82, 0.76, 0.13) },
 	Starfall = { tap(oreVoices.Gold, 0.09, 0.17, 1.58, 0.13), tap(oreVoices.Starfall, 1.32, 1.53, 1.86, 0.17) },
 }
+-- Ores added later share a simple pattern: a rock contact, then their own ring. Each ring starts
+-- a little later in its sample, so ores that share a sample still sound different.
+for index, cue in signatures do
+	local voice = oreVoices[cue[1]]
+	if not digSounds[cue[1]] then
+		local from = 0.007 * index
+		digSounds[cue[1]] = {
+			tap(oreVoices.Stone, 0.025, 0.14, 1.04, 0.15),
+			tap(voice, from, math.min(cue[5], from + 0.2), cue[4], 0.12),
+		}
+	end
+end
 function Audio.dig(ore, emitter)
 	local layers = digSounds[ore]
 	if not layers then
@@ -201,10 +234,12 @@ function Audio.ore(loot)
 		grit.PlaybackSpeed, grit.TimePosition = variation:NextNumber(1.0, 1.18), 0.04
 		grit:Play()
 	end
+	-- The chime grows with rarity: one note for Rare finds, up to five for Starfall.
 	local delay, best = 0, 0
-	for rank, cue in signatures do
+	for _, cue in signatures do
 		if loot[cue[1]] then
-			best = rank
+			local ore = Ores.byName[cue[1]]
+			best = math.max(best, if ore then Ores.rarityRank[ore.rarity] else 0)
 			local voice = oreVoices[cue[1]]
 			task.delay(delay, function()
 				voice.TimePosition = 0
@@ -214,10 +249,10 @@ function Audio.ore(loot)
 		end
 	end
 	local now = os.clock()
-	if best < 5 or (now < flourishEnd and best <= flourishRank) then
+	if best < Ores.rarityRank.Rare or (now < flourishEnd and best <= flourishRank) then
 		return
 	end
-	local noteCount = if best == #signatures then 5 elseif best >= 8 then 4 else best - 4
+	local noteCount = math.min(5, best - Ores.rarityRank.Rare + 1)
 	flourishRank, flourishEnd, flourishSerial = best, now + delay + noteCount * 0.09, flourishSerial + 1
 	local serial = flourishSerial
 	for note = 1, noteCount do

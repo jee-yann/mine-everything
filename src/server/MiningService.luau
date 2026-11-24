@@ -81,7 +81,8 @@ function Mining.start(world, net, sessions, sync)
 			p.temper,
 			p.skills,
 			p.hasteCuts,
-			p.stoneChips
+			p.stoneChips,
+			Profile.stat(p, "Power")
 		)
 		strokes[player] = {
 			profile = p,
@@ -196,6 +197,12 @@ function Mining.start(world, net, sessions, sync)
 		if purity then net.Feedback:FireClient(player, "assay", name, purity, units, record) end
 		if discovery then
 			net.Feedback:FireClient(player, "milestone", "ORE DISCOVERED", ore.name, ore.color)
+		end
+		-- Starfall, the rarest ore in the mine, is announced to the whole server.
+		if name == "Starfall" then
+			for _, other in Players:GetPlayers() do
+				net.Feedback:FireClient(other, "starfall", player.DisplayName, profile.counts.Starfall or 1, other == player)
+			end
 		end
 		for _, other in Players:GetPlayers() do
 			local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart")

@@ -411,18 +411,18 @@ local function test()
 				)
 			end
 			audio.ore({ [ore.name] = 1 })
+			-- One rising note for a Rare find, one more per rarity step, five for Starfall.
+			local Ores = require(rep.Shared.Ores)
+			local expected = math.clamp(Ores.rarityRank[ore.rarity] - Ores.rarityRank.Rare + 1, 0, 5)
 			waitFor(function()
-				return played
-					and notes
-						== (if ore.name == "Starfall"
-							then 5
-							elseif ore.rarity == "Mythic" then 4
-							else math.max(0, ore.hardness - 3))
+				return played and notes == expected
 			end, 2, ore.name .. " break and reward notes")
 			strike:Disconnect()
 			for _, signal in flourishes do
 				signal:Disconnect()
 			end
+			-- Let this flourish finish so a lower-ranked ore next in the list is not held back by it.
+			task.wait(0.15)
 		end
 		emitter:Destroy()
 	end
@@ -586,7 +586,7 @@ local function test()
 		local close = if page == "Skills" then overlay["Skill map"]["Map header"].Close else menu.Marquee.Close
 		assert(close.Visible and close.Modal, page .. " must release the first-person pointer")
 		if page == "Gear" and r:GetAttribute("CheckSwing") then
-			for key, price in { Speed = 30, Power = 36, Capacity = 8 } do
+			for key, price in { Speed = 30, Power = 110, Capacity = 8 } do
 				local row = menu.Listings[key]
 				waitFor(function()
 					return row.Requirements.ContentText == "× " .. price .. " G" and row.Requirements.TextFits
@@ -594,7 +594,7 @@ local function test()
 				end, 2, "gold cost of " .. key .. " for a new miner")
 			end
 			local benefit = menu.Listings.Power.Benefit
-			assert(benefit.Text == "Mines Copper" and benefit.TextFits)
+			assert(benefit.Text:sub(1, 12) == "Mines Copper" and benefit.TextFits, benefit.Text)
 			assert(benefit.AbsolutePosition.Y + benefit.AbsoluteSize.Y <= menu.Listings.Power.Action.AbsolutePosition.Y)
 		end
 		if page == "Pets" or page == "Passes" then
@@ -620,7 +620,7 @@ local function test()
 			assert(p:GetAttribute("EquippedTitle") == 1)
 		end
 		if page == "Book" then
-			assert(menu.Listings["Iron Shelf"].Depth.Text == "27–89 blocks", "index depth in blocks")
+			assert(menu.Listings["Iron Shelf"].Depth.Text == "27–59 blocks", "index depth in blocks")
 			assert(menu.Listings:FindFirstChild("Rock hardness"), "index depth and Power guide")
 		end
 		task.wait(0.26)
@@ -1474,7 +1474,7 @@ local function test()
 	task.wait(0.3)
 	assert(p:GetAttribute("HeldCoal") == 0 and p:GetAttribute("Gold") == saleGold)
 	visit("Gear", true)
-	for key, price in { Speed = 30, Power = 36, Capacity = 8 } do
+	for key, price in { Speed = 30, Power = 110, Capacity = 8 } do
 		waitFor(function()
 			local gear = menu.Listings:FindFirstChild(key)
 			local affordable = saleGold >= price

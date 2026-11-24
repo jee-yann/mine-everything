@@ -46,6 +46,21 @@ function W.text(parent, value, x, y, w, h, size, color, left)
 	l.Position, l.Size, l.Parent = off(x, y), off(w, h), parent
 	return l
 end
+-- Shows the first of `options` (after `prefix`) that fits on one line of `label`, else the last.
+function W.fitText(label, options, prefix)
+	prefix = prefix or ""
+	local bounds = Vector2.new(10000, label.Size.Y.Offset)
+	for _, option in options do
+		local text = prefix .. option
+		local size = game:GetService("TextService"):GetTextSize(text, label.TextSize, label.Font, bounds)
+		if size.X <= label.Size.X.Offset then
+			label.Text = text
+			return text
+		end
+	end
+	label.Text = prefix .. options[#options]
+	return label.Text
+end
 function W.title(parent, value, x, y, w, h, size, color, left)
 	local l = W.text(parent, value, x, y, w, h, size, color, left)
 	l.Font = Enum.Font.FredokaOne

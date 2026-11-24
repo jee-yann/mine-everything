@@ -11,6 +11,12 @@ local palettes = {
 	["Emerald Deep"] = {Color3.fromHex("152921"), Color3.fromHex("DBF9ED")},
 	["Midnight Fault"] = {Color3.fromHex("20192B"), Color3.fromHex("F2E4FF")},
 	["Frostglass Reach"] = {Color3.fromHex("152631"), Color3.fromHex("DEFAFF")},
+	["Rustroot Caverns"] = {Color3.fromHex("2A1C18"), Color3.fromHex("FFE6D8")},
+	["Saltglass Sinks"] = {Color3.fromHex("27251F"), Color3.fromHex("FFF8E6")},
+	["Glowcap Hollows"] = {Color3.fromHex("12291E"), Color3.fromHex("D8FFEC")},
+	["Cinderheart Forge"] = {Color3.fromHex("301511"), Color3.fromHex("FFDCC8")},
+	["Abyssal Hollows"] = {Color3.fromHex("0F1B2A"), Color3.fromHex("D2E6FF")},
+	["Starfall Crater"] = {Color3.fromHex("1C1331"), Color3.fromHex("EEDDFF")},
 }
 function View.start(player, origin, hud)
 	local daylight = Lighting.Ambient

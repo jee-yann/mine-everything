@@ -350,7 +350,7 @@ function Skills.capacity(base, owned)
 end
 
 function Skills.isGem(ore)
-	return ore.hardness >= 5
+	return ore.gem == true
 end
 
 function Skills.walkSpeed(owned, bag, used, capacity)
@@ -382,8 +382,8 @@ function Skills.oreXP(ore, owned, first, depth)
 	return xp + (if owned.RareStudy and Skills.isGem(ore) then 4 else 0)
 end
 
-function Skills.cutTime(base, ore, strength, charges, owned, hasteCuts, stoneChips)
-	local duration, tempered = Ores.cutTime(base, ore, strength, charges, if owned.HotSteel then 0.7 else nil)
+function Skills.cutTime(base, ore, strength, charges, owned, hasteCuts, stoneChips, power)
+	local duration, tempered = Ores.cutTime(base, ore, strength, charges, if owned.HotSteel then 0.7 else nil, power)
 	duration *= (100 - Skills.bonus(owned, "cut")) / 100
 	if owned.StoneSplit and ore.name == "Stone" then
 		duration *= 0.85

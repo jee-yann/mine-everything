@@ -202,7 +202,11 @@ for _, bag in { {}, { Dirt = 2, Stone = 3, Coal = 1, Copper = 2, Gold = 1 } } do
 		assert(not Profile.buy(miner, key) and miner.gold == 1e7 and miner.levels[key] == #values)
 		checkBag()
 	end
-	assert(Profile.stat(miner, "Speed") == 0.20 and Profile.stat(miner, "Power") == 6 and Profile.stat(miner, "Capacity") == 64)
+	for _, key in { "Speed", "Power", "Capacity" } do
+		local values = Upgrades.items[key].values
+		assert(Profile.stat(miner, key) == values[#values], key .. " reaches its top level")
+	end
+	assert(Profile.stat(miner, "Power") == #Config.StoneGrades, "the top pick mines every grade")
 	miner.bag.Stone = 7201
 	assert(not Profile.valid(miner))
 end
@@ -319,6 +323,7 @@ assert(Profile.sell(split, 2, "Copper", "Stack") == 0)
 assert(Profile.sell(split, 2, "Fake", 1) == nil and Profile.sell(split, 2, "Coal", -1) == nil)
 assert(Profile.sell(split, 2, nil, "Stack") == nil and Profile.sell(split, 2, "Coal", nil) == nil)
 assert(split.gold == 72 and split.bag.Stone == 4 and split.bag.Coal == 2)
+split.gold += Upgrades.price("Power", 1) - 36
 assert(Profile.buy(split, "Power") and split.gold == 36 and split.bag.Stone == 4 and split.bag.Coal == 2)
 assert(Profile.sell(split, 1, "Stone", "Stack") == 8)
 local lastGold, lastAward, lastCount = Profile.sell(split, 1, "Coal", "Stack")
@@ -334,7 +339,7 @@ assert(payout == 60 and award == awards.CleanSale.name)
 haul.bag = { Coal = 1 }
 local _, repeatAward = Profile.sell(haul)
 assert(not repeatAward and haul.earned.CleanSale and not haul.earned.Scales)
-haul.gold = 36
+haul.gold = Upgrades.price("Power", 1)
 haul.bag = { Stone = 4 }
 local bought, _, workshopAward = Profile.buy(haul, "Power")
 assert(bought and workshopAward == awards.PickUpgrade.name and haul.gold == 0 and haul.bag.Stone == 4)
@@ -540,6 +545,180 @@ assert(
 	Config.blockCoordinates(Vector3.new(-0.1, Config.FloorY - 27 * Config.Cell - 0.5, -9)) == Vector3.new(-1, -27, -2)
 )
 print("PASS one dirt layer, independent regional odds, repeatable fields and saved title levels")
+-- Expansion: regions, stone grades, the ore catalog, rare-ore precision and saves from before it.
+do
+	local grades, layers = Config.StoneGrades, Config.Layers
+	local last = #layers
+	assert(#layers >= 10 and #grades >= 12, "the mine has its full set of regions and stone grades")
+	assert(#Upgrades.items.Power.values == #grades and #Upgrades.pickNames == #grades, "one pick per grade")
+	for i = 2, #grades do
+		assert(grades[i].depth > grades[i - 1].depth, "stone grades deepen in order")
+	end
+	for i = 2, last do
+		assert(layers[i].depthBlocks > layers[i - 1].depthBlocks, "regions deepen in order")
+	end
+	-- The first six grades keep their depths, so an existing pick reaches the same rock as before.
+	for i, depth in { 0, 27, 60, 90, 140, 185 } do
+		assert(grades[i].depth == depth, grades[i].name .. " keeps its depth")
+	end
+	-- Region and grade boundaries fall exactly on their first block.
+	for i, layer in layers do
+		local topStuds = layer.depthBlocks * Config.Cell
+		assert(Config.layer(topStuds + 0.01) == layer, layer.name .. " starts on its first block")
+		if i > 1 then
+			assert(Config.layer(topStuds - 0.01) == layers[i - 1], layer.name .. " starts no higher")
+		end
+	end
+	for tier, grade in grades do
+		local y = Config.FloorY - grade.depth * Config.Cell
+		assert(Config.strength(y - 0.01) == tier, grade.name .. " starts on its first block")
+		if tier > 1 then
+			assert(Config.strength(y + 0.01) == tier - 1, grade.name .. " starts no higher")
+		end
+	end
+	local function tierAt(depthBlocks)
+		return Config.strength(Config.FloorY - depthBlocks * Config.Cell - 0.01)
+	end
+	-- Every region's table holds known ores at positive odds and stays mostly plain stone.
+	local appears, lowest, lowestName = {}, math.huge, nil
+	for i, layer in layers do
+		local total = 0
+		for name, chance in layer.oreChances do
+			local ore = Ores.byName[name]
+			assert(ore and not ore.host and chance > 0, layer.name .. ": " .. name)
+			total += chance
+			appears[name] = appears[name] or {}
+			table.insert(appears[name], i)
+			if chance < lowest then
+				lowest, lowestName = chance, name
+			end
+		end
+		assert(total < 30, layer.name .. " stays mostly plain stone")
+	end
+	for _, list in appears do
+		table.sort(list)
+	end
+	assert(lowestName == "Starfall", "Starfall has the lowest chance of any ore")
+	-- Every ore can be found, and mined with the region's pick or one no more than two levels on.
+	for _, ore in Ores.list do
+		if ore.host then
+			continue
+		end
+		assert(appears[ore.name], ore.name .. " appears in at least one region")
+		assert(ore.hardness >= 1 and ore.hardness <= #grades, ore.name .. " is mineable with some pick")
+		for _, i in appears[ore.name] do
+			assert(ore.hardness <= tierAt(layers[i].depthBlocks) + 2, ore.name .. " in " .. layers[i].name .. " is in reach")
+		end
+	end
+	assert(#appears.Starfall == 1 and appears.Starfall[1] == last, "Starfall appears only in the final region")
+	assert(Ores.byName.Starfall.hardness == #grades, "Starfall needs the final pick")
+	assert(#appears.Sunstone == 1 and appears.Sunstone[1] == 1, "Sunstone is found only in the first stone region")
+	assert(Ores.byName.Sunstone.hardness <= tierAt(layers[1].depthBlocks), "a starter pick can mine Sunstone")
+	local exclusive = 0
+	for _, list in appears do
+		if #list == 1 then
+			exclusive += 1
+		end
+	end
+	assert(exclusive >= 4, "several ores are found in only one region")
+	local earlyMystery = false
+	for _, ore in Ores.list do
+		if ore.secret then
+			assert(type(ore.hint) == "string" and #ore.hint > 0, ore.name .. " needs a hint")
+			earlyMystery = earlyMystery or appears[ore.name][1] < last - 1
+		end
+	end
+	assert(earlyMystery, "a mystery ore exists outside the final regions")
+	-- The fine roll keeps every share exact, even Starfall's one in 250,000.
+	for _, layer in layers do
+		local previous, total, listed = 0, 0, 0
+		for _, entry in Geology.thresholds[layer] do
+			local chance = layer.oreChances[entry.name]
+			total += chance
+			listed += 1
+			assert(entry.material == Ores.byName[entry.name].material and entry.limit > previous, layer.name .. " " .. entry.name)
+			assert(math.abs(entry.limit / Geology.scale - total / 100) <= 1 / Geology.scale, layer.name .. " " .. entry.name)
+			previous = entry.limit
+		end
+		local count = 0
+		for _ in layer.oreChances do
+			count += 1
+		end
+		assert(listed == count, layer.name .. " rolls every listed ore once")
+	end
+	local function band(layer, name)
+		local low = 0
+		for _, entry in Geology.thresholds[layer] do
+			if entry.name == name then
+				return low, entry.limit
+			end
+			low = entry.limit
+		end
+		error(name .. " is not in " .. layer.name)
+	end
+	local starfallLow, starfallHigh = band(layers[last], "Starfall")
+	assert(math.abs((starfallHigh - starfallLow) / Geology.scale - 0.000004) < 1e-9, "Starfall is one block in 250,000")
+	-- Sampled with the real rolls across several seeds, rare ores land near their odds.
+	local function hits(layer, name, seeds, cells)
+		local low, high = band(layer, name)
+		local count = 0
+		for _, seed in seeds do
+			for n = 0, cells - 1 do
+				local roll = Geology.roll(seed, n % 1000 - 500, -layer.depthBlocks - 4, n // 1000)
+				if roll >= low and roll < high then
+					count += 1
+				end
+			end
+		end
+		return count
+	end
+	-- Sunstone Hollow kept its original Coal and Copper odds, so for any seed its original coal and
+	-- copper blocks are unchanged; Pyrite and Sunstone only replace what was plain stone.
+	do
+		local hollow = Geology.new(74109)
+		for n = 0, 19999 do
+			local cell = Vector3.new(n % 100 - 50, -2 - (n // 100) % 20, n // 2000 - 5)
+			if not hollow:isCave(cell) then
+				local old = (Geology.hash(74109, cell.X, cell.Y, cell.Z) % 100000) / 1000
+				local now = hollow:material(cell)
+				if old < 13 then
+					assert(now == Ores.byName.Coal.material, "original coal moved at " .. tostring(cell))
+				elseif old < 18 then
+					assert(now == Ores.byName.Copper.material, "original copper moved at " .. tostring(cell))
+				else
+					local ore = Ores.byMaterial[now]
+					assert(not ore or ore.name == "Stone" or ore.name == "Pyrite" or ore.name == "Sunstone", tostring(cell))
+				end
+			end
+		end
+	end
+	local sunstone = hits(layers[1], "Sunstone", { 3, 17, 29, 41 }, 250000) -- expect 200
+	assert(sunstone > 150 and sunstone < 250, "Sunstone sampled " .. sunstone .. " times in a million blocks")
+	local starfall = hits(layers[last], "Starfall", { 5, 6, 7, 8, 9 }, 1000000) -- expect 20
+	assert(starfall >= 6 and starfall <= 38, "Starfall sampled " .. starfall .. " times in five million blocks")
+	print("SAMPLE Sunstone", sunstone, "per million; Starfall", starfall, "per five million")
+	-- A save from before the expansion still loads, with its picks, pack and discoveries.
+	local oldSave = Profile.new()
+	oldSave.levels = { Speed = 7, Power = 6, Capacity = 8 }
+	oldSave.bag = { Coal = 10, Emerald = 2, Starfall = 1 }
+	oldSave.counts = { Coal = 400, Emerald = 3, Starfall = 1, Amethyst = 2 }
+	oldSave.discoveries = { Coal = true, Emerald = true, Starfall = true, Amethyst = true }
+	assert(Profile.valid(oldSave), "a save from before the expansion is still valid")
+	local reloaded = Data.claim({ profile = oldSave }, "oldSave-expansion", 60).profile
+	assert(reloaded.levels.Power == 6 and Profile.stat(reloaded, "Power") == 6 and Upgrades.pickNames[6] == "Prismheart Pick", "old pick kept")
+	assert(Profile.stat(reloaded, "Speed") == 0.20 and Profile.stat(reloaded, "Capacity") == 64, "old gear kept")
+	assert(Upgrades.price("Power", 6) and Upgrades.price("Speed", 7) and Upgrades.price("Capacity", 8), "old top gear upgrades further")
+	Profile.recordCut(reloaded, "Sunstone", 5)
+	Profile.recordCut(reloaded, "Voidshard", 600)
+	assert(reloaded.discoveries.Sunstone and reloaded.bag.Voidshard == 1 and Profile.valid(reloaded), "new ores save")
+	reloaded.bag.Fakeite = 1
+	assert(not Profile.valid(reloaded), "unknown ores are still rejected")
+end
+assert(
+	Config.ResetAfter - Config.Layers[#Config.Layers].depthBlocks >= 2000,
+	"A renewal cycle should leave room to mine after a shaft to the crater"
+)
+print("PASS expansion regions, grade boundaries, ore reach, Starfall rarity, 32-bit precision, rare sampling and old saves")
 local surface = workspace.CitrineCove
 do
 	local guide = require(game.StarterPlayer.StarterPlayerScripts.Client.ExpeditionWaypoint).new()
@@ -637,22 +816,21 @@ do
 		assert(not look or kit.recipes[look.relief], ore.name .. " uses an unknown relief recipe")
 		assert(not (look and look.crown) or kit.crowns[look.crown], ore.name .. " uses an unknown crown")
 	end
-	-- Glow: Gold and every ore worth more glow, each a little more than the one below; Starfall most.
-	local ranked = table.clone(Ores.list)
-	table.sort(ranked, function(a, b)
-		return a.value < b.value
-	end)
-	local lastShine = 0
-	for _, ore in ranked do
+	-- Glow is kept for exceptional ores: Gold and the original gems glow, nothing cheaper than
+	-- Gold does, every glow has a colour and a strength, and Starfall glows the most.
+	local brightest = 0
+	for _, ore in Ores.list do
 		local shine = art.shine(ore.name)
-		if ore.value >= Ores.byName.Gold.value then
-			assert(shine and shine > lastShine and shine <= 1 and art.glow(ore.name), ore.name .. " glows a bit more")
-			lastShine = shine
-		else
-			assert(shine == nil, ore.name .. " does not glow")
+		if shine then
+			assert(shine > 0 and shine <= 1 and art.glow(ore.name), ore.name .. " needs a glow colour and strength")
+			assert(ore.value >= Ores.byName.Gold.value, ore.name .. " is too cheap to glow")
+			brightest = math.max(brightest, shine)
 		end
 	end
-	assert(lastShine == art.shine("Starfall"), "Starfall glows the most")
+	for _, name in { "Gold", "Diamond", "Emerald", "Amethyst", "Sapphire", "Emberglass" } do
+		assert(art.shine(name) and art.shine(name) < art.shine("Starfall"), name .. " glows less than Starfall")
+	end
+	assert(brightest == art.shine("Starfall"), "Starfall glows the most")
 	for name, rock in looks.rock do
 		for variant = 1, 3 do
 			local decor = art.decor(name, CFrame.identity, variant)
@@ -947,12 +1125,17 @@ for _, x in { -41, 41 } do
 end
 assert(not mapCopy["Harbor Plaza"]:FindFirstChild("Core samples"))
 local exhibit = mapCopy["Harbor Plaza"].Book
-for _, ore in Ores.list do
-	if ore.secret then
-		continue
+-- The shelf holds eight specimens from the opening regions; the Ore Index page lists every ore.
+local shelved = 0
+for _, part in exhibit:GetChildren() do
+	local shown = Ores.byName[part.Name:match("^(.+) sample$") or ""]
+	if part.Name:match(" sample$") then
+		assert(shown and not shown.secret, part.Name)
+		assert(exhibit:FindFirstChild(shown.name .. " label"), shown.name .. " label")
+		shelved += 1
 	end
-	assert(exhibit:FindFirstChild(ore.name .. " sample") and exhibit:FindFirstChild(ore.name .. " label"))
 end
+assert(shelved == 8, "The specimen shelf should keep its eight samples")
 assert(not floorAt(10, 32), "The inlet should pass completely under the bridge")
 for z = 2, Config.HallBack + 1, -0.5 do
 	for _, x in { -6, 0, 6 } do

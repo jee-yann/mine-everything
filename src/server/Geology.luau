@@ -2,18 +2,46 @@ local Shared = game:GetService("ReplicatedStorage").Shared
 local Config, Ores = require(Shared.GameConfig), require(Shared.Ores)
 local Geology = {}
 Geology.__index = Geology
+-- Each region's ores as cumulative limits on a roll of STEPS * FINE values. The coarse part is the
+-- original 0.001% roll (hash % 100000); 16 finer bits from a second hash keep even Starfall's
+-- 0.0004% exact. Ores from before the expansion take the first bands in their original order, so
+-- a region whose original odds are unchanged keeps the same blocks for a given seed and the new
+-- ores only replace what was plain stone.
+local STEPS, FINE = 100000, 65536
+local SCALE = STEPS * FINE
+local LEGACY =
+	{ "Coal", "Copper", "Iron", "Gold", "Diamond", "Emerald", "Amethyst", "Sapphire", "Emberglass", "Starfall" }
+local order = {}
+for _, name in LEGACY do
+	table.insert(order, Ores.byName[name])
+end
+for _, ore in Ores.list do
+	if not table.find(LEGACY, ore.name) then
+		table.insert(order, ore)
+	end
+end
 local thresholds = {}
 for _, layer in Config.Layers do
 	local list, total = {}, 0
-	for _, ore in Ores.list do
+	for _, ore in order do
 		local chance = layer.oreChances[ore.name]
 		if chance then
+			assert(type(chance) == "number" and chance > 0, layer.name .. ": bad chance for " .. ore.name)
 			total += chance
-			table.insert(list, { limit = total, material = ore.material })
+			table.insert(
+				list,
+				{ limit = math.floor(total / 100 * SCALE + 0.5), material = ore.material, name = ore.name }
+			)
 		end
 	end
+	for name in layer.oreChances do
+		assert(Ores.byName[name] and not Ores.byName[name].host, layer.name .. " lists an unknown ore " .. name)
+	end
+	assert(total < 100, layer.name .. " ore chances must leave room for plain stone")
 	thresholds[layer] = list
 end
+Geology.thresholds = thresholds
+Geology.scale = SCALE
 local function hash(seed, x, y, z)
 	local n = bit32.bxor(seed, x * 73856093, y * 19349663, z * 83492791)
 	n = bit32.bxor(n, bit32.rshift(n, 16))
@@ -76,7 +104,7 @@ function Geology:material(p)
 		return Enum.Material.Air
 	end
 	local layer = Config.layer((-p.Y - 0.5) * Config.Cell)
-	local roll = (hash(self.seed, p.X, p.Y, p.Z) % 100000) / 1000
+	local roll = Geology.roll(self.seed, p.X, p.Y, p.Z)
 	for _, entry in thresholds[layer] do
 		if roll < entry.limit then
 			return entry.material
@@ -106,10 +134,22 @@ function Geology:feature(p)
 	local middle = math.round(3.2 * math.sin(t * 7 + phase) + 1.6 * math.sin(t * 12 + phase))
 	if along == length - 3 and across == middle and h % 3 ~= 1 then
 		return if row >= 185 and h % 7 == 0 then "Egg" else "Cache"
-	elseif row >= 90 and row < 340 and h % 3 == 0 and along >= 12 and along <= 16 and across == middle - 1 then
+	elseif
+		((row >= 90 and row < 340) or (row >= 400 and row < 470))
+		and h % 3 == 0
+		and along >= 12
+		and along <= 16
+		and across == middle - 1
+	then
 		return "Lava"
 	end
 	return nil
+end
+Geology.hash = hash
+-- A cell's ore roll, 0 to SCALE - 1: the original coarse roll, then the fine bits.
+function Geology.roll(seed, x, y, z)
+	local fine = bit32.rshift(hash(bit32.bxor(seed, 0x2545F491), x, y, z), 16)
+	return hash(seed, x, y, z) % STEPS * FINE + fine
 end
 -- Coordinates are relative to the entrance in studs, as in a Studio map probe.
 function Geology:sample(x, y, z)

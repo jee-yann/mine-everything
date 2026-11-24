@@ -169,7 +169,8 @@ function Pages.index(menu)
 		local bar = W.frame(card, "Swatch", 5, 7, 6, 38, W.muted, 3)
 		local name = W.title(card, "", 17, 1, 193, 21, 16, W.white, true)
 		local worth = W.text(card, "", 17, 22, 196, 21, 14, W.muted, true)
-		worth.RichText = true
+		worth.RichText, worth.TextWrapped = true, true
+		worth.TextYAlignment = Enum.TextYAlignment.Top
 		local record = W.text(card, "", 17, 42, 194, 18, 14, W.aqua, true)
 		table.insert(menu.updates, function()
 			local found = menu.player:GetAttribute("Found" .. ore.name)
@@ -179,17 +180,23 @@ function Pages.index(menu)
 				elseif found then "Discovered" elseif not hidden then "Still to find" else ""
 			bar.BackgroundColor3 = if hidden then W.muted else ore.color
 			name.Text = if hidden then "???" else ore.name .. (if found then "   ✓" else "")
+			-- A mystery ore shows only a hint about where to look until it is first mined.
+			worth.Size = UDim2.fromOffset(196, if hidden then 38 else 21)
 			worth.Text = if hidden
-				then "Mine it to identify"
+				then (ore.hint or "Mine it to identify")
 				else W.colored(W.possiblePrice(ore, menu.player), W.gold) .. "   ·   " .. ore.xp .. " base XP"
 		end)
 	end
 	local y = 30
+	local textService = game:GetService("TextService")
 	for i, layer in Config.Layers do
-		local bounds = game:GetService("TextService"):GetTextSize(layerOdds(layer.oreChances), 14,
+		local bounds = textService:GetTextSize(layerOdds(layer.oreChances), 14,
 			Enum.Font.BuilderSansBold, Vector2.new(199, 10000))
 		local oddsHeight = math.max(36, bounds.Y + 7)
-		local card = W.frame(menu.list, layer.name, 225, y, 222, 47 + oddsHeight, W.card, 8)
+		local themeHeight = if layer.theme
+			then textService:GetTextSize(layer.theme, 12, Enum.Font.BuilderSans, Vector2.new(202, 10000)).Y + 3
+			else 0
+		local card = W.frame(menu.list, layer.name, 225, y, 222, 47 + themeHeight + oddsHeight, W.card, 8)
 		W.title(card, layer.name, 8, 4, 206, 21, 16, W.white, true)
 		local following = Config.Layers[i + 1]
 		local start = math.max(Config.DirtLayers, layer.depthBlocks)
@@ -198,7 +205,12 @@ function Pages.index(menu)
 			else string.format("%d+ blocks", start)
 		local d = W.text(card, depth, 8, 25, 202, 17, 13, W.aqua, true)
 		d.Name = "Depth"
-		local odds = W.text(card, "", 8, 42, 207, oddsHeight, 14, W.muted, true)
+		if layer.theme then
+			local theme = W.text(card, layer.theme, 8, 42, 202, themeHeight, 12, W.white)
+			theme.Name, theme.TextWrapped, theme.TextTransparency = "Theme", true, 0.25
+			theme.TextYAlignment = Enum.TextYAlignment.Top
+		end
+		local odds = W.text(card, "", 8, 42 + themeHeight, 207, oddsHeight, 14, W.muted, true)
 		odds.TextWrapped = true
 		odds.TextYAlignment = Enum.TextYAlignment.Top
 		table.insert(menu.updates, function()
@@ -206,7 +218,8 @@ function Pages.index(menu)
 		end)
 		y += card.Size.Y.Offset + 7
 	end
-	local card = W.frame(menu.list, "Rock hardness", 225, y, 222, 165, W.card, 8)
+	local gradesHeight = 34 + #Config.StoneGrades * 22
+	local card = W.frame(menu.list, "Rock hardness", 225, y, 222, gradesHeight, W.card, 8)
 	W.title(card, "Stone grades", 8, 3, 203, 23, 16, W.white, true)
 	for power, grade in Config.StoneGrades do
 		local lineY = 28 + (power - 1) * 22
@@ -214,6 +227,6 @@ function Pages.index(menu)
 		W.text(card, grade.name, 29, lineY, 115, 21, 13, W.white, true)
 		W.text(card, "P" .. power .. " · " .. grade.depth .. "+", 145, lineY, 70, 21, 12, W.aqua)
 	end
-	return math.ceil(math.max(30 + #Ores.list * 68, y + 169) / 69)
+	return math.ceil(math.max(30 + #Ores.list * 68, y + gradesHeight + 4) / 69)
 end
 return Pages
