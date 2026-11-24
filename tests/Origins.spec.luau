@@ -427,240 +427,117 @@ local function check(motion, live, remote)
 	assert((not cam.CFrame:FuzzyEq(aftershock, 0.001)) == motion, "aftershock or reduced-motion hold")
 	film:expose(383, false)
 	assert((cam.CFrame.Position - witness).Magnitude < 0.01, "shore camera must settle before cutting inland")
-	local era = sheet.frames
-	film:expose(era.seam + 2, false)
-	local rock = film.island.witnessPoint
-	film:expose(era.match - 2, false)
-	local previous = film.base:ToObjectSpace(cam.CFrame)
-	film:expose(era.match - 1, false)
-	local ancient = film.base:ToObjectSpace(cam.CFrame)
-	local ancientRay = ancient:PointToObjectSpace(rock)
-	local ash = lighting.SeaAir.Haze
+	-- Second half. One crane finds the star, its light dies, and the present day
+	-- opens on the exact mark the impact was watched from.
+	local F = sheet.frames
+	assert(F.aftermath == 384, "the approved opening ends on frame 383")
+	film:expose(F.aftermath, live)
+	local craneStart = cam.CFrame.Position
+	film:expose(F.seam - 1, live)
+	assert((craneStart.Y - cam.CFrame.Position.Y > 25) == motion, "the crane descends into the crater")
+	assert(film.embers[1].part.Color == film.embers[1].color, "the star burns through the crane")
+	film:expose(F.dark - 2, live)
+	assert(film.embers[1].part.Color.G < 0.12, "the light goes out before the cut")
+	assert(film:expose(F.dark + 6, live) == 1, "time passes in the dark")
 	local navigation = workspace.CitrineCove["Shore market"]:FindFirstChild("Station name", true)
 	local signageWasEnabled = navigation.Enabled
-	assert(film.daylight.depth.Enabled and -ancientRay.Z > 4 and film.island.set.Parent == stage)
-	assert(not film.island.set:FindFirstChild("Mine sign", true), "the modern portal appeared before the time cut")
-	local modernBase = if live then film.live else film.base
-	assert(film:expose(era.match, live) == 0, "the time jump must preserve the visible fork")
-	assert(navigation.Enabled == (not live and signageWasEnabled), "live station labels obscure the architectural match")
-	local modern = modernBase:ToObjectSpace(cam.CFrame)
-	local step = modern.Position - ancient.Position
-	assert((step - (ancient.Position - previous.Position)).Magnitude < 0.003 and (step.Magnitude > 0.02) == motion,
-		"the camera must carry its lateral movement across both eras")
-	assert((modern:PointToObjectSpace(rock) - ancientRay).Magnitude < 0.12 and ancient.UpVector:Dot(modern.UpVector) > 0.999,
-		"the fork moved on the time cut")
-	assert(ash > lighting.SeaAir.Haze + 0.8 and math.abs(lighting.ClockTime - hour) < 0.001,
-		"cut from the ash-filled night to the playable world's daylight in one frame")
+	film:expose(F.match, live)
+	local site = if live then film.live else film.base
+	assert((site:PointToObjectSpace(cam.CFrame.Position) - clock.breakerEye).Magnitude < 1, "the present opens on the offshore mark")
+	assert(film.matchLive == live and math.abs(lighting.ClockTime - hour) < 0.001)
+	assert(navigation.Enabled == (not live and signageWasEnabled), "station labels stay out of the wide")
 	assert(water.part.Color == water.base and water.part.Material == water.material, "the sea must release its impact lighting")
-	film:expose(era.establish, not live)
-	assert(film.matchLive == live)
-	local boulevard = cam.CFrame
-	film:expose(era.present - 1, live)
-	assert(cam.CFrame == boulevard and (cam.Focus.Position - modernBase * Vector3.new(0, 39.3, 9.5)).Magnitude < 9,
-		"hold the completed portal in its geography")
-	assert(not film.illumination.root.Parent and not film.daylight.bloom.Enabled and not film.daylight.depth.Enabled
-		and not film.daylight.rays.Enabled and not film.daylight.blur.Enabled, "ancient optics survived the wide")
-	film:expose(era.present, live)
-	assert(navigation.Enabled == signageWasEnabled, "station labels must return to their previous setting after the wide")
-	local playerView = cam.CFrame
-	assert(not film.broadcast.room and film.arrival.proof.model.Parent == stage, "introduce the miner in person first")
-	film:expose(era.broadcast - 1, live)
-	assert(cam.CFrame:FuzzyEq(playerView, 0.002), "hold the portrait while the miner moves into position")
+	if not remote then
+		assert(root.Transparency == 1 and not film.arrival.copy, "the player is not standing on the compass yet")
+	end
+	film:expose(F.boulevard + 10, live)
+	assert(film:expose(F.dig - 4, live) == 1 and film.mine.root.Parent == stage, "the gallery is lit before we see it")
+
+	-- The miner. The visible pick is the one welded into their glove.
+	local mine = film.mine
+	local hand, handle = mine.rig.model.RightHand, mine.handle
+	local seat
+	for picture = F.dig, F.living - 1, 3 do
+		film:expose(picture, live)
+		local relation = hand.CFrame:ToObjectSpace(handle.CFrame)
+		seat = seat or relation
+		assert(relation:FuzzyEq(seat, 0.0005), "the miner's pick left the hand at " .. picture)
+	end
+	for _, picture in { F.firstHit, F.secondHit } do
+		film:expose(picture, live)
+		local tip = mine.at:PointToObjectSpace(mine:tipAt())
+		assert(math.abs(tip.Z) < 0.35, "the steel stops on the rock at " .. picture)
+	end
+	film:expose(F.secondHit - 1, live)
+	assert(mine.glow.Parent == nil and mine.light.Brightness == 0)
+	film:expose(F.secondHit + 3, live)
+	assert(mine.glow.Parent == stage and mine.light.Brightness > 0.5, "the vein opens on the contact frame")
+
+	-- Living room and its live picture.
+	film:expose(F.living + 10, live)
+	assert(film.room.root.Parent == stage and film.room.tv.gui.Enabled and mine.root.Parent == nil)
+	assert(#film.room.tv.eye.Parent:FindFirstChildOfClass("WorldModel"):GetChildren() > 40, "the broadcast shows the real mine")
+	local kidArm = film.room.kid.model.RightHand.CFrame
+	film:expose(F.living + 30, live)
+	assert((film.room.kid.model.RightHand.CFrame ~= kidArm) == motion, "the kid reacts, and reduced motion holds")
+
+	-- The phone is in the fist, and its screen faces its owner.
+	local witness = film.arrival.witness
+	local phoneSeat
+	for picture = F.witness, F.sprout - 1, 4 do
+		film:expose(picture, live)
+		local relation = witness.rig.model.RightHand.CFrame:ToObjectSpace(witness.glass.CFrame)
+		phoneSeat = phoneSeat or relation
+		assert(relation:FuzzyEq(phoneSeat, 0.0005), "the phone left the hand at " .. picture)
+		local face = witness.rig.model.Head.Position - witness.glass.Position
+		assert((-witness.glass.CFrame.LookVector):Dot(face.Unit) > 0.5, "the screen turned away from its owner")
+		local forearm = witness.rig.model.RightHand.Position - witness.rig.model.RightLowerArm.Position
+		assert(forearm.Magnitude < 1.1, "the wrist came apart")
+	end
+	assert(film.room.root.Parent == nil and not film.room.tv.gui.Enabled)
+
+	-- The player.
+	local actor = film.arrival
+	film:expose(F.arrive + 8, live)
+	assert(actor.copy and actor.copy:FindFirstChild("Player's own hat"), "the player's own dressed character performs")
+	assert(actor.remote == remote)
 	if remote then
-		assert(film.arrival.copy and film.arrival.copy:FindFirstChild("Player's own hat"))
 		local replayAt = if live then landing else landing + film.base.Position - film.live.Position
-		assert((film.arrival.root.Position - replayAt).Magnitude < 0.02)
+		assert(((actor.mineBearing.Position - replayAt) * Vector3.new(1, 0, 1)).Magnitude < 0.02)
 	else
-		assert(film.arrival.copy:FindFirstChild("Player's own hat") and film.arrival.root ~= root and root.Transparency == 1, "the single dressed performer masks the live body")
+		assert(actor.root ~= root and root.Transparency == 1, "one performer masks the live body")
 	end
-	assert(not film.arrival.root["Hat glints"].Enabled and not film.arrival.root["Prism Ribbon"].Enabled)
-	local station = film.arrival.marker
-	local cuts = sheet.frames
-	local proof = film.arrival.proof
-	local tool = film.arrival.assay
-	film:expose(cuts.measure, live)
-	assert(not station.invitation:IsDescendantOf(stage), "the commission must follow the trial")
-	local tv = film.broadcast
-	for _, cue in { { cuts.broadcast, "Bedroom", 1 }, { cuts.livingRoom, "Living room", 1 }, { cuts.computer, "Computer room", 3 } } do
-		film:expose(cue[1] + 10, live)
-		assert(tv.view.Visible and tv.shot == cue[2] and #tv.room.fans >= cue[3], "missing audience in " .. cue[2])
-		assert(proof.model.Parent == stage, "the workbench must stay live in each receiver")
-		for _, fan in tv.room.fans do
-			assert(fan.rig.model:FindFirstChildOfClass("Humanoid") and fan.rig.head, "audience member lost its Roblox rig")
-		end
-		local lens, head = tv.camera.CFrame, tv.room.fans[1].rig.head.CFrame
-		film:expose(cue[1] + 32, live)
-		assert((tv.camera.CFrame ~= lens) == motion and (tv.room.fans[1].rig.head.CFrame ~= head) == motion,
-			"the room camera and audience poses should respect reduced motion in " .. cue[2])
-	end
-	film:expose(cuts.measure, live)
-	assert(not tv.view.Visible and not tv.bug.Visible, "clear the TV before the pick swing")
-	local gem = proof.gem.WorldPosition
-	local shut = proof.left.CFrame
-	for picture = cuts.proofStrike - 4, cuts.proofStrike do film:expose(picture, live) end
-	local glint = tool.tool:FindFirstChild("Steel afterimage", true)
-	assert(glint and glint.Enabled == motion, "only the moving pick draws an arc")
-	assert(((tool.tool:GetPivot() * tool.tip) - proof.seam.WorldPosition).Magnitude < 0.04, "pick missed the natural seam")
-	film:expose(cuts.revealGem + 6, live)
-	assert(not glint.Enabled, "steel afterimage still covering the emerald")
-	assert((proof.left.Position - shut.Position).Magnitude > 0.35, "the fracture must open")
-	assert((proof.gem.WorldPosition - gem).Magnitude < 0.001, "extract the crystal intact")
-	film:expose(cuts.portrait + 12, live)
-	assert(not station.invitation:IsDescendantOf(stage), "award was visible on the portrait")
-	assert(film.portrait.root.Visible and film.portrait.subject.world:FindFirstChild(film.arrival.root.Parent.Name),
-		"identity card must show this miner")
-	assert(film.portrait.subject.world:FindFirstChild(tool.tool.Name), "portrait lost the shouldered pick")
-	if motion then
-		local function checkTracking(picture, label)
-			film:expose(picture - 1, live)
-			local before = cam.CFrame
-			film:expose(picture, live)
-			local at = cam.CFrame
-			film:expose(picture + 1, live)
-			local after = cam.CFrame
-			local incoming, outgoing = at.Position - before.Position, after.Position - at.Position
-			assert(incoming:Dot(outgoing) > 0, label .. " must keep moving through the edit")
-			assert(math.max(incoming.Magnitude, outgoing.Magnitude) < 0.8 * film.arrival.unit,
-				label .. " jumped between adjacent exposures")
-			assert(before.LookVector:Dot(at.LookVector) > 0.94 and at.LookVector:Dot(after.LookVector) > 0.94,
-				label .. " lost its sightline")
-		end
-		checkTracking(cuts.beacon, "dispatch pullback")
-		checkTracking(cuts.autoStrike + 8 + 6, "camera following the beacon discharge")
-	end
-	film:expose(cuts.commission, live)
-	assert(not proof.model.Parent and not film.portrait.root.Visible and station.invitation:IsDescendantOf(stage))
-	local dispatch = station.model["Signed field dispatch"]["Guild commission"]
-	assert(dispatch:FindFirstChild(char.Name) and dispatch:FindFirstChild("TO FIND STARFALL"), "the miners chose the player")
-	assert(not film.arrival:requestStrike(cuts.prompt - 1))
-	local offered = cuts.prompt + 14
-	film:expose(offered, live)
-	assert(not station.signalPosition and not station.signal.root.Parent and station.route.Parent == stage,
-		"the vanes must be physically present and cold until the pick lands")
-	assert(film.arrival:requestStrike(offered) and not film.arrival:requestStrike(offered + 1), "one strike per expedition")
-	film:expose(offered + 8, live)
-	assert(film.arrival.contactFrame == offered + 8 and tool.chips.Parent == stage)
-	assert(((tool.tool:GetPivot() * tool.tip) - station.core.WorldPosition).Magnitude < 0.035, "pick must hit the route seal")
-	assert((station.signalPosition - station.core.WorldPosition).Magnitude < 0.035, "the live contact must start the signal at the struck facet")
-	assert(station.signal.sparks[1].ray.Enabled == motion, "reduced motion must suppress flying strike sparks")
-	-- The same distance of ground lights up on every exposure for either an
-	-- early tap or the automatic one. Sparse decorations along the route must
-	-- never act as evenly timed stops for the signal.
-	local signal = station.signal
-	local contact = film.arrival.contactFrame
-	for _, hit in { cuts.prompt + 8, contact, cuts.autoStrike + 8 } do
-		local pace = signal:distance(hit + 1, hit)
-		for f = hit + 2, math.floor(signal:time(signal.sill, hit)) do
-			local step = (signal:sample(f, hit) - signal:sample(f - 1, hit)).Magnitude
-			assert(step > pace * 0.76 and step < pace * 1.035, "the light must carry its speed through each bend")
-		end
-		assert(signal:time(signal.lip, hit) == cuts.lode - 12, "the guide must dive before the lens")
-	end
-	local lastVane = #station.runnels + 2
-	local vaneFrame = signal:time(lastVane, contact)
-	film:expose(math.ceil(vaneFrame), live)
-	assert(station.runnels[6].strokes[1].Material == Enum.Material.Neon, "the signal lights the far vane as it passes")
-	assert((signal.world * signal:sample(vaneFrame, contact) - station.runnels[6].at.WorldPosition).Magnitude < 0.34,
-		"the wake must cross the sixth copper inlay")
-	assert(station.signal.trail[2].wire.Enabled == motion, "reduced motion must retain only the calm ground trace")
-	local bearer = require(source.GalleryRun).origin(film.arrival)
-	local sillFrame = signal:time(signal.sill, contact)
-	assert((signal.world * signal:sample(sillFrame, contact) - bearer - Vector3.new(0.14, 1.29, -0.42)).Magnitude < 0.035,
-		"the energy head must cross the actual mine sill on the approach")
-	local run = require(source.GalleryRun)
-	local origin = run.origin(film.arrival)
-	local mouth = origin + run.mouth
-	if motion then
-		local tall = {
-			handoff = { landing = origin + Vector3.new(0, 4.96, 89), origin = origin },
-			mineBearing = CFrame.new(origin + Vector3.new(0, 4.96, 89)), unit = 1.85,
-			marker = require(source.ExpeditionMarker).new("Tall miner"), stage = stage,
-		}
-		tall.marker.signal.crystalContact = film.lode.contactPoint
-		tall.marker:place(tall)
-		local first, lastZ = cuts.prompt + 8 + 4, math.huge
-		for frame = first, cuts.mineRun do
-			local eye = run.gallery(tall, frame, first, true)
-			assert(eye.Z < lastZ, "earliest strike must keep travelling towards the arch with a tall avatar")
-			lastZ = eye.Z
-		end
-		tall.marker:Destroy()
-		for _, hit in { cuts.prompt + 8, contact, cuts.autoStrike + 8 } do
-			local gate = signal:time(signal.sill, hit)
-			local eyeAtGate = run.gallery(film.arrival, gate, hit + 4, true) - origin
-			local before = run.gallery(film.arrival, gate - 12, hit + 4, true)
-			local after = run.gallery(film.arrival, gate + 1, hit + 4, true)
-			assert(eyeAtGate.Z > 7 and (after - origin - eyeAtGate).Magnitude < (origin + eyeAtGate - before).Magnitude / 12,
-				"camera must coast outside the arch while the light goes through first")
-			for f = hit + 6, run.gemFrame do
-				local eye, aim, head
-				if f < cuts.lode then
-					eye, aim = run.gallery(film.arrival, f, hit + 4, true)
-					head = origin + signal:sample(f, hit)
-				else
-					eye, aim = run.chamber(f, true, false)
-					local position = signal:sample(f, hit)
-					head = run.shaft:PointToObjectSpace(position)
-				end
-				local travel = head - eye
-				local target = if f < cuts.lode then origin + run.shaft * film.lode.contactPoint else film.lode.contactPoint
-				assert((head - target).Magnitude < (eye - target).Magnitude,
-					string.format("camera passed the guide en route to Starfall at %d", f))
-				assert(travel.Magnitude > 1 and travel.Unit:Dot((aim - eye).Unit) > 0.92,
-					string.format("guide left the sightline at frame %d, strike %d", f, hit))
-				if f < gate then
-					assert(head.Z <= eye.Z + 0.05, "camera passed the guide on the bridge")
-				end
-			end
+	assert(not actor.root["Hat glints"].Enabled and not actor.root["Prism Ribbon"].Enabled)
+	film:expose(F.sprout - 1, live)
+	assert(actor.root3.groups[1].model.Parent == nil)
+	film:expose(F.strike + 4, live)
+	assert(actor.root3.groups[1].model.Parent == stage and actor.glass.root, "the root has broken the floor and the glass is built")
+	assert(not actor:requestStrike(F.prompt - 1))
+	film:expose(F.prompt + 12, live)
+	assert(actor:requestStrike(F.prompt + 12) == F.autoStrike - F.prompt - 12, "a press skips straight to the swing")
+	assert(not actor:requestStrike(F.prompt + 13), "one strike per screening")
+	film:expose(F.contact2, live)
+	assert((actor:tipAt() - actor.strikePoint).Magnitude < 0.02, "the player's steel meets the crystal")
+	assert((actor.glass.flash.Parent == stage), "the blow lights the frame")
+	film:expose(F.reveal + 20, live)
+	assert(actor.glass.root.Parent == stage and actor.copy.Parent == stage and actor.root3.groups[1].model.Parent == nil)
+	local head = actor.copy.Head.Position
+	local seen = cam.CFrame:PointToObjectSpace(head)
+	assert(seen.Z < -2 and math.abs(seen.X / seen.Z) < 0.5 and math.abs(seen.Y / seen.Z) < 0.35, "the face is inside the reveal")
+	for _, shard in actor.glass.near do
+		local p = cam.CFrame:PointToObjectSpace(shard.model:GetPivot().Position)
+		if p.Z < -0.5 then
+			local offset = Vector2.new(p.X / -p.Z - seen.X / -seen.Z, p.Y / -p.Z - seen.Y / -seen.Z)
+			assert(offset.Magnitude > 0.12, "a foreground shard covers the face")
 		end
 	end
-	film:expose(cuts.mineRun + 18, live)
-	local inHall = cam.CFrame.Position - origin
-	assert(math.abs(inHall.X) < 25 and inHall.Y > 1 and inHall.Y < 10 and inHall.Z < -6 and inHall.Z > -60,
-		"lens must enter the actual working gallery above its playable dig floor")
-	local photographed = {}
-	for item, original in film.lode.hidden do
-		assert(item.LocalTransparencyModifier == 1, "excavation must clear the photographed column")
-		photographed[item] = original
+	film:expose(F.answer - 1, live)
+	film:expose(F.answer, live)
+	assert(actor.glass.root.Parent == nil and actor.path.model.Parent == stage, "back to the real cove with the light running home")
+	film:expose(F.handoff, live)
+	if not remote then
+		assert((actor.root.Position - root.Position).Magnitude < 1.5, "the performance ends on the live mark")
 	end
-	assert(next(photographed), "the photographed shaft did not open in the live or replica floor")
-	film:expose(cuts.lode - 2, live)
-	local prev = cam.CFrame.Position
-	film:expose(cuts.lode - 1, live)
-	local endRun = (cam.CFrame.Position - prev).Magnitude
-	if motion then
-		assert((cam.CFrame.Position - mouth).Magnitude < 1.5 and cam.CFrame.LookVector.Y < -0.97,
-			"the dive must pass through the floor opening")
-	else
-		assert(endRun < 0.001, "reduced motion must hold the gallery view")
-	end
-	local lip = film.lode.model:GetPivot()
-	local approach = lip:ToObjectSpace(cam.CFrame)
-	film:expose(cuts.lode, live)
-	local chamber = film.lode.model:GetPivot():ToObjectSpace(cam.CFrame)
-	local deepSignal = film.lode.at:PointToObjectSpace(station.signalPosition)
-	assert((deepSignal - Vector3.new(0.30, 1.02, 16.11)).Magnitude < 0.035, "the guide must stay in sight down the shaft")
-	for item, original in photographed do
-		assert(item.LocalTransparencyModifier == original, "transition must restore each floor brick")
-	end
-	if motion then
-		local stride = (chamber.Position - approach.Position).Magnitude
-		assert(math.abs(stride - endRun) < 0.14, "lens lost its velocity in the throat")
-		assert(approach.LookVector:Dot(chamber.LookVector) > 0.99, "gallery and crystal must share the sightline")
-		assert(approach.UpVector:Dot(chamber.UpVector) > 0.99, "the horizon rolled at the shaft match")
-	end
-	film:expose(run.gemFrame - 1, live)
-	assert(not film.lode.spill.Enabled and not film.lode.arms[1].Enabled, "gem lit before the guide arrived")
-	film:expose(run.gemFrame, live)
-	assert((station.signalPosition - film.lode.at * film.lode.contactPoint).Magnitude < 0.035 and film.lode.spill.Enabled,
-		"the guide must light the actual crystal face on contact")
-	film:expose(cuts.lode + 32, live)
-	assert(film.lode.model.Parent == stage and film.lode.arms[1].Enabled, "the underground lode catches light")
-	local oldEye = cam.CFrame
-	film:expose(cuts.challenge - 1, live)
-	assert(not motion or (oldEye.Position - cam.CFrame.Position).Magnitude > 0.4, "the underground camera stalled")
-	film:expose(cuts.challenge, live)
-	assert(not film.lode.model.Parent)
 	local black = film:draw(clock.duration, live)
 	if remote then
 		assert(black > 0.99)
@@ -671,7 +548,7 @@ local function check(motion, live, remote)
 				and math.abs(cam.FieldOfView - 69) < 0.0002
 		)
 		h.playable = { view = view * CFrame.new(0, -1.3, -2.1), focus = focus + Vector3.yAxis, fov = 64 }
-		film:landingFrame(clock.duration)
+		film:landingFrame(sheet.frames.duration)
 		assert(
 			cam.CFrame:FuzzyEq(h.playable.view, 0.0002)
 				and cam.Focus:FuzzyEq(h.playable.focus, 0.0002)
@@ -680,18 +557,8 @@ local function check(motion, live, remote)
 	end
 	assert(root.CFrame == start and #workspace.CitrineCove:GetDescendants() == mapSize)
 	-- Repeat the release with sky, local lamps and optics actively changed.
-	if not live then
-		film:draw(if motion then 4.56 else 7.62, false)
-	else
-		film:expose(cuts.mineRun + 18, true)
-		assert(next(film.lode.hidden), "skip fixture must start above an open shaft")
-	end
+	film:draw(if live then clock.handoff - 1 elseif motion then 4.56 else 7.62, live)
 	film:Destroy()
-	if live then
-		for item, original in photographed do
-			assert(item.LocalTransparencyModifier == original, "skipping must restore the original dig cell")
-		end
-	end
 	assert(root["Hat glints"].TimeScale == 1 and root["Prism Ribbon"].Enabled, "avatar cosmetics must resume")
 	assert(#stage:GetChildren() == 0 and #screen:GetChildren() == 0, "private assets survived release")
 	for _, item in saved do
@@ -771,33 +638,38 @@ local function nativeAvatar(kind, size)
 	cam.Parent, stage.Parent = workspace, cam
 	local site = root.Position + Vector3.new(0, 100, 0)
 	local arrival = require(source.Arrival).new(stage, {root = root, landing = site, entrance = site - Vector3.zAxis * 85})
-	local gripRelation
+	arrival.motion = true
+	local gripRelation, hatRelation
 	local F = sheet.frames
-	for _, frame in {F.present, F.proofStrike - 1, F.proofStrike, F.portrait, F.prompt, F.prompt + 8, F.challenge} do
-		if frame == F.prompt then assert(arrival:requestStrike(frame)) end
-		arrival:draw(sheet.sceneTime(frame), frame)
+	for frame = F.witness, F.handoff, 2 do
+		arrival:draw(frame)
 		assert(arrival.remote and arrival.copy["Equipped 2"].Handle and root.CFrame == before, kind .. " underground appearance")
 		local pick = arrival.copy["Harbor pick"]
+		assert(arrival.handle == pick.Handle and pick.Handle.Transparency < 1, kind .. " must show the welded pick")
 		local grip = pick:FindFirstChild("Grip", true)
 		local hand = grip.Part0
 		assert((pick["Grip tape"].Position - hand.RightGripAttachment.WorldPosition).Magnitude < 0.001,
 			kind .. " wrapped handle missed the palm")
-		if kind == "R6" then
-			-- The complete steel crosspiece must clear the front of the
-			-- rectangular forearm, including in the raised and contact poses.
-			local steel = pick.Steel
-			local steelCenter = hand.CFrame:PointToObjectSpace(steel.Position)
-			assert(steelCenter.Z + steel.Size.Magnitude * 0.5 < -hand.Size.Z * 0.5,
-				"R6 pick head buried in the forearm")
-		end
-		local relation = grip.Part0.CFrame:ToObjectSpace(grip.Part1.CFrame)
+		local relation = hand.CFrame:ToObjectSpace(grip.Part1.CFrame)
 		gripRelation = gripRelation or relation
-		assert(relation:FuzzyEq(gripRelation,0.0003),kind .. " pick moved in hand")
-		if frame == F.proofStrike or frame == F.prompt + 8 then
-			local goal = if frame == F.proofStrike then arrival.proof.seam else arrival.marker.core
-			local tip = arrival.assay.tool:GetPivot() * arrival.assay.tip
-			assert((tip - goal.WorldPosition).Magnitude < 0.04, kind .. " missed the pictured contact")
+		assert(relation:FuzzyEq(gripRelation, 0.0003), kind .. " pick moved in hand")
+		local hat = arrival.copy["Equipped 2"].Handle
+		hatRelation = hatRelation or arrival.copy.Head.CFrame:ToObjectSpace(hat.CFrame)
+		assert(arrival.copy.Head.CFrame:ToObjectSpace(hat.CFrame):FuzzyEq(hatRelation, 0.0003), kind .. " accessory drifted")
+		if frame >= F.witness and frame < F.sprout and kind == "R15" then
+			for _, side in { "LeftFoot", "RightFoot" } do
+				local foot = arrival.copy[side]
+				assert(foot.Position.Y - foot.Size.Y / 2 > arrival.floor - 0.35, kind .. " foot sank at " .. frame)
+			end
 		end
+		if frame == F.contact2 then
+			assert((arrival:tipAt() - arrival.strikePoint).Magnitude < 0.02, kind .. " missed the crystal")
+			assert(arrival.strikePoint.Y > arrival.floor + 0.4, kind .. " struck below the floor")
+		end
+		-- A held exposure must not move anything.
+		local at = arrival.copy.Head.CFrame
+		arrival:draw(frame)
+		assert(arrival.copy.Head.CFrame == at, kind .. " twitched inside an exposure")
 	end
 	arrival:Destroy()
 	cam:Destroy()

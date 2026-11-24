@@ -40,7 +40,7 @@ return function(safe)
 	button.AnchorPoint, button.ZIndex, button.Parent = Vector2.new(0.5, 1), 11, safe
 	W.round(button, 9)
 	W.gradient(button, Color3.fromHex("3A3860"), Color3.fromHex("141B2E"))
-	local rim = W.stroke(button, Color3.fromHex("F6C979"), 2)
+	local rim = W.stroke(button, Color3.fromHex("8FE9FF"), 2)
 	local socket = W.frame(safe, "Strike socket", 0, 0, 1, 1, Color3.fromHex("FFFFFF"))
 	socket.AnchorPoint, socket.ZIndex, socket.Visible, socket.Active = button.AnchorPoint, 7, false, false
 	W.round(socket, 10)
@@ -59,12 +59,12 @@ return function(safe)
 	local key = W.title(button, "", 0, 0, 1, 1, 22, Color3.fromHex("27243A"))
 	key.Name, key.TextScaled, key.ZIndex = "Input key", true, 12
 	key.AnchorPoint, key.Position, key.Size = Vector2.new(0, 0.5), UDim2.fromScale(0.045, 0.48), UDim2.fromScale(0.27, 0.62)
-	key.BackgroundColor3, key.BackgroundTransparency = Color3.fromHex("FFE3A1"), 0
+	key.BackgroundColor3, key.BackgroundTransparency = Color3.fromHex("D9F7FF"), 0
 	W.round(key, 5)
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft, pad.PaddingRight = UDim.new(0.08, 0), UDim.new(0.08, 0)
 	pad.PaddingTop, pad.PaddingBottom, pad.Parent = UDim.new(0.08, 0), UDim.new(0.08, 0), key
-	local action = W.title(button, "Light the path", 0, 0, 1, 1, 26, Color3.fromHex("FFF8E5"))
+	local action = W.title(button, "Strike the star", 0, 0, 1, 1, 26, Color3.fromHex("FFF8E5"))
 	action.Name, action.TextScaled, action.ZIndex = "Action", true, 12
 	action.AnchorPoint, action.Position, action.Size = Vector2.new(0, 0.5), UDim2.fromScale(0.35, 0.48), UDim2.fromScale(0.60, 0.60)
 	W.outlineText(action, 1.2)
@@ -81,10 +81,10 @@ return function(safe)
 	})
 	local lastDevice
 	return button, function(frame, motion, contact, top, bottom, releaseFrame)
-		local press = contact and contact - 8
+		local press = contact
 		local age = if press then frame - press else -1
 		local releaseAt = if press and releaseFrame then math.clamp(releaseFrame - press, 3, 7) else 3
-		local confirming = press ~= nil and press < frames.autoStrike and age >= 0 and age < releaseAt + 16
+		local confirming = press ~= nil and age >= 0 and age < releaseAt + 14
 		local offered = not contact and frame >= frames.prompt and frame < frames.autoStrike
 		button.Interactable, button.Visible = offered, offered or confirming
 		socket.Visible = button.Visible
@@ -123,9 +123,9 @@ return function(safe)
 		socket.Position = UDim2.new(0.5, 0, 0, entryY(if confirming then press else frame) + depth)
 		button.Size = UDim2.fromOffset(leadWidth, leadHeight)
 		button.Position = UDim2.new(0.5, 0, 0, leadY)
-		key.BackgroundColor3 = if confirming then Color3.fromHex("B6F0CC") else Color3.fromHex("FFE3A1")
-		action.Text = if not confirming then "Light the path" elseif frame < contact then "Lighting…" else "Path lit!"
-		rim.Color = if confirming then Color3.fromHex("C4FFE2") else Color3.fromHex("F6C979")
+		key.BackgroundColor3 = if confirming then Color3.fromHex("B6F0CC") else Color3.fromHex("D9F7FF")
+		action.Text = if not confirming then "Strike the star" else "Strike!"
+		rim.Color = if confirming then Color3.fromHex("C4FFE2") else Color3.fromHex("8FE9FF")
 		glint.Offset = Vector2.new(if motion then math.clamp((waiting % 36) / 21, 0, 1) * 2 - 1 else 0, 0)
 		if motion and (confirming or waiting < 12) then
 			for i, echo in echoes do

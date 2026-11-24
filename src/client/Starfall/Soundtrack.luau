@@ -1,13 +1,9 @@
 -- Music and location effects have separate player-controlled buses.
 local sheet = require(script.Parent.ExposureSheet)
-local gemFrame = require(script.Parent.GalleryRun).gemFrame
 local fps, frame = sheet.fps, sheet.frames
 local contact, ignition, eruption, breaker = frame.contact / fps, frame.ignition / fps, frame.eruption / fps, frame.breaker / fps
-local seam, match = frame.seam / fps, frame.match / fps
-local chooseScoreAt = seam
-local scoreIn, scoreOut = match + 0.50, (frame.duration - 1) / fps
-local backswing = 8
-local automaticContact = frame.autoStrike + backswing
+local chooseScoreAt = frame.seam / fps
+local scoreIn, scoreOut = (frame.match - 2) / fps, (frame.duration - 1) / fps
 local aftermath = frame.aftermath / fps
 local passStart, passEnd = frame.flyby / fps, frame.coast / fps
 
@@ -74,6 +70,18 @@ local bank = {
 	chip = timbre("Starfall chips scatter", "action_footsteps_plastic.mp3", 0.043, 0.19, 2.23, 0.004, 0.055),
 	ring = instrument("Resonating ore", "volume_slider.ogg", 0.154422, 0.157030, 2.65, 0.002, 0.56, 3.20),
 }
+bank.step = timbre("Boots on the court", "action_footsteps_plastic.mp3", 0.049, 0.16, 1.1, 0.003, 0.05)
+bank.step.eq = { 3, -5, -16 }
+bank.chime = instrument("Cut glass", "volume_slider.ogg", 0.154422, 0.157030, 2.5, 0.004, 0.62, 2.1)
+bank.chime.room, bank.chime.effect = { 1.5, -9 }, true
+bank.pad = instrument("Glass pad", "volume_slider.ogg", 0.154422, 0.157030, 1.7, 0.30, 0.80, 0.28)
+bank.pad.room = { 1.8, -8 }
+bank.sub = timbre("Weight of the blow", "impact_explosion_03.mp3", 0.075, 1.10, 0.60, 0.004, 0.45)
+bank.sub.eq = { 6, -10, -26 }
+bank.shatter = timbre("Crystal breaking", "impact_water.mp3", 0.055, 0.40, 1.15, 0.002, 0.16)
+bank.shatter.eq, bank.shatter.room = { -22, 1, 8 }, { 0.8, -12 }
+bank.air = timbre("Air moving past glass", "action_falling.ogg", 2.37, 3.25, 5.4, 0.10, 0.14)
+bank.air.eq, bank.air.room = { -20, -4, 4 }, { 0.6, -16 }
 bank.body.eq = { 5, -7, -22 }
 bank.echo.eq = { -5, -2, -13 }
 bank.steam.eq = { -18, 1, 3 }
@@ -180,99 +188,135 @@ local function arrange()
 	play("ear", breaker + 0.65, 1.96, 2.22, 0.69, 1.70)
 	play("shudder", 356 / fps, 0.61, 0.47, 0.66, 0.34, "right")
 	play("shudder", 402 / fps, 0.48, 0.41, 0.48, 0.32, "left")
-	-- The pressure exhausts itself. Turbulent air feeding the hot vent, fine
-	-- crackles and a collapsing block keep their own depths across the basin.
+	-- The pressure exhausts itself. Every voice of the fire is gone by the dark.
 	play("flame", aftermath - 0.35, 2.10, 0.94, 0.88, 1.12, "left")
-	play("cinder", aftermath + 0.12, 2.82, 0.93, 0.92, 0.69)
-	play("wind", aftermath + 0.64, match - aftermath + 0.05, 0.68, 0.72, 0.45)
-	play("steam", seam - 0.42, match - seam + 0.28, 0.73, 0.51, 0.41, "left")
+	local dark, seamAt = frame.dark / fps, frame.seam / fps
+	play("cinder", aftermath + 0.12, dark - aftermath - 0.3, 0.93, 0.92, 0.62)
+	play("wind", aftermath + 0.64, dark - aftermath - 0.35, 0.68, 0.72, 0.40)
+	play("steam", aftermath + 1.3, dark - aftermath - 1.5, 0.73, 0.46, 0.38, "left")
 	play("boulder", aftermath + 0.51, 1.32, 0.58, 0.76, 0.40, "left")
 	play("sand", aftermath + 1.19, 0.38, 0.91, 0.59, 0.69, "left")
-	for i, tick in { 0.21, 0.78, 1.93, 2.10 } do
+	play("boulder", aftermath + 2.35, 0.9, 0.46, 0.40, 0.34, "right")
+	for i, tick in { 0.21, 0.78, 1.93, 2.10, 3.05, 3.9 } do
 		local side = if i % 4 < 2 then "right" else "left"
-		play("pop", aftermath + tick, 0.047, 1.21 + (i % 5) * 0.26, 0.69 + (i % 4) * 0.13, nil, side)
+		play("pop", aftermath + tick, 0.047, 1.21 + (i % 5) * 0.26, (0.69 + (i % 4) * 0.13) * (if i > 4 then 0.6 else 1), nil, side)
 		if i % 3 == 1 then
 			play("ember", aftermath + tick + 0.08, 0.074, 1.48 + (i % 4) * 0.16, 0.93)
 		end
 	end
+	-- The mineral sings an open fifth and burns out with its light.
+	note("vein", seamAt + 0.10, 76, dark - seamAt - 0.35, 0.66, "left")
+	note("vein", seamAt + 0.45, 69, dark - seamAt - 0.80, 0.40, "right")
+	note("cello", seamAt + 0.05, 40, dark - seamAt - 0.25, 0.62)
 
-	-- The mineral hum crosses the cut intact. A pick in the working mine
-	-- catches the same E in a sharper attack, with a fifth in its reflection.
-	note("vein", seam + 0.18, 76, match - seam + 0.92, 0.70, "left")
-	play("iron", match + 1 / fps, 0.09, 1.88, 0.86, 1.32, "left")
-	note("ring", match + 1 / fps, 76, 1.02, 0.85, "left")
-	note("ring", match + 3 / fps, 83, 0.69, 0.34, "right")
-	-- Widen the sound on the cut to the finished harbor boulevard.
-	play("tide", (frame.establish - 2) / fps, 2.24, 0.54, 0.53, 0.61, "right")
-	play("wind", frame.establish / fps, 1.86, 0.56, 0.34, 0.47, "left")
-	note("cello", match - 0.58, 40, 2.24, 0.69)
-	note("cello", match + 1.02, 47, 1.62, 0.51)
-	-- The viewer meets the miner before the broadcast. Close cloth and a
-	-- higher glass note carry their introduction into the quieter screens.
-	play("cloth", (frame.present + 3) / fps, 0.34, 0.89, 0.49)
-	note("glass", (frame.present + 7) / fps, 71, 1.10, 0.47)
-	-- The two halves of the assay block land before the exposed jewel rings.
-	play("cloth", (frame.measure - 7) / fps, 0.42, 0.83, 0.78)
-	play("lift", (frame.measure + 3) / fps, 0.10, 1.37, 0.72)
-	play("swing", (frame.proofStrike - 5) / fps, 5 / fps, 1.18, 0.78, 2.03, "left")
-	play("split", frame.proofStrike / fps, 0.21, 0.83, 1.24, 0.55)
-	play("fault", (frame.proofStrike + 2) / fps, 0.22, 0.94, 1.05, 0.60, "left")
-	play("boulder", (frame.proofStrike + 10) / fps, 0.35, 0.71, 1.06, 0.53, "right")
-	play("sand", (frame.proofStrike + 16) / fps, 0.20, 0.90, 0.75, 0.68, "left")
-	note("prism", (frame.revealGem + 6) / fps, 83, 0.72, 0.64, "right")
-	note("prism", (frame.revealGem + 14) / fps, 90, 0.52, 0.35, "right")
-	play("lift", (frame.portrait + 2) / fps, 0.14, 1.18, 0.95)
-	play("paper", frame.commission / fps, 0.15, 0.91, 0.88)
-	note("prism", (frame.mineRun - 15) / fps, 86, 0.43, 0.42, "signal")
-	play("tunnel", frame.mineRun / fps, (frame.lode - frame.mineRun + 3) / fps, 0.75, 1.05, 1.88, "inbound")
-	-- The buried fault answers the struck beacon one octave lower.
-	note("ring", (frame.lode - 5) / fps, 67, 0.94, 0.62, "signal")
-	play("drift", (frame.lode - 2) / fps, 1.39, 0.62, 0.70, 0.48)
-	note("prism", (frame.lode + 4) / fps, 69, 0.88, 0.51, "left")
-	note("prism", gemFrame / fps, 88, 0.63, 0.90, "signal")
-	note("prism", (gemFrame + 1) / fps, 100, 0.30, 0.31, "signal")
+	-- Present day. The sea is heard just before it is seen.
+	local now = frame.match / fps
+	play("tide", now - 0.34, 2.9, 0.54, 0.62, 0.58, "left")
+	play("tide", now + 1.7, 2.6, 0.50, 0.50, 0.55, "right")
+	play("wind", now - 0.1, 3.4, 0.52, 0.26, 0.46, "right")
+	play("tide", frame.boulevard / fps - 0.2, 1.6, 0.6, 0.30, 0.52, "left")
+	-- Into the rock. The outside closes off and the gallery opens around us.
+	play("drift", frame.dig / fps - 0.42, 2.0, 0.60, 0.62, 0.52)
+	play("drift", frame.dig / fps + 1.35, 1.9, 0.56, 0.50, 0.50)
 
-	-- Each line arrives in two movements. The last downbeat is wider and
-	-- heavier, while the small ore stamp has a dry, paper-like slap.
-	local function title(lead, headline, weight, pitch)
-		play("fly", (lead - 5) / fps, 7 / fps, 0.71, weight * 0.67, 1.93, "right")
-		play("paper", lead / fps, 0.10, 1.52, weight * 0.52)
-		play("slam", headline / fps, 0.31, pitch, weight)
-		play("paper", headline / fps, 0.11, 1.06, weight * 0.76, 0.80)
+	local function blow(at, weight)
+		play("cloth", (at - 15) / fps, 0.34, 0.80, 0.42 * weight)
+		play("swing", (at - 5) / fps, 5 / fps, 0.82, 0.62 * weight, 1.85, "left")
+		play("iron", at / fps, 0.10, 1.62, 0.90 * weight, 1.25)
+		play("chisel", at / fps, 0.22, 1.30, 0.85 * weight, 0.72)
+		play("chip", (at + 2) / fps, 0.13, 1.25, 0.70 * weight, 0.95, "right")
+		play("chip", (at + 6) / fps, 0.10, 1.6, 0.42 * weight, 1.2, "left")
+		play("sand", (at + 5) / fps, 0.26, 0.85, 0.6 * weight, 0.62, "left")
 	end
-	title(frame.portrait + 7, frame.portrait + 9, 1.07, 0.85)
-	title(frame.lode + 13, frame.lode + 15, 0.55, 0.83)
-	title(frame.challenge + 2, frame.challenge + 4, 1.14, 0.64)
-
-	-- These voices share one response to the player's actual windup.
-	-- Their intervals are laid out at the automatic strike for pool allocation.
-	local hitIndex = #cues + 1
-	play("swing", (automaticContact - backswing) / fps, backswing / fps, 0.56, 1.0, 2.31, "right")
-	play("chisel", automaticContact / fps, 0.24, 1.52, 1.11, 0.71)
-	note("ring", automaticContact / fps, 79, 0.91, 1.22)
-	note("ring", (automaticContact + 1) / fps, 90, 0.49, 0.67, "left")
-	play("chip", (automaticContact + 2) / fps, 0.14, 1.43, 0.86, 1.03, "right")
-	play("chip", (automaticContact + 5) / fps, 0.10, 1.83, 0.53, 1.24, "left")
-	note("prism", (automaticContact + 6) / fps, 74, 0.24, 0.55, "left")
-	note("prism", (automaticContact + 11) / fps, 81, 0.39, 0.65)
-	note("prism", (automaticContact + 19) / fps, 88, 0.49, 0.50, "signal")
-	for i = hitIndex, #cues do
-		cues[i].strike = true
+	blow(frame.firstHit, 0.85)
+	blow(frame.secondHit, 1.0)
+	-- The vein opens: rock first, then the note we left in the crater.
+	local open = frame.secondHit
+	play("sub", open / fps, 0.8, 0.8, 0.75, 0.55)
+	play("split", (open + 1) / fps, 0.24, 0.80, 0.95, 0.52)
+	play("fault", (open + 3) / fps, 0.24, 0.90, 0.80, 0.62, "right")
+	note("ring", (open + 2) / fps, 76, 1.5, 0.80, "left")
+	note("ring", (open + 4) / fps, 83, 1.2, 0.46, "right")
+	note("vein", (open + 2) / fps, 76, (frame.living - open + 6) / fps, 0.62, "left")
+	note("vein", (open + 10) / fps, 69, (frame.living - open - 4) / fps, 0.42, "right")
+	play("cloth", (open + 8) / fps, 0.34, 0.78, 0.46)
+	-- A living room: cloth, a cushion, and the same note thin and small
+	-- through a television speaker.
+	note("glass", frame.living / fps, 76, 1.5, 0.22, "left")
+	play("cloth", (frame.living + 19) / fps, 0.30, 0.95, 0.40)
+	play("cloth", (frame.living + 31) / fps, 0.42, 0.74, 0.36, nil, "right")
+	play("cloth", (frame.livingReverse + 9) / fps, 0.30, 0.90, 0.36, nil, "left")
+	-- Outside again.
+	local plaza = frame.witness / fps
+	play("tide", plaza - 0.25, 3.0, 0.52, 0.46, 0.57, "left")
+	play("wind", plaza, 2.7, 0.50, 0.24, 0.44, "right")
+	note("vein", plaza + 0.1, 64, 2.6, 0.40)
+	for i = 1, 8 do
+		local at = frame.witness - 4 + i * 10
+		if at >= frame.witness then
+			play("step", at / fps, 0.13, 0.78 + 0.05 * (i % 3), 0.34 + 0.05 * math.min(i, 6), 0.72)
+		end
 	end
+	-- The light travels toward the player and arrives under their feet.
+	play("tunnel", (frame.arrive - 16) / fps, 38 / fps, 0.62, 0.42, 1.25, "inbound")
+	play("shudder", (frame.arrive + 20) / fps, 1.1, 0.40, 0.60, 0.52)
+	note("chime", (frame.arrive + 22) / fps, 64, 1.1, 0.44)
+	note("chime", (frame.arrive + 25) / fps, 71, 1.0, 0.34, "right")
+	play("shudder", (frame.sprout - 8) / fps, 0.62, 0.46, 0.72, 0.6)
+	local up = frame.sprout + 6
+	play("sub", up / fps, 0.7, 0.9, 0.55, 0.6)
+	play("split", up / fps, 0.22, 0.92, 0.85, 0.55)
+	play("fault", (up + 2) / fps, 0.24, 1.0, 0.75, 0.66, "left")
+	play("boulder", (up + 4) / fps, 0.5, 0.75, 0.55, 0.5, "right")
+	play("chip", (up + 5) / fps, 0.12, 1.5, 0.6, 1.1, "left")
+	for i, pitch in { 64, 71, 76, 80, 83, 88 } do
+		note("chime", (up + ({ 0, 2, 3, 5, 6, 7 })[i]) / fps, pitch, 0.95, 0.56 - 0.05 * i, if i % 2 == 0 then "right" else "left")
+	end
+	note("vein", (up + 8) / fps, 76, (frame.contact2 - up - 8) / fps, 0.34)
 
-	-- The local score shares the pickup from the match cut. Its melody
-	-- follows the miner through the broadcast, the assay and the first dig.
+	-- The strike, and one breath later the glass.
+	local hit = frame.contact2
+	play("cloth", (hit - 9) / fps, 0.30, 0.72, 0.60)
+	play("swing", (hit - 5) / fps, 5 / fps, 0.62, 0.95, 2.1, "right")
+	play("chisel", hit / fps, 0.24, 1.45, 1.05, 0.70)
+	play("sub", hit / fps, 1.0, 0.66, 1.05, 0.42)
+	play("shatter", hit / fps, 0.30, 1.35, 0.95, 1.0)
+	play("shatter", (hit + 2) / fps, 0.26, 1.9, 0.55, 1.5, "right")
+	local glassAt = frame.reveal
+	play("air", (hit + 1) / fps, 0.50, 1.15, 0.72, 0.62, "left")
+	play("sub", glassAt / fps, 0.95, 0.95, 0.62, 0.50)
+	-- A rising E major spread, one facet at a time, then held.
+	for i, pitch in { 52, 64, 71, 76, 80, 83, 88, 92 } do
+		note("chime", (glassAt + (i - 1) * 1.25) / fps, pitch, 1.7, 0.78 - 0.06 * i, ({ "left", "right" })[i % 2 + 1])
+	end
+	for i, pitch in { 64, 71, 76, 80 } do
+		note("pad", (glassAt + 4) / fps, pitch, 2.75, 0.34 - 0.04 * i, if i % 2 == 0 then "right" else "left")
+	end
+	note("chime", (glassAt + 13) / fps, 95, 0.9, 0.24, "right")
+	note("chime", (glassAt + 50) / fps, 83, 1.0, 0.34, "left")
+	note("chime", (glassAt + 53) / fps, 88, 1.1, 0.30, "right")
+	play("air", (frame.answer - 9) / fps, 0.46, 0.80, 0.50, 1.45, "right")
+	play("chip", (frame.answer - 1) / fps, 0.13, 1.9, 0.42, 1.5, "left")
+	play("chip", (frame.answer + 2) / fps, 0.10, 2.2, 0.30, 1.8, "right")
+	-- The light runs home down the path and the mine rings once.
+	play("tunnel", (frame.answer + 1) / fps, 36 / fps, 1.15, 0.50, 0.58, "outbound")
+	note("chime", (frame.answer + 34) / fps, 76, 1.2, 0.46)
+	note("chime", (frame.answer + 36) / fps, 83, 1.0, 0.28, "right")
+	play("tide", (frame.answer + 10) / fps, (frame.duration - frame.answer - 10) / fps, 0.52, 0.40, 0.56, "left")
+	play("wind", (frame.answer + 16) / fps, (frame.duration - frame.answer - 18) / fps, 0.48, 0.20, 0.44, "right")
+
+	-- If the recording is unavailable the same scenes have a local score.
 	local function alternate(key, exposure, pitch, count, gain)
 		note(key, exposure / fps, pitch, count / fps, gain)
 		cues[#cues].alternate = true
 	end
-	local scoreStart = frame.match + 12
+	local scoreStart = frame.match
 	local bass = { 40, 43, 38, 43, 40, 36, 43, 38 }
 	for beat = scoreStart, frame.handoff - 16, 24 do
 		local bar = math.floor((beat - scoreStart) / 48)
 		local root = bass[bar % #bass + 1]
 		local offbeat = (beat - scoreStart) % 48 == 24
-		local gain = if beat < frame.measure then 0.57 elseif beat < frame.beacon then 0.80 else 1.06
+		local gain = if beat < frame.dig then 0.57 elseif beat < frame.arrive then 0.72 else 1.0
 		alternate("pulse", beat, if offbeat then root + 7 else root, if offbeat then 8 else 13, gain)
 	end
 	local function phrase(start, notes, gain)
@@ -280,16 +324,13 @@ local function arrange()
 			alternate("horn", start + n[1], n[2], n[3], gain)
 		end
 	end
-	phrase(frame.match, { { 29, 59, 13 }, { 44, 64, 25 } }, 0.65)
-	phrase(frame.broadcast, { { 10, 66, 11 }, { 28, 67, 26 }, { 72, 69, 18 } }, 0.68)
-	phrase(frame.computer, { { 4, 67, 22 }, { 40, 64, 16 } }, 0.73)
-	phrase(frame.revealGem, { { 4, 71, 13 }, { 22, 74, 22 } }, 0.93)
-	phrase(frame.portrait, { { 3, 67, 8 }, { 12, 74, 26 }, { 45, 71, 18 } }, 1.03)
-	phrase(frame.commission, { { 3, 69, 19 }, { 34, 67, 22 } }, 0.80)
-	phrase(frame.beacon, { { 1, 71, 23 }, { 52, 74, 19 } }, 0.78)
-	phrase(frame.mineRun, { { 1, 67, 16 }, { 20, 71, 12 } }, 1.04)
-	phrase(frame.lode, { { 2, 74, 19 }, { 34, 78, 15 }, { 54, 79, 14 } }, 0.94)
-	phrase(frame.challenge, { { 1, 74, 12 }, { 16, 79, 32 } }, 1.12)
+	phrase(frame.match, { { 12, 59, 18 }, { 36, 64, 34 } }, 0.65)
+	phrase(frame.reaction, { { 2, 66, 12 }, { 18, 67, 16 } }, 0.66)
+	phrase(frame.living, { { 8, 67, 16 }, { 32, 69, 22 } }, 0.62)
+	phrase(frame.witness, { { 6, 64, 18 }, { 32, 67, 22 } }, 0.70)
+	phrase(frame.arrive, { { 4, 69, 18 }, { 30, 71, 22 } }, 0.80)
+	phrase(frame.reveal, { { 2, 76, 12 }, { 16, 74, 10 }, { 30, 79, 36 } }, 1.05)
+	phrase(frame.answer, { { 2, 74, 14 }, { 18, 79, 30 } }, 1.0)
 	alternate("cello", frame.handoff + 2, 43, 31, 0.65)
 	table.sort(cues, function(a, b)
 		return a.at < b.at
@@ -353,7 +394,7 @@ return function(parent, musicGroup, effectsGroup)
 	score.Name, score.SoundId = "The Final Push 30B", scoreId
 	score.SoundGroup, score.Volume, score.Parent = musicGroup, 0, parent
 	local slots, voices = {}, { score }
-	local fixed, strikes = {}, {}
+	local fixed = {}
 	for _, event in events do
 		local preset = bank[event.key]
 		local position = event.path or preset.pan
@@ -379,22 +420,21 @@ return function(parent, musicGroup, effectsGroup)
 			table.insert(voices, chosen.sound)
 		end
 		event.voice, chosen.untilTime = chosen.sound, event.at + event.length
-		table.insert(if event.strike then strikes else fixed, event)
+		table.insert(fixed, event)
 	end
 	task.spawn(function()
 		pcall(function()
 			game:GetService("ContentProvider"):PreloadAsync(voices)
 		end)
 	end)
-	local nextCue, nextStrike, active = 1, 1, {}
-	local strikeAt
+	local nextCue, active = 1, {}
 	local useRecording, scoreStarted
 	local function startDue(queue, index, t)
 		while queue[index] and queue[index].at <= t do
 			local event = queue[index]
 			local preset = bank[event.key]
 			local age = t - event.at
-			if age < event.length and (not event.alternate or useRecording == false) then
+			if age < event.length and (event.at < aftermath or age < 0.5 or event.length > 1) and (not event.alternate or useRecording == false) then
 				local span = preset.last - preset.first
 				local elapsed = age * (event.pitch + (event.glide - event.pitch) * age / (2 * event.length))
 				-- Enter a sustained sound in time after a dropped render. Percussion
@@ -415,53 +455,37 @@ return function(parent, musicGroup, effectsGroup)
 	local function duck(t, reach)
 		return math.clamp(math.min((t - reach + 0.09) / 0.09, (reach + 0.30 - t) / 0.26), 0, 1)
 	end
-	return function(t, strikeFrame, signalPosition)
-		if not strikeAt and (strikeFrame ~= nil or t >= (automaticContact - backswing) / fps) then
-			strikeAt = (strikeFrame or automaticContact) / fps
-			for _, event in strikes do
-				event.at += strikeAt - automaticContact / fps
-			end
-		end
+	local began
+	return function(t)
 		-- Commit to one arrangement for this screening. A late network load must
 		-- never replace the live arrangement halfway through a phrase.
 		if useRecording == nil and t >= chooseScoreAt then
-			useRecording = score.IsLoaded and score.TimeLength >= math.max(24, (scoreOut - scoreIn) * 0.5)
-			if useRecording then
-				local speed = math.min(1, score.TimeLength / (scoreOut - scoreIn))
-				score.PlaybackSpeed = speed
-				if speed < 0.99 then
-					local tuning = Instance.new("PitchShiftSoundEffect")
-					tuning.Octave, tuning.Parent = 1 / speed, score
-				end
-			end
+			useRecording = score.IsLoaded and score.TimeLength >= 18
+			-- Play it at its own speed and let its ending be our ending.
+			began = math.max(scoreIn, scoreOut - score.TimeLength)
 		end
-		if useRecording and t >= scoreIn and t < scoreOut then
-			local age = t - scoreIn
+		if useRecording and t >= began and t < scoreOut then
+			local age = t - began
 			if not scoreStarted then
-				score.TimePosition = age * score.PlaybackSpeed
+				score.TimePosition = age
 				score:Play()
 				scoreStarted = true
 			end
-			local emphasis = math.max(duck(t, frame.proofStrike / fps), duck(t, (frame.portrait + 9) / fps),
-				duck(t, gemFrame / fps), duck(t, (frame.challenge + 4) / fps))
-			if strikeAt then
-				emphasis = math.max(emphasis, duck(t, strikeAt))
-			end
-			-- Ease the orchestra in under the face. Let the workbench strike
-			-- speak, then open the score as the miner shoulders the pick.
-			local trial = math.clamp(math.min((t * fps - frame.measure + 14) / 22, (frame.revealGem + 19 - t * fps) / 20), 0, 1)
-			local entrance = math.clamp(age / 2.8, 0, 1)
-			local envelope = entrance * entrance * (3 - 2 * entrance) * math.clamp((scoreOut - t) / 0.85, 0, 1)
-			score.Volume = (1.14 - 0.39 * trial - 0.31 * emphasis) * envelope
+			local emphasis = math.max(duck(t, frame.secondHit / fps), duck(t, (frame.sprout + 6) / fps),
+				duck(t, frame.contact2 / fps), 0.8 * duck(t, frame.firstHit / fps))
+			-- Quieter under the gallery and the living room, full for the reveal.
+			local f = t * fps
+			local indoors = math.clamp(math.min((f - frame.dig + 10) / 18, (frame.witness + 4 - f) / 18), 0, 1)
+			local held = math.clamp(math.min((f - frame.sprout) / 12, (frame.contact2 - f) / 4), 0, 1)
+			local entrance = math.clamp(age / 2.4, 0, 1)
+			local envelope = entrance * entrance * (3 - 2 * entrance) * math.clamp((scoreOut - t) / 1.6, 0, 1)
+			score.Volume = (1.12 - 0.34 * indoors - 0.30 * held - 0.30 * emphasis) * envelope
 		elseif scoreStarted and score.IsPlaying then
 			score:Stop()
 		end
 		local camera = workspace.CurrentCamera
 		if camera then
 			local view = camera.CFrame
-			if signalPosition then
-				anchors.signal.Position = signalPosition
-			end
 			anchors.left.Position = view * Vector3.new(-9, 0, -13)
 			anchors.right.Position = view * Vector3.new(10, 0, -12)
 			if t >= passStart and t <= passEnd then
@@ -470,9 +494,12 @@ return function(parent, musicGroup, effectsGroup)
 			elseif t >= breaker - 0.14 and t <= breaker + 0.85 then
 				local pass = math.clamp((t - breaker) / 0.62, 0, 1)
 				anchors.inbound.Position = view * Vector3.new(20 - 46 * pass, 2, -24 + 31 * pass)
-			elseif t >= frame.mineRun / fps then
-				local rush = math.clamp((t * fps - frame.mineRun) / (frame.lode - frame.mineRun), 0, 1)
-				anchors.inbound.Position = view * Vector3.new(-3 + 4 * rush, 1, -20 + 25 * rush)
+			elseif t >= (frame.arrive - 16) / fps and t < frame.sprout / fps then
+				local rush = math.clamp((t * fps - frame.arrive + 16) / 38, 0, 1)
+				anchors.inbound.Position = view * Vector3.new(-4 + 4 * rush, 0, -26 + 24 * rush)
+			elseif t >= frame.answer / fps then
+				local rush = math.clamp((t * fps - frame.answer) / 34, 0, 1)
+				anchors.outbound.Position = view * Vector3.new(0, 0, -5 - 34 * rush)
 			end
 		end
 		for i = #active, 1, -1 do
@@ -486,8 +513,5 @@ return function(parent, musicGroup, effectsGroup)
 			end
 		end
 		nextCue = startDue(fixed, nextCue, t)
-		if strikeAt then
-			nextStrike = startDue(strikes, nextStrike, t)
-		end
 	end
 end

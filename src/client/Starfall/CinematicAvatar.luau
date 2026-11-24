@@ -139,6 +139,7 @@ function Avatar.new(character, visibleAlpha)
 	local function attach(child, at, c0, c1, name, reverse)
 		local bone = { parent = at, c0 = c0, inverse = c1:Inverse(), pose = identity, reverse = reverse }
 		local index = #parts + 1
+		bone.index, bone.part = index, child
 		indices[child], parts[index], bones[index] = index, child, bone
 		if name then
 			channels[name:gsub(" ", "")] = bone
@@ -189,6 +190,20 @@ function Avatar.new(character, visibleAlpha)
 		source = character,
 	}, Avatar)
 	self:place(root.CFrame)
+	-- The neutral stance, relative to the root. Feet plant against it.
+	self.rest = {}
+	for i, part in parts do
+		self.rest[part] = root.CFrame:ToObjectSpace(self.world[i])
+	end
+	self.modern = model:FindFirstChild("UpperTorso") ~= nil
+	local sole = math.huge
+	for _, name in { "LeftFoot", "RightFoot", "Left Leg", "Right Leg" } do
+		local foot = model:FindFirstChild(name)
+		if foot and self.rest[foot] then
+			sole = math.min(sole, self.rest[foot].Y - foot.Size.Y * 0.5)
+		end
+	end
+	self.stand = if sole < math.huge then -sole else 3
 	return self
 end
 
@@ -198,6 +213,61 @@ function Avatar:turn(name, x, y, z)
 		local axes = bone.c0.Rotation
 		bone.pose = axes:Inverse() * CFrame.Angles(math.rad(x), math.rad(y), math.rad(z)) * axes
 	end
+end
+
+function Avatar:reset()
+	for _, bone in self.channels do
+		bone.pose = identity
+	end
+end
+
+-- Two-bone solve. The end socket lands on the goal, or straightens toward it.
+-- Every limb starts from its neutral twist, so joints keep their natural hinge.
+function Avatar:limb(upper, lower, tip, goal, pole, base)
+	local a, b, c = self.channels[upper], self.channels[lower], self.channels[tip]
+	if not a or not b or not c then
+		return false
+	end
+	a.pose, b.pose = identity, identity
+	local start = self:jointFrame(upper, base).Position
+	local elbow, wrist = b.c0.Position, c.c0.Position
+	local first = (elbow - a.inverse:Inverse().Position).Magnitude
+	local second = (wrist - b.inverse:Inverse().Position).Magnitude
+	local toward = goal - start
+	if toward.Magnitude < 0.001 then
+		return false
+	end
+	local reach = math.clamp(toward.Magnitude, math.abs(first - second) + 0.01, first + second - 0.005)
+	local dir = toward.Unit
+	local along = (first * first - second * second + reach * reach) / (2 * reach)
+	local out = pole - dir * pole:Dot(dir)
+	out = if out.Magnitude > 0.001 then out.Unit else Vector3.zero
+	local bend = start + dir * along + out * math.sqrt(math.max(0, first * first - along * along))
+	self:aim(upper, a.part, elbow, bend, base, 1)
+	self:aim(lower, b.part, wrist, start + dir * reach, base, 1)
+	return true
+end
+
+-- Face a hand or foot in a world direction without moving its socket.
+function Avatar:orient(name, rotation, base)
+	local bone = self.channels[name]
+	if not bone then
+		return
+	end
+	local socket = self:jointFrame(name, base).Rotation
+	local pose = socket:Inverse() * rotation.Rotation * bone.inverse:Inverse().Rotation
+	bone.pose = if bone.reverse then pose:Inverse() else pose
+end
+
+-- Carry a limb's last part to a whole CFrame. Used for planted feet and for
+-- hands that must meet a held object.
+function Avatar:carry(upper, lower, tip, frame, pole, base)
+	local bone = self.channels[tip]
+	if bone and self:limb(upper, lower, tip, frame * bone.inverse:Inverse().Position, pole, base) then
+		self:orient(tip, frame, base)
+		return true
+	end
+	return false
 end
 
 local function relativePose(bone)

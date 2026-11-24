@@ -237,7 +237,7 @@ function Moonlight:relight(base, frame)
 	local strength = 1 - S.ease(frame, frames.ignition, frames.waveLaunch + 12)
 	-- Keep the unburnt parcels in their night palette as the advancing wave
 	-- lights them. Restore the authored materials on the cut into the fissure.
-	local tinted = frame < frames.seam
+	local tinted = frame < frames.aftermath
 	if self.strength == strength and self.tinted == tinted and self.island then
 		return
 	end

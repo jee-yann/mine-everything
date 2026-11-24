@@ -127,7 +127,7 @@ local function test()
 		assert(acousticRig.inbound["Shale through the air"].SoundGroup == effects)
 		assert(acousticRig.inbound["Debris at the lens"].SoundGroup == effects)
 		assert(acousticRig.left["Resonance in the seam"].SoundGroup == effects)
-		assert(acousticRig.left["Iron pick at the working mine"].SoundGroup == effects)
+		assert(opening["Iron pick at the working mine"].SoundGroup == effects)
 		if r:GetAttribute("CheckSwing") then
 			local mix = song.SoundGroup.Volume
 			song.SoundGroup.Volume = 0
@@ -220,10 +220,10 @@ local function test()
 					voice.Played:Connect(function() fallbackNotes += 1 end)
 				end
 			end
-			local landed, eruption, breaker, fire, rock, lifted, collapse, bow, debris
+			local landed, eruption, breaker, fire, rock, collapse, bow, debris
 			local seamHeard, modernPick
 			acousticRig.left["Resonance in the seam"].Played:Once(function() seamHeard = os.clock() end)
-			acousticRig.left["Iron pick at the working mine"].Played:Once(function() modernPick = os.clock() end)
+			opening["Iron pick at the working mine"].Played:Once(function() modernPick = os.clock() end)
 			opening.Landfall.Played:Once(function() landed = os.clock() end)
 			opening["Collapsing crater wall"].Played:Once(function() collapse = os.clock() end)
 			opening.Eruption.Played:Once(function() eruption = os.clock() end)
@@ -232,7 +232,6 @@ local function test()
 			acousticRig.inbound["Debris at the lens"].Played:Once(function() debris = os.clock() end)
 			acousticRig.right["Fire in the fissure"].Played:Once(function() fire = os.clock() end)
 			acousticRig.left["Slumping basalt"].Played:Once(function() rock = os.clock() end)
-			opening["Pick settles on shoulder"].Played:Once(function() lifted = true end)
 			waitFor(function()
 				return opening["Atmospheric entry"].IsPlaying or landed or eruption or breaker
 			end, 30, "the film clock starts after native scene construction")
@@ -250,53 +249,52 @@ local function test()
 			waitFor(function() return fire and rock end, 7, "fire and settling debris sustain the burned basin")
 			assert(rock > breaker and fire > breaker, "the close aftermath follows the pressure wave")
 			waitFor(function()
-				return titles.Caption.Text:find("the star still glowed", 1, true)
-			end, 10, "the cooled island retains its fracture")
+				return titles.Caption.Text:find("the star took root", 1, true)
+			end, 10, "the crane finds the star")
 			waitFor(function()
 				return titles.Caption.Text == "Millions of years later"
-			end, 7, "the mineral cut reveals the completed cove")
-			local card = titles:WaitForChild("Expedition title", 2)
-			local typeArea = card.Letterpress
-			waitFor(function() return titles.Caption.Text:find("Keep the gem whole", 1, true) end, 17, "the precision trial")
-			local actor = assert(stage:FindFirstChild("Cinematic miner"), "the dressed performer is missing")
+			end, 7, "the island today")
+			waitFor(function() return stage:FindFirstChild("Cinematic miner") end, 16, "the dressed performer")
+			local actor
+			waitFor(function()
+				for _, model in stage:GetChildren() do
+					if model.Name == "Cinematic miner" and model:FindFirstChild("Harbor pick") then actor = model end
+				end
+				return actor
+			end, 22, "the player walks in with their own pick")
 			assert(actor.Head.Anchored and p.Character.Head.Transparency == 1)
 			assert(not actor:FindFirstChildWhichIsA("Animator", true), "gameplay animation entered the shot")
 			for _, body in actor:GetDescendants() do
 				if body:IsA("BasePart") then assert(not body.CanCollide, "the performance rig can push the real miner") end
 			end
-			waitFor(function()
-				return lifted and card.Visible and typeArea.Headline.Text == "GEM HUNTER"
-					and typeArea.Lead.Text == p.DisplayName and stage:FindFirstChild("Expedition pick")
-			end, 12, "the successful miner is introduced by name")
-			local station = stage:WaitForChild("Starfall expedition station", 6)
-			local dispatch = station["Signed field dispatch"]["Guild commission"]
-			assert(dispatch:FindFirstChild(p.DisplayName) and dispatch:FindFirstChild("TO FIND STARFALL"))
 			local strike = titles:WaitForChild("Strike sample", 2)
-			waitFor(function() return strike.Visible end, 8, "expedition route control opens")
-			local landedSample
-			opening["Pick strikes Starfall"].Played:Once(function() landedSample = os.clock() end)
+			waitFor(function() return strike.Visible end, 16, "strike control opens")
+			local struck
+			opening["Weight of the blow"].Played:Connect(function() struck = struck or os.clock() end)
+			struck = nil
 			local tappedAt = os.clock()
 			local input = game.UserInputService:CreateVirtualInput()
 			input:SendKey(true, Enum.KeyCode.Space)
 			task.wait(0.06)
 			input:SendKey(false, Enum.KeyCode.Space)
-			waitFor(function() return strike.Visible and not strike.Interactable end, 0.4, "beacon key shows the accepted press")
-			waitFor(function() return landedSample and not strike.Visible end, 1.6, "input causes the player strike")
-			assert(landedSample - tappedAt < 0.9, "the beacon waited for the automatic swing")
-
-			waitFor(function()
-				return card.Visible and typeArea.Headline.Text == "STARFALL" and stage:FindFirstChild("Unreached Starfall lode")
-			end, 11, "the mine dive reveals the unreached lode")
-			waitFor(function()
-				return card.Visible and typeArea.Headline.Text == "STARFALL FIRST?"
-			end, 6, "the route points to the real mine")
+			waitFor(function() return strike.Visible and not strike.Interactable end, 0.4, "control shows the accepted press")
+			waitFor(function() return struck end, 1.2, "input causes the player strike")
+			assert(struck - tappedAt < 0.75, "the swing waited for the automatic beat")
+			local card = titles:WaitForChild("Player introduction", 2)
+			waitFor(function() return card.Visible and stage:FindFirstChild("Glass stage") end, 3, "the glass reveal")
+			local named = false
+			for _, label in card:GetDescendants() do
+				named = named or (label:IsA("TextLabel") and label.Text == p.DisplayName)
+			end
+			assert(named, "the reveal carries the player's own name")
+			waitFor(function() return titles["Closing line"].Visible end, 6, "the goal")
 			assert((orchestraStarts == 1 and fallbackNotes == 0) or (orchestraStarts == 0 and fallbackNotes > 0),
-				"the screening keeps one score from the match cut through the mine")
+				"the screening keeps one score")
 			local sheet = require(p.PlayerScripts.Client.Starfall.ExposureSheet)
-			local ironAfterLandfall = (sheet.frames.match + 1 - sheet.frames.contact) / sheet.fps
+			local ironAfterLandfall = (sheet.frames.firstHit - sheet.frames.contact) / sheet.fps
 			assert(seamHeard and modernPick and seamHeard < modernPick
 				and math.abs(modernPick - landed - ironAfterLandfall) < 0.24,
-				string.format("mineral match cut: resonance %s, iron %s, expected %.3fs after impact",
+				string.format("first blow: resonance %s, iron %s, expected %.3fs after impact",
 					tostring(seamHeard and seamHeard - landed), tostring(modernPick and modernPick - landed), ironAfterLandfall))
 			for _, miner in game.Players:GetPlayers() do
 				if miner ~= p then

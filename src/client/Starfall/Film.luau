@@ -1,9 +1,8 @@
 local Island = require(script.Parent.Island)
 local Impact = require(script.Parent.Impact)
 local Arrival = require(script.Parent.Arrival)
-local StarfallLode = require(script.Parent.StarfallLode)
-local CoveBroadcast = require(script.Parent.CoveBroadcast)
-local ProspectorPortrait = require(script.Parent.ProspectorPortrait)
+local LivingRoom = require(script.Parent.LivingRoom)
+local MineFace = require(script.Parent.MineFace)
 local Daylight = require(script.Parent.Daylight)
 local MeteorLight = require(script.Parent.MeteorLight)
 local Tide = require(script.Parent.Tide)
@@ -18,9 +17,8 @@ Film.duration = frames.duration / sheet.fps
 
 local captions = {
 	{ 1, 52, "Millions of years ago" },
-	{ frames.aftermath + 7, frames.match - 7, "Deep in the rock, the star still glowed." },
-	{ frames.establish + 1, frames.present - 1, "Millions of years later" },
-	{ frames.measure - 36, frames.measure + 24, "One hit. Keep the gem whole." },
+	{ frames.seam + 4, frames.dark - 4, "Deep in the rock, the star took root." },
+	{ frames.dark + 2, frames.match + 40, "Millions of years later" },
 }
 function Film.caption(t)
 	local picture = sheet.frameForScene(t)
@@ -44,6 +42,7 @@ function Film.new(stage, screen, camera, handoff, motion, continueSetup, nightLo
 		handoff = handoff,
 		motion = motion,
 	}, Film)
+	local sun = game:GetService("Lighting"):GetSunDirection()
 	-- Cleanup also covers a failed import during construction.
 	local ok, reason = xpcall(function()
 		self.tide = Tide.new(stage, base, nightLook, motion)
@@ -62,11 +61,19 @@ function Film.new(stage, screen, camera, handoff, motion, continueSetup, nightLo
 		end
 		self.arrival = Arrival.new(stage, handoff)
 		self.arrival.motion = motion
-		self.lode = StarfallLode.new(stage, base * CF(0, 94, -480), self.island.set)
-		self.arrival.marker.signal.chamber = self.lode.at
-		self.arrival.marker.signal.crystalContact = self.lode.contactPoint
-		self.broadcast = CoveBroadcast.new(screen)
-		self.portrait = ProspectorPortrait.new(stage, screen)
+		-- Interior sets wait above and behind the cameras that cut to them. The
+		-- engine lights the region around the lens, so a set this close is
+		-- already lit on its first exposure. A distant one opens in the dark.
+		self.mine = MineFace.new(stage, (live * CF(-70, 96, 60)).Position, sun)
+		self.room = LivingRoom.new(stage, (live * CF(20, 96, 70)).Position, sun, screen.Parent)
+		self.embers = {}
+		for _, part in self.island.hot:GetDescendants() do
+			if part:IsA("BasePart") and part.Material == Enum.Material.Neon then
+				table.insert(self.embers, { part = part, color = part.Color })
+			elseif part:IsA("PointLight") then
+				self.emberLight, self.emberPower = part, part.Brightness
+			end
+		end
 		self.impact = Impact.new(stage, screen, base, motion)
 	end, debug.traceback)
 	if not ok then
@@ -169,14 +176,15 @@ function Film:frame(base, eye, look, fov, roll, framing)
 	cam.Focus, cam.FieldOfView = base * CF(look), lens
 end
 
-function Film:landingFrame(t)
+function Film:landingFrame(frame)
 	local h = self.handoff
 	local target = h.playable or h
-	self:frame(CFrame.identity, self.arrival:camera(t, self.motion))
-	local finish = ease(t, clock.handoff, clock.endBlend)
-	if (h.root.Position - h.landing).Magnitude >= 38 then
-		return ease(t, clock.duration - 0.38, clock.duration)
+	self:frame(CFrame.identity, self.arrival:camera(frame, self.motion))
+	if self.arrival.remote then
+		-- The live character is elsewhere. Fade, then return to them.
+		return ease(frame, frames.handoff + 8, frames.endBlend)
 	end
+	local finish = ease(frame, frames.handoff, frames.endBlend)
 	if finish >= 1 then
 		self.camera.CFrame, self.camera.Focus, self.camera.FieldOfView = target.view, target.focus, target.fov
 	else
@@ -187,6 +195,51 @@ function Film:landingFrame(t)
 	return 0
 end
 
+local function mix(a, b, u)
+	return a + (b - a) * u
+end
+
+-- The star in the rock burns down until only the dark is left.
+function Film:burnDown(frame)
+	local low = if frame < frames.seam then 0 else ease(frame, frames.seam + 20, frames.dark - 4)
+	if low == self.emberLevel then
+		return
+	end
+	self.emberLevel = low
+	for _, e in self.embers do
+		e.part.Color = e.color:Lerp(Color3.fromHex("120A1E"), low)
+	end
+	if self.emberLight then
+		self.emberLight.Brightness = self.emberPower * (1 - low)
+	end
+end
+
+-- One descending crane from above the bowl to the fork at its lip.
+local function craterCrane(frame, move)
+	local u = if move then ease(frame, frames.aftermath - 6, frames.seam + 16) else 0.35
+	local eye = V(44, 86, 88):Lerp(V(27, 44, 70), u) + V(5, -5, 2) * math.sin(u * math.pi)
+	return eye, V(3, 29, -8):Lerp(V(9.4, 32.6, 6), u), mix(41, 24, u), 0
+end
+
+local function craterFork(frame, move)
+	local u = if move then ease(frame, frames.seam - 10, frames.dark + 10) else 0.5
+	return V(mix(4.2, 8.0, u), mix(27.4, 27.9, u), mix(22.6, 21.0, u)), V(mix(10.0, 10.9, u), 31.9, 8), 34, 0
+end
+
+-- The same mark at sea the impact was watched from. Hold a breath so the
+-- match registers, then crane down and in toward the settled cove.
+local function islandToday(frame, move)
+	local u = if move then ease(frame, frames.match + 8, frames.boulevard + 14) else 0
+	local eye = clock.breakerEye:Lerp(V(84, 52, 124), u) + V(-6, -12, 18) * math.sin(u * math.pi)
+	return eye, V(-7, 34, -21):Lerp(V(1, 42, 2), u), mix(50, 40, u), 0
+end
+
+local function boulevard(frame, move)
+	local u = if move then math.clamp((frame - frames.boulevard) / (frames.dig - 11 - frames.boulevard), 0, 1) else 0.3
+	local run = 0.35 * u + 0.65 * u * u
+	return V(mix(3.4, 0, ease(u, 0, 0.8)), mix(32.4, 29.6, run), mix(60, 5, run)), V(mix(0.5, 0, u), mix(36.5, 29.8, ease(u, 0, 0.75)), -24), 46, 0
+end
+
 function Film:draw(t, liveReady, frame)
 	frame = frame or math.round(sheet.frameForScene(t))
 	local move = self.motion
@@ -195,16 +248,21 @@ function Film:draw(t, liveReady, frame)
 		self.island:prepareReplica()
 	end
 	if modern and self.matchLive == nil then self.matchLive = liveReady end
-	local remote = (self.handoff.root.Position - self.handoff.landing).Magnitude >= 38
-	local replica = modern and not self.matchLive and (frame < frames.present or remote)
-	if replica and remote then
+	local far = (self.handoff.root.Position - self.handoff.landing).Magnitude >= 38
+	-- A player deep underground keeps the prepared copy for the whole film.
+	-- Everyone else moves to the real cove before their own scenes.
+	local replica = modern and not self.matchLive and (frame < frames.dig or far)
+	if replica and far then
 		self.arrival.replayLanding = self.handoff.landing + self.base.Position - self.live.Position
+		self.arrival.replica = self.island.replaySite
 	end
-	self.island:draw(t, modern, replica, frame < frames.present)
+	self.island:draw(t, modern, replica, modern and frame < frames.handoff)
 	self.tide:draw(t)
+	self.arrival:draw(frame)
+	self.mine:draw(frame, move)
+	self.room:draw(frame, move)
 	self.daylight:draw(t, move, self.base, frame)
-	self.arrival:draw(t, frame)
-	self.lode:expose(frame, move, self.arrival)
+	self:burnDown(frame)
 	local base = self.base
 	local black = 0
 	if t < clock.entry then
@@ -220,53 +278,38 @@ function Film:draw(t, liveReady, frame)
 		local look = V(-7, 34, -21) + V(-3.3, 8.4, 0.5) * (lift / 2.9)
 		self:frame(base, eye, look, 54 + open, math.rad(roll), "offshore")
 	elseif frame < frames.seam then
-		-- Hold the rim while the airborne earth settles. The next shot
-		-- picks out one piece of the fractured rock in this landscape.
-		self:frame(base, V(51, 51, 63), V(-2, 32, -23), 37, 0, "landscape")
-	elseif frame < frames.establish then
-		-- The very same fork fills the frame before and after the cut.
-		-- Keep the marks, focal length and the operator's sideways step
-		-- continuous. Only the rock finish and the world around it change.
-		local fork = self.island.witnessPoint
-		local offset = if move then (frame - frames.match) * 0.052 else 0
-		local eye = fork + V(-2.70 + offset, 1.80, 11.8)
-		local aim = fork + V(0.42 + 0.34 * offset, 0.90, 0)
-		self:frame(if modern and not replica then self.live else base, eye, aim, 23)
-	elseif frame < frames.present then
-		-- Widen on a cut from the mineral to the masonry that holds it.
-		-- From the spawn boulevard, the sign, arch and worked shore read
-		-- together. Let the audience look around this fixed composition.
-		local site = if replica then base else self.live
-		local mark = site:PointToObjectSpace(self.arrival.mineBearing.Position)
-		if (mark - V(0, 28.96, 93)).Magnitude < 14 then
-			local distance = self.arrival.unit * self.arrival.portraitDistance
-			local eye = mark + V(3.1, 2.4, 13.4) * distance
-			self:frame(site, eye, V(0.3, 34.5, 8), 34, 0, "landscape")
+		self:frame(base, craterCrane(frame, move))
+	elseif frame < frames.match then
+		self:frame(base, craterFork(frame, move))
+		black = if frame >= frames.dark then 1 else ease(frame, frames.dark - 14, frames.dark)
+	elseif frame < frames.boulevard then
+		self:frame(if replica then base else self.live, islandToday(frame, move))
+		black = 1 - ease(frame, frames.match, frames.match + 7)
+	elseif frame < frames.dig then
+		-- Daylight gives out inside the arch. The lens is already in the gallery
+		-- during the dark beat, so its lamps are steady when we see it.
+		if frame < frames.dig - 11 then
+			self:frame(if replica then base else self.live, boulevard(frame, move))
 		else
-			-- A replay can open from a shop counter or a partially streamed
-			-- shore. Keep that establishing lens clear of nearby kiosks.
-			self:frame(site, V(2, 43, 76), V(0, 35, 7), 36, 0, "landscape")
+			self:frame(self.mine.at, self.mine:camera(frames.dig, move))
 		end
-	elseif frame >= frames.lode and frame < frames.challenge then
-		local portrait = self.camera.ViewportSize.X < self.camera.ViewportSize.Y
-		local eye, look, lens, roll = self.lode:camera(frame, move, portrait)
-		self:frame(self.lode.at, eye, look, lens, roll)
-		self.arrival.lens.Enabled = true
-		self.arrival.lens.FocusDistance = (look - eye).Magnitude
-		self.arrival.lens.InFocusRadius = 2.1
-	elseif t < clock.handoff then
-		self:frame(CFrame.identity, self.arrival:camera(t, move))
+		black = ease(frame, frames.dig - 20, frames.dig - 12)
+	elseif frame < frames.living then
+		self:frame(self.mine.at, self.mine:camera(frame, move))
+		black = 1 - ease(frame, frames.dig, frames.dig + 8)
+	elseif frame < frames.witness then
+		self:frame(self.room.at, self.room:camera(frame, move))
+	elseif frame < frames.handoff then
+		self:frame(CFrame.identity, self.arrival:camera(frame, move))
 	else
-		black = self:landingFrame(t)
+		black = self:landingFrame(frame)
 	end
-	if move and frame >= frames.entry and frame < frames.seam then
+	if move and frame >= frames.entry and frame < frames.aftermath then
 		self.camera.CFrame *= vibration(frame)
 	end
 	self.impact:draw(t, self.camera, frame)
 	self.illumination:draw(t, Impact.position(t, frame), self.camera, move, frame)
 	self.daylight:focus(self.camera, base, frame, move)
-	self.broadcast:draw(self.camera, frame, move)
-	self.portrait:draw(self.arrival, self.camera, frame, move)
 	return black
 end
 
@@ -287,7 +330,7 @@ function Film:holdCamera()
 end
 
 function Film:Destroy()
-	for _, name in { "broadcast", "portrait", "daylight", "illumination", "impact", "arrival", "lode", "tide", "island" } do
+	for _, name in { "room", "mine", "daylight", "illumination", "impact", "arrival", "tide", "island" } do
 		if self[name] then
 			self[name]:Destroy()
 		end

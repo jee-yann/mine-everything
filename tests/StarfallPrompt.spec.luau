@@ -21,14 +21,14 @@ local baseY = socket.Position.Y.Offset
 assert(button.Visible and button.Interactable)
 assert(socket.Visible and baseY > restingY and not socket.Active)
 for i = 1, 3 do assert(not screen["Strike outline " .. i].Visible) end
-expose(press, true, press + 8)
+expose(press, true, press)
 assert(button.Visible and not button.Interactable and button.Position.Y.Offset > restingY)
 assert(button.Size.Y.Offset < restSize.Y.Offset and socket.Position.Y.Offset == baseY)
-expose(press + 2, true, press + 8)
+expose(press + 2, true, press)
 assert(math.abs(button.Position.Y.Offset - baseY) < 3, "the compressed cap should bottom out in its socket")
-expose(press + 6, true, press + 8, math.huge)
+expose(press + 6, true, press, math.huge)
 assert(math.abs(button.Position.Y.Offset - baseY) < 3, "holding the control keeps the cap down for the windup")
-expose(press + 7, true, press + 8, press + 2)
+expose(press + 7, true, press, press + 2)
 assert(button.Position.Y.Offset < restingY and button.Size.Y.Offset > restSize.Y.Offset)
 local above, transparency = button.Position.Y.Offset, 0
 for i = 1, 3 do
@@ -37,18 +37,18 @@ for i = 1, 3 do
 	assert(echo.Position.Y.Offset > above and echo.UIStroke.Transparency > transparency)
 	above, transparency = echo.Position.Y.Offset, echo.UIStroke.Transparency
 end
-expose(press + 12, true, press + 8)
+expose(press + 12, true, press)
 assert(button.Position.Y.Offset > restingY, "spring return lands on the socket")
-expose(press + 16, true, press + 8)
+expose(press + 16, true, press)
 assert(button.Visible and button.Position.Y.Offset == restingY and button.Size == restSize)
-expose(press + 8, false, press + 8)
-assert(button.Visible and button.Action.Text == "Path lit!" and button.Position.Y.Offset == restingY and button.Size == restSize)
+expose(press + 8, false, press)
+assert(button.Visible and button.Action.Text == "Strike!" and button.Position.Y.Offset == restingY and button.Size == restSize)
 for i = 1, 3 do assert(not screen["Strike outline " .. i].Visible) end
-expose(press + 19, true, press + 8)
+expose(press + 19, true, press)
 assert(not button.Visible and not button.Interactable and not socket.Visible)
 expose(frames.autoStrike - 1, true, nil)
 assert(button.Visible and button.Interactable)
-expose(frames.autoStrike, true, frames.autoStrike + 8)
+expose(frames.autoStrike, true, nil)
 assert(not button.Visible and not button.Interactable)
 for i = 1, 3 do assert(not screen["Strike outline " .. i].Visible) end
 screen:Destroy()
