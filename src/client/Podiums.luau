@@ -184,14 +184,11 @@ function Podiums.start(viewer, hud)
 						end
 						if slot.model and slot.label then
 							local name = base:GetAttribute("StandingName") or ""
-							local score = base:GetAttribute(
-								if key == "Global" then "StandingDepth" else "StandingLevel"
-							) or 0
-							slot.label.Text = string.format(
-								if key == "Global" then "%s  ·  %d blocks" else "%s  ·  Lv %d",
-								name,
-								score
-							)
+							-- The global board alternates between depths and levels.
+							local depth = base:GetAttribute("StandingDepth")
+							local score = depth or base:GetAttribute("StandingLevel") or 0
+							slot.label.Text =
+								string.format(if depth then "%s  ·  %d blocks" else "%s  ·  Lv %d", name, score)
 						end
 					end
 				end

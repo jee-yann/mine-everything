@@ -373,6 +373,7 @@ net.Dust.OnClientEvent:Connect(function(point, spread, ore, finds, normal, loot)
 end)
 
 require(script.Podiums).start(player, hud)
+require(script.FriendMarkers)(player, hud)
 
 Players.PlayerAdded:Connect(Swing.observe)
 for _, other in Players:GetPlayers() do

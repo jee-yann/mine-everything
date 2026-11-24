@@ -29,13 +29,33 @@ function Details.place(grid, support, feature)
 		end)
 	else
 		if feature == "Cache" then
-			for _, x in { -0.76, 0.76 } do
-				local band = Instance.new("Part")
-				band.Name, band.Anchored, band.CanCollide, band.CanTouch, band.CanQuery =
-					"Brass strap", true, false, false, false
-				band.Size, band.Position = Vector3.new(0.19, 1.54, 1.69), item.Position + Vector3.xAxis * x
-				band.Color, band.Material, band.Parent = Color3.fromRGB(255, 201, 88), Enum.Material.Metal, item
+			-- A chunky surveyor's crate in the game's blocky, ink-edged style: flat painted body, a
+			-- darker lid, citrine corner caps and a glowing citrine on the lid. Built from plain
+			-- blocks rather than a planked prop.
+			item.Material, item.Color = Enum.Material.SmoothPlastic, Color3.fromRGB(176, 112, 64)
+			local function block(name, size, offset, color, material)
+				local b = Instance.new("Part")
+				b.Name, b.Anchored, b.CanCollide, b.CanTouch, b.CanQuery = name, true, false, false, false
+				b.Size, b.Position = size, item.Position + offset
+				b.Color, b.Material = color, material or Enum.Material.SmoothPlastic
+				b.Parent = item
+				return b
 			end
+			local s = item.Size
+			block("Lid", Vector3.new(s.X + 0.12, 0.42, s.Z + 0.12), Vector3.new(0, s.Y / 2 + 0.05, 0), Color3.fromRGB(120, 70, 40))
+			block("Band", Vector3.new(s.X + 0.06, 0.22, s.Z + 0.06), Vector3.new(0, -0.1, 0), Color3.fromRGB(62, 40, 30))
+			for _, x in { -1, 1 } do
+				for _, z in { -1, 1 } do
+					block("Corner cap", Vector3.new(0.34, s.Y + 0.5, 0.34),
+						Vector3.new(x * (s.X / 2 - 0.08), 0.05, z * (s.Z / 2 - 0.08)), Color3.fromRGB(255, 199, 74))
+				end
+			end
+			local gem = block("Citrine", Vector3.new(0.5, 0.5, 0.5), Vector3.new(0, s.Y / 2 + 0.42, 0),
+				Color3.fromRGB(255, 214, 92), Enum.Material.Neon)
+			gem.Orientation = Vector3.new(0, 45, 45)
+			local outline = Instance.new("SelectionBox")
+			outline.Name, outline.Adornee, outline.Color3 = "Ink edge", item, Color3.fromRGB(26, 22, 30)
+			outline.LineThickness, outline.SurfaceTransparency, outline.Parent = 0.05, 1, item
 		end
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.ObjectText, prompt.ActionText, prompt.MaxActivationDistance, prompt.HoldDuration =
