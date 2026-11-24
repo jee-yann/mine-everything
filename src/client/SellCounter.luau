@@ -15,10 +15,10 @@ local function makeRow(menu, ore, slot)
 	local stockFont = Instance.new("UITextSizeConstraint")
 	stockFont.MinTextSize, stockFont.MaxTextSize, stockFont.Parent = 13, 22, title
 	detail.Name, detail.RichText = "Unit price", true
-	detail.Position, detail.Size, detail.TextSize = UDim2.fromOffset(67, 28), UDim2.fromOffset(205, 34), 16
+	detail.Position, detail.Size, detail.TextSize = UDim2.fromOffset(67, 27), UDim2.fromOffset(205, 35), 18
 	detail.TextScaled = true
 	local detailFont = Instance.new("UITextSizeConstraint")
-	detailFont.MinTextSize, detailFont.MaxTextSize, detailFont.Parent = 12, 16, detail
+	detailFont.MinTextSize, detailFont.MaxTextSize, detailFont.Parent = 15, 18, detail
 	sell.Name, sell.Position, sell.Size = "Sell quantity", UDim2.fromOffset(277, 8), UDim2.fromOffset(158, 51)
 	sell.TextScaled = true
 	local saleFont = Instance.new("UITextSizeConstraint")

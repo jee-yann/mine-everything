@@ -185,6 +185,9 @@ function Mining.start(world, net, sessions, sync)
 			net.Feedback:FireClient(player, "achievement", award)
 		end
 		local level = Expeditions.level(profile.xp)
+		if level > oldLevel then
+			net.Feedback:FireClient(player, "levelUp", level)
+		end
 		for _, rank in Expeditions.ranks do
 			if oldLevel < rank.level and level >= rank.level then
 				net.Feedback:FireClient(player, "titleUnlocked", rank.name)

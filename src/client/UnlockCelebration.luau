@@ -24,15 +24,25 @@ function Celebration:show(kind, name)
 	end)
 end
 
+function Celebration:skillsLeft()
+	for _, node in require(game.ReplicatedStorage.Shared.Skills).nodes do
+		if not self.hud.player:GetAttribute("Skill" .. node.id) then
+			return true
+		end
+	end
+	return false
+end
+
 function Celebration:present(kind, name)
 	local root = self.hud.root
 	local isTitle = kind == "titleUnlocked"
+	local isLevel = kind == "levelUp"
 	if kind == "aura" then
 		require(script.Parent.FirstLightCase)(self.hud, name)
 		return
 	end
 	local ore = if kind == "discovery" then Ores.byName[name] else nil
-	local tint = if ore then ore.color:Lerp(W.white, 0.35) elseif isTitle then W.violet else W.gold
+	local tint = if ore then ore.color:Lerp(W.white, 0.35) elseif isTitle then W.violet elseif isLevel then W.aqua else W.gold
 	local motion = self.hud.player:GetAttribute("MenuMotion") ~= false and not game:GetService("GuiService").ReducedMotionEnabled
 	local group = W.fadeGroup(root, "Unlock celebration", 368, 124)
 	group.ZIndex = 35
@@ -43,18 +53,18 @@ function Celebration:present(kind, name)
 	scale.Scale = fit
 	local body = W.frame(group, "Plaque", 8, 12, 352, 98, W.panel, 16)
 	W.stroke(body, tint, 2.5)
-	W.enamel(body, if ore then ore.color:Lerp(W.panel, 0.48) elseif isTitle then W.grape else Color3.fromRGB(110, 69, 32), W.ink)
+	W.enamel(body, if ore then ore.color:Lerp(W.panel, 0.48) elseif isTitle then W.grape elseif isLevel then Color3.fromRGB(24, 88, 104) else Color3.fromRGB(110, 69, 32), W.ink)
 	local badge = W.frame(body, "Medal", 16, 24, 50, 50, tint, 14)
 	W.stroke(badge, tint:Lerp(W.white, 0.65), 2)
-	Icons.draw(badge, if ore then "Crystal" elseif isTitle then "Titles" else "Achievements", 5, 5, 40, tint)
-	W.text(body, if ore then "NEW ORE DISCOVERED" elseif isTitle then "TITLE UNLOCKED" else "ACHIEVEMENT UNLOCKED", 83, 8, 260, 18, 14, tint, true)
-	local headline = W.title(body, name, 82, 27, 262, 42, 27, W.white, true)
+	Icons.draw(badge, if ore then "Crystal" elseif isTitle then "Titles" elseif isLevel then "Skills" else "Achievements", 5, 5, 40, tint)
+	W.text(body, if ore then "NEW ORE DISCOVERED" elseif isTitle then "TITLE UNLOCKED" elseif isLevel then "LEVEL UP!" else "ACHIEVEMENT UNLOCKED", 83, 8, 260, 18, 14, tint, true)
+	local headline = W.title(body, if isLevel then "Level " .. tostring(name) else name, 82, 27, 262, 42, 27, W.white, true)
 	headline.TextScaled = true
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MinTextSize, limit.MaxTextSize, limit.Parent = 13, 27, headline
 	W.text(
 		body,
-		if ore then "Added to your Ore Index" elseif isTitle then "Equip in Inventory → Titles" else "Saved to Achievements",
+		if ore then "Added to your Ore Index" elseif isTitle then "Equip in Inventory → Titles" elseif isLevel then (if self:skillsLeft() then "+1 skill point · spend it in Skills" else "Every skill learned · keep climbing") else "Saved to Achievements",
 		83,
 		70,
 		260,
@@ -69,8 +79,8 @@ function Celebration:present(kind, name)
 		group.Position = center + UDim2.fromOffset(0, 14)
 		W.tween(group, 0.18, { GroupTransparency = 0, Position = center })
 		W.tween(scale, 0.20, { Scale = fit })
-		for i = 0, 7 do
-			local angle = i * math.pi / 4
+		for i = 0, if isLevel then 15 else 7 do
+			local angle = i * math.pi / (if isLevel then 8 else 4)
 			local dot = W.frame(body, "Medal spark", 40, 46, 5, 5, tint, 1)
 			dot.Rotation = 45
 			W.tween(

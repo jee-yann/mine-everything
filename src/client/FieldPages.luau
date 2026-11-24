@@ -145,17 +145,28 @@ function Pages.achievements(menu)
 	return #Guide.achievements
 end
 
-local function layerOdds(chances, player)
+-- Ore names in the odds lists take their ore's colour, lifted so dark ores stay readable on the
+-- card. `colored` is false when only measuring the text.
+local function readable(color)
+	local h, s, v = color:ToHSV()
+	return Color3.fromHSV(h, math.min(s, 0.75), math.max(v, 0.72))
+end
+local function layerOdds(chances, player, colored)
 	local entries, total = {}, 0
+	local function entry(label, chance, color)
+		local text = string.format("%s %s%%", label, chance)
+		return if colored and color then W.colored(label, readable(color)) .. string.format(" %s%%", chance) else text
+	end
 	for _, ore in Ores.list do
 		local chance = chances[ore.name]
 		if chance then
 			total += chance
 			local hidden = player and ore.secret and not player:GetAttribute("Found" .. ore.name)
-			table.insert(entries, string.format("%s %g%%", if hidden then "???" else ore.name, chance))
+			table.insert(entries, entry(if hidden then "???" else ore.name, string.format("%g", chance), not hidden and ore.color or nil))
 		end
 	end
-	table.insert(entries, 1, string.format("Stone %g%%", 100 - total))
+	local stone = math.floor((100 - total) * 10 + 0.5) / 10
+	table.insert(entries, 1, entry("Stone", string.format("%g", stone), Ores.byName.Stone.color))
 	return table.concat(entries, "   ")
 end
 
@@ -181,6 +192,7 @@ function Pages.index(menu)
 				elseif found then "Discovered" elseif not hidden then "Still to find" else ""
 			bar.BackgroundColor3 = if hidden then W.muted else ore.color
 			name.Text = if hidden then "???" else ore.name .. (if found then "   ✓" else "")
+			name.TextColor3 = if hidden or ore.host then W.white else readable(ore.color)
 			-- A mystery ore shows only a hint about where to look until it is first mined.
 			worth.Size = UDim2.fromOffset(196, if hidden then 38 else 21)
 			worth.Text = if hidden
@@ -212,10 +224,10 @@ function Pages.index(menu)
 			theme.TextYAlignment = Enum.TextYAlignment.Top
 		end
 		local odds = W.text(card, "", 8, 42 + themeHeight, 207, oddsHeight, 14, W.muted, true)
-		odds.TextWrapped = true
+		odds.TextWrapped, odds.RichText = true, true
 		odds.TextYAlignment = Enum.TextYAlignment.Top
 		table.insert(menu.updates, function()
-			odds.Text = layerOdds(layer.oreChances, menu.player)
+			odds.Text = layerOdds(layer.oreChances, menu.player, true)
 		end)
 		y += card.Size.Y.Offset + 7
 	end
