@@ -89,6 +89,10 @@ bank.tone = instrument("Resonance in the crystal", "volume_slider.ogg", 0.154422
 bank.tone.room, bank.tone.effect = { 2.2, -7 }, true
 bank.facet = instrument("Cut glass", "volume_slider.ogg", 0.154422, 0.157030, 2.2, 0.004, 0.7, 2.4)
 bank.facet.room, bank.facet.effect = { 1.8, -8 }, true
+-- The loop lands a whole number of samples long and sounds 12 cents flat of
+-- the score. Measured, then corrected.
+bank.tone.hz *= 0.9932
+bank.facet.hz *= 0.9932
 bank.under = instrument("Sub under the rock", "impact_water.mp3", 0.132698, 0.135306, 0.52, 0.9, 1.0)
 bank.under.eq, bank.under.room, bank.under.effect = { 4, -16, -40 }, { 1.4, -14 }, true
 bank.low = recorded("Wind over the rim", 9113286969, 2.0, 30, 9.0, 1.2, 1.2)
@@ -118,7 +122,7 @@ bank.sparkle.eq, bank.sparkle.room = { -14, -2, 2 }, { 2.0, -8 }
 bank.pass2 = recorded("Glass crossing the lens", 9120718279, 0.22, 1.2, 0.5, 0.06, 0.2)
 bank.pass2.eq = { -8, -2, 2 }
 bank.drum = recorded("Something moving below", 9113343298, 0.0, 1.2, 1.0, 0.004, 0.5)
-bank.drum.eq, bank.drum.room = { 5, -8, -24 }, { 2.4, -6 }
+bank.drum.eq, bank.drum.room = { 2, 0, -14 }, { 2.4, -6 }
 bank.body.eq = { 5, -7, -22 }
 bank.echo.eq = { -5, -2, -13 }
 bank.steam.eq = { -18, 1, 3 }
@@ -231,16 +235,16 @@ local function arrange()
 	-- cools, and one low tone that belongs to the thing on the floor.
 	play("low", aftermath + 0.10, dark - aftermath + 0.1, 0.92, 0.42, 0.80)
 	play("cinder", aftermath + 0.12, dark - aftermath - 0.6, 0.93, 0.80, 0.60)
-	play("ground", aftermath + 0.05, 3.0, 0.42, 0.26, 0.32)
+	play("ground", aftermath + 0.05, 3.0, 0.42, 0.18, 0.32)
 	play("boulder", aftermath + 0.60, 1.2, 0.55, 0.55, 0.40, "left")
 	play("sand", aftermath + 1.5, 0.38, 0.85, 0.5, 0.66, "right")
 	for i, tick in { 0.30, 1.05, 1.9, 2.75, 3.4 } do
 		play("pop", aftermath + tick, 0.047, 1.2 + (i % 3) * 0.3, 0.62, nil, if i % 2 == 0 then "right" else "left")
 	end
-	play("ice", frame.seam / fps - 0.2, 2.1, 0.62, 0.9, 0.58, "right")
-	note("under", aftermath + 1.2, 30, dark - aftermath - 1.4, 0.75)
-	note("tone", frame.seam / fps + 0.05, 66, dark - frame.seam / fps - 0.25, 0.55, "left")
-	note("tone", frame.seam / fps + 0.55, 73, dark - frame.seam / fps - 0.80, 0.34, "right")
+	play("ice", frame.seam / fps - 0.2, 2.1, 0.62, 1.7, 0.58, "right")
+	note("under", aftermath + 1.2, 30, dark - aftermath - 1.4, 0.48)
+	note("tone", frame.seam / fps + 0.05, 66, dark - frame.seam / fps - 0.25, 1.35, "left")
+	note("tone", frame.seam / fps + 0.55, 73, dark - frame.seam / fps - 0.80, 0.85, "right")
 
 	-- Present day. Water, then light, then the score.
 	local now = frame.match / fps
@@ -274,30 +278,30 @@ local function arrange()
 	play("cloth", (trace + 9) / fps, 0.34, 0.78, 0.46)
 
 	-- A quiet room. The same tone, small, in a television speaker.
-	note("facet", frame.living / fps + 0.1, 78, 1.4, 0.14, "left")
-	play("cloth", (frame.living + 19) / fps, 0.30, 0.95, 0.40)
-	play("cloth", (frame.living + 30) / fps, 0.40, 0.74, 0.34, nil, "right")
-	play("cloth", (frame.livingReverse + 8) / fps, 0.30, 0.90, 0.34, nil, "left")
+	note("facet", frame.living / fps + 0.1, 78, 1.4, 0.55, "left")
+	play("cloth", (frame.living + 19) / fps, 0.30, 0.95, 1.5)
+	play("cloth", (frame.living + 30) / fps, 0.40, 0.74, 1.2, nil, "right")
+	play("cloth", (frame.livingReverse + 8) / fps, 0.30, 0.90, 1.2, nil, "left")
 
 	-- Outside: boots go past the lens and away toward it.
 	local plaza = frame.witness / fps
-	play("lap", plaza - 0.15, 2.5, 0.92, 0.62, 0.95, "left")
+	play("lap", plaza - 0.15, 2.5, 0.92, 1.0, 0.95, "left")
 	for i = 1, 7 do
 		local at = frame.witness - 10 + i * 10
 		if at >= frame.witness then
-			play("step", at / fps, 0.13, 0.78 + 0.05 * (i % 3), 0.62 - 0.06 * i, 0.72, if i > 3 then "right" else nil)
+			play("step", at / fps, 0.13, 0.78 + 0.05 * (i % 3), 1.5 - 0.15 * i, 0.72, if i > 3 then "right" else nil)
 		end
 	end
-	note("tone", plaza + 0.2, 66, 1.9, 0.30, "right")
+	note("tone", plaza + 0.2, 66, 1.9, 0.60, "right")
 	-- Back below.
 	local gallery = frame.enter / fps
 	play("drone", gallery - 0.25, frame.reveal / fps - gallery + 0.2, 0.96, 1.1)
 	for i = 1, 4 do
-		play("step", (frame.enter - 8 + i * 10) / fps, 0.13, 0.62 + 0.04 * (i % 2), 0.52, 0.58)
+		play("step", (frame.enter - 8 + i * 10) / fps, 0.13, 0.62 + 0.04 * (i % 2), 1.35, 0.58)
 	end
-	play("drip", gallery + 1.2, 0.5, 1.0, 0.6, nil, "left")
-	note("tone", gallery + 0.2, 66, (frame.contact2 - frame.enter) / fps - 0.1, 0.44, "right")
-	note("tone", (frame.strike + 4) / fps, 73, (frame.contact2 - frame.strike) / fps - 0.2, 0.30, "left")
+	play("drip", gallery + 1.2, 0.5, 1.0, 1.0, nil, "left")
+	note("tone", gallery + 0.2, 66, (frame.contact2 - frame.enter) / fps - 0.1, 1.0, "right")
+	note("tone", (frame.strike + 4) / fps, 73, (frame.contact2 - frame.strike) / fps - 0.2, 0.75, "left")
 
 	-- The break: contact, the crack running, the weight letting go, the dust.
 	local hit = frame.contact2
@@ -309,20 +313,20 @@ local function arrange()
 	play("chip", (hit + 2) / fps, 0.13, 1.2, 0.8, 0.9, "right")
 	play("run", (hit + 2) / fps, 0.75, 1.05, 0.85, 0.92, "left")
 	play("run", (hit + 7) / fps, 0.55, 1.35, 0.5, 1.2, "right")
-	play("crack", (hit + 11) / fps, 0.6, 0.72, 0.58, 0.68, "left")
-	play("boom", (hit + 12) / fps, 2.6, 0.92, 0.70, 0.84)
-	play("tumble", (hit + 13) / fps, 2.0, 0.92, 0.66, 0.88)
-	play("tinkle", (hit + 16) / fps, 2.2, 1.12, 0.8, 1.05, "right")
+	play("crack", (hit + 11) / fps, 0.6, 0.72, 0.48, 0.68, "left")
+	play("boom", (hit + 12) / fps, 2.2, 0.92, 0.46, 0.84)
+	play("tumble", (hit + 13) / fps, 2.0, 0.92, 0.54, 0.88)
+	play("tinkle", (hit + 16) / fps, 2.2, 1.12, 1.15, 1.05, "right")
 	play("rubble", (hit + 24) / fps, 2.2, 0.95, 0.7, 0.90, "left")
 	-- The pocket opens upward into the reveal.
 	for i, pitch in { 54, 66, 70, 73 } do
 		note("tone", (frame.inside - 4 + i * 2) / fps, pitch, (frame.reveal - frame.inside) / fps + 1.5, 0.30 + 0.05 * i, if i % 2 == 0 then "right" else "left")
 	end
 	local glassAt = frame.reveal
-	play("sparkle", (glassAt - 2) / fps, 2.2, 1.0, 0.9)
+	play("sparkle", (glassAt - 2) / fps, 2.2, 1.0, 1.1)
 	play("tinkle", (glassAt - 3) / fps, 1.3, 1.5, 0.55, 1.35, "left")
 	for i, pitch in { 66, 70, 73, 78, 82, 85 } do
-		note("facet", (glassAt + (i - 1) * 2.95) / fps, pitch, 1.4, 0.40 - 0.035 * i, ({ "left", "right" })[i % 2 + 1])
+		note("facet", (glassAt + (i - 1) * 2.95) / fps, pitch, 1.4, 0.95 - 0.08 * i, ({ "left", "right" })[i % 2 + 1])
 	end
 	-- One pass, one direction, then air.
 	play("pass2", (frame.answer - 9) / fps, 0.9, 0.82, 0.9, 0.74, "pass")
@@ -332,12 +336,12 @@ local function arrange()
 	play("lap", road + 2.9, (frame.duration - frame.answer) / fps - 2.7, 1.02, 0.9, 0.98, "right")
 	play("gull", road + 0.7, 1.4, 0.9, 0.35, nil, "left")
 	for i = 2, 6 do
-		play("step", (frame.answer - 14 + i * 10) / fps, 0.13, 0.80 + 0.05 * (i % 3), 0.50, 0.72)
+		play("step", (frame.answer - 14 + i * 10) / fps, 0.13, 0.80 + 0.05 * (i % 3), 1.1, 0.72)
 	end
 	-- Below, once.
-	play("drum", (frame.turn - 1) / fps, 1.2, 0.72, 0.9, 0.66)
-	play("boom", (frame.turn - 1) / fps, 2.0, 0.62, 0.42, 0.56)
-	note("tone", (frame.turn + 1) / fps, 66, 2.2, 0.40)
+	play("drum", (frame.turn - 1) / fps, 1.2, 0.80, 1.5, 0.72)
+	play("boom", (frame.turn - 1) / fps, 2.0, 0.62, 0.26, 0.56)
+	note("tone", (frame.turn + 1) / fps, 66, 2.2, 0.9)
 	play("cloth", (frame.turn + 12) / fps, 0.36, 0.84, 0.34)
 
 	-- With no recordings at all, a plain pulse and pad keep the shape.
@@ -498,7 +502,8 @@ return function(parent, musicGroup, effectsGroup)
 			local enter = smooth((t - scoreIn) / 2.0)
 			local rock = smooth((f - frame.dig + 8) / 20) * (1 - smooth((f - frame.witness + 6) / 18))
 			local build = smooth((f - frame.enter) / 60)
-			score.Volume = (1.45 - 0.45 * rock + 0.10 * build) * enter * (1 - smooth((t - blowAt) / 0.2))
+			local gallery = smooth((f - frame.enter + 4) / 10) * (1 - smooth((f - frame.autoStrike + 12) / 12))
+			score.Volume = (1.45 - 0.45 * rock + 0.10 * build - 0.55 * gallery) * enter * (1 - smooth((t - blowAt) / 0.2))
 		elseif scoreStarted and score.IsPlaying then
 			score:Stop()
 		end
@@ -510,7 +515,8 @@ return function(parent, musicGroup, effectsGroup)
 			end
 			-- Under the break for its one bar, open on the reveal.
 			local open = smooth((f - frame.reveal + 10) / 12)
-			theme.Volume = (0.46 + 0.38 * open) * smooth((t - blowAt) / 0.04 + 0.2) * (1 - smooth((t - scoreOut + 1.4) / 1.4))
+			local turn = smooth((f - frame.turn + 4) / 4) * (1 - smooth((f - frame.turn - 8) / 22))
+			theme.Volume = (0.46 + 0.38 * open) * (1 - 0.5 * turn) * smooth((t - blowAt) / 0.04 + 0.2) * (1 - smooth((t - scoreOut + 1.4) / 1.4))
 		elseif themeStarted and theme.IsPlaying then
 			theme:Stop()
 		end

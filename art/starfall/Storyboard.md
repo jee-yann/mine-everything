@@ -96,7 +96,7 @@ The small sparks above the secondary fires and the dust along the meteor use the
 
 ## Current Studio recording
 
-The film runs 1,208 exposures (50.3 s). Pictures are Studio captures of every exposure. The stereo track is a real-time Play session of the same build, with its level restored to match earlier captures. [Watch the current cut with sound](Where-the-Stars-Took-Root-Current.mp4) · ![Second-half frames](Second-half-frames.jpg)
+The film runs 1,208 exposures (50.3 s). Pictures are Studio captures of every exposure. The stereo track is a real-time Play session of the same build. [Watch the current cut with sound](Where-the-Stars-Took-Root-Current.mp4) · ![Second-half frames](Second-half-frames.jpg)
 
 ## Previous Studio recording
 
