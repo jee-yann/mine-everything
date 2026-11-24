@@ -240,8 +240,23 @@ return function()
 					if open and not skin then
 						local key = Drawn.key(block.Name, cell, face.Value)
 						local decal = key and Drawn.apply(block, face, key)
-						skin = { decal = decal or InkFrame.apply(block, face), drawn = decal ~= nil }
+						skin = { decal = decal or InkFrame.apply(block, face), drawn = decal ~= nil, key = key }
 						skins[face] = skin
+						if key and not decal then
+							-- The drawing couldn't be shown yet; try this face again shortly.
+							task.delay(5, function()
+								if blocks[block] and skins[face] == skin then
+									local retry = Drawn.apply(block, face, key)
+									if retry then
+										if skin.decal then
+											skin.decal:Destroy()
+										end
+										skin.decal, skin.drawn = retry, true
+										refresh()
+									end
+								end
+							end)
+						end
 					elseif not open and skin then
 						if skin.decal then
 							skin.decal:Destroy()
