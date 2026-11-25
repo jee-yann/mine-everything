@@ -28,7 +28,7 @@ For live editing, run `rojo serve default.project.json` here if this project's s
 
 ## Saving your work
 
-- **On your PC** press **Ctrl+S** in VS Code to save a script. If you edit the island directly in Studio, stop Play before editing and save the `Workspace.CitrineCove` model to `map/CitrineCove.rbxmx`. The build command above bundles those files into a place you can reopen.
+- **On your PC** press **Ctrl+S** in VS Code to save a script. If you edit the island directly in Studio, stop Play before editing and save the `Workspace.CitrineCove` model to `map/CitrineCove.rbxmx`. The build command above bundles those files into a place you can reopen. `python map/build_map.py` draws that file from code and replaces it, so port Studio edits into `map/places.py` first. After any map change, run `python art/starfall/bake_replay.py` to update the copy the film and its broadcast use. `python map/check_map.py` (NumPy) looks for flickering faces, props set into other things and pits a miner cannot leave.
 - **On GitHub** commit your saved source files, then push your feature branch. In VS Code these actions are under **Source Control**. A pull request lets you merge the work into `main`.
 - **On Roblox** open the built place in Studio and choose **File → Publish**. A new experience starts private. Open the published experience in the Roblox app to keep your miner’s gold, inventory, upgrades and best depth. The game autosaves every 45 seconds and on exit. In a local playtest, **Settings** shows **Practice session**. Its progress resets when you stop it. [Roblox publishing guide](https://create.roblox.com/docs/production/publishing/publish-games-and-places)
 
@@ -36,7 +36,7 @@ During testing, **Settings → Reset progress** returns a miner to level 1. The 
 
 ## World and balance
 
-The harbor spans roughly 268 × 229 studs inside a continuous rock rim. Outside the rim, tilted tidal ledges run down into the strait. A broken ridge and its low western islet form the skyline beyond the mine. The spawn compass opens onto a 95-stud-wide court. Follow the central bridge to the mine, the amber bullion sign to Sell, or the cyan pickaxe to Upgrades. Side paths pass ore wagons, gardens and the stepped waterfall. Both hillside paths climb to the rear cableway trail, where four grounded towers carry three moving ore cars.
+The island is a horseshoe of honey-sandstone terraces, about 268 × 229 studs, that steps down to an open south shore. Spawn is a compass plaza with Jobs, Outfitters, Supplies and the Ore Index in an arc around it. A straight avenue crosses the canal to the Star Gate, with Sell and Upgrades on either side of the mine. West is the ore yard, where rails run out of an adit to a headframe and dock. East are the gardens, the falls and the lighthouse. Both hillside paths climb to the ridge trail under the tram, and a ramp leads on to the overlook above the gate. Every structural block is Plastic with studs on all faces, so one stud size covers the island.
 
 Music and sound effects each have a volume slider and a mute button in **Settings**. Unmute restores the level shown on the slider. Volume, mute and menu-motion preferences are saved with player progress. The track plays quietly beneath the mining cues. The music slider sets the volume of Anthony Mawer’s *Prima Bossa Nova*. The buttons use short bubble pops. Each ore has its own break sound, and rarer finds add progressively longer rising notes, from one note for a Rare ore to five for Starfall. [Prima Bossa Nova](https://create.roblox.com/store/asset/1837070127) · [UI Cute Pop](https://create.roblox.com/store/asset/15675055424) · [UI Cute Goodbye](https://create.roblox.com/store/asset/15675081158)
 
@@ -103,6 +103,7 @@ Each completed cut removes the highlighted block. A mint border follows its expo
 | Game pass IDs and perks | `src/shared/PassCatalog.luau`, `src/server/Passes.luau` |
 | Seeded ore rolls and underground caves | `src/server/Geology.luau` |
 | Editable island, signed stations, spawn and bridge | `map/CitrineCove.rbxmx` |
+| Island generator, palette and places | `map/build_map.py`, `map/cove.py`, `map/places.py`, `map/source/CoveCore.rbxmx` |
 | Studded brick geometry and visible targets | `src/server/MineBlocks.luau`, `src/shared/BlockPattern.luau` |
 | Region depths and ore percentages | `src/shared/GameConfig.luau` |
 | Station binding | `src/server/MineSite.luau` |

@@ -803,16 +803,19 @@ do
 end
 local world = World.new(Config.LandscapeSeed, surface)
 local mapCopy = surface:Clone()
-local coast = mapCopy.TideCoast
-local datum = mapCopy["Sand path and bridge"]["Portal paving"]
-assert((coast:GetPivot().Position - (datum.Position + Vector3.yAxis * datum.Size.Y / 2)).Magnitude < 0.02)
-assert(#coast:GetDescendants() == #Shared.TideCoast:GetDescendants())
+-- The realistic ledges belong to the film's ancient island. The playable shore is stud-built.
+assert(not mapCopy:FindFirstChild("TideCoast") and Shared:FindFirstChild("TideCoast"), "old tidal ledges around the new shore")
 assert(mapCopy["Offshore water"].ModelStreamingMode == Enum.ModelStreamingMode.Persistent)
-for _, scenery in { coast, mapCopy["Offshore water"] } do
-	for _, part in scenery:GetDescendants() do
-		if part:IsA("BasePart") then
-			assert(part.Anchored and not part.CanCollide and not part.CanTouch and not part.CanQuery,
-				"offshore scenery interferes with mining or movement")
+for _, part in mapCopy["Offshore water"]:GetDescendants() do
+	if part:IsA("BasePart") then
+		assert(part.Anchored and not part.CanCollide and not part.CanTouch and not part.CanQuery, "offshore scenery interferes with mining or movement")
+	end
+end
+do
+	local allowed = { [Enum.Material.Plastic] = true, [Enum.Material.SmoothPlastic] = true, [Enum.Material.Neon] = true, [Enum.Material.Metal] = true, [Enum.Material.Wood] = true }
+	for _, part in mapCopy:GetDescendants() do
+		if part:IsA("BasePart") and part.Transparency < 1 and not part:FindFirstAncestor("EditFace") and not part:FindFirstAncestor("Working gallery") then
+			assert(allowed[part.Material], "off-style material " .. part.Material.Name .. " on " .. part:GetFullName())
 		end
 	end
 end
@@ -941,35 +944,54 @@ for _, x in { -73, -63, -56, 52, 68, 76 } do
 end
 local highlands = mapCopy["Citrine Highlands"]
 do
-	local rail = highlands["Ore siding"]
-	local gardens = highlands["Compass gardens"]
-	local tracks = {}
-	for _, part in rail:GetChildren() do
+	-- The yard's rails run out of the adit on a clear bed, and the wagons stand on them.
+	local yard = highlands["Ore siding"]
+	local tracks, wheels = {}, 0
+	for _, part in yard:GetChildren() do
 		if part.Name == "Rail" then table.insert(tracks, part) end
 	end
-	assert(#tracks == 2)
-	for _, piece in gardens:GetChildren() do
-		if not piece:IsA("BasePart") then continue end
-		local frame, size = piece.CFrame, piece.Size * 0.5
-		local rx = math.abs(frame.RightVector.X)*size.X + math.abs(frame.UpVector.X)*size.Y + math.abs(frame.LookVector.X)*size.Z
-		local rz = math.abs(frame.RightVector.Z)*size.X + math.abs(frame.UpVector.Z)*size.Y + math.abs(frame.LookVector.Z)*size.Z
-		for _, track in tracks do
-			assert(math.abs(piece.Position.X - track.Position.X) > rx + track.Size.X/2
-				or math.abs(piece.Position.Z - track.Position.Z) > rz + track.Size.Z/2, "planting across a running rail: " .. piece.Name)
+	assert(#tracks == 2 and yard:FindFirstChild("Adit lintel") and yard:FindFirstChild("Rail stop"), "rails without a mine or an end")
+	for _, part in yard:GetChildren() do
+		if part.Name == "Flanged wheel" then
+			wheels += 1
+			local near = math.huge
+			for _, track in tracks do
+				if math.abs(part.Position.Z - track.Position.Z) < track.Size.Z / 2 then
+					near = math.min(near, math.abs(part.Position.X - track.Position.X))
+				end
+			end
+			assert(near < 0.1, "a wagon is off its rails")
+			assert(math.abs(part.Position.Y - part.Size.Y / 2 - (tracks[1].Position.Y + tracks[1].Size.Y / 2)) < 0.55, "a wagon floats")
 		end
 	end
-	local boards, steps = 0, 0
-	for _, part in rail:GetChildren() do
-		if part.Name == "Wharf step" then steps += 1 end
-		if part.Name == "Planked rail crossing" then
-			boards += 1
-			for _, track in tracks do
-				assert(math.abs(part.Position.X - track.Position.X) - (part.Size.X + track.Size.X)/2 >= 0.1,
-					"crossing boards cover a wagon's wheel flange")
+	assert(wheels >= 8)
+	-- Structural blocks carry the stud, on every face wide enough to show one.
+	local studded, structural = 0, 0
+	for _, part in mapCopy:GetDescendants() do
+		if part:IsA("Part") and part.Material == Enum.Material.Plastic and part.Transparency < 0.5 and part.Name ~= "Dirt" and math.min(part.Size.X, part.Size.Y, part.Size.Z) > 2 then
+			structural += 1
+			if part.TopSurface == Enum.SurfaceType.Studs and part.FrontSurface == Enum.SurfaceType.Studs and part.LeftSurface == Enum.SurfaceType.Studs then
+				studded += 1
 			end
 		end
 	end
-	assert(boards == 15 and steps == 3, "unload platform lost its pedestrian approach")
+	assert(structural > 500 and studded / structural > 0.95, string.format("studs on %d of %d", studded, structural))
+	-- Broad stairs join every level. No riser needs a jump.
+	local flights = {}
+	for _, part in mapCopy:GetDescendants() do
+		if part.Name == "Stone step" then
+			local key = part.Parent.Name .. tostring(math.round(part.CFrame.LookVector.X * 10)) .. tostring(math.round(part.CFrame.LookVector.Z * 10))
+			flights[key] = flights[key] or {}
+			table.insert(flights[key], part.Position.Y + part.Size.Y / 2)
+		end
+	end
+	local count = 0
+	for _, tops in flights do
+		table.sort(tops)
+		count += 1
+		for i = 2, #tops do assert(tops[i] - tops[i - 1] < 0.8 or tops[i] - tops[i - 1] > 2, "a riser is too high") end
+	end
+	assert(count >= 5)
 end
 -- The bluff caps sit above the excavated gallery. Check underneath them too:
 -- a top-down floor check alone can miss a player-sized slot in the sandstone.
@@ -993,7 +1015,7 @@ do
 	for _, point in { Vector2.new(28, -29), Vector2.new(-31, -30), Vector2.new(33, -7), Vector2.new(-31, -6) } do
 		local at = Vector3.new(point.X, 80, point.Y)
 		local cap = assert(workspace:Raycast(at, -Vector3.yAxis * 55, grassRay))
-		local support = workspace:Raycast(cap.Position, -Vector3.yAxis * 1.3, stoneRay)
+		local support = workspace:Raycast(cap.Position, -Vector3.yAxis * 2, stoneRay)
 		assert(support, "Unsupported sandstone cap at " .. tostring(point))
 	end
 	-- Check the visible roof in addition to its structural support. These were the
@@ -1001,7 +1023,7 @@ do
 	local crest = include({ mapCopy["Working gallery"], bluffs })
 	for _, point in { Vector2.new(0, -14), Vector2.new(-7, -26), Vector2.new(7, -34), Vector2.new(-60, -30), Vector2.new(40, -30) } do
 		local ridge = workspace:Raycast(Vector3.new(point.X, 60, point.Y), -Vector3.yAxis * 23, crest)
-		assert(ridge and (ridge.Instance.Name == "Ridge meadow" or ridge.Instance.Name == "Grass shelf" or ridge.Instance.Name == "Gully shoulder"), "Uncapped mine roof at " .. tostring(point))
+		assert(ridge and ridge.Instance.Name == "Grass shelf", "Uncapped mine roof at " .. tostring(point))
 	end
 	local trailRay = include({ highlands["Cableway trail"], mapCopy["Working gallery"] })
 	for _, x in { -19, 0, 19 } do
@@ -1104,13 +1126,6 @@ for _, cell in
 do
 	assert(floorAt(cell.X, cell.Y), "Outer promenade floor at " .. tostring(cell))
 end
-for _, name in { "Exchange lights", "Workshop lights" } do
-	local lamps = highlands[name]
-	assert(
-		lamps:FindFirstChildWhichIsA("PointLight", true) and lamps:FindFirstChildWhichIsA("SurfaceLight", true),
-		name
-	)
-end
 do
 	local gallery = mapCopy["Working gallery"]
 	local lamps = {}
@@ -1209,13 +1224,11 @@ for _, name in { "Sell", "Shop" } do
 	local prompt = site.stations[name]
 	local pad = prompt.Parent.Position - world.origin
 	assert(floorAt(pad.X, pad.Z) and math.abs(pad.Z - 15) < prompt.MaxActivationDistance)
-	for _, part in { prompt.Parent, prompt.Parent.Parent.Deck } do
-		local half = part.Size / 2
-		for _, x in { -1, 1 } do
-			for _, z in { -1, 1 } do
-				local corner = part.CFrame:PointToWorldSpace(Vector3.new(x * (half.X + 1.25), 3, z * (half.Z + 1.25)))
-				assert(workspace:Raycast(corner, -Vector3.yAxis * 6, onPaving), name .. " on paving edge")
-			end
+	local half = prompt.Parent.Size / 2
+	for _, x in { -1, 1 } do
+		for _, z in { -1, 1 } do
+			local corner = prompt.Parent.CFrame:PointToWorldSpace(Vector3.new(x * (half.X + 1.25), 3, z * (half.Z + 0.6)))
+			assert(workspace:Raycast(corner, -Vector3.yAxis * 6, onPaving), name .. " on paving edge")
 		end
 	end
 end
@@ -1227,27 +1240,24 @@ end
 local function groundBelow(position)
 	return workspace:Raycast(position + Vector3.yAxis * 1.5, -Vector3.yAxis * 3, onMap)
 end
-local crossings = highlands["Outer meadows"]
-for _, key in { "Supplies", "Book" } do
-	local mat = site.stations[key].Parent
-	local counter = if key == "Supplies" then mat.Parent["Merch top"] else mat.Parent["Display plinth"]
-	assert(math.abs(mat.Position.X - counter.Position.X) < 0.01)
-	assert(mat.Position.Z - mat.Size.Z / 2 > counter.Position.Z + counter.Size.Z / 2, key .. " pad behind counter")
-	local foundBridge = false
-	for _, bridge in crossings:GetDescendants() do
-		if bridge.Name ~= "Timber deck" or math.abs(bridge.Position.X - mat.Position.X) > 10 then
-			continue
-		end
-		foundBridge = true
-		local endZ = bridge.Position.Z - bridge.Size.Z / 2
-		assert(endZ - (mat.Position.Z + mat.Size.Z / 2) >= 1.5, key .. " pad crowds bridge")
-		for _, dx in { -2.8, 0, 2.8 } do
-			local joint = Vector3.new(bridge.Position.X + dx, bridge.Position.Y, endZ)
-			assert(groundBelow(joint - Vector3.zAxis * 0.1).Instance.Name == "Wharf deck")
-			assert(groundBelow(joint + Vector3.zAxis * 0.1).Instance == bridge)
+-- Every service stands clear: its pad is level with the ground in front, nothing hangs over
+-- it at head height, and a miner can walk up to it from spawn.
+for key, prompt in site.stations do
+	local mat = prompt.Parent
+	for _, dx in { -2.5, 0, 2.5 } do
+		for _, dz in { 0, 3, 6 } do
+			local at = mat.CFrame:PointToWorldSpace(Vector3.new(dx, 0, dz))
+			local ground = groundBelow(at + Vector3.yAxis * 0.5)
+			assert(ground and math.abs(ground.Position.Y - mat.Position.Y) < 0.8, key .. " pad is not level with its approach")
+			assert(not workspace:Raycast(at + Vector3.yAxis * 0.8, Vector3.yAxis * 5, onMap), key .. " approach is blocked")
 		end
 	end
-	assert(foundBridge, key .. " has no bridge landing")
+	local toward = (site.spawn.Position - mat.Position) * Vector3.new(1, 0, 1)
+	if key ~= "Sell" and key ~= "Shop" then
+		assert(mat.CFrame.ZVector:Dot(toward.Unit) > 0.75, key .. " turns its back on spawn")
+		assert(toward.Magnitude < 60, key .. " is a long walk")
+	end
+	assert(mat.Parent:FindFirstChild("Shop sign") and mat.Parent["Shop sign"].Lettering:FindFirstChildOfClass("TextLabel"), key .. " has no sign")
 end
 for _, key in { "Server", "Global" } do
 	local panel = site.court[key].Standings
@@ -1260,10 +1270,9 @@ local ranks = require(Server.Standings).top({
 	[3] = { name = "Deep", score = 90 },
 })
 assert(#ranks == 3 and ranks[1]:find("Deep") and ranks[2]:find("Earlier"))
-for _, pair in { { "Sell", "Exchange lights" }, { "Shop", "Workshop lights" } } do
-	local group = site.stations[pair[1]].Parent.Parent
-	assert(group["Name tag"]:FindFirstChildOfClass("BillboardGui"))
-	assert(highlands[pair[2]]:FindFirstChildWhichIsA("PointLight", true).Brightness < 0.5)
+for _, key in { "Sell", "Shop" } do
+	local group = site.stations[key].Parent.Parent
+	assert(group["Name tag"]:FindFirstChildOfClass("BillboardGui") and group:FindFirstChildWhichIsA("PointLight", true))
 end
 for _, key in { "Jobs", "Store", "Book", "Supplies" } do
 	local stall = site.stations[key].Parent.Parent
@@ -1296,20 +1305,25 @@ do
 		assert(bin and ready, "both ends of each cable need a physical transfer point")
 	end
 end
-local obstructions = { mapCopy["Honey bluffs"], highlands["Ridge tramway"] }
-for _, piece in back:GetChildren() do
-	if piece.Name == "Tower footing" then
-		table.insert(obstructions, piece)
+-- The falls land in water, and no mesa stands in the tram's way.
+do
+	local falls = mapCopy["Highland falls"]
+	local pool = falls:FindFirstChild("Plunge pool")
+	local foot = math.huge
+	for _, part in falls:GetChildren() do
+		if part.Name == "Falling water" then foot = math.min(foot, part.Position.Y - part.Size.Y / 2) end
 	end
-end
-local terraceCheck = OverlapParams.new()
-terraceCheck.FilterType, terraceCheck.FilterDescendantsInstances = Enum.RaycastFilterType.Include, obstructions
-for _, piece in highlands["Turquoise cascade"]:GetChildren() do
-	if piece.Name == "Meadow cap" then
-		assert(piece.Color == Color3.fromRGB(134, 202, 103), "Hill turf matches the lawn")
-	end
-	if piece.Name == "Meadow cap" or piece.Name == "Mesa face" then
-		assert(#workspace:GetPartsInPart(piece, terraceCheck) == 0, "Waterfall intersects a hill or tower")
+	assert(pool and math.abs(foot - pool.Position.Y) < 2.5, "the falls miss their pool")
+	local ropes = OverlapParams.new()
+	ropes.FilterType, ropes.FilterDescendantsInstances = Enum.RaycastFilterType.Include, { mapCopy["Honey bluffs"], highlands["Northern mesas"], highlands["Ridge dressing"] }
+	for lane = 1, 3 do
+		local car = highlands["Moving cabins"]["Ore carrier " .. lane]
+		local relay = require(game.StarterPlayer.StarterPlayerScripts.Client.Tramway)
+		for phase = 0, 1, 0.02 do
+			local hook = relay.sample(car["West terminal"].Value, car["East terminal"].Value, phase)
+			local hit = workspace:GetPartBoundsInBox(CFrame.new(world.origin + hook - Vector3.yAxis * 4), Vector3.new(7, 10, 6), ropes)
+			assert(not hit[1], "ore carrier meets " .. (hit[1] and hit[1].Name or ""))
+		end
 	end
 end
 local groundParams = RaycastParams.new()

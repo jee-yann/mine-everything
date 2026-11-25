@@ -46,15 +46,16 @@ function Island.new(stage, base, live)
 		return a.at < b.at
 	end)
 	local coast = Shared:FindFirstChild("TideCoast")
+	local ledges
 	if coast then
-		local ledges = coast:Clone()
+		ledges = coast:Clone()
 		ledges:PivotTo(base * coast:GetPivot())
 		ledges.Parent = set
 	end
 	local hot = Outcrop.new(false)
 	hot:PivotTo(base)
 	local self = setmetatable({
-		set = set, stage = stage, base = base, live = live or base, vault = vault,
+		set = set, stage = stage, base = base, live = live or base, vault = vault, ledges = ledges,
 		changes = changes, parcels = parcels, trees = trees, index = 1, last = -1,
 		tide = TideFront.new(stage, base), faults = FaultField.new(stage, base),
 		hot = hot,
@@ -129,6 +130,10 @@ function Island:draw(t, modern, showReplica, cleanSigns)
 			parcel.Parent = self.vault
 		end
 		self.index = 1
+	end
+	-- The tidal ledges are the old island's. Today's shore has its own.
+	if self.ledges and self.modern ~= modern then
+		self.ledges.Parent = if modern then self.vault else self.set
 	end
 	self.modern, self.last = modern, t
 	if modern and showReplica and not self.replaySite then

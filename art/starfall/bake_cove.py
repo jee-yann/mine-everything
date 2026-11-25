@@ -1,4 +1,8 @@
-"""Build the private photographic set from the editable island. Run with Python, NumPy and Rojo."""
+"""Build the ancient photographic set. Run with Python, NumPy and Rojo.
+
+It reads AncestralCove.rbxm, the island the approved opening was photographed on. The playable
+map has moved on since. `bake_replay.py` copies that one for the present day.
+"""
 
 import copy
 import json
@@ -18,7 +22,13 @@ from ancestral_cove import CoveKit
 
 ROOT = Path(__file__).resolve().parents[2]
 DEST = ROOT / "src/client/Starfall"
-source = ET.parse(ROOT / "map/CitrineCove.rbxmx").getroot().find("Item")
+with tempfile.TemporaryDirectory() as _folder:
+    _xml = Path(_folder) / "cove.rbxmx"
+    (Path(_folder) / "p.project.json").write_text(
+        json.dumps({"name": "CitrineCove", "tree": {"$path": str(ROOT / "art/starfall/AncestralCove.rbxm")}})
+    )
+    subprocess.run(["rojo", "build", Path(_folder) / "p.project.json", "-o", _xml], check=True)
+    source = ET.parse(_xml).getroot().find("Item")
 document = ET.Element("roblox", version="4")
 groups = {}
 shore = []
@@ -75,10 +85,6 @@ def item(parent, cl, label):
 
 
 model = item(document, "Model", "CoveChronicle")
-replay_document = ET.Element("roblox", version="4")
-replay = item(replay_document, "Model", "CoveReplay")
-replay_site = item(replay, "Model", "Present-day cove")
-replay_floor = item(replay, "Model", "Present_EditFace")
 
 
 def group(a, b, label):
@@ -397,10 +403,6 @@ def extract(parent, path):
                 q.remove(child)
         for key in ("CanCollide", "CanTouch", "CanQuery"):
             field(q, key, "bool", "false")
-        # A deep replay can be outside map streaming range. Store the finished
-        # playable architecture in a single timeless replica, complete with signage.
-        target = replay_floor if path[0] == "EditFace" else replay_site
-        target.append(copy.deepcopy(q))
         if not prehistoric(path, k):
             continue
         if k == "Ridgeline turf" and x > 101 and z > -26:
@@ -657,7 +659,7 @@ def main():
     build_landforms(shore, coast, sample, front_exposure, group, part, face, spar, DEST)
     # Keep the editable map origin even when ancient parcels detach or a replay
     # is placed above a player's distant, underground character.
-    for root_model, data in ((model, document), (replay, replay_document)):
+    for root_model, data in ((model, document),):
         label = name(root_model)
         root = part(root_model, "Survey origin", (0, 0, 0), (0.1, 0.1, 0.1), "FFFFFF")
         root.set("referent", "FilmOrigin")

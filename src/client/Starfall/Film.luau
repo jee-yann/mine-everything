@@ -217,7 +217,7 @@ end
 local function islandToday(frame, move)
 	-- Already under way behind the fade.
 	local u = if move then glide(frame, frames.match - 10, frames.boulevard, 0.1) else 0.12
-	local eye = clock.breakerEye:Lerp(V(66, 48, 118), u) + V(-6, -12, 18) * math.sin(u * math.pi)
+	local eye = clock.breakerEye:Lerp(V(62, 57, 112), u) + V(-6, -8, 18) * math.sin(u * math.pi)
 	return eye, V(-7, 34, -21):Lerp(V(0.5, 40, 4), u), mix(50, 38, u), 0
 end
 
@@ -233,7 +233,7 @@ end
 -- toward it as the light comes out. Space is the mine's entrance.
 local function doorway(frame, move)
 	local u = if move then glide(frame, frames.outside - 2, frames.living + 6, 0.15) else 0.55
-	return V(mix(-14.0, -11.2, u), mix(0.0, 0.9, u), mix(32.5, 27.5, u)), V(mix(0.8, 0.5, u), mix(6.6, 6.4, u), 2), 47, 0
+	return V(mix(-12.6, -9.8, u), mix(0.2, 1.0, u), mix(25.0, 21.4, u)), V(mix(1.6, 1.0, u), mix(8.0, 7.4, u), 2), 60, 0
 end
 
 -- The engine takes a few exposures to light a place the lens has just cut to.
