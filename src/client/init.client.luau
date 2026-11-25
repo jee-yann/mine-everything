@@ -28,6 +28,7 @@ do
 end
 local Config, Ores, Upgrades = require(shared.GameConfig), require(shared.Ores), require(shared.Upgrades)
 local Skills = require(shared.Skills)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local owned = Skills.read(player)
 player.AttributeChanged:Connect(function(key)
 	local id = key:match("^Skill(.+)$")
@@ -358,6 +359,23 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		else
 			hud:notice(point, "", if a then W.green else W.gold)
 		end
+	elseif kind == "rebirth" then
+		hud.menu.rebirthPending = false
+		if a then
+			release()
+			fx:clearOreLights()
+			fx:chime(1.8)
+			hud.menu:close()
+			hud:milestone("REBIRTH " .. point, Rebirth.perks[1].text(point) .. "  ·  " .. Rebirth.perks[2].text(point), W.violet)
+			hud:notice("Rebirth " .. point .. "!", "A new run begins with your bonuses.", W.violet)
+		elseif hud.overlay.Visible and hud.menu.page == "Rebirth" then
+			hud.menu.status.Text = point
+			hud.menu:refresh()
+		else
+			hud:notice(point, "", W.gold)
+		end
+	elseif kind == "rebirthAnnounce" then
+		hud:notice(a .. " reached Rebirth " .. point, "", W.violet)
 	elseif kind == "upgrade" then
 		fx:chime(1.55)
 		hud:workshop(point, spread)
@@ -575,7 +593,8 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 	local duration = Skills.cutTime(
-		Upgrades.items.Speed.values[player:GetAttribute("Speed") or 1],
+		Upgrades.items.Speed.values[player:GetAttribute("Speed") or 1]
+			* Rebirth.cutMultiplier(player:GetAttribute("Rebirths") or 0),
 		aimOre,
 		Config.strength(target.Y - origin.Y),
 		player:GetAttribute("TemperCharges"),

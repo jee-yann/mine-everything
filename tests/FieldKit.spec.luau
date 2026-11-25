@@ -3,7 +3,7 @@
 local source = game.StarterPlayer.StarterPlayerScripts.Client.FieldKit
 local tiles = {
 	Inventory = Vector2.new(0, 0), Skills = Vector2.new(1, 0), Achievements = Vector2.new(2, 0), Daily = Vector2.new(3, 0),
-	Book = Vector2.new(0, 1), Settings = Vector2.new(1, 1), Playtime = Vector2.new(2, 1),
+	Book = Vector2.new(0, 1), Settings = Vector2.new(1, 1), Playtime = Vector2.new(2, 1), Rebirth = Vector2.new(3, 1),
 }
 local imageId = source:GetAttribute("ImageId")
 if imageId then
@@ -36,7 +36,7 @@ assert(edits == 1)
 probe.Source = instrumented
 local renderer = require(probe)
 local container = Instance.new("Frame")
-for _, key in { "Inventory", "Skills", "Achievements", "Book", "Settings", "Daily", "Playtime", "Pack", "Capacity", "Titles" } do
+for _, key in { "Inventory", "Skills", "Achievements", "Book", "Settings", "Daily", "Playtime", "Rebirth", "Pack", "Capacity", "Titles" } do
 	assert(renderer.draw(container, key))
 	local icon = container["Field Kit"]
 	assert(icon:IsA("Frame") and #icon:GetChildren() > 25 and icon:FindFirstChildWhichIsA("UIGradient", true), key)
@@ -55,4 +55,4 @@ assert(probe:GetAttribute("Allocated") and probe:GetAttribute("Released"))
 assert(not renderer.draw(container, "Power"))
 container:Destroy()
 probe:Destroy()
-print("PASS published Field Kit write denial, all seven icons and three aliases")
+print("PASS published Field Kit write denial, all eight icons and three aliases")

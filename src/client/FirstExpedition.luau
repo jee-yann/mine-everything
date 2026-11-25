@@ -3,6 +3,7 @@ local Collection = game:GetService("CollectionService")
 local Gui = game:GetService("GuiService")
 local Input = game:GetService("UserInputService")
 local Config, Upgrades, Ores = require(Shared.GameConfig), require(Shared.Upgrades), require(Shared.Ores)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Pattern = require(Shared.BlockPattern)
 local W = require(script.Parent.Widgets)
 local Waypoint, GuideButton = require(script.Parent.ExpeditionWaypoint), require(script.Parent.GuideButton)
@@ -150,7 +151,7 @@ end
 function Guide:objective(head, inMine, depth, mobile, full, step)
 	local p = self.player
 	local gold = p:GetAttribute("Gold") or 0
-	local haul = (p:GetAttribute("BagValue") or 0) * (if p:GetAttribute("DoubleGold") then 2 else 1)
+	local haul = (p:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(p)
 	local used, slots = p:GetAttribute("Used") or 0, p:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1]
 	local key, price = Upgrades.onboardingPick(gold)
 	local upgrade = if key == "Speed" then "Speed" else "Backpack"
@@ -222,7 +223,7 @@ function Guide:update(head, inMine, depth, mobile, full, aimed)
 		if spotlight then
 			local used = self.player:GetAttribute("Used") or 0
 			local capacity = self.player:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1]
-			local worth = (self.player:GetAttribute("BagValue") or 0) * (if self.player:GetAttribute("DoubleGold") then 2 else 1)
+			local worth = (self.player:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(self.player)
 			local headline = if full then string.format("Backpack full · %d/%d", used, capacity) else "Your rocks are ready to sell"
 			local action = if mobile then "Tap Surface" else "Press R or click Surface"
 			if Input.PreferredInput == Enum.PreferredInput.Gamepad then

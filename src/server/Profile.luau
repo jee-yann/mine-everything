@@ -9,6 +9,7 @@ local Expeditions = require(Shared.Expeditions)
 local Preferences = require(Shared.Preferences)
 local Guide = require(Shared.FieldGuide)
 local Skills = require(Shared.Skills)
+local Rebirth = require(Shared.Rebirth)
 local Profile = {}
 
 function Profile.new()
@@ -43,6 +44,8 @@ function Profile.new()
 		pet = "",
 		petName = "Pebble",
 		bestDepth = 0,
+		rebirths = 0,
+		runStarfalls = 0,
 		jobs = 0,
 		claimedJobs = 0,
 		discoveries = {},
@@ -147,6 +150,11 @@ function Profile.valid(p)
 	end
 	for _, n in { "gold", "mined", "bestDepth" } do
 		if not integer(p[n], 9e15) then
+			return false
+		end
+	end
+	for _, n in { "rebirths", "runStarfalls" } do
+		if p[n] ~= nil and not integer(p[n], 9e15) then
 			return false
 		end
 	end
@@ -338,6 +346,9 @@ function Profile.upgradeSave(p)
 		p.counts = table.clone(p.bag)
 	end
 	p.pet, p.petName = p.pet or "", p.petName or "Pebble"
+	-- Saves from before rebirths: every Starfall so far belongs to the current run.
+	p.rebirths = p.rebirths or 0
+	if p.runStarfalls == nil then p.runStarfalls = p.counts.Starfall or 0 end
 	p.preferences = p.preferences or {}
 	for key, value in Preferences.defaults do
 		if p.preferences[key] == nil then
@@ -436,7 +447,8 @@ function Profile.recordCut(p, name, depth, random)
 		record = grade > (p.bestPurity[name] or 0)
 		if record then p.bestPurity[name] = grade end
 	end
-	local xp = Skills.oreXP(ore, p.skills, not p.discoveries[name], depth or 0)
+	local xp = math.floor(Skills.oreXP(ore, p.skills, not p.discoveries[name], depth or 0) * Rebirth.xpMultiplier(p.rebirths) + 0.5)
+	if name == Rebirth.requirement.ore then p.runStarfalls += 1 end
 	p.discoveries[name] = true
 	p.bag[name] = (p.bag[name] or 0) + units
 	p.counts[name] = (p.counts[name] or 0) + 1
@@ -459,6 +471,21 @@ function Profile.recordCut(p, name, depth, random)
 		end
 	end
 	return unlocked, grade, units, record
+end
+
+-- Starts a new run when the current one has met Rebirth.requirement. Resets gold, the pack,
+-- workshop levels and field supplies; keeps everything earned for the miner. Returns the new count.
+function Profile.rebirth(p)
+	if not Rebirth.ready(p.runStarfalls) then
+		return nil
+	end
+	p.rebirths += 1
+	p.runStarfalls = 0
+	p.gold = 0
+	p.bag, p.grades = {}, {}
+	p.levels = { Speed = 1, Power = 1, Capacity = 1 }
+	p.flares, p.temper = 0, 0
+	return p.rebirths
 end
 
 function Profile.claimJob(p, i)
