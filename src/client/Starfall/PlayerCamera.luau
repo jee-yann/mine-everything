@@ -51,11 +51,18 @@ function Camera.frame(actor, frame, motion)
 	local eye, aim, lens, roll = nil, nil, 40, 0
 	local focus, radius, far, near = nil, 30, 0, 0
 	if frame < F.enter then
-		local w = actor.witness.stand
-		local k = n(F.witness, F.enter)
-		eye = w * V(mix(3.05, 2.65, k), mix(1.78, 1.66, k), mix(1.95, 1.35, k))
-		aim = w * V(mix(0.30, 0.50, k), mix(1.42, 1.45, k), -2.2)
-		lens = if portrait then 64 else 47
+		-- Beside someone filming, where the phone is a phone: an edge, a camera
+		-- block, a hand. Then round behind it, where its picture is the player.
+		local phone = actor.witness.phone or actor.witness.stand * CF(1, 1.3, -1.6)
+		local at = phone.Position
+		local away = (at - face) * V(1, 0, 1)
+		away = if away.Magnitude > 0.1 then away.Unit else phone.ZVector
+		local k = n(F.witness, F.enter, 0.35)
+		local turn = math.rad(mix(56, 1.5, S.ease(k, -0.08, 0.56)))
+		local reach = mix(3.15, 2.42, k)
+		eye = at + CFrame.Angles(0, turn, 0) * away * reach + V(0, mix(0.22, 0.10, k), 0)
+		aim = at - away * mix(0.2, 2.2, k) + V(0, mix(-0.21, -0.10, k), 0)
+		lens = if portrait then 60 else 46
 	elseif frame < F.strike then
 		-- Beside the rock, looking back along the gallery. The player walks into
 		-- the light of the thing they came to see.
@@ -69,7 +76,12 @@ function Camera.frame(actor, frame, motion)
 	elseif frame < F.break2 then
 		-- Side on. The whole arc of the swing is readable and ends on the rock.
 		local at = actor.faceAt
-		local k = n(F.strike, F.contact2 + 4, -0.1)
+		-- Most of the move is over before the prompt, and it barely drifts while it
+		-- waits. A press jumps the clock to the swing, and the lens must not jump.
+		local k = if motion then 0.55 * S.ease(frame, F.strike - 10, F.prompt + 8)
+				+ 0.06 * math.clamp((frame - F.prompt) / (F.autoStrike - F.prompt), 0, 1)
+				+ 0.39 * S.ease(frame, F.autoStrike, F.contact2 + 4)
+			else 0.6
 		local tip = at:PointToObjectSpace(actor.strikePoint)
 		local back = if portrait then 1.3 else 1
 		local d = u * mix(1, actor.portraitDistance, 0.6)

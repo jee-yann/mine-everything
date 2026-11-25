@@ -21,7 +21,7 @@ local captions = {
 	{ 1, 52, "Millions of years ago" },
 	{ frames.seam + 3, frames.dark - 4, "Deep in the rock, the star took root." },
 	{ frames.match + 4, frames.match + 50, "Millions of years later" },
-	{ frames.secondHit + 4, frames.living - 4, "A trace of it." },
+	{ frames.secondHit + 4, frames.outside - 4, "A trace of it." },
 }
 function Film.caption(t)
 	local picture = sheet.frameForScene(t)
@@ -64,11 +64,12 @@ function Film.new(stage, screen, camera, handoff, motion, continueSetup, nightLo
 		end
 		self.arrival = Arrival.new(stage, handoff)
 		self.arrival.motion = motion
-		-- Interior sets wait above and behind the cameras that cut to them. The
-		-- engine lights the region around the lens, so a set this close is
-		-- already lit on its first exposure. A distant one opens in the dark.
+		-- The gallery waits near the cameras that cut to it. Its lamps are late on
+		-- a first visit, so both ways into it bring them up from the dark.
 		self.mine = MineFace.new(stage, (live * CF(-34, 72, 30)).Position, sun)
-		self.room = LivingRoom.new(stage, (live * CF(30, 78, 66)).Position, sun, screen.Parent)
+		-- The room has no local lights to be late. It stands out over the water,
+		-- behind every lens that is open while it waits.
+		self.room = LivingRoom.new(stage, (live * CF(30, 130, 250)).Position, sun, screen.Parent)
 		self.arrival.mine = self.mine
 		self.deposit = StarDeposit.new()
 		self.deposit:place(base)
@@ -228,6 +229,13 @@ local function boulevard(frame, move)
 	return V(mix(6.5, 0, ease(u, 0, 0.9)), mix(30.6, 30.2, run), mix(62, 2, run)), V(mix(0.2, 0, u), mix(35.2, 30.4, ease(u, 0, 0.85)), -26), 40, 0
 end
 
+-- The cove, an instant later. Low on the paving in front of the doorway, going
+-- toward it as the light comes out. Space is the mine's entrance.
+local function doorway(frame, move)
+	local u = if move then glide(frame, frames.outside - 2, frames.living + 6, 0.15) else 0.55
+	return V(mix(-14.0, -11.2, u), mix(0.0, 0.9, u), mix(32.5, 27.5, u)), V(mix(0.8, 0.5, u), mix(6.6, 6.4, u), 2), 47, 0
+end
+
 -- The engine takes a few exposures to light a place the lens has just cut to.
 -- The crater's own light swells from the cut, so it never switches on.
 local function craterLight(frame)
@@ -291,10 +299,12 @@ function Film:draw(t, liveReady, frame)
 	elseif frame < frames.dig then
 		self:frame(if replica then base else self.live, boulevard(frame, move))
 		black = ease(frame, frames.dig - 9, frames.dig - 1)
-	elseif frame < frames.living then
+	elseif frame < frames.outside then
 		self:frame(self.mine.at, self.mine:camera(frame, move))
 		black = 1 - ease(frame, frames.dig, frames.dig + 9)
-	elseif frame < frames.witness and frame >= frames.living then
+	elseif frame < frames.living then
+		self:frame(CF(self.arrival.entrance), doorway(frame, move))
+	elseif frame < frames.witness then
 		self:frame(self.room.at, self.room:camera(frame, move))
 	elseif frame < frames.handoff then
 		self:frame(CFrame.identity, self.arrival:camera(frame, move))

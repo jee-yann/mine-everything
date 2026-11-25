@@ -99,31 +99,63 @@ end
 do
 	local m = person("Witness", { skin = "9A6644", shirt = 382538059, pants = 144076760, hair = "62234425" })
 	local right = m.RightHand
-	-- With the forearm raised, the hand's -Y points away from the body and -Z is
-	-- up. The phone stands in the fist: its lower third is inside the grip.
-	local body = CF(0, -0.10, -0.72) * CFrame.fromMatrix(Vector3.zero, V(1, 0, 0), V(0, 0, -1), V(0, 1, 0))
-	local glass = piece(m, right, "Phone", V(0.96, 1.66, 0.03), body, "10202C", Enum.Material.SmoothPlastic)
+	-- A phone. Portrait, the length of a head, thin, with a bright metal edge, a
+	-- dark face and a camera block on its back. With the forearm raised the hand's
+	-- -Y points away from the body and -Z is up, so the foot of it stands in the
+	-- fist and the whole screen is clear. Phone space: +Z is the screen, -Z is the lens.
+	local body = CF(0, -0.13, -1.08) * CFrame.fromMatrix(Vector3.zero, V(1, 0, 0), V(0, 0, -1), V(0, 1, 0))
+	local W, H, D = 0.80, 1.60, 0.10
+	local glass = piece(m, right, "Phone", V(W - 0.06, H - 0.06, 0.02), body * CF(0, 0, 0.04), "0A0D12", Enum.Material.SmoothPlastic)
 	glass["Costume weld"].Name = "Phone grip"
-	glass.Transparency = 0.94
-	local function trim(name, size, at, color)
-		return piece(m, glass, name, size, at, color or "20262E")
+	glass.Transparency = 1
+	local function trim(name, size, at, color, material, shape)
+		return piece(m, glass, name, size, at * CF(0, 0, -0.04), color, material, shape)
 	end
-	trim("Phone bezel", V(1.08, 0.09, 0.11), CF(0, 0.86, 0))
-	trim("Phone bezel", V(1.08, 0.12, 0.11), CF(0, -0.86, 0))
-	trim("Phone bezel", V(0.06, 1.8, 0.11), CF(0.51, 0, 0))
-	trim("Phone bezel", V(0.06, 1.8, 0.11), CF(-0.51, 0, 0))
-	local back = trim("Phone back", V(1.0, 1.72, 0.03), CF(0, 0, -0.06), "2C3A46")
-	back.Transparency = 1
-	for k = 0, 1 do
-		trim("Phone lens", V(0.14, 0.14, 0.04), CF(-0.30, 0.62 - k * 0.2, -0.075), "0C1014")
+	local edge, r = "C9CFD8", 0.10
+	local metal = Enum.Material.Metal
+	trim("Phone edge", V(W - 2 * r, 0.05, D), CF(0, H / 2 - 0.025, 0), edge, metal)
+	trim("Phone edge", V(W - 2 * r, 0.05, D), CF(0, -H / 2 + 0.025, 0), edge, metal)
+	trim("Phone edge", V(0.05, H - 2 * r, D), CF(W / 2 - 0.025, 0, 0), edge, metal)
+	trim("Phone edge", V(0.05, H - 2 * r, D), CF(-W / 2 + 0.025, 0, 0), edge, metal)
+	for _, x in { -1, 1 } do
+		for _, y in { -1, 1 } do
+			for k = 0, 2 do
+				local a = math.rad(15 + 30 * k)
+				local at = CF(x * (W / 2 - r + math.cos(a) * (r - 0.025)), y * (H / 2 - r + math.sin(a) * (r - 0.025)), 0)
+				trim("Phone corner", V(0.05, 0.062, D), at * A(0, 0, math.atan2(y * math.sin(a), x * math.cos(a))), edge, metal)
+			end
+		end
 	end
-	-- Four fingers fold across the back, the thumb closes on the near edge.
+	trim("Phone key", V(0.03, 0.26, 0.045), CF(W / 2 + 0.01, 0.30, 0), "9AA3AF", metal)
+	trim("Phone key", V(0.03, 0.12, 0.045), CF(-W / 2 - 0.01, 0.50, 0), "9AA3AF", metal)
+	trim("Phone key", V(0.03, 0.12, 0.045), CF(-W / 2 - 0.01, 0.34, 0), "9AA3AF", metal)
+	-- The dark face round the picture is solid, so it is there before its app is.
+	local tall = H - 0.06
+	local function bezel(size, at)
+		return piece(m, glass, "Phone face", size, at * CF(0, 0, -0.012), "07080C", Enum.Material.Neon)
+	end
+	bezel(V(W - 0.12, tall * 0.105, 0.012), CF(0, tall * 0.4475, 0))
+	bezel(V(W - 0.12, tall * 0.205, 0.012), CF(0, -tall * 0.3975, 0))
+	for _, x in { -1, 1 } do
+		bezel(V(0.04, tall - 0.06, 0.012), CF(x * (W / 2 - 0.05), 0, 0))
+	end
+	trim("Phone back", V(W - 0.06, H - 0.06, 0.03), CF(0, 0, -0.035), "5B4B8A")
+	trim("Camera block", V(0.40, 0.40, 0.06), CF(0.17, H / 2 - 0.28, -0.075), "40356A")
+	local round = A(0, math.rad(90), 0)
+	for _, p in { { 0.07, 0.09 }, { 0.07, -0.09 }, { -0.10, 0.09 } } do
+		local at = CF(0.17 + p[1], H / 2 - 0.28 + p[2], -0.12)
+		trim("Phone lens", V(0.06, 0.17, 0.17), at * round, "B9C0CC", metal, Enum.PartType.Cylinder)
+		trim("Phone lens", V(0.07, 0.13, 0.13), at * round, "05070B", Enum.Material.Glass, Enum.PartType.Cylinder)
+	end
+	trim("Phone lamp", V(0.05, 0.08, 0.08), CF(0.07, H / 2 - 0.37, -0.11) * round, "FFF4D6", Enum.Material.Neon, Enum.PartType.Cylinder)
+	-- Fingers round the back, the thumb along the near edge. They stop short of
+	-- the picture.
 	local skin = "9A6644"
 	for k = 0, 2 do
-		piece(m, right, "Finger", V(0.30, 0.13, 0.19), CF(0.30, -0.22, -0.60 - k * 0.22), skin)
+		piece(m, right, "Finger", V(0.50, 0.12, 0.16), CF(0.16, -0.27, -0.38 - k * 0.19), skin)
 	end
-	piece(m, right, "Finger wrap", V(0.12, 0.30, 0.64), CF(0.55, -0.10, -0.80), skin)
-	piece(m, right, "Thumb", V(0.17, 0.13, 0.60), CF(-0.43, 0.02, -0.62) * A(0, math.rad(16), 0), skin)
+	piece(m, right, "Finger wrap", V(0.13, 0.26, 0.56), CF(0.46, -0.15, -0.56), skin)
+	piece(m, right, "Thumb", V(0.14, 0.14, 0.52), CF(-0.44, -0.04, -0.46) * A(0, math.rad(8), 0), skin)
 	m.Parent = cast
 end
 

@@ -21,8 +21,36 @@ Arrival.nearby = 12
 function Arrival.new(stage, h)
 	return setmetatable({
 		stage = stage, handoff = h,
-		mouth = MouthGlow.new(stage), glass = Glass.new(stage), witness = Witness.new(stage),
+		mouth = MouthGlow.new(stage, 1, true), glass = Glass.new(stage), witness = Witness.new(stage),
 	}, Arrival)
+end
+
+-- A portrait's lights, round the player's own head. They come up inside the
+-- pocket, so they are steady before the glass.
+local portrait = {
+	{ V(-2.6, 2.3, -4.6), "FFF1E2", 15, 0.85 }, -- key
+	{ V(3.4, 0.2, -4.4), "DCC8FF", 13, 0.32 }, -- fill
+	{ V(-2.7, 1.4, 2.3), "A45CFF", 9, 2.0 }, -- rims
+	{ V(2.9, 1.0, 2.3), "B682FF", 9, 2.0 },
+}
+function Arrival:light(frame)
+	local up = S.ease(frame, F.inside + 2, F.reveal - 2)
+	if frame >= F.answer then
+		up = 0
+	end
+	if up > 0 and not self.lamps then
+		self.lamps = {}
+		local u = self.unit * self.portraitDistance
+		local head = self.galleryStand * CF(0, 0, 0.3 * self.unit) * CF(self.rig.rest[self.head or self.root].Position)
+		for _, q in portrait do
+			local lamp = S.part(self.stage, "Portrait light", head * CF(q[1] * u), Vector3.one * 0.05, "FFFFFF")
+			lamp.Transparency, lamp.CastShadow = 1, false
+			table.insert(self.lamps, { part = lamp, light = S.light(lamp, q[2], q[3] * u, 0), power = q[4] })
+		end
+	end
+	for _, l in self.lamps or {} do
+		l.light.Brightness = l.power * up
+	end
 end
 
 -- Leave room in close shots for the hat this player is actually wearing.
@@ -115,7 +143,7 @@ function Arrival:start()
 	local post = self.mineBearing * CF(-2.6, -rig.stand, 11.8)
 	local y = floorAt(site, post.Position) or self.floor
 	self.witness:place(CF(post.X, y, post.Z) * self.mineBearing.Rotation * CFrame.Angles(0, math.rad(-22), 0))
-	self.mouth:place(entrance)
+	self.mouth:place(CF(entrance))
 	self.lens = Instance.new("DepthOfFieldEffect")
 	self.lens.Name, self.lens.NearIntensity, self.lens.FarIntensity = "Expedition focus", 0, 0.4
 	self.lens.Parent = self.stage.Parent
@@ -222,13 +250,14 @@ function Arrival:draw(frame)
 		self.unmask()
 		self.unmask, self.visibleAlpha = nil, nil
 	end
-	self.witness:draw(frame, self.motion)
+	self.witness:draw(frame, self.motion, if self.head then self.head.Position - Vector3.yAxis * 0.5 * self.unit else self.root.Position)
 	self.mouth:draw(frame, self.motion)
 	if frame >= F.prompt and not self.glass.at then
 		self.glass:place(Camera.glassFrame(self), self.unit, self.unit * self.portraitDistance)
 	end
 	local eye, aim = Camera.frame(self, math.max(frame, F.witness), self.motion)
 	self.glass:draw(frame, self.motion, if frame >= F.reveal and frame < F.answer then self:palmAt() else nil, CFrame.lookAt(eye, aim))
+	self:light(frame)
 	self.lens.Enabled = frame >= F.witness and frame < F.handoff
 end
 
@@ -251,7 +280,10 @@ function Arrival:dismiss()
 	if self.lens then
 		self.lens:Destroy()
 	end
-	self.rig, self.lens, self.copy, self.handle = nil, nil, nil, nil
+	for _, l in self.lamps or {} do
+		l.part:Destroy()
+	end
+	self.rig, self.lens, self.copy, self.handle, self.lamps = nil, nil, nil, nil, nil
 	self.added, self.removed, self.appearanceChanged = nil, nil, nil
 	self.head, self.root, self.mineBearing = nil, nil, nil
 end

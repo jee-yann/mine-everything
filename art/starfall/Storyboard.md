@@ -13,13 +13,15 @@ The last offshore picture is frame 383. Frame 384, at 16.000 seconds on the 24 f
 | 10.00–13.50 s | Hold the same offshore view for the dry puncture, one moonlit exposure and the pin of light. The fireball opens three frames after ground contact. Violet and copper streak the terraces, and a segmented circle closes around the starburst on frame 246. | Contact cracks. The main report lands three frames later. The crater wall collapses and the echo rolls back across the water. |
 | 13.50–16.00 s | A clean view of the erupting island precedes the return wave. The old ivory-and-charcoal crest sweeps across the bottom of two full-color views of the burning island. Color splits along the trees, shore and airborne fragments. | The crest brings a rush of air. A smaller, short explosion follows three frames later as debris reaches the camera. |
 | 16.00–21.08 s | One crane goes over the rim and down to the crystal in the bottom of the bowl. A low move round it as its light burns out. | Wind over the rim, cooling rock, a low held tone that dies with the light. |
-| 21.08–26.00 s | The present-day island from the mark the impact was watched from, then the lens runs under the sign and into the mine. | Silence, then the sea and the first bar of the score. |
-| 26.00–30.33 s | The miner swings twice. The vein opens on frame 684. Light rises on their face. | Steel and rock, then the crystal's tone. |
-| 30.33–34.58 s | Two siblings see it on the news. A witness films the mine and the player walks through their frame. | The tone, small, through a television. Shore and footsteps. |
-| 34.58–39.33 s | The player reaches the face. **Break it open** is live from 36.67 s. | The gallery, the crystal humming behind the rock. |
-| 39.33–41.29 s | The blow on frame 944. The fracture runs, the slabs fall and the pocket lights the player. | The break, then fragments. The theme enters on the contact. |
-| 41.29–44.25 s | The glass reveal with the player's own avatar and name. | Theme and light on the facets. |
-| 44.25–50.33 s | They walk out of the mine, hear it and turn back. The camera becomes the gameplay camera. | Something moves below. The last hit of the score lands before play. |
+| 21.08–25.58 s | The present-day island from the mark the impact was watched from, then the lens runs under the sign and into the mine. | Silence, then the sea and the first bar of the score. |
+| 25.58–29.92 s | The miner swings twice. The vein opens on frame 674. Light rises on their face. | Steel and rock, then the crystal's tone. |
+| 29.92–31.67 s | Outside, violet light builds in the doorway and spills over the stone and the paving. | The ground, then the crystal's chord rising. The score steps back. |
+| 31.67–35.17 s | Two siblings see it on the news. They check with each other and lean in. | The tone, small, through a television. |
+| 35.17–37.17 s | A witness films the player on a phone, walking toward the mine. | Shore and footsteps. |
+| 37.17–41.92 s | The player reaches the face. **Break it open** is live from 39.25 s. | The gallery, the crystal humming behind the rock. The press has its own sound. |
+| 41.92–43.88 s | The blow on frame 1006. The fracture runs, the slabs fall and the pocket lights the player. | The break, then fragments. The theme enters on the contact. |
+| 43.88–46.83 s | The violet glass reveal with the player's own avatar and name. | Theme and light on the facets. |
+| 46.83–52.92 s | They walk out of the mine, hear it and turn back. The camera becomes the gameplay camera. | Something moves below. The last hit of the score lands before play. |
 
 ## Tune the opening in Studio
 
@@ -96,7 +98,7 @@ The small sparks above the secondary fires and the dust along the meteor use the
 
 ## Current Studio recording
 
-The film runs 1,208 exposures (50.3 s). Pictures are Studio captures of every exposure. The stereo track is a real-time Play session of the same build. [Watch the current cut with sound](Where-the-Stars-Took-Root-Current.mp4) · ![Second-half frames](Second-half-frames.jpg)
+The film runs 1,270 exposures (52.9 s). Pictures are Studio captures of every exposure, with a Space press at frame 967, so the recording is 51.8 s. The stereo track is a real-time Play session of the same build. [Watch the current cut with sound](Where-the-Stars-Took-Root-Current.mp4) · ![Second-half frames](Second-half-frames.jpg)
 
 ## Previous Studio recording
 

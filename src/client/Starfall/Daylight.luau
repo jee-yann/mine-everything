@@ -6,6 +6,7 @@ local sheet = require(script.Parent.ExposureSheet)
 local terminal = require(script.Parent.TerminalLight)
 local Moonlight = require(script.Parent.Moonlight)
 local MineFace = require(script.Parent.MineFace)
+local MouthGlow = require(script.Parent.MouthGlow)
 local V, CF, hex = Vector3.new, CFrame.new, Color3.fromHex
 local ancientHour = 2.65
 -- This low sun shares the surveyed moon's bearing to within 0.1 degree.
@@ -219,7 +220,7 @@ function Daylight:draw(t, motion, base, masterFrame)
 		local haze = self.haze + (1.38 - 0.60 * offshore) * ash + 0.28 * hot + 1.67 * veil + 1.15 * basin
 		-- Open air has haze. A room does not.
 		local F = sheet.frames
-		local indoors = (frame >= F.dig - 2 and frame < F.witness) or (frame >= F.enter and frame < F.answer)
+		local indoors = (frame >= F.dig - 2 and frame < F.outside) or (frame >= F.living and frame < F.witness) or (frame >= F.enter and frame < F.answer)
 		-- Ash hangs over the rim. Down on the crater floor it is above us.
 		local clear = if frame >= F.aftermath and frame < F.match then 1 - 0.75 * S.ease(frame, F.aftermath + 30, F.seam) else 1
 		self.air.Density, self.air.Haze = if indoors then 0 else density * clear, if indoors then 0 else haze * clear
@@ -262,8 +263,8 @@ function Daylight:draw(t, motion, base, masterFrame)
 end
 
 -- Each present-day scene has one key idea. The cove keeps its afternoon sun,
--- the gallery is lamplit until the vein opens, the living room is dim so the
--- screen can light it, and the glass stage is clean and cool.
+-- the gallery is lamplit until the vein opens, the living room is late sun and
+-- then the screen, and the glass stage lights the player.
 function Daylight:scene(frame, want)
 	local F = sheet.frames
 	if frame >= F.aftermath and frame < F.match then
@@ -285,23 +286,42 @@ function Daylight:scene(frame, want)
 		self.grade.Contrast, self.grade.Saturation = contrast, saturation
 	end
 	local white = Color3.new(1, 1, 1)
-	local gallery = (frame >= F.dig - 2 and frame < F.living) or (frame >= F.enter and frame < F.reveal)
+	local gallery = (frame >= F.dig - 2 and frame < F.outside) or (frame >= F.enter and frame < F.reveal)
 	if gallery then
 		-- Night blue down the open shaft, over the miner's shoulder. It is the one
 		-- source here with a shadow map, so the pick and the body throw their
 		-- shadows on the rock. The lamps warm only what they reach.
 		local shine = MineFace.shine(frame)
-		local dim = hex("1D2540"):Lerp(hex("4A3F86"), 0.16 * shine)
+		local dim = hex(if frame < F.enter then "1D2540" else "2C3156"):Lerp(hex("4A3F86"), 0.16 * shine)
 		light(2.2, dim, dim, hex("4A78E6"), -0.04 + 0.04 * shine, hex("DCE6FF"):Lerp(hex("EAE2FF"), shine), 0.16, 0.06)
 		want.EnvironmentDiffuseScale, want.ShadowSoftness = 0.22, 0.12
 	elseif frame < F.dig then
 		return
+	elseif frame < F.living then
+		-- A cloud's worth less sun, so the doorway is the brightest thing in frame.
+		local k = math.clamp(MouthGlow.level(frame), 0, 1)
+		want.Brightness *= 0.62 - 0.14 * k
+		want.ExposureCompensation -= 0.20 + 0.10 * k
+		self.grade.TintColor = self.grade.TintColor:Lerp(hex("E6DAFF"), 0.25 + 0.35 * k)
+		self.grade.Contrast += 0.05
+		self.grade.Saturation += 0.08
 	elseif frame < F.witness then
-		light(0.62, hex("4C4A5C"), hex("4C4A5C"), hex("FFD9AE"), -0.10, hex("FFF8F2"), 0.10, 0.0)
+		-- Global light only, so it is there on the cut. Late sun and a cool fill,
+		-- then the report's own colour on the two faces.
+		if frame < F.livingReverse then
+			light(2.6, hex("655C78"), hex("655C78"), hex("FFC68A"), -0.12, hex("FFF3E6"), 0.12, 0.06)
+		else
+			local k = math.clamp(MouthGlow.level(frame), 0, 1)
+			light(2.2 + 0.6 * k, hex("655565"), hex("655565"), hex("BFA0FF"), -0.06, hex("FFF4EC"), 0.12, 0.08)
+		end
+		want.EnvironmentDiffuseScale, want.ShadowSoftness = 0.30, 0.22
 	elseif frame < F.enter then
 		self.grade.TintColor = self.grade.TintColor:Lerp(hex("F4ECFF"), 0.3)
 	elseif frame >= F.reveal and frame < F.answer then
-		light(0.95, hex("98A0AE"), hex("98A0AE"), hex("F4FAFF"), -0.2, white, 0.09, 0.03)
+		-- Neutral and generous on the player, whoever they are. The sun is behind
+		-- them and edges the hair and shoulders. The violet is the glass, not a wash.
+		light(1.8, hex("8E8698"), hex("8E8698"), hex("F3E6FF"), -0.08, white, 0.08, 0.03)
+		want.EnvironmentDiffuseScale = 0.34
 	end
 end
 

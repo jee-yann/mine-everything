@@ -34,7 +34,7 @@ function Titles.new(safe, screen)
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius, corner.Parent = UDim.new(0, 5), plate
 	local fill = Instance.new("UIGradient")
-	fill.Color = ColorSequence.new(hex("0A2E86"), hex("1AA6F0"))
+	fill.Color = ColorSequence.new(hex("260A6B"), hex("9A52FF"))
 	fill.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.20), NumberSequenceKeypoint.new(0.55, 0.42), NumberSequenceKeypoint.new(1, 0.92),
 	})
@@ -42,7 +42,7 @@ function Titles.new(safe, screen)
 	local stroke = Instance.new("UIStroke")
 	stroke.Thickness, stroke.Color, stroke.Parent = 1.5, Color3.new(1, 1, 1), plate
 	local edge = Instance.new("UIGradient")
-	edge.Color = ColorSequence.new(hex("FFFFFF"), hex("6FE6FF"))
+	edge.Color = ColorSequence.new(hex("FFFFFF"), hex("CFA0FF"))
 	edge.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(0.5, 0.55), NumberSequenceKeypoint.new(1, 1),
 	})
@@ -60,8 +60,8 @@ function Titles.new(safe, screen)
 	local bar = Instance.new("Frame")
 	bar.BorderSizePixel, bar.BackgroundColor3, bar.ZIndex, bar.Parent = 0, Color3.new(1, 1, 1), 9, plate
 	local barTint = Instance.new("UIGradient")
-	barTint.Color, barTint.Rotation, barTint.Parent = ColorSequence.new(hex("FFFFFF"), hex("49D8FF")), 90, bar
-	local lead = text(group, medium, hex("DDF9FF"), 23)
+	barTint.Color, barTint.Rotation, barTint.Parent = ColorSequence.new(hex("FFFFFF"), hex("B77BFF")), 90, bar
+	local lead = text(group, medium, hex("F1E6FF"), 23)
 	lead.Text, lead.Position, lead.Size = "C I T R I N E   C O V E   M I N E R", UDim2.fromOffset(34, 8), UDim2.fromOffset(560, 32)
 	local title = text(group, heavy, Color3.new(1, 1, 1), 76)
 	title.Position, title.Size = UDim2.fromOffset(34, 46), UDim2.fromOffset(556, 112)

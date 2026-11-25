@@ -68,7 +68,7 @@ end
 
 -- Plaza: past the person filming, toward the light, and on out of the shot.
 local plaza, plazaKey = recorder()
-walk(plazaKey, { first = F.witness - 10, steps = 7, beat = 10, x0 = 2.9, z0 = 11.4, x1 = -0.2, z1 = -0.4, yaw = 14, look = 2 })
+walk(plazaKey, { first = F.witness - 10, steps = 7, beat = 10, x0 = 2.3, z0 = 7.4, x1 = -0.2, z1 = -4.2, yaw = 12, look = 2 })
 
 -- Gallery: the last steps up to the face, a look at the miner, and the blow.
 -- Space is the player's mark at the face. -Z is into the rock.

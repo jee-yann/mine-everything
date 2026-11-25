@@ -272,15 +272,42 @@ local function test()
 			local struck
 			opening["Body of the break"].Played:Connect(function() struck = struck or os.clock() end)
 			struck = nil
+			local prompt = titles["Strike prompt"]
+			local cap, breaks, clicks, jumped = prompt["Strike face"], 0, 0, false
+			opening["Body of the break"].Played:Connect(function() breaks += 1 end)
+			opening["Letterpress snap"].Played:Connect(function() clicks += 1 end)
+			local human = p.Character.Humanoid
+			local leaping = human.StateChanged:Connect(function(_, state)
+				jumped = jumped or state == Enum.HumanoidStateType.Jumping
+			end)
+			-- The cap is clearly ready before it is taken.
+			task.wait(0.6)
+			assert(strike.Interactable and cap.BackgroundTransparency < 0.05)
+			local restY = cap.Position.Y.Offset
 			local tappedAt = os.clock()
 			local input = game.UserInputService:CreateVirtualInput()
 			input:SendKey(true, Enum.KeyCode.Space)
-			task.wait(0.06)
+			waitFor(function() return prompt.Visible and not strike.Interactable end, 0.2, "control shows the accepted press")
+			local answered = os.clock() - tappedAt
+			assert(answered < 0.1, "input lag " .. answered)
+			waitFor(function() return cap.Position.Y.Offset > restY + 3 end, 0.15, "the cap goes down with the key")
+			-- Holding it, and then mashing it, adds nothing.
+			task.wait(0.25)
 			input:SendKey(false, Enum.KeyCode.Space)
-			waitFor(function() return strike.Visible and not strike.Interactable end, 0.4, "control shows the accepted press")
+			for _ = 1, 8 do
+				input:SendKey(true, Enum.KeyCode.Space)
+				task.wait(0.03)
+				input:SendKey(false, Enum.KeyCode.Space)
+				task.wait(0.03)
+			end
 			waitFor(function() return struck end, 1.9, "input causes the break")
 			assert(struck - tappedAt < 1.35, "the swing waited for the automatic beat")
+			assert(not prompt.Visible and not strike.Visible, "the prompt outlived the press")
 			local card = titles:WaitForChild("Player introduction", 2)
+			waitFor(function() return card.Visible end, 5, "the introduction")
+			assert(breaks == 1 and clicks == 1, "one press, one break: " .. breaks .. " " .. clicks)
+			leaping:Disconnect()
+			assert(not jumped, "the strike also jumped")
 			waitFor(function() return card.Visible and stage:FindFirstChild("Glass stage") end, 5, "the glass reveal")
 			local named = false
 			for _, label in card:GetDescendants() do

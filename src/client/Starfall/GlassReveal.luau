@@ -35,8 +35,8 @@ end
 -- Behind everything, a tunnel of wide facets. Each runs toward the lens as it
 -- leaves the centre, at its own pitch, so light separates them.
 local rings = {
-	{ 0.0, 2.6, "FAFEFF" }, { 2.6, 5.4, "D3F1FB" }, { 5.4, 9.0, "96DDF4" }, { 9.0, 13.5, "63C8EE" },
-	{ 13.5, 20, "43A9E2" }, { 20, 29, "3088D0" }, { 29, 54, "2266B2" },
+	{ 0.0, 2.6, "F3E9FF" }, { 2.6, 5.4, "DCC4FF" }, { 5.4, 9.0, "C08EF0" }, { 9.0, 13.5, "A067E0" },
+	{ 13.5, 20, "9048C4" }, { 20, 29, "7A32AE" }, { 29, 54, "561F86" },
 }
 local function field(parent)
 	local rng = Random.new(9102)
@@ -90,7 +90,7 @@ local function slab(shape, w, h, thick, tint, clear)
 	local n = #outer
 	for i = 2, n - 1 do
 		for _, p in tri(model, front[1], front[i], front[i + 1], tint, M.Glass) do
-			p.Transparency, p.Reflectance = clear, 0.24
+			p.Transparency, p.Reflectance = clear, 0.10
 		end
 		for _, p in tri(model, rear[1], rear[i], rear[i + 1], tint, M.Glass) do
 			p.Transparency, p.Reflectance = math.min(0.9, clear + 0.22), 0.05
@@ -102,7 +102,7 @@ local function slab(shape, w, h, thick, tint, clear)
 		normal = if normal.Magnitude > 0 then normal.Unit else V(0, 0, -1)
 		if normal.Z > 0 then normal = -normal end
 		local lit = math.clamp(normal:Dot(light), 0, 1)
-		local tone = hex("2E86C8"):Lerp(hex("F4FCFF"), lit ^ 1.4)
+		local tone = hex("5A2BC6"):Lerp(hex("FBF5FF"), lit ^ 1.4)
 		for _, p in tri(model, outer[i], outer[j], front[i], tone:ToHex(), M.SmoothPlastic) do
 			p.Transparency, p.Reflectance = 0.66 - 0.60 * lit ^ 1.5, 0.1 * lit
 		end
@@ -117,7 +117,8 @@ function Glass.new(stage)
 	return setmetatable({ stage = stage }, Glass)
 end
 
-local tints = { "BFE9F8", "8FD3F0", "A9DDF4", "7FC4EA", "D3F1FB" }
+-- The ore's own range, from the violet in its veins to the white of its cuts.
+local tints = { "DCC2FF", "B47BEE", "D2A6FF", "8F66E6", "EFDDFF" }
 
 function Glass:build()
 	if self.root then
@@ -129,7 +130,7 @@ function Glass:build()
 	anchor.Transparency, self.root.PrimaryPart = 1, anchor
 	self.anchor = anchor
 	self.blades = field(self.root)
-	S.part(self.root, "Deep field", CF(0, 0, depth + 5), V(240, 240, 0.2), "2C78C4").CastShadow = false
+	S.part(self.root, "Deep field", CF(0, 0, depth + 5), V(240, 240, 0.2), "5C2699").CastShadow = false
 	self.panels = {}
 	local function add(angle, radius, z, size, shape, stretch)
 		local model = slab(shape, size * stretch, size, 0.05 + 0.045 * size, tints[#self.panels % #tints + 1], rng:NextNumber(0.28, 0.48))
@@ -168,7 +169,7 @@ function Glass:build()
 		beam.Attachment0, beam.Attachment1, beam.FaceCamera, beam.Segments = a0, a1, true, 1
 		beam.LightEmission, beam.LightInfluence = 0.85, 0
 		local broad = i > 26
-		beam.Color = ColorSequence.new(hex(if i % 4 == 0 then "FFFFFF" else "9BEBFF"), hex("2F9BFF"))
+		beam.Color = ColorSequence.new(hex(if i % 4 == 0 then "FFFFFF" else "DDB8FF"), hex("8A3DFF"))
 		beam.Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.35, if broad then 0.80 else 0.55), NumberSequenceKeypoint.new(1, 1),
 		})
@@ -191,7 +192,7 @@ function Glass:build()
 	for k = 1, 5 do
 		local j = k % 5 + 1
 		tri(self.star, ring[k], ring[j], V(0.02, 0.64, 0), if k % 2 == 0 then "E9DDFF" else "B99AF0")
-		tri(self.star, ring[k], ring[j], V(-0.02, -0.46, 0), if k % 2 == 0 then "8A62DA" else "6F9BEA")
+		tri(self.star, ring[k], ring[j], V(-0.02, -0.46, 0), if k % 2 == 0 then "7B4BD8" else "9C6BF0")
 	end
 	-- Slabs that cross the lens itself, camera space, and carry us out.
 	self.wipe = {}
@@ -216,8 +217,8 @@ function Glass:build()
 			sheet.Size, sheet.BorderSizePixel, sheet.BackgroundColor3, sheet.Parent = UDim2.fromScale(1, 1), 0, Color3.new(1, 1, 1), gui
 			local blend = Instance.new("UIGradient")
 			blend.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, hex("1668C4")), ColorSequenceKeypoint.new(0.28, hex("3FB2EC")), ColorSequenceKeypoint.new(0.44, hex("CFF3FF")),
-				ColorSequenceKeypoint.new(0.52, hex("74CDF4")), ColorSequenceKeypoint.new(0.8, hex("2E93DC")), ColorSequenceKeypoint.new(1, hex("1A6CC6")),
+				ColorSequenceKeypoint.new(0, hex("3C1596")), ColorSequenceKeypoint.new(0.28, hex("8E4DF5")), ColorSequenceKeypoint.new(0.44, hex("DDBBFF")),
+				ColorSequenceKeypoint.new(0.52, hex("B98AFA")), ColorSequenceKeypoint.new(0.8, hex("6E38D8")), ColorSequenceKeypoint.new(1, hex("45189E")),
 			})
 			blend.Transparency = NumberSequence.new({
 				NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(0.10, 0), NumberSequenceKeypoint.new(0.90, 0), NumberSequenceKeypoint.new(1, 0.55),

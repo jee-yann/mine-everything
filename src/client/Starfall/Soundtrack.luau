@@ -254,7 +254,7 @@ local function arrange()
 	play("gull", now + 2.6, 1.2, 0.84, 0.35, nil, "left")
 	-- The arch closes the sky off.
 	local dig = frame.dig / fps
-	play("drone", dig - 0.5, frame.living / fps - dig + 0.7, 1.0, 1.0)
+	play("drone", dig - 0.5, frame.outside / fps - dig + 0.6, 1.0, 1.0)
 	play("drip", dig + 0.95, 0.5, 0.92, 0.7, nil, "right")
 	play("drip", dig + 3.3, 0.5, 1.12, 0.5, nil, "left")
 
@@ -274,14 +274,28 @@ local function arrange()
 	play("run", (trace + 3) / fps, 0.9, 1.2, 0.45, 1.05, "right")
 	note("facet", (trace + 3) / fps, 78, 1.4, 0.50, "left")
 	note("facet", (trace + 6) / fps, 85, 1.1, 0.28, "right")
-	note("tone", (trace + 3) / fps, 66, (frame.living - trace + 2) / fps, 0.46, "left")
+	note("tone", (trace + 3) / fps, 66, (frame.outside - trace + 2) / fps, 0.46, "left")
 	play("cloth", (trace + 9) / fps, 0.34, 0.78, 0.46)
 
+	-- The cove hears it. Open air, then the ground, then the crystal's own chord
+	-- rising out of the doorway.
+	local out = frame.outside / fps
+	play("lap", out - 0.1, 2.1, 0.96, 0.55, 1.0, "left")
+	play("gull", out + 0.05, 0.9, 0.9, 0.30, nil, "right")
+	play("drum", (frame.outside + 4) / fps, 1.2, 0.62, 0.95, 0.56)
+	play("ground", (frame.outside + 2) / fps, 1.7, 0.46, 0.16, 0.60)
+	note("tone", (frame.outside + 4) / fps, 54, 1.6, 0.85)
+	note("tone", (frame.outside + 10) / fps, 66, 1.4, 0.95, "left")
+	note("tone", (frame.outside + 15) / fps, 73, 1.2, 0.75, "right")
+	play("sparkle", (frame.outside + 18) / fps, 1.5, 0.86, 0.85)
+	play("gull", (frame.outside + 24) / fps, 0.7, 1.12, 0.34, nil, "left")
 	-- A quiet room. The same tone, small, in a television speaker.
 	note("facet", frame.living / fps + 0.1, 78, 1.4, 0.55, "left")
 	play("cloth", (frame.living + 19) / fps, 0.30, 0.95, 1.5)
 	play("cloth", (frame.living + 30) / fps, 0.40, 0.74, 1.2, nil, "right")
-	play("cloth", (frame.livingReverse + 8) / fps, 0.30, 0.90, 1.2, nil, "left")
+	note("facet", (frame.living + 22) / fps, 85, 1.2, 0.34, "left")
+	play("cloth", (frame.livingReverse + 5) / fps, 0.30, 0.90, 1.2, nil, "left")
+	play("cloth", (frame.livingReverse + 25) / fps, 0.42, 0.78, 1.3, nil, "right")
 
 	-- Outside: boots go past the lens and away toward it.
 	local plaza = frame.witness / fps
@@ -479,6 +493,24 @@ return function(parent, musicGroup, effectsGroup)
 		end
 		return index
 	end
+	-- The key itself: a small cap bottoming out, and the crystal in it. It plays on
+	-- the input, whatever the clock is doing.
+	local keyEvents = {}
+	for _, q in { { "lift", 0.10, 1.05, 1.0 }, { "paper", 0.07, 0.62, 0.75 }, { "facet", 0.7, 85, 0.50 }, { "facet", 0.6, 90, 0.26 } } do
+		local key, pitch = q[1], q[3]
+		if bank[key].hz then pitch = 440 * 2 ^ ((pitch - 69) / 12) / bank[key].hz end
+		local voice = makeVoice(bank[key], parent, effectsGroup)
+		table.insert(keyEvents, { key = key, at = 0, length = q[2], pitch = pitch, glide = pitch, gain = q[4], voice = voice })
+	end
+	local function press(t)
+		for _, event in keyEvents do
+			event.at = t
+			mix(event, math.min(0.012, bank[event.key].attack))
+			event.voice.TimePosition = bank[event.key].first
+			event.voice:Play()
+			table.insert(active, event)
+		end
+	end
 	local themeStarted
 	local function smooth(u)
 		u = math.clamp(u, 0, 1)
@@ -501,9 +533,11 @@ return function(parent, musicGroup, effectsGroup)
 			-- player winds up, and out from under the blow.
 			local enter = smooth((t - scoreIn) / 2.0)
 			local rock = smooth((f - frame.dig + 8) / 20) * (1 - smooth((f - frame.witness + 6) / 18))
+			-- It leaves the doorway to the crystal, and the room to its own sounds.
+			local doorway = smooth((f - frame.outside + 2) / 8) * (1 - smooth((f - frame.living + 4) / 10))
 			local build = smooth((f - frame.enter) / 60)
 			local gallery = smooth((f - frame.enter + 4) / 10) * (1 - smooth((f - frame.autoStrike + 12) / 12))
-			score.Volume = (1.45 - 0.45 * rock + 0.10 * build - 0.55 * gallery) * enter * (1 - smooth((t - blowAt) / 0.2))
+			score.Volume = (1.45 - 0.45 * rock + 0.10 * build - 0.55 * gallery - 0.15 * doorway) * enter * (1 - smooth((t - blowAt) / 0.2))
 		elseif scoreStarted and score.IsPlaying then
 			score:Stop()
 		end
@@ -547,5 +581,5 @@ return function(parent, musicGroup, effectsGroup)
 			end
 		end
 		nextCue = startDue(fixed, nextCue, t)
-	end
+	end, press
 end

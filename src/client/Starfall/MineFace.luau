@@ -51,7 +51,7 @@ local function blow(c, heavy)
 end
 
 local keys = {
-	{ F.living - 1, {
+	{ F.outside - 1, {
 		Body = { 0.06, -0.10, 0.50 }, Turn = { -3, -6, 0 }, Waist = { -7, -4, 0 }, Neck = { 5, 8, 3 },
 		RightShoulder = { 13, 0, 9 }, RightElbow = { 18 }, RightWrist = { 0 },
 		LeftShoulder = { 30, 0, -12 }, LeftElbow = { 44 }, LeftFoot = { -0.1, 0, 0.5 }, RightFoot = { 0.2, 0, 1.15 },
@@ -356,12 +356,16 @@ local guide = Acting.clip({
 }, { LeftElbow = 1, Neck = -1 })
 
 function Face:draw(frame, motion)
-	local early = frame >= F.dig - 8 and frame < F.living
+	local early = frame >= F.dig - 8 and frame < F.outside
 	local late = frame >= F.enter and frame < F.reveal
 	local active = early or late
 	self:ready(active or (frame >= F.dig - 34 and frame < F.dig) or (frame >= F.witness + 12 and frame < F.enter))
 	if not active then
 		self.rig.model.Parent, self.glow.Parent, self.scar.Parent, self.pool.Parent = nil, nil, nil, nil
+		for _, lamp in self.lamps do
+			lamp.Brightness = if frame < F.dig then 0.55 else 0
+		end
+		self.light.Brightness, self.poolLight.Brightness = 0, 0
 		self.chipsA:draw(nil, CF(), -1, 1)
 		self.chipsB:draw(nil, CF(), -1, 1)
 		self.fracture:draw(if self.root.Parent then self.stage else nil, -1, nil, motion)
@@ -385,16 +389,22 @@ function Face:draw(frame, motion)
 			v.part.Color = v.tint:Lerp(Color3.new(1, 1, 1), 0.4 * (1 - S.ease(age, 0, 7)))
 		end
 	end
-	self.light.Brightness = 1.15 * shine * (1 - S.ease(blow, 6, 14))
+	-- A cut to this place gets its lamps a few exposures late. The second visit
+	-- brings them up as the player walks in, so there is no step to see.
+	local up = if late and motion then S.ease(frame, F.enter + 1, F.enter + 18) else 1
+	for _, lamp in self.lamps do
+		lamp.Brightness = 0.55 * up
+	end
+	self.light.Brightness = 1.15 * shine * up * (1 - S.ease(blow, 6, 14))
 	-- The beam gutters when the rock jumps, then steadies on what it found.
 	local from = self.at:PointToObjectSpace(self.lens.WorldPosition)
 	local toward = self.at:VectorToObjectSpace(self.lens.WorldCFrame.LookVector)
 	local reach = if toward.Z < -0.05 then math.min(13, (from.Z - 0.25) / -toward.Z) else 13
 	self.pool.CFrame = self.at * CF(from + toward * math.max(0.5, reach - 0.9))
 	self.pool.Parent, self.haze.Enabled = self.stage, frame < F.crack
-	self.poolLight.Brightness = 1.5 * (1 - 0.5 * S.ease(age, 0, 2) * (1 - S.ease(age, 5, 16)))
+	self.poolLight.Brightness = 1.5 * up * (1 - 0.5 * S.ease(age, 0, 2) * (1 - S.ease(age, 5, 16)))
 	for _, r in self.rays do
-		r.ray.Enabled = age >= 1 and motion and frame < F.living
+		r.ray.Enabled = age >= 1 and motion and frame < F.outside
 		if r.ray.Enabled then
 			local length = 6.5 * (1 - math.exp(-age / 6)) * (0.8 + 0.2 * math.sin(age / 7 + r.seed))
 			r.far.WorldPosition = self.contact.Position + self.contact:VectorToWorldSpace(r.dir) * length
@@ -431,7 +441,7 @@ function Face:camera(frame, motion)
 		local jolt = if motion and age >= 0 then math.exp(-age / 2.6) * math.cos(age * 2.0) else 0
 		return V(p.X - 4.6 + 0.6 * u, p.Y - 0.15 - 0.10 * jolt, 4.1 - 0.5 * u + 0.12 * jolt), V(p.X + 0.45 - 0.2 * u, p.Y + 0.2 + 0.25 * u, 0.5), 40 + 1.0 * jolt, 0.9 * jolt
 	end
-	local u = if motion then glide(frame, F.reaction, F.living) else 0.5
+	local u = if motion then glide(frame, F.reaction, F.outside) else 0.5
 	local eye = V(p.X + 1.9 - 0.3 * u, head.Y - 0.30, 0.55 + 0.15 * u)
 	return eye, V(head.X - 0.1, head.Y - 0.12, head.Z), 42, 0
 end

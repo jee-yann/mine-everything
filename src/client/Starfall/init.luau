@@ -64,13 +64,6 @@ local function compose(screen, safe)
 	W.round(skip, 7)
 	skip.ZIndex = 12
 	local strike, drawPrompt = BeaconPrompt(safe)
-	local heldInput, releaseFrame
-	local function drawStrike(frame, motion, contact, topEdge, bottomEdge)
-		if heldInput and (heldInput.UserInputState == Enum.UserInputState.End or heldInput.UserInputState == Enum.UserInputState.Cancel) then
-			heldInput, releaseFrame = nil, frame
-		end
-		drawPrompt(frame, motion, contact, topEdge, bottomEdge, if heldInput then math.huge else releaseFrame)
-	end
 	local title = IntroTitles.new(safe, screen)
 	return skip,
 		function(t, black, picture, motion, contact)
@@ -79,7 +72,7 @@ local function compose(screen, safe)
 			local pictureHeight = math.max(1, pictureBottom - pictureTop)
 			caption.Position = UDim2.new(0.5, 0, 0, pictureBottom - math.max(8, pictureHeight * 0.047))
 			caption.Size = UDim2.new(0.86, 0, 0, math.clamp(pictureHeight * 0.068, 27, 63))
-			drawStrike(frame, motion, contact, pictureTop, pictureBottom)
+			drawPrompt(frame, motion, contact, pictureTop, pictureBottom)
 			local text, opacity = Film.caption(t)
 			caption.Text, caption.TextTransparency, caption.TextStrokeTransparency =
 				text, 1 - opacity, 1 - 0.62 * opacity
@@ -91,9 +84,9 @@ local function compose(screen, safe)
 		end,
 		fade,
 		strike,
-		function(frame, motion, contact, input)
-			heldInput, releaseFrame = input, nil
-			drawStrike(frame, motion, contact, fitMatte(frame))
+		-- The prompt moves at the display's rate, between the film's exposures.
+		function(frame, motion, contact)
+			drawPrompt(frame, motion, contact, fitMatte(frame))
 		end
 end
 
@@ -140,26 +133,29 @@ function Opening.play(player, net, hud)
 	local function run()
 		showOtherMiners = hideOtherMiners(player)
 		local motion = player:GetAttribute("MenuMotion") ~= false and not Gui.ReducedMotionEnabled
-		local skip, titles, curtain, strike, confirmStrike = compose(screen, safe)
-		local advanced = 0
-		local function tap(input)
-			local ahead = film and film.arrival and film.pictureFrame and film.arrival:requestStrike(film.pictureFrame)
+		local skip, titles, curtain, strike, animateStrike = compose(screen, safe)
+		local advanced, filmTime, pressSound = 0, nil, nil
+		-- One press. The cap, its sound and the swing all answer it here. A held
+		-- key, a second key and a double tap find it already taken.
+		local function tap()
+			local ahead = filmTime and film and film.arrival and film.pictureFrame and film.arrival:requestStrike(film.pictureFrame)
 			if ahead then
 				-- The swing starts on the press. The clock skips the wait.
 				advanced += ahead
-				confirmStrike(sheet.frames.autoStrike, motion, film.arrival.pressed, input)
+				animateStrike(filmTime() * sheet.fps, motion, film.arrival.pressed)
+				pressSound(filmTime())
 				return true
 			end
 			return false
 		end
 		strike.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-				tap(input)
+				tap()
 			end
 		end)
 		strike.Activated:Connect(tap)
-		Actions:BindActionAtPriority("Light expedition route", function(_, state, input)
-			if state == Enum.UserInputState.Begin and tap(input) then
+		Actions:BindActionAtPriority("Light expedition route", function(_, state)
+			if state == Enum.UserInputState.Begin and tap() then
 				return Enum.ContextActionResult.Sink
 			end
 			return Enum.ContextActionResult.Pass
@@ -193,8 +189,8 @@ function Opening.play(player, net, hud)
 				pcall(player.RequestStreamAroundAsync, player, net:GetAttribute("Entrance") or landing, 4)
 			end)
 		end
-		local mix = Audio.origins(screen)
-		local sound = mix
+		local sound, press = Audio.origins(screen)
+		pressSound = press
 		local function continueSetup()
 			Run.PreRender:Wait()
 			return not skipped and player.Character == char and root.Parent and camera == workspace.CurrentCamera
@@ -246,6 +242,9 @@ function Opening.play(player, net, hud)
 			end)
 		end
 		local start = os.clock()
+		function filmTime()
+			return os.clock() - start + advanced / sheet.fps
+		end
 		while
 			film.impact
 			and not skipped
@@ -253,7 +252,7 @@ function Opening.play(player, net, hud)
 			and root.Parent
 			and camera == workspace.CurrentCamera
 		do
-			local t = os.clock() - start + advanced / sheet.fps
+			local t = filmTime()
 			local pictureFrame = sheet.frameAt(t)
 			if
 				pictureFrame >= sheet.frames.handoff
@@ -266,6 +265,9 @@ function Opening.play(player, net, hud)
 			if film.pictureFrame ~= pictureFrame then
 				local black = film:expose(pictureFrame, liveCove() ~= nil)
 				titles(film.sceneTime, black, pictureFrame, motion, film.arrival.pressed)
+			end
+			if pictureFrame >= sheet.frames.prompt and pictureFrame < sheet.frames.break2 + 4 then
+				animateStrike(t * sheet.fps, motion, film.arrival.pressed)
 			end
 			sound(t)
 			if t >= Film.duration then
