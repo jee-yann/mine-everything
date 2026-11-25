@@ -14,7 +14,8 @@ local folder = script.Parent:FindFirstChild("OreDrawings")
 local piecesFolder = script.Parent:FindFirstChild("OrePieces")
 local glowFolder = script.Parent:FindFirstChild("OreGlow")
 local variants = {} -- block name -> number of variants, or 0 for a single drawing named after the block
-local images = {} -- source StringValue -> Content, or false when it can't be shown
+local images = {} -- source StringValue -> Content, or the os.clock() of the last failed attempt
+local RETRY = 4 -- seconds before a drawing that couldn't be decoded is tried again
 
 if folder then
 	for _, value in folder:GetChildren() do
@@ -70,11 +71,16 @@ local function content(from, key)
 	if not value then
 		return nil
 	end
-	if images[value] == nil then
+	local cached = images[value]
+	-- EditableImage allocation can fail for a moment (the device's image memory budget is
+	-- briefly full, for example while a reset rebuilds the mine). Retry later instead of
+	-- leaving that ore undrawn for the rest of the session.
+	if cached == nil or (type(cached) == "number" and os.clock() - cached >= RETRY) then
 		local ok, image = pcall(decode, value.Value)
-		images[value] = ok and image or false
+		images[value] = if ok then image else os.clock()
 	end
-	return images[value] or nil
+	cached = images[value]
+	return if type(cached) == "number" then nil else cached
 end
 
 -- The drawing for `face` (a NormalId value) of a block at cell `p`, or nil if the block has none.
@@ -106,7 +112,12 @@ function Drawn.apply(part, face, key)
 	end
 	local rock = Looks.rock[part.Name]
 	if rock and rock.tint then
-		decal.Color3 = part.Color
+		-- The tint multiplies the drawing, so the darkest grades (Shadowslate, Abyssal Basalt,
+		-- Voidglass, Starbound Rock) would turn it nearly black and no lamp could show it. Dark
+		-- tints keep their hue but are drawn at 0.54 to 0.56 brightness; grades from 0.45 up are
+		-- unchanged. The region's ambient palette still makes the deep mine feel dark.
+		local h, s, v = part.Color:ToHSV()
+		decal.Color3 = if v < 0.45 then Color3.fromHSV(h, s * 0.85, 0.54 + 0.1 * (v - 0.25)) else part.Color
 	end
 	decal.Parent = part
 	return decal

@@ -10,19 +10,31 @@ local Data = require(Server.DataService)
 do
 	local Purity = require(Shared.OrePurity)
 	local function sample(roll, extra)
-		return { NextInteger = function(_, _, limit) return if limit == 10 then extra or 10 else roll end }
+		return { NextInteger = function(_, _, limit) return if limit == 10 then extra or 10 elseif limit == 100 then roll else 0 end }
+	end
+	-- The band comes from the 1-100 roll; the exact value inside it from a second roll.
+	local function exact(band, step)
+		return { NextInteger = function(_, _, limit) return if limit == 100 then band else step end }
 	end
 	for roll, percent in { [1] = 50, [30] = 50, [31] = 65, [63] = 80, [86] = 90, [96] = 98, [100] = 100 } do
-		assert(Purity.roll(sample(roll)) == percent)
+		assert(Purity.roll(exact(roll, 0)) == percent)
 	end
+	assert(Purity.roll(exact(31, 5432)) == 70.432 and Purity.roll(exact(1, 14999)) == 64.999)
+	assert(Purity.roll(exact(100, 999)) == 100 and Purity.valid(70.432) and not Purity.valid(70.4321))
+	assert(Purity.bonus(50) == 0 and Purity.bonus(65) == 10 and Purity.bonus(98) == 50 and Purity.bonus(100) == 100)
+	assert(math.abs(Purity.bonus(72.5) - 15) < 1e-9 and Purity.text(70.432) == "70.432%" and Purity.text(100) == "100%")
+	assert(Purity.multiplierText(65) == "×1.10" and Purity.validGrade("65") and Purity.validGrade("70.432"))
+	assert(not Purity.validGrade("70.4320") and not Purity.validGrade("49.999") and not Purity.validGrade("x"))
+	local mixed = Purity.decode(Purity.encode({ ["70.432"] = 2, ["65"] = 1 }))
+	assert(mixed["70.432"] == 2 and mixed["65"] == 1 and select(1, Purity.range(mixed)) == 65)
 
 	local old = Profile.new()
 	old.grades, old.bestPurity, old.bag = nil, nil, { Gold = 1 }
 	local miner = Data.claim({profile = old}, "assay", 1000).profile
 	local awards, grade, units, record = Profile.recordCut(miner, "Gold", 30, sample(99))
-	assert(table.find(awards, "First Gold") and grade == 98 and units == 1 and record)
+	assert(#awards == 0 and grade == 98 and units == 1 and record)
 	awards, grade, units, record = Profile.recordCut(miner, "Gold", 30, sample(100))
-	assert(not table.find(awards, "First Gold") and record and miner.bestPurity.Gold == 100)
+	assert(#awards == 0 and record and miner.bestPurity.Gold == 100)
 	local stock = Purity.decode(Purity.encode(miner.grades.Gold))
 	local low, high = Purity.range(stock)
 	assert(low == 98 and high == 100 and stock["98"] == 1 and stock["100"] == 1)
@@ -145,7 +157,7 @@ do
 	assert(Profile.expeditionStep(starter) == "Sell" and starter.xp == 0)
 	assert(Profile.sell(starter) == 8 and Profile.expeditionStep(starter) == "Upgrade")
 	assert(Upgrades.onboardingPick(starter.gold) == "Capacity" and Profile.buy(starter, "Capacity"))
-	assert(starter.gold == 0 and Upgrades.price("Capacity", 2) == 60 and Profile.expeditionStep(starter) == "Return")
+	assert(starter.gold == 0 and Upgrades.price("Capacity", 2) == 36 and Profile.expeditionStep(starter) == "Return")
 	Profile.recordCut(starter, "Dirt")
 	assert(Profile.expeditionStep(starter) == "Done")
 
@@ -167,8 +179,9 @@ do
 		local oldSlots = skills.capacity(oldBase, veteran.skills)
 		veteran.bag = { Dirt = oldSlots - 1, Coal = 1 }
 		local loaded = Data.claim({ profile = veteran }, "veteran", 50).profile
-		assert(Upgrades.items.Capacity.values[level] == level * 8)
-		assert(Profile.stat(loaded, "Capacity") == skills.capacity(level * 8, veteran.skills))
+		local newSlots = 8 + 6 * (level - 1) + 2 * (level - 1) ^ 2
+		assert(Upgrades.items.Capacity.values[level] == newSlots)
+		assert(Profile.stat(loaded, "Capacity") == skills.capacity(newSlots, veteran.skills))
 		assert(Profile.sell(loaded, 1, "Coal", "Stack") == 5)
 		local rejoined = Data.claim({ profile = Data.snapshot(loaded) }, "again", 51).profile
 		assert(Profile.sell(rejoined) == oldSlots - 1 and Profile.used(rejoined) == 0)
@@ -238,6 +251,9 @@ assert(
 	not Profile.markViewed(upgraded, "Book", "Starfall")
 		and not Profile.markViewed(upgraded, "Achievements", "LuckAndSkill")
 )
+-- Pocket Change now asks for ten coal.
+assert(not Profile.markViewed(upgraded, "Achievements", "PocketChange"))
+upgraded.counts.Coal = 10
 assert(Profile.markViewed(upgraded, "Achievements", "PocketChange"))
 local snapshot = Data.commit({ owner = "harbor" }, "harbor", upgraded, 100, true)
 local loaded = Data.claim(snapshot, "again", 101).profile
@@ -379,9 +395,7 @@ assert(hiddenTitle == "Copper Collector" and hiddenDetail == "Mine 50 Copper.")
 reader:SetAttribute("FoundDirt", true)
 local _, sequenceText = Guide.awardText(scales, reader)
 assert(sequenceText == "Dirt → Stone → Coal → Copper → Iron → Gold → Diamond")
-assert(Guide.awardText(awards.FirstStarfall, reader) == "First ???")
-reader:SetAttribute("FoundStarfall", true)
-assert(Guide.awardText(awards.FirstStarfall, reader) == "First Starfall")
+assert(awards.FirstStarfall == nil and awards.FirstGold == nil and awards.PocketChange.goal == 10)
 reader:Destroy()
 do
 	local Skills = require(Shared.Skills)
@@ -703,11 +717,15 @@ do
 	oldSave.bag = { Coal = 10, Emerald = 2, Starfall = 1 }
 	oldSave.counts = { Coal = 400, Emerald = 3, Starfall = 1, Amethyst = 2 }
 	oldSave.discoveries = { Coal = true, Emerald = true, Starfall = true, Amethyst = true }
+	oldSave.progression = nil
 	assert(Profile.valid(oldSave), "a save from before the expansion is still valid")
 	local reloaded = Data.claim({ profile = oldSave }, "oldSave-expansion", 60).profile
 	assert(reloaded.levels.Power == 6 and Profile.stat(reloaded, "Power") == 6 and Upgrades.pickNames[6] == "Prismheart Pick", "old pick kept")
-	assert(Profile.stat(reloaded, "Speed") == 0.20 and Profile.stat(reloaded, "Capacity") == 64, "old gear kept")
-	assert(Upgrades.price("Power", 6) and Upgrades.price("Speed", 7) and Upgrades.price("Capacity", 8), "old top gear upgrades further")
+	-- Old Speed 7 (0.20 s) and Capacity 8 (64 slots) move to the first long-curve level as good.
+	assert(reloaded.progression == 2 and reloaded.levels.Speed == 100 and reloaded.levels.Capacity == 5, "old gear migrated")
+	assert(Profile.stat(reloaded, "Speed") == 0.2 and Profile.stat(reloaded, "Capacity") == 64, "old gear kept")
+	assert(Upgrades.migrateLevel("Speed", 1) == 1 and Upgrades.migrateLevel("Capacity", 2) == 2, "starter levels unchanged")
+	assert(Upgrades.price("Power", 6) and not Upgrades.price("Speed", 100) and Upgrades.price("Capacity", 5), "migrated gear upgrades further")
 	Profile.recordCut(reloaded, "Sunstone", 5)
 	Profile.recordCut(reloaded, "Voidshard", 600)
 	assert(reloaded.discoveries.Sunstone and reloaded.bag.Voidshard == 1 and Profile.valid(reloaded), "new ores save")
@@ -1125,17 +1143,17 @@ for _, x in { -41, 41 } do
 end
 assert(not mapCopy["Harbor Plaza"]:FindFirstChild("Core samples"))
 local exhibit = mapCopy["Harbor Plaza"].Book
--- The shelf holds eight specimens from the opening regions; the Ore Index page lists every ore.
-local shelved = 0
+-- The stall shows a heap of ore chunks (one per ore, in its colour); the Ore Index page lists every ore.
+local heap = 0
 for _, part in exhibit:GetChildren() do
-	local shown = Ores.byName[part.Name:match("^(.+) sample$") or ""]
-	if part.Name:match(" sample$") then
-		assert(shown and not shown.secret, part.Name)
-		assert(exhibit:FindFirstChild(shown.name .. " label"), shown.name .. " label")
-		shelved += 1
+	local shown = Ores.byName[part.Name:match("^(.+) chunk$") or ""]
+	if shown then
+		assert(not shown.secret and part.Color == shown.color, part.Name)
+		heap += 1
 	end
+	assert(not part.Name:match(" sample$") and not part.Name:match(" label$"), "Old labelled shelf left behind")
 end
-assert(shelved == 8, "The specimen shelf should keep its eight samples")
+assert(heap >= 15, "The ore heap should hold at least fifteen chunks")
 assert(not floorAt(10, 32), "The inlet should pass completely under the bridge")
 for z = 2, Config.HallBack + 1, -0.5 do
 	for _, x in { -6, 0, 6 } do
@@ -1288,7 +1306,7 @@ local terraceCheck = OverlapParams.new()
 terraceCheck.FilterType, terraceCheck.FilterDescendantsInstances = Enum.RaycastFilterType.Include, obstructions
 for _, piece in highlands["Turquoise cascade"]:GetChildren() do
 	if piece.Name == "Meadow cap" then
-		assert(piece.Color == Color3.fromRGB(116, 212, 79), "Waterfall turf palette")
+		assert(piece.Color == Color3.fromRGB(134, 202, 103), "Hill turf matches the lawn")
 	end
 	if piece.Name == "Meadow cap" or piece.Name == "Mesa face" then
 		assert(#workspace:GetPartsInPart(piece, terraceCheck) == 0, "Waterfall intersects a hill or tower")

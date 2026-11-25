@@ -15,10 +15,10 @@ local function makeRow(menu, ore, slot)
 	local stockFont = Instance.new("UITextSizeConstraint")
 	stockFont.MinTextSize, stockFont.MaxTextSize, stockFont.Parent = 13, 22, title
 	detail.Name, detail.RichText = "Unit price", true
-	detail.Position, detail.Size, detail.TextSize = UDim2.fromOffset(67, 28), UDim2.fromOffset(205, 34), 16
+	detail.Position, detail.Size, detail.TextSize = UDim2.fromOffset(67, 27), UDim2.fromOffset(205, 35), 18
 	detail.TextScaled = true
 	local detailFont = Instance.new("UITextSizeConstraint")
-	detailFont.MinTextSize, detailFont.MaxTextSize, detailFont.Parent = 12, 16, detail
+	detailFont.MinTextSize, detailFont.MaxTextSize, detailFont.Parent = 15, 18, detail
 	sell.Name, sell.Position, sell.Size = "Sell quantity", UDim2.fromOffset(277, 8), UDim2.fromOffset(158, 51)
 	sell.TextScaled = true
 	local saleFont = Instance.new("UITextSizeConstraint")
@@ -41,7 +41,7 @@ local function makeRow(menu, ore, slot)
 		less.TextTransparency = if less.Interactable then 0 else 0.55
 		more.TextTransparency = if more.Interactable then 0 else 0.55
 		local low, high = Purity.range(grades)
-		local gradeText = if low then (if low == high then low .. "%" else low .. "–" .. high .. "%") .. " pure · low sells first"
+		local gradeText = if low then (if low == high then Purity.text(low) .. " pure · " .. Purity.multiplierText(low) .. " value" else Purity.text(low) .. "–" .. Purity.text(high) .. " pure · low sells first")
 			else W.unitPrice(Purity.quote(ore, stock, grades, math.min(stock, 1), menu.player:GetAttribute("SkillBroker")) * multiplier)
 		detail.Text = gradeText .. "\n" .. W.goldAmount(stock - quantity) .. " left after sale"
 		paint(if stock > 1 then (quantity - 1) / (stock - 1) else 0, stock > 1)

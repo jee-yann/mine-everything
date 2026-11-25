@@ -1,6 +1,7 @@
 local shared = game:GetService("ReplicatedStorage").Shared
 local Config = require(shared.GameConfig)
 local Ores = require(shared.Ores)
+local Purity = require(shared.OrePurity)
 local Audio = require(script.Parent.HarborAudio)
 local Tween = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
@@ -321,7 +322,7 @@ function Effects:assay(name, grade, quantity, newBest)
 	detail.Font, detail.TextScaled = Enum.Font.BuilderSansBold, true
 	detail.TextColor3 = if newBest then Color3.fromRGB(255, 220, 120) else Color3.fromRGB(190, 245, 255)
 	detail.TextStrokeTransparency, detail.TextStrokeColor3 = 0.12, Color3.fromRGB(26, 31, 52)
-	detail.Text = grade .. "% pure" .. (if newBest then " · Personal best!" else "") .. (if quantity > 1 then " · Bonus ore!" else "")
+	detail.Text = Purity.text(grade) .. " pure · " .. Purity.multiplierText(grade) .. " value" .. (if newBest then " · Personal best!" else "") .. (if quantity > 1 then " · Bonus ore!" else "")
 	detail.Parent = popup
 	Tween:Create(detail, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.58),
 		{ TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
