@@ -75,7 +75,7 @@ Buy pickaxe Power, swing Speed and backpack Capacity with gold at the Workshop. 
 
 Field Supplies crafts items from your bag. Two copper and three coal make a survey flare that lights a tunnel and points toward a natural cave within ten blocks. Four coal temper your pick for 25 successful hard cuts. Quick-cut wax doubles your speed for twelve cuts. Diamond teeth use iron and gems to break six plain stone blocks almost instantly. A cave pulse opens the nearby rock for prospecting. The pet compass lets an equipped companion point out exposed ore.
 
-Claim one stamp per UTC day from **Jobs → Seven-day gem card**. Missing a day keeps your progress. Day seven pays 15 gems and starts a new card on your next claim. **Jobs → Time in the cove** pays 1 gem at 10 minutes, 2 at 20 minutes and 4 at 60 minutes played that UTC day. Saved progress resumes when you rejoin. A daily material delivery at the Jobs board pays gold, two gems and at least one survey flare. Buy your first Workshop upgrade and open its gift case to reveal the equipped **First Light** pickaxe aura. Equip it under **Inventory → Supplies**.
+**Daily** (L) holds a seven-day reward card: one claim per UTC day, and missing a day keeps your place. **Gift** (G) holds playtime gifts at 5 and 10 minutes, then one a minute up to 16. They reset at midnight UTC. The rewards are placeholders. Change what each day and gift holds in `src/shared/FieldRewards.luau`.
 
 ![Backpack showing one coal worth five gold](map/Backpack-preview.jpg)
 

@@ -33,7 +33,7 @@ local function diamond(parent, name, x, y, size, color)
 end
 
 local function stateBadge(parent, x, y)
-	local badge = W.frame(parent, "Skill state", x, y, 22, 22, W.muted, 11)
+	local badge = W.frame(parent, "Skill state", x, y, 24, 24, W.muted, 12)
 	W.stroke(badge, W.ink, 2)
 	local glyph = W.title(badge, "", 0, -1, 22, 23, 17, W.ink)
 	glyph.Name = "Symbol"
@@ -55,8 +55,8 @@ function Map.new(parent, player, net, close)
 	screen.Size, screen.Visible, screen.Active = UDim2.fromScale(1, 1), false, true
 	W.gradient(screen, Color3.fromRGB(255, 255, 255), Color3.fromRGB(122, 146, 178), 55)
 	self.screen = screen
-	local view = clear(screen, "Map viewport", 0, 65, 1, 1)
-	view.Size, view.ClipsDescendants, view.Active = UDim2.new(1, 0, 1, -65), true, true
+	local view = clear(screen, "Map viewport", 0, 84, 1, 1)
+	view.Size, view.ClipsDescendants, view.Active = UDim2.new(1, 0, 1, -84), true, true
 	self.view = view
 	local canvas = clear(view, "Branches", 0, 0, 1, 1)
 	self.canvas, self.scale = canvas, W.scale(canvas)
@@ -92,7 +92,7 @@ function Map.new(parent, player, net, close)
 	local center = diamond(canvas, "Keystone", 0, 0, 59, W.ocean)
 	W.enamel(center, W.ocean, W.ink)
 	Icons.draw(canvas, "Power", -22, -22, 44)
-	W.outlineText(W.title(canvas, "Prospector", -70, 52, 140, 23, 17, W.gold), 2)
+	W.outlineText(W.title(canvas, "Prospector", -70, 52, 140, 26, 21, W.gold), 2.2)
 	for _, node in Skills.nodes do
 		local item = self.nodes[node.id]
 		local b = W.clearButton(canvas, node.id, node.x - 42, node.y - 42, 84, 84, "Select")
@@ -108,10 +108,10 @@ function Map.new(parent, player, net, close)
 		selection.BackgroundTransparency, selection.Visible = 1, false
 		W.stroke(selection, W.white, 2)
 		item.selection = selection
-		item.title = W.title(b, node.name, -25, 79, 134, 23, 16, W.white)
-		W.outlineText(item.title, 1.8)
+		item.title = W.title(b, node.name, -38, 79, 160, 26, 20, W.white)
+		W.outlineText(item.title, 2.2)
 		if #node.requires == 0 then
-			W.outlineText(W.text(b, node.branch, -25, 100, 134, 17, 13, colors[node.branch]), 1.5)
+			W.outlineText(W.text(b, node.branch, -38, 103, 160, 20, 16, colors[node.branch]), 1.8)
 		end
 		item.setBadge = stateBadge(b, 57, 48)
 		b.Activated:Connect(function()
@@ -142,9 +142,9 @@ function Map.new(parent, player, net, close)
 	end
 	self.pulses = clear(canvas, "Unlock lights", 0, 0, 1, 1)
 	self.pulses.ZIndex = 3
-	local header = W.frame(screen, "Map header", 0, 0, 1, 65, W.panel)
+	local header = W.frame(screen, "Map header", 0, 0, 1, 84, W.panel)
 	self.header = header
-	header.Size = UDim2.new(1, 0, 0, 65)
+	header.Size = UDim2.new(1, 0, 0, 84)
 	W.enamel(header, W.panel, W.ink)
 	local seam = W.frame(header, "Seam", 0, 0, 1, 2, W.aqua)
 	seam.Size, seam.Position = UDim2.new(1, 0, 0, 2), UDim2.new(0, 0, 1, -2)
@@ -155,27 +155,26 @@ function Map.new(parent, player, net, close)
 	self.points.Name, self.points.TextScaled = "Count", true
 	local pointFont = Instance.new("UITextSizeConstraint")
 	pointFont.MinTextSize, pointFont.MaxTextSize, pointFont.Parent = 12, 33, self.points
-	self.pointsLabel = W.text(balance, "SKILL POINTS\nTO SPEND", 54, 0, 97, 46, 13, W.ink, true)
+	self.pointsLabel = W.text(balance, "SKILL POINTS\nTO SPEND", 54, 0, 97, 46, 16, W.ink, true)
 	self.balance = balance
-	self.legend = clear(header, "Skill key", 0, 0, 253, 24)
+	self.legend = clear(header, "Skill key", 0, 0, 312, 26)
 	local function legendEntry(x, state, width)
 		local setBadge = stateBadge(self.legend, x, 1)
 		setBadge(state)
-		local label = W.text(self.legend, state.label, x + 26, 0, width, 24, 14, W.white, true)
+		local label = W.text(self.legend, state.label, x + 29, 0, width, 26, 17, W.white, true)
 		return setBadge, label
 	end
-	legendEntry(0, states.owned, 46)
-	self.setLegendBadge, self.legendAction = legendEntry(78, states.available, 80)
-	legendEntry(189, states.locked, 55)
-	self.heading = W.title(header, "Skill tree", 16, 1, 160, 34, 28, W.white, true)
-	self.summary = W.text(header, "", 17, 35, 350, 21, 15, W.aqua, true)
+	legendEntry(0, states.owned, 60)
+	self.setLegendBadge, self.legendAction = legendEntry(92, states.available, 108)
+	legendEntry(232, states.locked, 64)
+	self.heading = W.title(header, "Skill tree", 16, 1, 190, 42, 34, W.white, true)
+	self.summary = W.text(header, "", 17, 35, 350, 26, 19, W.aqua, true)
 	self.summary.Name = "Summary"
 	self.summary.TextScaled = true
 	local font = Instance.new("UITextSizeConstraint")
-	font.MinTextSize, font.MaxTextSize, font.Parent = 10, 17, self.summary
-	local home = W.button(header, "Recenter", 0, 10, 56, 44, W.aqua, "Center", "Select")
-	home.Position = UDim2.new(1, -114, 0, 10)
-	home.TextSize = 14
+	font.MinTextSize, font.MaxTextSize, font.Parent = 12, 20, self.summary
+	local home = W.button(header, "Recenter", 0, 10, 98, 60, W.aqua, "Center", "Select")
+	home.TextSize = 24
 	home.Activated:Connect(function()
 		self:home()
 	end)
@@ -185,32 +184,34 @@ function Map.new(parent, player, net, close)
 			if i == 1 then "Zoom out" else "Zoom in",
 			0,
 			10,
-			44,
-			44,
+			60,
+			60,
 			W.muted,
 			if i == 1 then "−" else "+",
 			"Select"
 		)
-		button.Position = UDim2.new(1, -214 + (i - 1) * 50, 0, 10)
+		button.TextSize = 38
 		button.Activated:Connect(function()
 			self:zoomBy(factor)
 		end)
 	end
-	local exit = W.closeButton(header, 0, 10, 44)
-	exit.Position = UDim2.new(1, -52, 0, 10)
+	local exit = W.closeButton(header, 0, 10, 60)
+	exit.TextSize = 38
+	self.controls = { exit, home, header["Zoom in"], header["Zoom out"] }
 	exit.Activated:Connect(close)
-	local footer = W.frame(screen, "Skill details", 0, 0, 500, 86, W.panel, 10)
+	local footer = W.frame(screen, "Skill details", 0, 0, 500, 112, W.panel, 12)
 	W.anchor(footer, 0.5, 1, UDim2.new(0.5, 0, 1, -6))
-	W.stroke(footer, W.line, 1.5)
+	W.enamelPanel(footer, Color3.fromRGB(72, 68, 124), Color3.fromRGB(46, 43, 86), 12)
 	self.footer = footer
 	self.footerScale = W.scale(footer)
-	self.title = W.title(footer, "", 12, 3, 250, 25, 19, W.gold, true)
-	self.detail = W.text(footer, "", 12, 27, 250, 32, 14, W.white, true)
+	self.title = W.title(footer, "", 16, 6, 250, 32, 26, W.gold, true)
+	self.detail = W.text(footer, "", 16, 38, 250, 42, 18, W.white, true)
 	self.detail.TextWrapped = true
-	self.path = W.text(footer, "", 12, 60, 470, 23, 13, W.muted, true)
+	self.path = W.text(footer, "", 16, 82, 470, 24, 16, W.muted, true)
 	self.path.TextWrapped = true
-	self.learn = W.button(footer, "Learn", 0, 9, 106, 44, W.green, "", "Select")
-	self.learn.Position = UDim2.new(1, -114, 0, 9)
+	self.learn = W.button(footer, "Learn", 0, 12, 144, 56, W.green, "", "Select")
+	self.learn.TextSize = 20
+	self.learn.Position = UDim2.new(1, -156, 0, 12)
 	self.learn.Activated:Connect(function()
 		if self.selected then
 			net.Action:FireServer("Skill", self.selected)
@@ -296,44 +297,50 @@ function Map:position()
 	self.scale.Scale = scale
 	local bounds = self.extent * scale + Vector2.new(75, 95)
 	self.pan = Vector2.new(math.clamp(self.pan.X, -bounds.X, bounds.X), math.clamp(self.pan.Y, -bounds.Y, bounds.Y))
-	self.canvas.Position = UDim2.new(0.5, self.pan.X, 0.5, self.pan.Y - 44)
+	self.canvas.Position = UDim2.new(0.5, self.pan.X, 0.5, self.pan.Y - 54)
 	if self.layoutSize == size then
 		return
 	end
 	self.layoutSize = size
 	self.footerScale.Scale = math.clamp(size.X / 1080, 1, 1.24)
-	local width = math.clamp((size.X - 12) / self.footerScale.Scale, 190, 510)
-	self.footer.Size = UDim2.fromOffset(width, 86)
-	self.title.Size, self.detail.Size = UDim2.fromOffset(width - 130, 25), UDim2.fromOffset(width - 130, 32)
-	self.path.Size = UDim2.fromOffset(width - 24, 23)
+	local width = math.clamp((size.X - 12) / self.footerScale.Scale, 190, 640)
+	self.footer.Size = UDim2.fromOffset(width, 112)
+	self.title.Size, self.detail.Size = UDim2.fromOffset(width - 182, 32), UDim2.fromOffset(width - 182, 42)
+	self.path.Size = UDim2.fromOffset(width - 32, 24)
 	local wide, narrow = size.X >= 950, size.X < 550
-	local headerHeight = if wide then 65 elseif narrow then 99 else 78
+	local headerHeight = if wide then 84 elseif narrow then 108 else 90
 	self.header.Size = UDim2.new(1, 0, 0, headerHeight)
 	self.view.Position, self.view.Size = UDim2.fromOffset(0, headerHeight), UDim2.new(1, 0, 1, -headerHeight)
-	local cardWidth = math.clamp(size.X - 230, 82, 163)
+	local control = if wide then 60 else 48
+	local right = -8
+	for i, button in self.controls do
+		local w = if i == 2 then control * 1.62 else control
+		button.Size, button.TextSize = UDim2.fromOffset(w, control), if i == 2 then control * 0.42 else control * 0.9
+		right -= w
+		button.Position = UDim2.new(1, right, 0, if wide then 11 else 3)
+		right -= 7
+	end
+	local cardWidth = math.clamp(size.X + right - 12, 72, 190)
 	local numberWidth = math.floor(cardWidth * 0.36)
 	self.balance.Size, self.balance.Position =
-		UDim2.fromOffset(cardWidth, 44), UDim2.fromOffset(8, if wide then 10 else 4)
+		UDim2.fromOffset(cardWidth, 46), UDim2.fromOffset(8, if wide then 18 else 4)
 	self.points.Size = UDim2.fromOffset(numberWidth, 44)
 	self.pointsLabel.Position = UDim2.fromOffset(numberWidth + 4, 0)
 	self.pointsLabel.Size, self.pointsLabel.TextSize =
-		UDim2.fromOffset(cardWidth - numberWidth - 6, 44), if cardWidth < 123 then 10 else 13
-	self.heading.Visible = not narrow
-	self.heading.Position = UDim2.fromOffset(183, if wide then 2 else 7)
-	self.heading.Size = UDim2.fromOffset(139, 34)
+		UDim2.fromOffset(cardWidth - numberWidth - 6, 46), if cardWidth < 123 then 11 elseif cardWidth < 170 then 14 else 16
+	self.heading.Visible = size.X + right > 370
+	self.heading.Position = UDim2.fromOffset(212, if wide then 7 else 6)
+	self.heading.Size = UDim2.fromOffset(180, 40)
 	if wide then
-		self.legend.Position = UDim2.new(1, -501, 0, 20)
-		self.summary.Position, self.summary.Size = UDim2.fromOffset(184, 34), UDim2.new(1, -696, 0, 22)
+		self.legend.Visible = size.X + right > 800
+		self.legend.Position = UDim2.new(1, right - 318, 0, 29)
+		self.summary.Position, self.summary.Size = UDim2.fromOffset(213, 48), UDim2.fromOffset(size.X + right - 213 - (if self.legend.Visible then 334 else 8), 26)
 	else
-		self.legend.Position = UDim2.fromOffset(12, 50)
-		local x = if narrow then 12 else 302
+		self.legend.Visible = true
+		self.legend.Position = UDim2.fromOffset(12, 57)
+		local x = if narrow then 12 else 340
 		self.summary.Position, self.summary.Size =
-			UDim2.fromOffset(x, if narrow then 76 else 50), UDim2.new(1, -x - 12, 0, if narrow then 18 else 24)
-	end
-	for _, button in self.heading.Parent:GetChildren() do
-		if button:IsA("GuiButton") then
-			button.Position = UDim2.new(1, button.Position.X.Offset, 0, if wide then 10 else 4)
-		end
+			UDim2.fromOffset(x, if narrow then 85 else 57), UDim2.new(1, -x - 12, 0, if narrow then 20 else 26)
 	end
 end
 function Map:zoomBy(factor)

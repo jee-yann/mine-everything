@@ -10,7 +10,9 @@ local GuideButton = require(script.Parent.GuideButton)
 local Catalog = require(Shared.PassCatalog)
 local Materials = require(Shared.Materials)
 local W, Icons = require(script.Parent.Widgets), require(script.Parent.Icons)
-local Field = require(script.Parent.FieldPages)
+local FieldPages = require(script.Parent.FieldPages)
+local Field = require(Shared.FieldRewards)
+local RewardsPanel, IndexPanel = require(script.Parent.RewardsPanel), require(script.Parent.IndexPanel)
 local Guide = require(Shared.FieldGuide)
 local Purity = require(Shared.OrePurity)
 local Skills = require(Shared.Skills)
@@ -42,6 +44,8 @@ Menu.pages = {
 	Sell = { name = "Sell ore", color = W.gold },
 	Jobs = { name = "Shift jobs", color = W.violet },
 	Book = { name = "Ore index", color = W.green },
+	Daily = { name = "Daily rewards", color = W.pink },
+	Playtime = { name = "Playtime gifts", color = W.violet },
 	Store = { name = "Outfitters", color = W.pink },
 	Pack = { name = "My backpack", color = W.gold },
 }
@@ -57,14 +61,20 @@ function Menu.new(root, player, net, close)
 	self.overlay = shade
 	local modal = W.frame(shade, "Harbor menu", 0, 0, 480, 408, W.panel, 18)
 	modal.Active = true
-	W.stroke(modal, W.ink, 3)
+	W.stroke(modal, W.navy, 4)
 	self.trim = W.enamel(modal, W.grape, W.panel)
+	W.studs(modal, 18, 26, 0.4)
 	W.anchor(modal, 0.5, 0.5, UDim2.fromScale(0.5, 0.5))
 	self.scale = W.scale(modal)
 	self.modal = modal
 	local header = W.frame(modal, "Marquee", 7, 7, 466, 73, W.aqua, 12)
 	self.header = header
 	self.headerGradient = W.enamel(header, W.ink, W.ocean)
+	W.stroke(header, W.navy, 3)
+	W.studs(header, 12)
+	local headerRim = W.frame(header, "Rim", 2, 2, 462, 69, W.white, 10)
+	headerRim.BackgroundTransparency = 1
+	W.stroke(headerRim, W.white, 2).Transparency = 0.72
 	for i = 1, 3 do
 		local stripe = W.frame(header, "Sunburst", 323 + i * 17, 10, 10, 52, W.white, 4)
 		stripe.Rotation, stripe.BackgroundTransparency = 22, 0.76
@@ -72,11 +82,20 @@ function Menu.new(root, player, net, close)
 	self.iconWell = W.frame(header, "Badge", 12, 11, 50, 50, W.white, 12)
 	W.stroke(self.iconWell, W.ink, 2)
 	self.heading = W.title(header, "", 74, 2, 316, 42, 33, W.white, true)
-	W.outlineText(self.heading, 1.8)
+	W.navyText(self.heading, 3)
 	self.sub = W.text(header, "", 76, 42, 313, 24, 17, W.white, true)
 	self.sub.Name = "Summary"
 	W.outlineText(self.sub, 1)
 	self.sub.TextScaled = true
+	-- What the miner can spend, wherever gold is spent or earned.
+	local purse = W.frame(header, "Purse", 254, 37, 144, 31, W.navy, 15)
+	purse.BackgroundTransparency, purse.Visible = 0.25, false
+	Icons.draw(purse, "Coins", 6, 2, 27)
+	self.gold = W.title(purse, "0", 36, 0, 102, 30, 22, W.gold, true)
+	self.gold.TextScaled = true
+	local goldFont = Instance.new("UITextSizeConstraint")
+	goldFont.MinTextSize, goldFont.MaxTextSize, goldFont.Parent = 12, 22, self.gold
+	self.purse = purse
 	local summaryFont = Instance.new("UITextSizeConstraint")
 	summaryFont.MinTextSize, summaryFont.MaxTextSize, summaryFont.Parent = 12, 17, self.sub
 	local closeButton = W.closeButton(header, 404, 9, 55)
@@ -134,7 +153,7 @@ function Menu.new(root, player, net, close)
 	self.seenRows = {}
 	game:GetService("RunService").Heartbeat:Connect(function()
 		local now = os.clock()
-		if shade.Visible and not self.closing and #self.seenRows > 0 and now >= (self.nextRead or 0) then
+		if shade.Visible and not self.wide and not self.closing and #self.seenRows > 0 and now >= (self.nextRead or 0) then
 			self.nextRead = now + 0.12
 			self:observeRows(now)
 		end
@@ -161,6 +180,10 @@ end
 function Menu:layout(width, height, touch)
 	-- Give landscape phones larger type and touch targets by scrolling the rows
 	-- inside the card. Keep the header, footer and close button within safe bounds.
+	self.touchLayout = touch
+	for _, panel in { self.rewards, self.index } do
+		panel.card:layout(Vector2.new(width, height), touch)
+	end
 	local shortLandscape = width > height and (touch or height < 470)
 	local maxScale = if shortLandscape then 1.38 else 1.76
 	local minHeight = if shortLandscape then 270 else 408
@@ -249,14 +272,19 @@ function Menu:gear()
 		self.gearButtons[key] = b
 		detail.Name, detail.RichText = "Requirements", true
 		W.outlineText(detail, 1)
-		local benefit = W.text(title.Parent, "", 247, 1, 188, 18, 15, W.aqua)
-		local savings = W.text(title.Parent, "", 174, 29, 139, 31, 15, W.muted, true)
-		savings.Name, savings.TextTruncate = "Savings", Enum.TextTruncate.AtEnd
-		detail.Size = UDim2.fromOffset(105, 31)
-		benefit.Name, benefit.TextXAlignment = "Benefit", Enum.TextXAlignment.Right
-		b.Position = UDim2.fromOffset(322, 21)
+		local row = title.Parent
+		row.Position, row.Size = UDim2.fromOffset(1, 1 + (i - 1) * 91), UDim2.fromOffset(447, 85)
+		row["Color tab"].Size, row.Badge.Position = UDim2.fromOffset(4, 61), UDim2.fromOffset(9, 19)
+		title.Size, title.TextSize = UDim2.fromOffset(250, 29), 23
+		local benefit = W.text(row, "", 67, 30, 250, 20, 16, W.aqua, true)
+		benefit.Name = "Benefit"
+		-- What the miner has, over what it costs. Always both, in type that can be read at a glance.
+		detail.Position, detail.Size, detail.Font = UDim2.fromOffset(67, 50), UDim2.fromOffset(250, 32), Enum.Font.FredokaOne
+		detail:FindFirstChildOfClass("UITextSizeConstraint"):Destroy()
+		detail.TextScaled, detail.TextWrapped, detail.TextSize = false, false, 26
+		b.Position, b.Size = UDim2.fromOffset(322, 19), UDim2.fromOffset(113, 48)
 		b.TextWrapped = true
-		b.TextSize = 16
+		b.TextSize = 19
 		b.Activated:Connect(function()
 			self.net.Action:FireServer("Buy", key)
 		end)
@@ -275,14 +303,13 @@ function Menu:gear()
 					else describe(key, nextLevel)
 			end
 			if not price then
-				detail.Text, savings.Text = "", ""
+				detail.Text = ""
 				setButton(b, "Max level", W.muted, false)
 				return
 			end
 			local gold = self.player:GetAttribute("Gold") or 0
 			local ready = gold >= price
-			detail.Text = requirement(W.goldAmount(price) .. " G", ready)
-			savings.Text = if ready then "Ready to buy" else W.goldAmount(gold) .. " saved"
+			detail.Text = W.colored(W.goldAmount(gold), if ready then W.green else unmet) .. " / " .. W.colored(W.goldAmount(price) .. " G", W.gold)
 			local caption = if ready then "Upgrade" else "Need " .. W.goldAmount(price - gold) .. " G"
 			setButton(b, caption, if ready then W.green else unmet, ready)
 		end)
@@ -290,8 +317,7 @@ function Menu:gear()
 	return #Upgrades.order
 end
 function Menu:jobs()
-	local offset = require(script.Parent.FieldRewardsPage).attendance(self)
-	local title, summary, deliver = self:row(offset + 1, "Daily supply order", "Jobs", W.aqua)
+	local title, summary, deliver = self:row(1, "Daily supply order", "Jobs", W.aqua)
 	twoLines(summary)
 	summary.RichText = true
 	local shownDay
@@ -312,7 +338,7 @@ function Menu:jobs()
 		setButton(deliver, if done then "Delivered" else "Deliver", if ready then W.green else W.muted, ready)
 	end)
 	for i, job in Expeditions.jobs do
-		local _, detail, b = self:row(i + offset + 1, job.title, "Jobs", W.gold)
+		local _, detail, b = self:row(i + 1, job.title, "Jobs", W.gold)
 		b.Activated:Connect(function()
 			self.net.Action:FireServer("Job", i)
 		end)
@@ -330,7 +356,7 @@ function Menu:jobs()
 			)
 		end)
 	end
-	return offset + #Expeditions.jobs + 1
+	return #Expeditions.jobs + 1
 end
 function Menu:supplies()
 	for i, key in Materials.supplyOrder do
@@ -485,8 +511,6 @@ function Menu:attention(key)
 		end
 	elseif key == "Jobs" then
 		local day = self.net:GetAttribute("OrderDay") or 0
-		if p:GetAttribute("ShiftReadyAt") == 0 then return true end
-		if (p:GetAttribute("StampDay") or 0) < day then return true end
 		local recipe = Materials.daily(day).recipe
 		if (p:GetAttribute("DailyClaim") or 0) < day and not Materials.missing(recipe, held(p, recipe)) then
 			return true
@@ -499,6 +523,11 @@ function Menu:attention(key)
 				return true
 			end
 		end
+	elseif key == "Daily" then
+		return p:GetAttribute("ProfileReady") == true
+			and Field.dailyState(p:GetAttribute("StampCount"), p:GetAttribute("StampDay"), self.net:GetAttribute("OrderDay")) ~= nil
+	elseif key == "Playtime" then
+		return Field.giftState(p, workspace:GetServerTimeNow()) > 0
 	elseif key == "Book" then
 		for _, ore in Ores.list do
 			if p:GetAttribute("Found" .. ore.name) and not p:GetAttribute("SeenBook" .. ore.name) then
@@ -591,7 +620,7 @@ function Menu:store()
 	return #Catalog
 end
 local function shortcuts(self)
-	local destinations = { "Inventory", "Skills", "Achievements", "Book", "Jobs", "Settings", "Pets", "Miners" }
+	local destinations = { "Daily", "Playtime", "Inventory", "Skills", "Achievements", "Book", "Jobs", "Settings", "Pets", "Miners" }
 	for i, key in destinations do
 		local page = Menu.pages[key]
 		local color = if page then page.color else W.aqua
@@ -644,17 +673,16 @@ local builders = {
 	Menu = shortcuts,
 	Gear = Menu.gear,
 	Sell = SellCounter.build,
-	Inventory = Field.titles,
-	Pets = Field.pets,
+	Inventory = FieldPages.titles,
+	Pets = FieldPages.pets,
 	Kit = Menu.kit,
 	Supplies = Menu.supplies,
 	Passes = Menu.passes,
-	Achievements = Field.achievements,
+	Achievements = FieldPages.achievements,
 	Settings = function(self)
 		return self.preferences:build(self)
 	end,
 	Jobs = Menu.jobs,
-	Book = Field.index,
 	Pack = Menu.pack,
 	Store = Menu.store,
 }
@@ -695,7 +723,6 @@ function Menu:open(key)
 		self.motion:Cancel()
 	end
 	self.closing = false
-	self.modal.Visible = key ~= "Skills"
 	if key == "Skills" and not self.map then
 		self.map = SkillMap.new(self.overlay, self.player, self.net, self.closeMap)
 		self.map.screen:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -705,6 +732,18 @@ function Menu:open(key)
 	if self.map then
 		self.map.screen.Visible = key == "Skills"
 	end
+	local wide
+	if key == "Daily" or key == "Playtime" then
+		self.rewards = self.rewards or RewardsPanel.new(self)
+		wide = self.rewards
+	elseif key == "Book" then
+		self.index = self.index or IndexPanel.new(self)
+		wide = self.index
+	end
+	for _, panel in { self.rewards, self.index } do
+		if panel ~= wide then panel.card.modal.Visible = false end
+	end
+	self.modal.Visible = key ~= "Skills" and not wide
 	self.overlay.Visible = true
 	if key == "Skills" then
 		self.page = key
@@ -713,6 +752,16 @@ function Menu:open(key)
 		self.map:refresh()
 		return
 	end
+	if wide then
+		local fresh = self.wide ~= wide
+		self.page, self.wide = key, wide
+		wide:open(key)
+		wide.card:layout(self.overlay.AbsoluteSize, self.touchLayout)
+		wide.card:enter(fresh and self.preferences.values.MenuMotion)
+		self:refresh()
+		return
+	end
+	self.wide = nil
 	self.tabs.Visible, self.tabViewport.Visible, self.mainList.Visible = isTab, isTab, not isTab
 	for k, b in self.tabButtons do
 		b.BackgroundColor3 = if key == k then W.white else Menu.pages[k].color
@@ -743,7 +792,6 @@ function Menu:open(key)
 		elseif key == "Pack" then "Take your haul to the amber Sell counter."
 		elseif key == "Jobs" then "Deliver daily orders at the Jobs board. New order at midnight UTC."
 		elseif key == "Settings" then "Changes take effect immediately."
-		elseif key == "Book" then "The first layer is dirt. Odds apply to solid rock."
 		elseif key == "Store" then "Permanent passes for this experience."
 		else "Upgrades stay equipped between visits."
 	if isTab then
@@ -752,7 +800,7 @@ function Menu:open(key)
 		self.list = self.mainList
 		local rows = builders[key](self)
 		self.list.CanvasSize, self.list.CanvasPosition =
-			UDim2.fromOffset(0, rows * (if key == "Menu" then 77 else 69)), Vector2.zero
+			UDim2.fromOffset(0, rows * (if key == "Menu" then 77 elseif key == "Gear" then 91 else 69)), Vector2.zero
 	end
 	self.footer.Visible = key ~= "Menu"
 	local center = UDim2.fromScale(0.5, 0.5)
@@ -777,6 +825,11 @@ function Menu:close()
 	if self.page == "Skills" then
 		self.map.screen.Visible = false
 		self.overlay.Visible = false
+		return
+	end
+	if self.wide then
+		self.wide.card.modal.Visible = false
+		self.wide, self.overlay.Visible = nil, false
 		return
 	end
 	if not self.preferences.values.MenuMotion then
@@ -836,7 +889,7 @@ function Menu:guideTrade()
 			target, hint = self.closeButton, "Take your first haul to Sell"
 		end
 	end
-	if hint then self.sub.Text = W.goldAmount(gold) .. " G   ·   " .. hint end
+	if hint then self.sub.Text = hint end
 	if target and target ~= self.guideButton.button and Input.PreferredInput == Enum.PreferredInput.Gamepad then
 		Gui.SelectedObject = target
 	end
@@ -847,6 +900,9 @@ function Menu:refresh()
 		return
 	end
 	local p = self.player
+	self.purse.Visible = self.page == "Gear" or self.page == "Sell"
+	self.gold.Text = W.goldAmount(p:GetAttribute("Gold") or 0) .. " G"
+	self.sub.Size = UDim2.fromOffset(if self.purse.Visible then 172 else 313, 24)
 	if self.page == "Menu" then
 		self.sub.Text = ""
 	elseif self.page == "Inventory" then
@@ -861,6 +917,9 @@ function Menu:refresh()
 		)
 	elseif self.page == "Skills" then
 		self.map:refresh()
+		return
+	elseif self.wide then
+		self.wide:refresh()
 		return
 	elseif self.page == "Pets" then
 		self.sub.Text = if p:GetAttribute("Pet") == "Rock" or p:GetAttribute("Pet") == "Drake"
@@ -883,26 +942,17 @@ function Menu:refresh()
 		self.sub.Text = string.format("%d / %d earned", earned, #Guide.achievements)
 	elseif self.page == "Sell" then
 		local used = p:GetAttribute("Used") or 0
-		self.sub.Text = string.format("Wallet  %s G    ·    %s %s in pack", W.goldAmount(p:GetAttribute("Gold") or 0),
-			W.goldAmount(used), if used == 1 then "block" else "blocks")
+		self.sub.Text = string.format("%s %s in pack", W.goldAmount(used), if used == 1 then "block" else "blocks")
 	elseif self.page == "Pack" then
 		local cap = p:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1]
 		local value = (p:GetAttribute("BagValue") or 0) * (if p:GetAttribute("DoubleGold") then 2 else 1)
 		self.sub.Text = string.format("%d / %d slots   ·   %s G", p:GetAttribute("Used") or 0, cap, W.number(value))
 	elseif self.page == "Gear" then
-		self.sub.Text = W.goldAmount(p:GetAttribute("Gold") or 0) .. " gold available"
+		self.sub.Text = "Spend gold on gear"
 	elseif self.page == "Jobs" then
-		self.sub.Text = string.format("%d gems    ·    %d / %d quests collected", p:GetAttribute("Gems") or 0, p:GetAttribute("Jobs") or 0, #Expeditions.jobs)
+		self.sub.Text = string.format("%d / %d quests collected", p:GetAttribute("Jobs") or 0, #Expeditions.jobs)
 	elseif self.page == "Settings" then
 		self.sub.Text = p:GetAttribute("SaveStatus") or "Sound and motion"
-	elseif self.page == "Book" then
-		local found = 0
-		for _, ore in Ores.list do
-			if p:GetAttribute("Found" .. ore.name) then
-				found += 1
-			end
-		end
-		self.sub.Text = found .. " / " .. #Ores.list .. " materials discovered"
 	else
 		self.sub.Text = "Game passes"
 	end

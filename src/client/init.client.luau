@@ -340,6 +340,12 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		hud:openPage(a)
 	elseif kind == "close" then
 		hud:setShop(false)
+	elseif kind == "reward" then
+		fx:chime(1.8)
+		if hud.overlay.Visible and hud.menu.rewards then
+			hud.menu.rewards:claimed(a, point)
+		end
+		hud:notice(spread, finds, W.gold)
 	elseif kind == "job" then
 		fx:chime(1.65)
 		hud:notice("+" .. W.number(point) .. " gold", a .. " completed", W.gold)
@@ -373,6 +379,7 @@ net.Dust.OnClientEvent:Connect(function(point, spread, ore, finds, normal, loot)
 end)
 
 require(script.Podiums).start(player, hud)
+require(script.CourtBoards).start(player, hud)
 require(script.FriendMarkers)(player, hud)
 
 Players.PlayerAdded:Connect(Swing.observe)
@@ -459,7 +466,7 @@ local function sampleAim()
 	local space = cap - (player:GetAttribute("Used") or 0)
 	if hud.touchActions.enabled and (space <= 0 or not ready) then
 		if held and space <= 0 and ready then
-			hud:bagFull()
+			hud:cantMine(true)
 		end
 		release()
 	end
@@ -477,8 +484,10 @@ local function sampleAim()
 	fx:aim(cells)
 	local valid = cells ~= nil and #cells == 1
 	hud:aimAt(screen, valid, locked ~= nil or (cells ~= nil and space <= 0))
-	if held and cells ~= nil and space <= 0 then
-		hud:bagFull()
+	local packed = cells ~= nil and space <= 0
+	local tooHard = not valid and not packed and locked ~= nil
+	if held and (packed or tooHard) then
+		hud:cantMine(packed)
 	end
 	hud.reticle.Visible = centerAim and not hud.cursor.Visible
 	if centerAim then
@@ -492,16 +501,14 @@ local function sampleAim()
 	end
 	if not ready then
 		hud:guide("Opening the mine…", "Preparing your pack and the mine", true)
+	elseif packed then
+		hud:guide("Backpack full!", if mobile then "Tap ↑ Surface, then sell your haul" else "Press R to surface, then sell your haul", true, true)
+	elseif tooHard then
+		hud:guide("Needs Power " .. required .. "!", targetName(locked, center) .. " is too hard. Upgrade at the workshop", true, true)
 	elseif objective then
 		hud:guide(objective, instruction, not expedition.spotlight.layer.Visible)
 	elseif space <= 0 then
-		hud:guide(
-			"Backpack full",
-			instruction or (if inMine then "Use ↑ Surface, then visit Sell" else "Visit the amber Sell counter"),
-			true
-		)
-	elseif not valid and locked then
-		hud:guide(targetName(locked, center) .. " needs Power " .. required, "Upgrade Power at the workshop", true)
+		hud:guide("Backpack full!", if inMine then "Use ↑ Surface, then visit Sell" else "Visit the amber Sell counter", true)
 	elseif valid then
 		local ore = Ores.byName[hit.Instance.Name]
 		local worth = if ore.secret and not player:GetAttribute("Found" .. ore.name)

@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserService = game:GetService("UserService")
+local Http = game:GetService("HttpService")
 local Data = require(script.Parent.DataService)
 local Standings = {}
 
@@ -28,6 +29,16 @@ local function draw(board, scores, levels, empty)
 	for i = 1, 5 do
 		face["Row" .. i].Text = lines[i] or (if i == 1 then empty else "")
 	end
+	-- The whole list, for the boards each player scrolls.
+	local full = {}
+	for i = 1, math.min(100, #rows) do
+		full[i] = { id = rows[i].id, name = rows[i].name, score = rows[i].score }
+	end
+	local ok, text = pcall(Http.JSONEncode, Http, full)
+	if ok then
+		board:SetAttribute(if levels then "RanksLevel" else "RanksDepth", text)
+	end
+	board:SetAttribute("Notice", empty)
 	for i = 1, 3 do
 		local podium = board["Podium " .. i]
 		local row = rows[i]
@@ -44,6 +55,7 @@ local function refreshGlobal(board, names, levels)
 	local ok, page = pcall(if levels then Data.globalLevels else Data.globalDepths)
 	if not ok then
 		board.Standings.Lettering.Title.Text = "GLOBAL RECORDS OFFLINE"
+		board:SetAttribute("Notice", "Global records are offline. Checking again shortly")
 		if not board["Podium 1"]:GetAttribute("StandingId") then
 			board.Standings.Lettering.Row1.Text = "Checking again shortly"
 		end
@@ -62,14 +74,16 @@ local function refreshGlobal(board, names, levels)
 		end
 	end
 	if #missing > 0 then
-		local resolved, users = pcall(UserService.GetUserInfosByUserIdsAsync, UserService, missing)
-		if resolved then
-			for _, user in users do
-				currentNames[user.Id] = user.DisplayName
+		for first = 1, #missing, 50 do
+			local batch = table.move(missing, first, math.min(first + 49, #missing), 1, {})
+			local resolved, users = pcall(UserService.GetUserInfosByUserIdsAsync, UserService, batch)
+			if resolved then
+				for _, user in users do
+					currentNames[user.Id] = user.DisplayName
+				end
 			end
 		end
 	end
-	table.clear(names)
 	for id, row in scores do
 		names[id] = currentNames[id]
 		row.name = names[id] or ("Miner #" .. id)
@@ -87,10 +101,10 @@ function Standings.start(court)
 		task.spawn(function()
 			local names, levels = {}, false
 			while true do
-				-- 12 s per view keeps ordered-store reads well under the request budget.
+				-- 20 s per view keeps ordered-store reads well under the request budget.
 				refreshGlobal(court.Global, names, levels)
 				levels = not levels
-				task.wait(12)
+				task.wait(20)
 			end
 		end)
 	end

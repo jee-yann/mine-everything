@@ -9,16 +9,25 @@ local Pulse = require(Server.MinePulse)
 local Config = require(Shared.GameConfig)
 
 local legacy = Profile.new()
-for _, key in { "gems", "stampDay", "stampCount", "shiftDay", "shiftSeconds", "shiftClaims", "hasteCuts", "stoneChips", "pulses" } do legacy[key] = nil end
+for _, key in { "gems", "stampDay", "stampCount", "shiftDay", "shiftSeconds", "shiftClaims", "giftDay", "giftSeconds", "giftClaims", "hasteCuts", "stoneChips", "pulses" } do legacy[key] = nil end
 local p = assert(Data.claim({profile = legacy}, "new session", 1000)).profile
 assert(p.gems == 0 and p.hasteCuts == 0 and not Profile.hasUpgrade(p))
-for day, payout in Field.stamps do
+assert(#Field.daily == 7, "a week of daily rewards")
+for day, reward in Field.daily do
 	local today = 20000 + 3 * day
-	local number, amount = Field.claim(p, today)
-	assert(number == day and amount == payout)
+	local before = { gold = p.gold, gems = p.gems, flares = p.flares, pulses = p.pulses }
+	local ready, done = Field.dailyState(p.stampCount, p.stampDay, today)
+	assert(ready == day and done == day - 1)
+	local number, given = Field.claim(p, today)
+	assert(number == day and given == reward and Field.describe(reward) ~= "")
+	for key, amount in before do
+		assert(p[key] == amount + (reward[key] or 0), key .. " on day " .. day)
+	end
 	assert(not Field.claim(p, today) and not Field.claim(p, today - 1))
+	assert(not Field.dailyState(p.stampCount, p.stampDay, today))
 end
-assert(p.gems == 36 and Field.claim(p, 20100) == 1 and p.gems == 37)
+assert(Field.claim(p, 20100) == 1, "the card starts again after day 7")
+p.gold, p.gems, p.flares, p.pulses = 0, 37, 0, 0
 assert(not Profile.buySupply(p, "Haste") and p.gems == 37)
 p.bag = { Stone = 2, Coal = 3, Iron = 3, Copper = 5 }
 assert(Profile.buySupply(p, "Haste") and p.hasteCuts == 12 and not Profile.buySupply(p, "Haste"))
@@ -44,37 +53,50 @@ snapshot.stampCount = 8
 assert(not Profile.valid(snapshot))
 print("PASS gem card rollover, missed days, duplicate claims, recipes, saved charges, first-upgrade aura")
 
+-- Gifts at 5 and 10 minutes, then every minute.
+assert(Field.gifts[1].minutes == 5 and Field.gifts[2].minutes == 10)
+for i = 3, #Field.gifts do assert(Field.gifts[i].minutes == Field.gifts[i - 1].minutes + 1) end
 local visit = { profile = p }
 local start = 20101 * 86400
-Field.trackShift(visit, start)
-Field.trackShift(visit, start + 599)
-Field.trackShift(visit, start + 599)
-assert(p.shiftSeconds == 599 and not Field.claimShift(visit, start + 599, 1))
+Field.trackGifts(visit, start)
+Field.trackGifts(visit, start + 299)
+Field.trackGifts(visit, start + 299)
+assert(p.giftSeconds == 299 and not Field.claimGift(visit, start + 299, 1))
 local saved = Data.snapshot(p)
 local returnVisit = { profile = assert(Data.claim({ profile = saved }, "return", start + 2000)).profile }
 local resumed = returnVisit.profile
-Field.trackShift(returnVisit, start + 2000)
-assert(resumed.shiftSeconds == 599 and not Field.claimShift(returnVisit, start + 2000, 1))
-assert(not Field.claimShift(returnVisit, start + 2001, 3))
-assert(Field.claimShift(returnVisit, start + 2001, 1) == 1)
-assert(not Field.claimShift(returnVisit, start + 2001, 1) and resumed.gems == 3)
-assert(not Field.claimShift(returnVisit, start + 2600, 2))
-assert(Field.claimShift(returnVisit, start + 2601, 2) == 2)
-assert(Field.claimShift(returnVisit, start + 12000, 3) == 4 and resumed.gems == 9)
-assert(resumed.shiftSeconds == 3600 and not Field.claimShift(returnVisit, start + 12000, 3))
+Field.trackGifts(returnVisit, start + 2000)
+assert(resumed.giftSeconds == 299 and not Field.claimGift(returnVisit, start + 2000, 1), "time away does not count")
+assert(not Field.claimGift(returnVisit, start + 2001, 2) and not Field.claimGift(returnVisit, start + 2001, 0) and not Field.claimGift(returnVisit, start + 2001, "1"))
+local gold = resumed.gold
+local given = Field.claimGift(returnVisit, start + 2001, 1)
+assert(given and #given == 1 and resumed.gold == gold + Field.gifts[1].reward.gold)
+assert(not Field.claimGift(returnVisit, start + 2001, 1), "a gift was given twice")
+-- Claiming a later gift collects the ones before it.
+local all = Field.claimGift(returnVisit, start + 12000, #Field.gifts)
+assert(all and #all == #Field.gifts - 1 and resumed.giftClaims == #Field.gifts)
+assert(resumed.giftSeconds == Field.maxGiftTime and not Field.claimGift(returnVisit, start + 12000, #Field.gifts) and not Field.claimGift(returnVisit, start + 12000, #Field.gifts + 1))
 local sameDay = { profile = assert(Data.claim({ profile = Data.snapshot(resumed) }, "third", start + 22000)).profile }
-assert(not Field.claimShift(sameDay, start + 22000, 1))
-Field.trackShift(sameDay, start + 86400 + 9)
-assert(sameDay.profile.shiftClaims == 0 and sameDay.profile.shiftSeconds == 9)
-assert(not Field.claimShift(sameDay, start + 86400 + 9, 1))
+assert(not Field.claimGift(sameDay, start + 22000, 1))
+Field.trackGifts(sameDay, start + 86400 + 9)
+assert(sameDay.profile.giftClaims == 0 and sameDay.profile.giftSeconds == 9)
+assert(not Field.claimGift(sameDay, start + 86400 + 9, 1))
 local followingDay = { profile = sameDay.profile }
-Field.trackShift(followingDay, start + 3 * 86400 + 16000)
-assert(sameDay.profile.shiftSeconds == 0 and sameDay.profile.shiftClaims == 0)
-assert(not Field.claimShift(followingDay, start + 3 * 86400 + 16000, 1))
-local corrupt = Data.snapshot(sameDay.profile)
-corrupt.shiftClaims = 3
-assert(not Profile.valid(corrupt))
-print("PASS online shift timer, no offline or duplicate credit, all three claims, midnight and reconnect")
+Field.trackGifts(followingDay, start + 3 * 86400 + 16000)
+assert(sameDay.profile.giftSeconds == 0 and sameDay.profile.giftClaims == 0)
+-- A save from the old timed rewards still loads.
+local older = Data.snapshot(sameDay.profile)
+older.shiftClaims, older.shiftSeconds, older.giftDay, older.giftSeconds, older.giftClaims = 3, 3600, nil, nil, nil
+assert(Profile.valid(older) and assert(Data.claim({ profile = older }, "older", start)).profile.giftClaims == 0)
+older.giftClaims = -1
+assert(not Profile.valid(older))
+-- What the client shows from the two attributes.
+local miner = { GetAttribute = function(_, key) return ({ GiftClock = 1000, GiftClaims = 1 })[key] end }
+local ready, left = Field.giftState(miner, 1000 + 630)
+assert(ready == 1 and left == 30 and Field.played(miner, 1000 + 630) == 630)
+ready, left = Field.giftState(miner, 1000 + 99999)
+assert(ready == #Field.gifts - 1 and left == nil)
+print("PASS daily card, playtime gifts, no offline or duplicate credit, claim-through, midnight, reconnect and old saves")
 
 local folder = Instance.new("Folder")
 folder.Parent = workspace

@@ -5,6 +5,7 @@ local GuiService = game:GetService("GuiService")
 local LevelRing = require(script.Parent.LevelRing)
 local StarterGui = game:GetService("StarterGui")
 local Upgrades, Expeditions = require(Shared.Upgrades), require(Shared.Expeditions)
+local Field = require(Shared.FieldRewards)
 local W, Icons, Menu = require(script.Parent.Widgets), require(script.Parent.Icons), require(script.Parent.HarborMenu)
 local Audio = require(script.Parent.HarborAudio)
 local Roster = require(script.Parent.MinerRoster)
@@ -78,24 +79,28 @@ function Hud.new(player, net, mobile)
 	self.status = W.text(wallet, "", 0, 52, 210, 17, 13, W.gold, true)
 	W.outlineText(self.status, 1.5)
 	local haul = clearFrame(root, "Haul", 0, 0, 250, 79)
+	local haulFace = W.frame(haul, "Face", 0, 0, 0, 0, W.white, 15)
+	haulFace.Size = UDim2.fromScale(1, 1)
+	W.enamelPanel(haulFace, Color3.fromRGB(94, 88, 160), Color3.fromRGB(62, 57, 112), 15)
 	self.haul, self.rows = haul, {}
-	self.haulTitle = W.title(haul, "Your haul", 10, 4, 99, 24, 20, W.white, true)
-	self.pack = W.title(haul, "", 100, 4, 140, 24, 17, W.white)
-	local track = W.frame(haul, "Capacity", 10, 30, 230, 5, W.ink, 3)
-	self.fill = W.frame(track, "Ore", 0, 0, 0, 5, W.green, 3)
+	self.haulTitle = W.title(haul, "Your haul", 14, 6, 136, 24, 20, W.white, true)
+	self.pack = W.title(haul, "", 148, 6, 88, 24, 18, W.white)
+	self.pack.TextXAlignment = Enum.TextXAlignment.Right
+	local track = W.frame(haul, "Capacity", 13, 33, 224, 8, W.navy, 4)
+	self.fill = W.frame(track, "Ore", 0, 0, 0, 8, W.green, 4)
 	self.haulPulse = W.scale(self.haulTitle)
-	self.haulValue = W.text(haul, "", 10, 58, 230, 18, 13, W.gold, true)
+	self.haulValue = W.title(haul, "", 14, 58, 222, 20, 16, W.gold, true)
 	for _, ore in Ores.list do
-		local row = W.frame(haul, ore.name, 10, 38, 230, 20, W.panel)
+		local row = W.frame(haul, ore.name, 12, 46, 226, 20, W.panel)
 		row.BackgroundTransparency = 1
 		local sample = W.frame(row, "Ore sample", 1, 3, 14, 14, ore.color, 2)
 		sample.Rotation = 15
 		W.stroke(sample, W.ink, 1.5)
 		W.text(row, ore.name, 21, 0, 98, 20, 16, W.white, true)
 		-- What this stack adds to the sale: its base price in gold, then the purity bonus in aqua.
-		local worth = W.text(row, "", 112, 0, 76, 20, 13, W.gold, true)
+		local worth = W.text(row, "", 108, 0, 76, 20, 13, W.gold, true)
 		worth.Name, worth.RichText, worth.TextXAlignment = "Worth", true, Enum.TextXAlignment.Right
-		local quantity = W.title(row, "", 190, 0, 40, 20, 17, W.white)
+		local quantity = W.title(row, "", 186, 0, 40, 20, 17, W.white)
 		quantity.Name, quantity.TextXAlignment = "Quantity", Enum.TextXAlignment.Right
 		quantity.TextColor3 = ore.color:Lerp(W.white, 0.5)
 		self.rows[ore.name] = row
@@ -107,13 +112,14 @@ function Hud.new(player, net, mobile)
 	details.Activated:Connect(function()
 		self:openPage("Pack")
 	end)
-	local taskCard = clearFrame(root, "Current job", 0, 0, 215, 51)
-	local jobTap = W.button(taskCard, "OpenJob", 0, 0, 215, 51, W.card, "", "Job")
-	Icons.draw(jobTap, "Jobs", 7, 9, 33)
-	self.job = W.title(jobTap, "", 46, 3, 141, 24, 18, W.white, true)
-	self.jobCount = W.text(jobTap, "", 46, 26, 143, 20, 14, W.gold, true)
-	W.title(jobTap, "›", 188, 4, 21, 42, 30, W.gold)
-	self.ribbon = clearFrame(taskCard, "Discovery", 0, 54, 215, 52)
+	local taskCard = clearFrame(root, "Current job", 0, 0, 250, 58)
+	local jobTap = W.clearButton(taskCard, "OpenJob", 0, 0, 250, 58, "Job")
+	self.jobPaint = W.enamelPanel(jobTap, Color3.fromRGB(255, 208, 110), Color3.fromRGB(240, 148, 40), 15)
+	Icons.draw(jobTap, "Jobs", 9, 10, 38)
+	self.job = W.title(jobTap, "", 54, 5, 166, 26, 20, W.white, true)
+	self.jobCount = W.text(jobTap, "", 54, 30, 170, 21, 15, W.white, true)
+	W.title(jobTap, "›", 222, 6, 21, 44, 32, W.white)
+	self.ribbon = clearFrame(taskCard, "Discovery", 0, 62, 250, 52)
 	self.ribbon.Visible = false
 	self.ribbonType = W.text(self.ribbon, "", 12, 4, 192, 17, 12, W.aqua, true)
 	self.ribbonName = W.title(self.ribbon, "", 12, 22, 192, 25, 20, W.white, true)
@@ -129,7 +135,16 @@ function Hud.new(player, net, mobile)
 	self.depth = W.text(loc, "Surface", 0, 37, 244, 21, 15, W.white)
 	self.depth.Name = "Depth"
 	W.outlineText(self.depth, 1.8)
-	self.surface = W.button(loc, "Surface", 0, 0, 112, 44, W.gold, "↑ Surface", "Select")
+	self.surface = W.clearButton(loc, "Surface", 0, 0, 132, 46, "Select")
+	W.round(self.surface, 14)
+	local surfaceShadow = W.frame(self.surface, "Shadow", 0, 4, 132, 46, W.navy, 14)
+	surfaceShadow.ZIndex = 0
+	self.surfaceFace = W.frame(self.surface, "Face", 0, 0, 132, 46, W.white, 14)
+	self.surfacePaint = W.enamelPanel(self.surfaceFace, Color3.fromRGB(255, 230, 128), Color3.fromRGB(243, 165, 26), 14)
+	local surfaceName = W.title(self.surfaceFace, "↑ Surface", 2, 0, 116, 44, 21, W.white)
+	surfaceName.Name = "Caption"
+	W.navyText(surfaceName, 2.6)
+	self.surfaceKey = SideButtons.letter(self.surfaceFace, "R", 107, 21)
 	W.anchor(self.surface, 0.5, 0, UDim2.new(0.5, 0, 1, 3))
 	self.surface.Activated:Connect(function()
 		net.Action:FireServer("Surface")
@@ -161,11 +176,12 @@ function Hud.new(player, net, mobile)
 	for _, slot in hotbar do
 		self.hotbarPages[slot.code] = slot.page
 	end
-	local tileStep = SideButtons.size + 22
-	local menuRail = clearFrame(root, "Menu buttons", 0, 0, SideButtons.size + 14, 82 + 4 * tileStep - 22)
-	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, SideButtons.size + 14, 2 * tileStep)
+	local tileStep = SideButtons.size + 15
+	local menuRail = clearFrame(root, "Menu buttons", 0, 0, 2 * tileStep, 2 * tileStep + 60)
+	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, SideButtons.size + 6, 2 * tileStep)
 	self.sideKeys = {}
 	local settingsButton = SideButtons.round(menuRail, "Settings", shortcutLetters.Settings)
+	settingsButton.button.Position = UDim2.fromOffset(0, 2 * tileStep)
 	settingsButton.button.Activated:Connect(function()
 		self:openPage("Settings")
 	end)
@@ -173,7 +189,7 @@ function Hud.new(player, net, mobile)
 	for i, key in { "Inventory", "Skills", "Achievements", "Book" } do
 		local caption = if key == "Book" then "Index" elseif key == "Achievements" then "Awards" else key
 		local tile = SideButtons.tile(menuRail, key, caption, shortcutLetters[key])
-		tile.button.Position = UDim2.fromOffset(0, 82 + (i - 1) * tileStep)
+		tile.button.Position = UDim2.fromOffset((i - 1) % 2 * tileStep, math.floor((i - 1) / 2) * tileStep)
 		table.insert(self.sideKeys, tile.key)
 		if key ~= "Inventory" then
 			self.navDots[key] = SideButtons.badge(tile, if key == "Book" then "NEW" else "!")
@@ -182,19 +198,18 @@ function Hud.new(player, net, mobile)
 			self:openPage(key)
 		end)
 	end
-	-- Placeholders until the reward systems exist: Daily opens the seven-day gem card (on the Jobs
-	-- page for now) and Playtime only says it is coming. setGiftReady drives the ready wiggle.
 	local daily = SideButtons.tile(rewardRail, "Daily", "Daily", shortcutLetters.Daily)
-	daily.button.Position = UDim2.fromOffset(0, 14)
+	daily.button.Position = UDim2.fromOffset(0, 6)
 	daily.button.Activated:Connect(function()
 		self:toggleHotbarPage("Daily")
 	end)
 	local gift = SideButtons.tile(rewardRail, "Playtime", "Gift", shortcutLetters.Playtime)
-	gift.button.Position = UDim2.fromOffset(0, 14 + tileStep)
+	gift.button.Position = UDim2.fromOffset(0, 6 + tileStep)
 	gift.button.Activated:Connect(function()
 		self:toggleHotbarPage("Playtime")
 	end)
 	self.giftTile, self.giftBadge = gift, SideButtons.badge(gift)
+	self.dailyTile, self.dailyBadge = daily, SideButtons.badge(daily)
 	table.insert(self.sideKeys, daily.key)
 	table.insert(self.sideKeys, gift.key)
 	local shortcuts = W.frame(root, "Edge shortcuts", 0, 0, 76, 100, W.ink)
@@ -219,13 +234,13 @@ function Hud.new(player, net, mobile)
 	self.edgeAlert = W.dot(menuButton, -13, 2)
 	self.touchActions = TouchActions.new(root)
 	self.mine = self.touchActions.hold
-	local speech = clearFrame(root, "Feedback", 0, 0, 320, 47)
-	self.message = W.title(speech, "", 5, 1, 310, 25, 18, W.white)
-	self.detail = W.text(speech, "", 5, 25, 310, 18, 13, W.muted)
+	local speech = clearFrame(root, "Feedback", 0, 0, 460, 62)
+	self.message = W.title(speech, "", 5, 1, 450, 34, 27, W.white)
+	self.detail = W.text(speech, "", 5, 35, 450, 24, 18, W.white)
 	for _, panel in { haul, taskCard, speech } do
 		for _, label in panel:GetDescendants() do
 			if label:IsA("TextLabel") then
-				W.outlineText(label, if label.TextSize >= 18 then 2 else 1.4)
+				W.navyText(label, if label.TextSize >= 18 then 2.4 else 1.8)
 			end
 		end
 	end
@@ -292,6 +307,7 @@ function Hud.new(player, net, mobile)
 	end)
 	local walletScale, taskScale, haulScale = W.scale(wallet), W.scale(taskCard), W.scale(haul)
 	local locScale, speechScale = W.scale(loc), W.scale(speech)
+	self.speechScale, self.speechBoost, self.speechBase = speechScale, 1, 1
 	local menuRailScale, rewardRailScale = W.scale(menuRail), W.scale(rewardRail)
 	local toolScale = W.scale(tools)
 	local legacyChat
@@ -313,7 +329,7 @@ function Hud.new(player, net, mobile)
 		local s = if edge then 1 else math.clamp(math.min(width / 1150, height / 750), 0.90, 1.32)
 		local margin = if edge then 4 else 10
 		self.menu:layout(width, height, touchLayout)
-		walletScale.Scale, taskScale.Scale, haulScale.Scale, speechScale.Scale = s, s, s, s
+		walletScale.Scale, taskScale.Scale, haulScale.Scale = s, s, s
 		toolScale.Scale = s
 		locScale.Scale = s
 		local full = GuiService:GetInsetArea(Enum.ScreenInsets.None)
@@ -392,7 +408,7 @@ function Hud.new(player, net, mobile)
 			loc.Position = UDim2.fromOffset(titleX, locationY)
 			local depthY = belowChat(titleX - 58, locationY + 37, 116, 21)
 			self.depth.Position = UDim2.fromOffset(0, depthY - locationY)
-			local surfaceY = belowChat(titleX - 56, depthY + 24, 112, 44)
+			local surfaceY = belowChat(titleX - 66, depthY + 24, 132, 46)
 			self.surface.Position = UDim2.new(0.5, 0, 0, surfaceY - locationY)
 			local right = if topActions then freeRight else width - margin
 			local rowY = if topActions then top elseif inTopbar then 4 else math.max(73, depthY + 26)
@@ -403,12 +419,12 @@ function Hud.new(player, net, mobile)
 			end
 			if
 				self.surface.Visible
-				and titleX + 56 > right - pairWidth
-				and titleX - 56 < right
+				and titleX + 66 > right - pairWidth
+				and titleX - 66 < right
 				and rowY + 48 > surfaceY
-				and rowY < surfaceY + 44
+				and rowY < surfaceY + 50
 			then
-				rowY = surfaceY + 46
+				rowY = surfaceY + 52
 			end
 			rowY = belowChat(right - pairWidth, rowY, pairWidth, 48)
 			local gearY = belowChat(right - 150, rowY + 51, 150, 46)
@@ -432,7 +448,7 @@ function Hud.new(player, net, mobile)
 			local walletLeft = if walletTop + 52 > height - 100 then leftEdge + 92 else leftEdge
 			if narrow and walletLeft < titleX + titleHalf and walletLeft + walletWidth > titleX - titleHalf then
 				local regionBottom = math.max(locationY + loc.Size.Y.Offset, depthY + 21)
-				if self.surface.Visible then regionBottom = math.max(regionBottom, surfaceY + 44) end
+				if self.surface.Visible then regionBottom = math.max(regionBottom, surfaceY + 50) end
 				if walletTop < regionBottom + 4 and walletTop + 52 > locationY then
 					walletTop = belowChat(walletLeft, regionBottom + 4, walletWidth, 52)
 				end
@@ -455,38 +471,40 @@ function Hud.new(player, net, mobile)
 				1,
 				UDim2.new(0, margin, 1, -bottom - 46 * s - (if self.status.Text == "" then 0 else 18 * s))
 			)
-			local rightY = margin + rosterHeight + 4
-			W.anchor(taskCard, 1, 0, UDim2.new(1, -margin, 0, rightY))
-			W.anchor(haul, 1, 0, UDim2.new(1, -margin, 0, rightY + 55 * s))
+			local rightY = margin + rosterHeight + 9
+			W.anchor(taskCard, 1, 0, UDim2.new(1, -margin - 2, 0, rightY))
+			W.anchor(haul, 1, 0, UDim2.new(1, -margin - 2, 0, rightY + 66 * s))
 			-- The menu rail fills the left side between the chat window and the wallet, shrinking to fit.
 			local keyboard = not rosterOnDemand
 			for _, cap in self.sideKeys do
 				cap.Visible = keyboard
 			end
-			local railScale = math.clamp(math.min(width / 1500, height / 900), 0.7, 1.2)
+			local railScale = math.clamp(math.min(width / 1400, height / 780), 0.78, 1.15)
 			local walletTop = height - margin - (46 + 52) * s - (if self.status.Text == "" then 0 else 18 * s)
 			local topLimit = margin + 6
 			for _, chat in { chatWindow, chatInput } do
 				if chat and chat.Enabled and chat.AbsoluteSize.Y > 0 then
 					local pos = chat.AbsolutePosition - root.AbsolutePosition
-					if pos.X < margin + 130 * railScale then
+					if pos.X < margin + 200 * railScale then
 						topLimit = math.max(topLimit, pos.Y + chat.AbsoluteSize.Y + 8)
 					end
 				end
 			end
 			local menuHeight = menuRail.Size.Y.Offset
 			local room = walletTop - 12 - topLimit
-			menuRailScale.Scale = math.max(0.45, math.min(railScale, room / menuHeight))
-			local menuTop = topLimit + math.max(0, (room - menuHeight * menuRailScale.Scale) / 2)
+			-- Directly under the chat window, or centred when chat is out of the way.
+			menuRailScale.Scale = math.max(0.5, math.min(railScale, room / menuHeight))
+			local slack = math.max(0, room - menuHeight * menuRailScale.Scale)
+			local menuTop = topLimit + (if topLimit > margin + 6 then math.min(slack, 14) else slack / 2)
 			W.anchor(menuRail, 0, 0, UDim2.fromOffset(margin + 4, menuTop))
 			-- The reward rail sits under the haul card, or beside it when the haul is long.
-			local haulBottom = rightY + (55 + self.haul.Size.Y.Offset) * s + 12
+			local haulBottom = rightY + (66 + self.haul.Size.Y.Offset) * s + 12
 			local rewardHeight = rewardRail.Size.Y.Offset
 			rewardRailScale.Scale = railScale
 			if haulBottom + rewardHeight * railScale <= height - margin then
-				W.anchor(rewardRail, 1, 0, UDim2.fromOffset(width - margin, haulBottom))
+				W.anchor(rewardRail, 1, 0, UDim2.fromOffset(width - margin - 2, haulBottom))
 			else
-				W.anchor(rewardRail, 1, 0, UDim2.fromOffset(width - margin - 262 * s, rightY + 55 * s))
+				W.anchor(rewardRail, 1, 0, UDim2.fromOffset(width - margin - 268 * s, rightY + 66 * s))
 			end
 		end
 		local touchGui = gui.Parent:FindFirstChild("TouchGui")
@@ -498,12 +516,13 @@ function Hud.new(player, net, mobile)
 			self.mobile and playing and not browsing and not typing,
 			toolsBottom
 		)
-		local speechWidth = if edge then math.clamp(width - 175, 144, 248) else 320
-		speechScale.Scale = s
-		speech.Size = UDim2.fromOffset(speechWidth, if edge then 41 else 47)
-		self.message.Size = UDim2.fromOffset(speechWidth - 10, if edge then 21 else 25)
-		self.detail.Position = UDim2.fromOffset(5, if edge then 21 else 25)
-		self.detail.Size = UDim2.fromOffset(speechWidth - 10, 18)
+		local speechWidth = if edge then math.clamp(width - 175, 144, 290) else 460
+		self.speechBase = s
+		speechScale.Scale = s * self.speechBoost
+		speech.Size = UDim2.fromOffset(speechWidth, if edge then 46 else 62)
+		self.message.Size = UDim2.fromOffset(speechWidth - 10, if edge then 25 else 34)
+		self.detail.Position = UDim2.fromOffset(5, if edge then 25 else 35)
+		self.detail.Size = UDim2.fromOffset(speechWidth - 10, if edge then 19 else 24)
 		meter.Size = UDim2.new(1, -20, 0, 7)
 		self.meterHeadroom = -meter.Position.Y.Offset * speechScale.Scale
 		local footer = if touchLayout and width < height then 136 else margin
@@ -578,6 +597,13 @@ function Hud.new(player, net, mobile)
 		self:refresh()
 	end)
 	self:refresh()
+	require(script.Parent.MenuCursor)(self)
+	task.spawn(function()
+		while gui.Parent do
+			task.wait(1)
+			self:refreshRewards()
+		end
+	end)
 	return self
 end
 function Hud:placePanels(touch)
@@ -591,13 +617,6 @@ function Hud:openPage(key)
 	self.reticle.Visible = false
 end
 function Hud:toggleHotbarPage(key)
-	if key == "Playtime" then
-		Audio.denied()
-		self:notice("Playtime gifts", "Coming soon: a free gift for every stretch of mining.", W.violet)
-		return
-	elseif key == "Daily" then
-		key = "Jobs"
-	end
 	local menu = self.menu
 	local samePage = menu.page == key or (key == "Inventory" and menu.tabLists[menu.page] ~= nil)
 	if self.overlay.Visible and samePage and not menu.closing then
@@ -633,7 +652,7 @@ function Hud:refresh()
 	self.pack.Text = W.number(used) .. " / " .. W.number(cap)
 	self.edgeCount.Text = W.number(used) .. "/" .. W.number(cap)
 	local full = used >= cap
-	self.haulTitle.Text = if full then "Bag full!" else "Your haul"
+	self.haulTitle.Text = if full then "Backpack full!" else "Your haul"
 	self.haulTitle.TextColor3 = if full then fullRed else W.white
 	self.pack.TextColor3 = if full then fullRed else W.white
 	self.edgeCount.TextColor3 = if full then fullRed else W.white
@@ -641,15 +660,18 @@ function Hud:refresh()
 	local control = Input.PreferredInput
 	local shortcut = if self.mobile then "↑" elseif control == Enum.PreferredInput.Gamepad then Input:GetStringForKeyCode(Enum.KeyCode.ButtonY) else "R"
 	shortcut = shortcut:gsub("^Button", "")
-	self.surface.Text = shortcut .. " · Surface" .. (if full then "\nBag full!" else "")
+	self.surfaceKey.Text = if self.mobile then "" else shortcut
+	self.surfacePaint.Color = if full
+		then ColorSequence.new(Color3.fromRGB(255, 150, 140), Color3.fromRGB(226, 58, 70))
+		else ColorSequence.new(Color3.fromRGB(255, 230, 128), Color3.fromRGB(243, 165, 26))
 	if used >= cap and (self.lastUsed or 0) < cap and self.player:GetAttribute("MenuMotion") ~= false
 		and not GuiService.ReducedMotionEnabled then
 		for _, pulse in { self.haulPulse, self.edgeCountPulse } do
 			pulse.Scale = 1.15
 			W.tween(pulse, 0.38, { Scale = 1 })
 		end
-		self.surface.BackgroundColor3 = W.white
-		W.tween(self.surface, 0.7, { BackgroundColor3 = W.gold })
+		self.surfaceFace.Rotation = 4
+		W.tween(self.surfaceFace, 0.5, { Rotation = 0 })
 	end
 	if used ~= self.lastUsed or cap ~= self.lastCap then
 		self.lastUsed, self.lastCap = used, cap
@@ -668,16 +690,16 @@ function Hud:refresh()
 		local total = Purity.quote(ore, entry.amount, grades, entry.amount, broker) * double
 		local base = Purity.unitPrice(ore, nil, broker) * entry.amount * double
 		row.Worth.Text = W.number(base) .. " G" .. (if total > base then W.colored(" +" .. W.number(total - base), W.aqua) else "")
-		row.Position, row.Visible = UDim2.fromOffset(10, 38 + (i - 1) * 20), true
+		row.Position, row.Visible = UDim2.fromOffset(12, 46 + (i - 1) * 20), true
 	end
 	local visible = #held
 	self.haulValue.Visible = visible > 0
-	local footerY = 39 + visible * 20
-	self.haulValue.Position = UDim2.fromOffset(10, footerY)
+	local footerY = 47 + visible * 20
+	self.haulValue.Position = UDim2.fromOffset(14, footerY)
 	self.haulValue.Text = "Sell value   "
 		.. W.number((p:GetAttribute("BagValue") or 0) * (if p:GetAttribute("DoubleGold") then 2 else 1))
 		.. " G"
-	local haulHeight = footerY + (if visible > 0 then 22 else 0)
+	local haulHeight = footerY + (if visible > 0 then 27 else 4)
 	if self.haul.Size.Y.Offset ~= haulHeight then
 		self.haul.Size = UDim2.fromOffset(250, haulHeight)
 		self.layout()
@@ -700,10 +722,12 @@ function Hud:refresh()
 		then "Claim " .. W.number(job.reward) .. " G"
 		elseif job then job.title
 		else "Daily supply order"
-	self.job.TextColor3 = if claimable then W.gold else W.white
+	self.jobPaint.Color = if claimable
+		then ColorSequence.new(Color3.fromRGB(166, 245, 154), Color3.fromRGB(52, 178, 74))
+		else ColorSequence.new(Color3.fromRGB(255, 208, 110), Color3.fromRGB(240, 148, 40))
 	if claimable and self.claimShown ~= job and self.player:GetAttribute("MenuMotion") ~= false then
-		self.job.Parent.BackgroundColor3 = W.gold
-		W.tween(self.job.Parent, 0.65, { BackgroundColor3 = W.card })
+		self.job.Parent.Rotation = 3
+		W.tween(self.job.Parent, 0.45, { Rotation = 0 })
 	end
 	self.claimShown = if claimable then job else nil
 	self.jobCount.Text = if claimable
@@ -711,13 +735,14 @@ function Hud:refresh()
 		elseif job then string.format("%d / %d  ·  %s G", mined, job.goal, W.number(job.reward))
 		elseif dailyDone then "Delivered today"
 		else "View today's delivery"
-	self.jobCount.TextColor3 = if job and mined >= job.goal then W.green else W.gold
 	local any = self.menu:attention("Jobs")
 	self.jobDot.Visible = any
 	for key, dot in self.navDots do
 		dot.Visible = self.menu:attention(key)
 		any = any or dot.Visible
 	end
+	self:refreshRewards()
+	any = any or self.dailyBadge.Visible or self.giftBadge.Visible
 	self.edgeAlert.Visible = any
 	local pointCount = tostring(p:GetAttribute("SkillPoints") or 0)
 	self.levelDot.Text, self.navDots.Skills.Text = pointCount, pointCount
@@ -775,7 +800,9 @@ function Hud:pickup(ore, amount, point)
 end
 function Hud:pointerOnControl(screen)
 	if GuiService.MenuIsOpen or Input:GetFocusedTextBox() or (self.chatInput and self.chatInput.IsFocused) then return true end
-	for _, item in self.player.PlayerGui:GetGuiObjectsAtPosition(screen.X, screen.Y) do
+	-- The mouse is measured from the window's corner. Gui positions start below the top bar.
+	local at = screen - GuiService:GetGuiInset()
+	for _, item in self.player.PlayerGui:GetGuiObjectsAtPosition(at.X, at.Y) do
 		if item:IsA("GuiButton") or item:IsA("TextBox") then return true end
 	end
 	return false
@@ -874,20 +901,30 @@ function Hud:notice(title, detail, color)
 	self.message.TextTransparency = 0.35
 	W.tween(self.message, 0.16, { TextTransparency = 0 })
 end
--- Trying to mine with a full pack: a short buzz, the no-entry cursor and the "Bag full!" heading
--- shake and pop, and a notice says what to do. Throttled so holding the button doesn't spam it.
-function Hud:bagFull()
-	local now = os.clock()
-	if now < (self.bagFullAt or 0) then
+function Hud:boostSpeech(boost, seconds)
+	if self.speechBoost == boost then
 		return
 	end
-	self.bagFullAt = now + 0.9
+	self.speechBoost = boost
+	if self.boostTween then self.boostTween:Cancel() end
+	self.boostTween = W.tween(self.speechScale, seconds or 0.12, { Scale = self.speechBase * boost })
+end
+-- Trying to mine what can't be mined: a short buzz, and the reason at the cursor grows and wiggles
+-- where it is. The no-entry cursor shakes too. Throttled so holding the button doesn't spam it.
+function Hud:cantMine(full)
+	local now = os.clock()
+	if now < (self.cantMineAt or 0) then
+		return
+	end
+	self.cantMineAt, self.untilTime = now + 0.9, 0
 	Audio.denied()
-	local surface = if self.mobile then "Tap ↑ Surface" else "Press R to surface"
-	self:notice("Bag full!", surface .. ", then sell your haul to keep mining", fullRed)
 	if self.player:GetAttribute("MenuMotion") == false or GuiService.ReducedMotionEnabled then
 		return
 	end
+	self:boostSpeech(1.95, 0.07)
+	task.delay(0.12, function()
+		if self.speechBoost == 1.95 then self:boostSpeech(1.4, 0.5) end
+	end)
 	local function shake(gui, scale)
 		if not gui then
 			return
@@ -906,14 +943,30 @@ function Hud:bagFull()
 	local badge = self.denied.Parent
 	self.deniedScale = self.deniedScale or W.scale(badge)
 	shake(badge, self.deniedScale)
-	shake(self.haulTitle, self.haulPulse)
-	shake(self.edgeCount, self.edgeCountPulse)
+	shake(self.speech)
+	if full then
+		shake(self.haulTitle, self.haulPulse)
+		shake(self.edgeCount, self.edgeCountPulse)
+	end
 end
-function Hud:guide(title, detail, visible)
+-- `blocked` marks a reason the aimed block can't be mined. It is shown larger and in red.
+function Hud:guide(title, detail, visible, blocked)
 	if os.clock() < (self.untilTime or 0) then
 		return
 	end
+	if not blocked then
+		self:boostSpeech(1)
+	elseif self.speechBoost < 1.4 then
+		self:boostSpeech(1.4)
+	end
 	self.speech.Visible, self.detail.RichText = visible, true
-	self.message.Text, self.message.TextColor3, self.detail.Text = title, W.white, detail
+	self.message.Text, self.message.TextColor3, self.detail.Text = title, if blocked then fullRed else W.white, detail
+end
+-- The two reward tiles: a badge when something can be claimed, and the time to the next gift.
+function Hud:refreshRewards()
+	self.dailyBadge.Visible = self.menu:attention("Daily")
+	SideButtons.setReady(self.dailyTile, self.dailyBadge.Visible, if self.dailyBadge.Visible then "Claim!" else "Daily")
+	local ready, left = Field.giftState(self.player, workspace:GetServerTimeNow())
+	self:setGiftReady(ready > 0, if ready > 0 then "Claim!" elseif left then W.clock(left) else "Gift", ready)
 end
 return Hud
