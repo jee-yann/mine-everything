@@ -434,7 +434,8 @@ function Profile.equipTitle(p, id)
 	p.title = id
 	return true
 end
-function Profile.recordCut(p, name, depth, random)
+-- `boost` multiplies the XP of this cut, for mining with a friend.
+function Profile.recordCut(p, name, depth, random, boost)
 	local ore = Ores.byName[name]
 	local units, grade, record = 1, nil, false
 	if not ore.host then
@@ -450,7 +451,7 @@ function Profile.recordCut(p, name, depth, random)
 		record = grade > (p.bestPurity[name] or 0)
 		if record then p.bestPurity[name] = grade end
 	end
-	local xp = math.floor(Skills.oreXP(ore, p.skills, not p.discoveries[name], depth or 0) * Rebirth.xpMultiplier(p.rebirths) + 0.5)
+	local xp = math.floor(Skills.oreXP(ore, p.skills, not p.discoveries[name], depth or 0) * Rebirth.xpMultiplier(p.rebirths) * (boost or 1) + 0.5)
 	if name == Rebirth.requirement.ore then p.runStarfalls += 1 end
 	p.discoveries[name] = true
 	p.bag[name] = (p.bag[name] or 0) + units
@@ -503,6 +504,20 @@ function Profile.claimJob(p, i)
 	p.jobs += 1
 	p.gold += job.reward
 	return job, if p.jobs == #Expeditions.jobs then Profile.unlock(p, "Shifts") else nil
+end
+
+-- Collects every finished job. Returns how many, their gold and an award, if any.
+function Profile.claimJobs(p)
+	local count, gold, award = 0, 0, nil
+	for i in Expeditions.jobs do
+		local job, earned = Profile.claimJob(p, i)
+		if job then
+			count += 1
+			gold += job.reward
+			award = earned or award
+		end
+	end
+	return count, gold, award
 end
 
 function Profile.value(bag, grades, broker)

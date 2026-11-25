@@ -739,6 +739,18 @@ do
 		Profile.recordCut(plain, "Copper", 40, Random.new(3))
 		Profile.recordCut(reborn, "Copper", 40, Random.new(3))
 		assert(reborn.xp == math.floor(plain.xp * 1.25 + 0.5), "rebirth XP bonus")
+		-- A friend in the server: 25% more, on top of rebirths. Nothing extra alone.
+		local Friends = require(Shared.FriendBonus)
+		assert(Friends.multiplier(0) == 1 and Friends.multiplier(nil) == 1 and Friends.multiplier(1) == 1.25 and Friends.multiplier(4) == 1.25)
+		local together = Profile.new()
+		Profile.recordCut(together, "Copper", 40, Random.new(3), Friends.multiplier(2))
+		assert(together.xp == math.floor(plain.xp * 1.25 + 0.5), "friend XP bonus")
+		-- Claiming every finished job at once pays each of them once.
+		local shift = Profile.new()
+		shift.mined = 80
+		local count, pay = Profile.claimJobs(shift)
+		assert(count == 3 and pay == 25 + 80 + 160 and shift.gold == pay and shift.jobs == 3)
+		assert(Profile.claimJobs(shift) == 0 and shift.gold == pay)
 		-- Saves from before rebirths count their Starfalls toward this run.
 		local legacy = Profile.new()
 		legacy.rebirths, legacy.runStarfalls, legacy.counts = nil, nil, { Starfall = 2 }

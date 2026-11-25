@@ -3,6 +3,7 @@
 -- the right (Hud lays them out). The art is drawn in art/hud/field_kit.html.
 local W = require(script.Parent.Widgets)
 local FieldKit = require(script.Parent.FieldKit)
+local Icons = require(script.Parent.Icons)
 
 local SideButtons = {}
 local rgb = Color3.fromRGB
@@ -21,6 +22,7 @@ local tints = {
 	Daily = { rgb(255, 159, 200), rgb(227, 69, 138) },
 	Playtime = { rgb(207, 174, 255), rgb(129, 80, 230) },
 	Rebirth = { rgb(255, 150, 150), rgb(214, 52, 78) },
+	Profile = { rgb(140, 240, 220), rgb(24, 160, 150) },
 }
 
 local function outline(label, thickness)
@@ -54,7 +56,7 @@ function SideButtons.tile(parent, key, caption, shortcut)
 	W.stroke(rim, W.white, 2.5).Transparency = 0.55
 	local icon = W.frame(face, "Icon", 12, 1, SIZE - 24, SIZE - 24, W.white)
 	icon.BackgroundTransparency, icon.ZIndex = 1, 3
-	FieldKit.draw(icon, key)
+	if not FieldKit.draw(icon, key) then Icons.draw(icon, key, 0, 0, SIZE - 24) end
 	local label = W.title(face, caption, -8, SIZE - 31, SIZE + 16, 24, 17, W.white)
 	label.Name, label.ZIndex = "Caption", 4
 	outline(label, 2.6)

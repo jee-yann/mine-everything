@@ -25,6 +25,7 @@ local hotbar = {
 	{ page = "Book", code = Enum.KeyCode.J },
 	{ page = "Settings", code = Enum.KeyCode.P },
 	{ page = "Rebirth", code = Enum.KeyCode.U },
+	{ page = "Profile", code = Enum.KeyCode.F },
 	{ page = "Daily", code = Enum.KeyCode.L },
 	{ page = "Playtime", code = Enum.KeyCode.G },
 }
@@ -182,41 +183,48 @@ function Hud.new(player, net, mobile)
 		self.hotbarPages[slot.code] = slot.page
 	end
 	local tileStep = SideButtons.size + 24
-	local menuRail = clearFrame(root, "Menu buttons", 0, 0, 2 * tileStep, 2 * tileStep + 68)
-	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, SideButtons.size + 18, 3 * tileStep)
+	local menuRail = clearFrame(root, "Menu buttons", 0, 0, 2 * tileStep, 3 * tileStep + 68)
+	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, SideButtons.size + 18, 2 * tileStep)
 	self.sideKeys = {}
 	local settingsButton = SideButtons.round(menuRail, "Settings", shortcutLetters.Settings)
-	settingsButton.button.Position = UDim2.fromOffset(0, 2 * tileStep)
 	settingsButton.button.Activated:Connect(function()
 		self:openPage("Settings")
 	end)
 	table.insert(self.sideKeys, settingsButton.key)
-	for i, key in { "Inventory", "Skills", "Achievements", "Book" } do
+	local railTiles = {}
+	for i, key in { "Inventory", "Skills", "Achievements", "Book", "Rebirth", "Profile" } do
 		local caption = if key == "Book" then "Index" elseif key == "Achievements" then "Awards" else key
 		local tile = SideButtons.tile(menuRail, key, caption, shortcutLetters[key])
-		tile.button.Position = UDim2.fromOffset((i - 1) % 2 * tileStep, math.floor((i - 1) / 2) * tileStep)
+		railTiles[i] = tile.button
 		table.insert(self.sideKeys, tile.key)
-		if key ~= "Inventory" then
+		if key == "Skills" then self.skillsTile = tile.button end
+		if key == "Rebirth" then self.rebirthTile = tile end
+		if key ~= "Inventory" and key ~= "Profile" then
 			self.navDots[key] = SideButtons.badge(tile, if key == "Book" then "NEW" else "!")
 		end
 		tile.button.Activated:Connect(function()
 			self:openPage(key)
 		end)
 	end
-	local rebirth = SideButtons.tile(rewardRail, "Rebirth", "Rebirth", shortcutLetters.Rebirth)
-	rebirth.button.Position = UDim2.fromOffset(0, 6)
-	rebirth.button.Activated:Connect(function()
-		self:toggleHotbarPage("Rebirth")
-	end)
-	self.rebirthTile, self.navDots.Rebirth = rebirth, SideButtons.badge(rebirth)
-	table.insert(self.sideKeys, rebirth.key)
+	-- Two columns when there is height for three rows, otherwise three columns.
+	local function arrangeRail(columns)
+		if self.railColumns == columns then return end
+		self.railColumns = columns
+		for i, button in railTiles do
+			button.Position = UDim2.fromOffset((i - 1) % columns * tileStep, math.floor((i - 1) / columns) * tileStep)
+		end
+		local rows = math.ceil(#railTiles / columns)
+		settingsButton.button.Position = UDim2.fromOffset(0, rows * tileStep)
+		menuRail.Size = UDim2.fromOffset(columns * tileStep, rows * tileStep + 68)
+	end
+	arrangeRail(2)
 	local daily = SideButtons.tile(rewardRail, "Daily", "Daily", shortcutLetters.Daily)
-	daily.button.Position = UDim2.fromOffset(0, 6 + tileStep)
+	daily.button.Position = UDim2.fromOffset(0, 6)
 	daily.button.Activated:Connect(function()
 		self:toggleHotbarPage("Daily")
 	end)
 	local gift = SideButtons.tile(rewardRail, "Playtime", "Gift", shortcutLetters.Playtime)
-	gift.button.Position = UDim2.fromOffset(0, 6 + 2 * tileStep)
+	gift.button.Position = UDim2.fromOffset(0, 6 + tileStep)
 	gift.button.Activated:Connect(function()
 		self:toggleHotbarPage("Playtime")
 	end)
@@ -516,8 +524,9 @@ function Hud.new(player, net, mobile)
 				local usual = math.min(275, height * 0.4) * chatWindow.HeightScale + (if chatInput and chatInput.Enabled then 56 else 0)
 				topLimit = math.max(topLimit, math.min(usual + 12, height * 0.55))
 			end
-			local menuHeight = menuRail.Size.Y.Offset
 			local room = walletTop - 12 - topLimit
+			arrangeRail(if room / (3 * tileStep + 68) >= railScale * 0.8 then 2 else 3)
+			local menuHeight = menuRail.Size.Y.Offset
 			-- Directly under the chat window, or centred when chat is out of the way.
 			menuRailScale.Scale = math.max(0.5, math.min(railScale, room / menuHeight))
 			local slack = math.max(0, room - menuHeight * menuRailScale.Scale)

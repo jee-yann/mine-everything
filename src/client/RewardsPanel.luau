@@ -116,44 +116,62 @@ function Panel:buildPlaytime()
 	self.playtimePage, self.gifts = page, {}
 	local n = #Field.gifts
 	-- The line of steps above the gifts fills with play time.
-	local step = 764 / n
-	local track = W.frame(page, "Progress", step / 2, 10, 764 - step, 12, W.navy, 6)
+	-- The last gift is the big one and takes the whole right side.
+	local grand = 178
+	local step = (764 - grand - 12) / (n - 1)
+	local centers = {}
+	for i = 1, n do
+		centers[i] = if i == n then 764 - grand / 2 else (i - 0.5) * step
+	end
+	self.giftCenters = centers
+	local track = W.frame(page, "Progress", centers[1], 10, centers[n] - centers[1], 12, W.navy, 6)
 	W.stroke(track, W.navy, 3)
 	self.trackFill = W.frame(track, "Time", 0, 0, 0, 12, W.gold, 6)
 	W.gradient(self.trackFill, W.white, rgb(255, 190, 70), 90)
 	for i, gift in Field.gifts do
 		local last = i == n
-		local x = (i - 1) * step + 4
-		local w = step - 8
+		local x = if last then 764 - grand else (i - 1) * step + 4
+		local w = if last then grand else step - 8
 		local knob = W.frame(page, "Step", x + w / 2 - 12, 4, 24, 24, W.navy, 7)
 		knob.ZIndex = 3
 		W.stroke(knob, W.navy, 3)
-		local tile = box(page, "Gift " .. i, x, 40, w, 252, if last then tints[7] elseif i % 2 == 0 then tints[4] else tints[1])
+		local h = if last then 318 else 252
+		local tile = box(page, "Gift " .. i, x, if last then 36 else 40, w, h, if last then { rgb(255, 226, 120), rgb(240, 120, 40) } elseif i % 2 == 0 then tints[4] else tints[1])
 		local scale = W.scale(tile)
-		local well = W.frame(tile, "Picture", 7, 8, w - 14, 84, W.navy, 11)
+		local well = W.frame(tile, "Picture", 7, if last then 40 else 8, w - 14, if last then 112 else 84, W.navy, 11)
 		well.BackgroundTransparency, well.ClipsDescendants = 0.72, true
-		Card.rays(well, (w - 14) / 2, 42, 80, 6)
-		local sun = Burst.rays(well, (w - 14) / 2, 42, 90, 8, rgb(255, 250, 190), 0.5)
-		sun.Visible = false
-		local picture = Icons.draw(well, gift.reward.icon, (w - 14) / 2 - 29, 13, 58, rgb(120, 225, 255))
+		Card.rays(well, (w - 14) / 2, if last then 56 else 42, if last then 130 else 80, 6)
+		local sun = Burst.rays(well, (w - 14) / 2, if last then 56 else 42, if last then 150 else 90, 8, rgb(255, 250, 190), if last then 0.62 else 0.5)
+		sun.Visible = last
+		local picture = Icons.draw(well, gift.reward.icon, (w - 14) / 2 - (if last then 46 else 29), if last then 10 else 13, if last then 92 else 58, rgb(120, 225, 255))
 		local glow = W.frame(tile, "Ready", 0, 0, 0, 0, W.white, 16)
 		glow.Size, glow.BackgroundTransparency = UDim2.fromScale(1, 1), 1
 		local rim = W.stroke(glow, W.gold, 5)
-		rim.Enabled = false
-		W.navyText(W.title(tile, gift.minutes .. " min", 0, 96, w, 26, 21, W.white), 2.4)
-		local line = 124
-		for part in string.gmatch(Field.describe(gift.reward), "%+[^+]+") do
-			local words = W.title(tile, part, 0, line, w, 21, 16, rgb(255, 240, 150))
-			words.TextScaled = true
-			local limit = Instance.new("UITextSizeConstraint")
-			limit.MaxTextSize, limit.Parent = 16, words
-			W.navyText(words, 2)
-			line += 22
+		rim.Enabled = last
+		if last then
+			rim.Color = rgb(255, 250, 200)
+			local banner = W.title(tile, "GRAND GIFT!", 0, 6, w, 32, 27, rgb(255, 250, 190))
+			W.navyText(banner, 3.2)
+			for k = 1, 5 do
+				local spark = W.title(tile, "★", ({ 12, 150, 22, 146, 84 })[k] - 14, ({ 48, 54, 122, 128, 36 })[k], 28, 28, ({ 22, 26, 20, 24, 18 })[k], rgb(255, 250, 190))
+				spark.ZIndex = 4
+				W.navyText(spark, 2)
+				self.sparks = self.sparks or {}
+				table.insert(self.sparks, { label = spark, scale = W.scale(spark), phase = k * 1.3 })
+			end
 		end
-		local button = W.clearButton(tile, "Claim", 7, 206, w - 14, 38, "Buy")
+		W.navyText(W.title(tile, gift.minutes .. " min", 0, if last then 155 else 96, w, if last then 32 else 26, if last then 28 else 21, W.white), if last then 3 else 2.4)
+		local line = if last then 189 else 124
+		for part in string.gmatch(Field.describe(gift.reward), "%+[^+]+") do
+			local words = W.title(tile, part, 0, line, w, if last then 26 else 21, if last then 22 else 16, rgb(255, 250, 190))
+			W.largest(words, if last then 22 else 16, 10)
+			W.navyText(words, 2.2)
+			line += if last then 26 else 22
+		end
+		local button = W.clearButton(tile, "Claim", if last then 10 else 7, h - (if last then 58 else 46), w - (if last then 20 else 14), if last then 48 else 38, "Buy")
 		W.round(button, 10)
 		local paint = W.enamelPanel(button, rgb(150, 154, 176), rgb(98, 102, 128), 10)
-		local label = W.title(button, "", 0, 0, w - 14, 36, 19, W.white)
+		local label = W.title(button, "", 0, 0, w - (if last then 20 else 14), if last then 46 else 36, if last then 26 else 19, W.white)
 		label.ZIndex = 3
 		W.navyText(label, 2.2)
 		button.Activated:Connect(function()
@@ -161,22 +179,22 @@ function Panel:buildPlaytime()
 		end)
 		local done = W.frame(tile, "Collected", 0, 0, 0, 0, W.navy, 16)
 		done.Size, done.BackgroundTransparency, done.ZIndex = UDim2.fromScale(1, 1), 0.5, 4
-		local tick = W.title(done, "✓", 0, 10, w, 120, 56, rgb(140, 255, 120))
+		local tick = W.title(done, "✓", 0, if last then 46 else 10, w, 120, if last then 96 else 56, rgb(140, 255, 120))
 		tick.ZIndex = 5
 		W.navyText(tick, 4)
 		self.gifts[i] = { tile = tile, scale = scale, knob = knob, button = button, paint = paint, label = label, done = done,
-			sun = sun, rim = rim, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"),
+			grand = last, sun = sun, rim = rim, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"),
 			pictureRest = picture:FindFirstChildOfClass("UIScale").Scale, buttonScale = button["Interaction scale"], w = w }
 	end
-	self.playedLabel = W.title(page, "", 4, 308, 250, 34, 24, W.white, true)
+	self.playedLabel = W.title(page, "", 4, 308, 182, 34, 22, W.white, true)
 	W.navyText(self.playedLabel, 2.6)
-	self.resetLabel = W.title(page, "", 510, 308, 250, 34, 20, W.white)
+	self.resetLabel = W.title(page, "", 398, 308, 176, 34, 17, W.white)
 	self.resetLabel.TextXAlignment = Enum.TextXAlignment.Right
 	W.navyText(self.resetLabel, 2.4)
-	local all = W.clearButton(page, "Claim all", 272, 302, 220, 48, "Buy")
+	local all = W.clearButton(page, "Claim all", 190, 300, 200, 52, "Buy")
 	W.round(all, 13)
 	self.allPaint = W.enamelPanel(all, rgb(150, 154, 176), rgb(98, 102, 128), 13)
-	self.allLabel = W.title(all, "Claim all", 0, 0, 220, 46, 25, W.white)
+	self.allLabel = W.title(all, "Claim all", 0, 0, 200, 50, 27, W.white)
 	self.allLabel.ZIndex = 3
 	W.navyText(self.allLabel, 2.6)
 	all.Activated:Connect(function()
@@ -243,15 +261,28 @@ end
 function Panel:animate(now)
 	local list = if self.page == "Daily" then self.days else self.gifts
 	local moving = motion(self.menu)
+	if moving and self.page == "Playtime" then
+		for _, spark in self.sparks do
+			local wave = (1 + math.sin(now * 3 + spark.phase)) / 2
+			spark.scale.Scale, spark.label.TextTransparency = 0.6 + 0.6 * wave, 0.7 * (1 - wave)
+			spark.label.Rotation = math.sin(now * 1.6 + spark.phase) * 18
+		end
+	end
 	for _, entry in list do
 		local live = entry.live == true
-		entry.sun.Visible = live
+		entry.sun.Visible = live or (entry.grand == true and not entry.done.Visible)
 		if live and moving then
 			local beat = (1 - math.cos(now * 5.2)) / 2
 			entry.pictureScale.Scale = entry.pictureRest * (1 + 0.16 * beat)
 			entry.picture.Rotation = math.sin(now * 5.2) * 5
 			entry.buttonScale.Scale = 1 + 0.07 * beat
 			entry.rim.Thickness = 4.5 + 2 * beat
+		elseif entry.grand and moving and not entry.done.Visible then
+			-- The big gift keeps swaying while it waits.
+			local sway = (1 - math.cos(now * 2.2)) / 2
+			entry.pictureScale.Scale = entry.pictureRest * (1 + 0.07 * sway)
+			entry.picture.Rotation = math.sin(now * 2.2) * 4
+			entry.rim.Thickness = 3 + 2.5 * sway
 		elseif entry.wasLive and not live then
 			entry.pictureScale.Scale, entry.picture.Rotation, entry.buttonScale.Scale = entry.pictureRest, 0, 1
 		end
@@ -282,24 +313,24 @@ function Panel:refresh()
 		local played, claims = Field.played(player, now), player:GetAttribute("GiftClaims") or 0
 		local waiting = Field.giftState(player, now)
 		-- Steps are evenly spaced, so the line moves by how far it is between them.
-		local at, n = 0, #Field.gifts
+		local at, n = self.giftCenters[1], #Field.gifts
 		for i, entry in self.gifts do
 			local gift, before = Field.gifts[i], Field.gifts[i - 1]
 			local start = if before then before.seconds else 0
 			local share = math.clamp((played - start) / (gift.seconds - start), 0, 1)
-			if i > 1 then at += share end
+			if i > 1 then at += share * (self.giftCenters[i] - self.giftCenters[i - 1]) end
 			local open, collected = played >= gift.seconds, i <= claims
 			entry.knob.BackgroundColor3 = if open then W.gold else W.navy:Lerp(W.white, 0.2)
 			entry.done.Visible = collected
 			entry.label.Text = if collected then "Claimed" elseif open then "Claim!" else W.clock(gift.seconds - played)
 			entry.paint.Color = if open and not collected then green else grey
 			entry.button.Interactable, entry.live = open and not collected, open and not collected
-			entry.rim.Enabled = entry.live
+			entry.rim.Enabled = entry.live or (entry.grand == true and not collected)
 		end
-		self.trackFill.Size = UDim2.new(at / math.max(1, n - 1), 0, 1, 0)
+		self.trackFill.Size = UDim2.new((at - self.giftCenters[1]) / (self.giftCenters[n] - self.giftCenters[1]), 0, 1, 0)
 		self.playedLabel.Text = W.clock(math.floor(played)) .. (if played >= Field.maxGiftTime then "+ played" else " played")
 		self.resetLabel.Text = "Resets in " .. clock
-		self.allLabel.Text = if waiting > 1 then "Claim all (" .. waiting .. ")" elseif waiting == 1 then "Claim gift" else "Keep playing"
+		self.allLabel.Text = "Claim all"
 		self.allPaint.Color, self.all.Interactable = if waiting > 0 then green else grey, waiting > 0
 	end
 end

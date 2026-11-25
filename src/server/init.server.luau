@@ -15,6 +15,7 @@ local Passes = require(script.Passes)
 local equipKit = require(script.ProspectorKit)
 local Pickaxe = require(script.Pickaxe)
 local Rebirth = require(Rep.Shared.Rebirth)
+local FriendsHere = require(script.FriendsHere)
 local Data, Profile, Mining = require(script.DataService), require(script.Profile), require(script.MiningService)
 local PIXELII_USER_ID = 45241447
 
@@ -422,6 +423,8 @@ local function action(player, key, option, value)
 		and key ~= "Sell"
 		and key ~= "Buy"
 		and key ~= "Job"
+		and key ~= "JobAll"
+		and key ~= "JoinFriend"
 		and key ~= "Supply"
 		and key ~= "Flare"
 		and key ~= "Deliver"
@@ -613,6 +616,16 @@ local function action(player, key, option, value)
 			sync(player, p, award)
 			net.Feedback:FireClient(player, "job", job.title, job.reward)
 		end
+	elseif key == "JobAll" then
+		local count, gold, award = Profile.claimJobs(p)
+		if count > 0 then
+			sync(player, p, award)
+			net.Feedback:FireClient(player, "job", count .. (if count == 1 then " job" else " jobs"), gold)
+		end
+	elseif key == "JoinFriend" then
+		times[actionKey] = now + 4
+		local problem = FriendsHere.join(player, option)
+		if problem then net.Feedback:FireClient(player, "friend", problem) end
 	elseif key == "PreviewPass" then
 		Passes.preview(player, option)
 	elseif key == "Pass" then
@@ -639,6 +652,7 @@ for name, prompt in site.stations do
 	end)
 end
 Mining.start(world, net, sessions, sync)
+FriendsHere.start()
 require(script.Standings).start(site.court)
 Players.PlayerAdded:Connect(join)
 Players.PlayerRemoving:Connect(leave)

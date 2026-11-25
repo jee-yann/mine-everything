@@ -14,7 +14,7 @@ local W, Icons = require(script.Parent.Widgets), require(script.Parent.Icons)
 local FieldPages = require(script.Parent.FieldPages)
 local Field = require(Shared.FieldRewards)
 local RewardsPanel, IndexPanel = require(script.Parent.RewardsPanel), require(script.Parent.IndexPanel)
-local RebirthPanel = require(script.Parent.RebirthPanel)
+local RebirthPanel, ProfilePanel = require(script.Parent.RebirthPanel), require(script.Parent.ProfilePanel)
 local Guide = require(Shared.FieldGuide)
 local Purity = require(Shared.OrePurity)
 local Skills = require(Shared.Skills)
@@ -31,6 +31,7 @@ local themes = {
 	[W.orange] = ColorSequence.new(rgb(255, 208, 138), rgb(240, 138, 58)),
 	[W.pink] = ColorSequence.new(rgb(255, 159, 200), rgb(227, 69, 138)),
 }
+local jobTabs = { "All", "Daily", "Quests", "Collected" }
 local inventoryTabs = { "Inventory", "Pets", "Kit", "Passes" }
 Menu.pages = {
 	Menu = { name = "Menu", color = W.aqua },
@@ -52,6 +53,8 @@ Menu.pages = {
 	Store = { name = "Outfitters", color = W.pink },
 	Pack = { name = "My backpack", color = W.gold },
 	Rebirth = { name = "Rebirth", color = W.rebirth },
+	Profile = { name = "Profile", color = W.aqua },
+	Friends = { name = "Friends", color = W.green },
 }
 function Menu.new(root, player, net, close)
 	local self = setmetatable({ player = player, net = net, prices = {}, updates = {} }, Menu)
@@ -140,6 +143,26 @@ function Menu.new(root, player, net, close)
 			self:open(key)
 		end)
 	end
+	-- Shift jobs have their own tabs and one button that collects everything that is done.
+	local kinds = W.frame(modal, "Job tabs", 11, 85, 458, 32, W.navy, 8)
+	kinds.Visible = false
+	self.jobBar, self.jobButtons, self.jobKind = kinds, {}, "All"
+	for i, kind in jobTabs do
+		local b = W.button(kinds, kind, 4 + (i - 1) * 114, 2, 110, 28, rgb(92, 86, 152), kind, "Select")
+		self.jobButtons[kind] = b
+		b.Activated:Connect(function()
+			self.jobKind = kind
+			self:arrangeJobs()
+		end)
+	end
+	self.claimJobs = W.button(footer, "Claim all", 242, 3, 210, 44, W.gold, "Claim all", "Job")
+	W.largest(self.claimJobs, 21, 12)
+	self.claimJobs.Visible = false
+	self.claimJobs.Activated:Connect(function()
+		if self.page == "Jobs" and self.overlay.Visible and self.claimJobs.Interactable then
+			self.net.Action:FireServer("JobAll")
+		end
+	end)
 	self.closeMap = close
 	self.seenRows = {}
 	game:GetService("RunService").Heartbeat:Connect(function()
@@ -154,13 +177,15 @@ function Menu.new(root, player, net, close)
 end
 function Menu:sizeListings()
 	local height = self.designHeight or 408
-	local selling = self.page == "Sell"
+	local jobs = self.page == "Jobs"
+	local selling = self.page == "Sell" or jobs
 	local footerHeight = if selling then 50 else 34
-	self.mainList.Size = UDim2.fromOffset(458, height - (if self.page == "Menu" then 99 else 107 + footerHeight))
+	self.mainList.Position = UDim2.fromOffset(11, if jobs then 124 else 89)
+	self.mainList.Size = UDim2.fromOffset(458, height - (if self.page == "Menu" then 99 elseif jobs then 142 + footerHeight else 107 + footerHeight))
 	self.tabViewport.Size = UDim2.fromOffset(458, height - 170)
 	self.footer.Size, self.footer.Position = UDim2.fromOffset(458, footerHeight), UDim2.fromOffset(11, height - footerHeight - 9)
 	self.status.Size = UDim2.fromOffset(if selling then 226 else 442, footerHeight)
-	self.sellAll.Visible = selling
+	self.sellAll.Visible, self.claimJobs.Visible, self.jobBar.Visible = selling and not jobs, jobs, jobs
 end
 local function revealRow(list, row)
 	local top = row.Position.Y.Offset
@@ -172,7 +197,7 @@ function Menu:layout(width, height, touch)
 	-- Give landscape phones larger type and touch targets by scrolling the rows
 	-- inside the card. Keep the header, footer and close button within safe bounds.
 	self.touchLayout = touch
-	for _, panel in { self.rewards, self.index, self.rebirth } do
+	for _, panel in { self.rewards, self.index, self.rebirth, self.profile } do
 		panel.card:layout(Vector2.new(width, height), touch)
 	end
 	local shortLandscape = width > height and (touch or height < 470)
@@ -244,7 +269,7 @@ function Menu:gear()
 	self.gearButtons = {}
 	local function describe(key, level)
 		if key == "Capacity" then
-			return W.number(Skills.capacity(Upgrades.items.Capacity.values[level], owned)) .. " ore"
+			return W.number(Skills.capacity(Upgrades.items.Capacity.values[level], owned)) .. " block"
 		elseif key == "Speed" then
 			local base = Upgrades.items.Speed.values[level] * Rebirth.cutMultiplier(self.player:GetAttribute("Rebirths") or 0)
 			local seconds = Skills.cutTime(base, Ores.byName.Stone, 1, 0, owned)
@@ -285,7 +310,7 @@ function Menu:gear()
 			if key == "Power" then
 				W.fitText(benefit, Upgrades.unlockTexts(nextLevel), "Mines ")
 			else
-				benefit.Text = if key == "Capacity" then describe(key, nextLevel) .. " capacity"
+				benefit.Text = if key == "Capacity" then describe(key, nextLevel) .. " limit"
 					elseif price then describe(key, level) .. " → " .. describe(key, nextLevel)
 					else describe(key, nextLevel)
 			end
@@ -305,7 +330,9 @@ function Menu:gear()
 	return #Upgrades.order
 end
 function Menu:jobs()
+	self.jobRows, self.jobKind = {}, "All"
 	local title, summary, deliver = self:row(1, "Daily supply order", "Jobs", W.aqua)
+	self.jobRows[1] = { row = title.Parent, kind = "Daily" }
 	twoLines(summary)
 	summary.RichText = true
 	local shownDay
@@ -324,9 +351,14 @@ function Menu:jobs()
 			.. order.gold
 			.. (if self.player:GetAttribute("SkillSupplyRunner") then " G + 2 gems + 2 flares" else " G + 2 gems + 1 flare")
 		setButton(deliver, if done then "Delivered" else "Deliver", if ready then W.green else W.muted, ready)
+		self.jobRows[1].done, self.jobRows[1].ready = done, ready
 	end)
 	for i, job in Expeditions.jobs do
-		local _, detail, b = self:row(i + 1, job.title, "Jobs", W.gold)
+		local jobTitle, detail, b = self:row(i + 1, job.title, "Jobs", W.gold)
+		local entry = { row = jobTitle.Parent, kind = "Quests" }
+		local glow = W.stroke(entry.row, W.gold, 3)
+		glow.Enabled = false
+		self.jobRows[i + 1] = entry
 		b.Activated:Connect(function()
 			self.net.Action:FireServer("Job", i)
 		end)
@@ -342,9 +374,69 @@ function Menu:jobs()
 				if ready then W.green else W.muted,
 				ready
 			)
+			entry.done, entry.ready, entry.gold = claimed, ready, if ready then job.reward else 0
+			glow.Enabled = ready
 		end)
 	end
+	table.insert(self.updates, function()
+		local count, total, changed = 0, 0, false
+		for i, entry in self.jobRows do
+			if entry.ready and entry.gold then
+				count += 1
+				total += entry.gold
+			end
+			-- Something was finished while the page is open.
+			if entry.ready and not entry.wasReady then changed = true end
+			entry.wasReady = entry.ready
+		end
+		local button = self.claimJobs
+		button.Text = if count > 0 then string.format("Claim all (%d)\n+%s G", count, W.goldAmount(total)) else "Claim all"
+		button.Interactable, button.BackgroundColor3 = count > 0, if count > 0 then W.green else W.muted
+		self:arrangeJobs(changed)
+	end)
 	return #Expeditions.jobs + 1
+end
+-- Shows the jobs of the chosen tab. `toReady` scrolls to the first one that can be collected.
+function Menu:arrangeJobs(toReady)
+	if self.page ~= "Jobs" then return end
+	for kind, b in self.jobButtons do
+		b.BackgroundColor3 = if kind == self.jobKind then rgb(110, 214, 82) else rgb(92, 86, 152)
+	end
+	local y, first = 1, nil
+	for _, entry in self.jobRows do
+		local shown = if self.jobKind == "All" then true
+			elseif self.jobKind == "Collected" then entry.done == true
+			else entry.kind == self.jobKind and not entry.done
+		entry.row.Visible = shown
+		if shown then
+			entry.row.Position = UDim2.fromOffset(1, y)
+			y += 69
+			if entry.ready and not first then first = entry.row end
+		end
+	end
+	local canvas = UDim2.fromOffset(0, y)
+	if self.mainList.CanvasSize ~= canvas then self.mainList.CanvasSize = canvas end
+	local empty = self.mainList:FindFirstChild("No jobs")
+	if not empty then
+		empty = W.title(self.mainList, "", 0, 24, 447, 60, 22, W.white)
+		empty.Name = "No jobs"
+		W.navyText(empty, 2.4)
+	end
+	empty.Visible = y == 1
+	empty.Text = if self.jobKind == "Collected" then "Nothing collected yet" else "All done here!"
+	if toReady and first then
+		local list = self.mainList
+		local goal = Vector2.new(0, math.max(0, first.Position.Y.Offset - math.max(0, (list.Size.Y.Offset - 62) / 2)))
+		-- After the page has its full length, so the scroll is not cut short.
+		task.defer(function()
+			if self.page ~= "Jobs" or not first.Parent then return end
+			if self.preferences.values.MenuMotion then
+				W.tween(list, 0.35, { CanvasPosition = goal })
+			else
+				list.CanvasPosition = goal
+			end
+		end)
+	end
 end
 function Menu:supplies()
 	for i, key in Materials.supplyOrder do
@@ -610,7 +702,7 @@ function Menu:store()
 	return #Catalog
 end
 local function shortcuts(self)
-	local destinations = { "Daily", "Playtime", "Inventory", "Skills", "Achievements", "Book", "Jobs", "Rebirth", "Settings", "Pets", "Miners" }
+	local destinations = { "Daily", "Playtime", "Inventory", "Skills", "Achievements", "Book", "Jobs", "Rebirth", "Profile", "Friends", "Settings", "Pets", "Miners" }
 	for i, key in destinations do
 		local page = Menu.pages[key]
 		local color = if page then page.color else W.aqua
@@ -733,8 +825,11 @@ function Menu:open(key)
 	elseif key == "Rebirth" then
 		self.rebirth = self.rebirth or RebirthPanel.new(self)
 		wide = self.rebirth
+	elseif key == "Profile" or key == "Friends" then
+		self.profile = self.profile or ProfilePanel.new(self)
+		wide = self.profile
 	end
-	for _, panel in { self.rewards, self.index, self.rebirth } do
+	for _, panel in { self.rewards, self.index, self.rebirth, self.profile } do
 		if panel ~= wide then panel.card.modal.Visible = false end
 	end
 	self.modal.Visible = key ~= "Skills" and not wide
@@ -742,7 +837,9 @@ function Menu:open(key)
 	if key == "Skills" then
 		self.page = key
 		self.map.selected = nil
-		self.map:home()
+		-- The zoom and place stay as they were left, for this visit to the game only.
+		if self.mapSeen then self.map:position() else self.map:home() end
+		self.mapSeen = true
 		self.map:refresh()
 		return
 	end
@@ -950,7 +1047,7 @@ function Menu:refresh()
 	elseif self.page == "Pack" then
 		local cap = p:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1]
 		local value = (p:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(p)
-		self.sub.Text = string.format("%d / %d slots   ·   %s G", p:GetAttribute("Used") or 0, cap, W.number(value))
+		self.sub.Text = string.format("%d / %d blocks   ·   %s G", p:GetAttribute("Used") or 0, cap, W.number(value))
 	elseif self.page == "Gear" then
 		self.sub.Text = ""
 	elseif self.page == "Jobs" then

@@ -2,6 +2,7 @@
 local W = require(script.Parent.Widgets)
 local FieldKit = require(script.Parent.FieldKit)
 local Icons = {}
+local rgb = Color3.fromRGB
 function Icons.draw(parent, key, x, y, size, tint)
 	local canvas = W.frame(parent, key .. " icon", x, y, 32, 32, W.ink)
 	canvas.BackgroundTransparency = 1
@@ -116,6 +117,17 @@ function Icons.draw(parent, key, x, y, size, tint)
 	elseif key == "Crew" then
 		shape("Head", 10, 4, 12, 12, W.gold, 6, 0, true)
 		shape("Coat", 5, 18, 22, 11, W.aqua, 5, 0, true)
+	elseif key == "Profile" then
+		shape("Head", 9, 3, 14, 14, rgb(255, 214, 160), 7, 0, true)
+		shape("Helmet", 8, 2, 16, 7, W.gold, 4, 0, true)
+		shape("Helmet lamp", 13, 3, 6, 5, light, 2)
+		shape("Shoulders", 4, 18, 24, 12, rgb(64, 140, 240), 6, 0, true)
+		shape("Strap", 14, 19, 4, 10, W.gold, 1)
+	elseif key == "Friends" then
+		shape("Back head", 18, 4, 10, 10, rgb(255, 224, 180), 5, 0, true)
+		shape("Back coat", 16, 15, 14, 11, W.pink, 5, 0, true)
+		shape("Head", 5, 6, 12, 12, rgb(255, 206, 150), 6, 0, true)
+		shape("Coat", 2, 19, 18, 11, rgb(64, 140, 240), 5, 0, true)
 	elseif key == "Speed" then
 		for _, xx in { 8, 19 } do
 			shape("Upper chevron", xx, 5, 6, 14, W.gold, 2, -40, true)

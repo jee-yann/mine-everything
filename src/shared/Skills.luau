@@ -181,12 +181,12 @@ footwork(
 )
 
 local hauling = branch("Hauling", "Inventory")
-hauling("Pack", "Pack Stitch I", "+10% of your workshop bag’s base capacity.", -185, 85, {}, "pack", 10)
-hauling("PackII", "Pack Stitch II", "Add another 10% of base bag capacity.", -365, 175, { "Pack" }, "pack", 10)
+hauling("Pack", "Pack Stitch I", "+10% of your workshop bag’s base block limit.", -185, 85, {}, "pack", 10)
+hauling("PackII", "Pack Stitch II", "Add another 10% of the base block limit.", -365, 175, { "Pack" }, "pack", 10)
 hauling(
 	"PackIII",
 	"Pack Stitch III",
-	"Add another 10% of base capacity (30% total).",
+	"Add another 10% of the base block limit (30% total).",
 	-550,
 	265,
 	{ "PackII" },
@@ -240,7 +240,7 @@ hauling(
 hauling(
 	"DeepPockets",
 	"Hidden Pockets",
-	"Gain 24 extra slots after bag percentage bonuses.",
+	"Your pack holds 24 more blocks after percentage bonuses.",
 	-395,
 	447,
 	{ "PackIII", "PackMule" },

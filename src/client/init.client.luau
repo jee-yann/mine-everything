@@ -386,6 +386,12 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		else
 			hud:notice(point, "", W.gold)
 		end
+	elseif kind == "friend" then
+		if hud.overlay.Visible and hud.menu.page == "Friends" then
+			hud.menu.profile:say(a)
+		else
+			hud:notice(a, "", W.gold)
+		end
 	elseif kind == "rebirthAnnounce" then
 		hud:milestone("REBIRTH " .. point, a .. " was reborn!", W.rebirth)
 	elseif kind == "upgrade" then
@@ -564,6 +570,22 @@ require(script.AutoRewards).start(player, hud, function(kind)
 end, function()
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	return root ~= nil and Config.inMine(root.Position - origin)
+end)
+
+local function busy()
+	return joinOpeningPending or hud.inOpening or passage.active or held ~= nil or hud.touchActions.enabled
+end
+require(script.SkillGuide).start(player, hud, busy)
+require(script.InviteHint).start(player, hud, function()
+	return swinging
+end)
+game:GetService("TeleportService").TeleportInitFailed:Connect(function(who)
+	if who ~= player then return end
+	if hud.overlay.Visible and hud.menu.page == "Friends" then
+		hud.menu.profile:say("Your friend's server could not be joined.")
+	else
+		hud:notice("Your friend's server could not be joined", "It may be full", W.gold)
+	end
 end)
 
 local elapsed = 1

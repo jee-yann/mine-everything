@@ -42,7 +42,7 @@ function Auto.start(player, hud, busy, underground)
 				continue
 			end
 			since = since or now
-			local occupied = hud.overlay.Visible or hud.unlocks.playing or GuiService.MenuIsOpen
+			local occupied = hud.overlay.Visible or hud.unlocks.playing or hud.guidingSkills or GuiService.MenuIsOpen
 				or Input:GetFocusedTextBox() ~= nil or (hud.chatInput and hud.chatInput.IsFocused)
 				or os.clock() < (hud.untilTime or 0) or hud.goldFlow.running
 			calm = if occupied then nil else calm or now

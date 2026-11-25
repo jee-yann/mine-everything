@@ -146,6 +146,8 @@ def stall(key, parent, x, z, yaw, y=24.5, tone="coral", tone2="cream2", title=""
     tag = b.adopt(m, next(c for c in CORE[key].findall("Item") if name(c) == "Name tag"))
     move(tag, f.at([0, tag_h + 9.0, 0]))
     station(tag)
+    halo = b.part(m, "Emblem light", [0, 15.0, 3.4], [0.4, 0.4, 0.4], "FFE7A8", f, studs=False, solid=False, mat=SMOOTH, alpha=1, shadow=False)
+    b.light(halo, {"coral": "FFC64A", "teal": "6FE6F0", "honey": "FFD98A", "pink": "FF8FB8", "leafgold": "FFDFA0", "grass3": "FFE9A8"}.get(tone, "FFE0A0"), 13, 0.8)
     return f, m
 
 
@@ -158,7 +160,7 @@ for i, (x, y, z) in enumerate(((-2.2, 3.65, 3.0), (0, 3.65, 3.2), (2.2, 3.65, 3.
     b.part(m, "Gold ingot", [x, y + 0.5, z], [2.0, 1.0, 1.3], P["citrine" if i % 2 else "citrine2"], f, mat=SMOOTH, studs=False, shine=0.1)
 for i, (dx, dy, r) in enumerate(((-1.7, 14.1, 1.9), (1.6, 14.0, 1.7), (0, 16.2, 2.2))):
     b.part(m, "Bullion emblem", [dx, dy, 0.6], [0.8, r * 2, r * 2], P["citrine"], f, ry(90), mat=SMOOTH, studs=False, shape=2, solid=False)
-    b.part(m, "Bullion shine", [dx, dy, 1.02], [0.3, r * 1.35, r * 1.35], P["citrine2"], f, ry(90), mat=SMOOTH, studs=False, shape=2, solid=False)
+    b.part(m, "Bullion shine", [dx, dy, 1.02], [0.3, r * 1.35, r * 1.35], "DDB054", f, ry(90), mat=NEON, studs=False, shape=2, solid=False, shadow=False)
 for x, z in ((-8.9, 3.2), (-9.4, 0.2)):
     sack(m, *f.at([x, 0, z]), yaw=20 * x)
 g = f.at([10.0, 0, -2.4])
@@ -172,8 +174,8 @@ fire = b.part(m, "Forge fire", [-3.6, 4.0, -0.8], [2.2, 1.4, 0.4], "FF9A3C", f, 
 b.light(fire, "FF9A4A", 11, 0.5)
 b.part(m, "Chimney", [-3.6, 13.6, -2.2], [2.6, 5.4, 2.6], P["slate2"], f)
 b.part(m, "Chimney cap", [-3.6, 16.5, -2.2], [3.3, 0.8, 3.3], P["slate3"], f)
-b.part(m, "Pick emblem haft", [1.0, 14.7, 0.4], [0.96, 4.6, 0.96], P["wood3"], f, rz(-34), mat=SMOOTH, studs=False, solid=False)
-b.part(m, "Pick emblem head", [2.4, 16.9, 0.4], [4.6, 1.1, 1.2], "9FE8EE", f, rz(-34), mat=SMOOTH, studs=False, solid=False, shine=0.1)
+b.part(m, "Pick emblem haft", [1.0, 14.7, 0.4], [0.96, 4.6, 0.96], "B4763C", f, rz(-34), mat=NEON, studs=False, solid=False, shadow=False)
+b.part(m, "Pick emblem head", [2.4, 16.9, 0.4], [4.6, 1.1, 1.2], "5FB4C6", f, rz(-34), mat=NEON, studs=False, solid=False, shadow=False)
 barrel(m, *f.at([8.9, 0, 1.0]), tone="teal")
 
 # The four services stand in an arc and face spawn.
@@ -199,7 +201,7 @@ board = b.part(m, "Notice cork", [0, 5.2, -3.3], [9.4, 4.4, 0.4], P["wood3"], f)
 for i, (x, y, r) in enumerate(((-3.2, 5.6, 4), (-0.9, 4.9, -5), (1.5, 5.8, 3), (3.4, 4.8, -3))):
     b.part(m, "Work order", [x, y, -3.02], [1.7, 2.1, 0.16], P["cream2"], f, rz(r), mat=SMOOTH, studs=False, solid=False)
     b.part(m, "Wax seal", [x, y - 0.6, -2.9], [0.5, 0.5, 0.1], P[("coral", "violet", "teal", "citrine")[i]], f, rz(45), mat=SMOOTH, studs=False, solid=False)
-b.part(m, "Scroll emblem", [0, 14.8, 0.4], [5.6, 3.2, 0.7], P["cream2"], f, mat=SMOOTH, studs=False, solid=False)
+b.part(m, "Scroll emblem", [0, 14.8, 0.4], [5.6, 3.2, 0.7], "D8AE66", f, mat=NEON, studs=False, solid=False, shadow=False)
 for s in (-1, 1):
     b.part(m, "Scroll roll", [s * 3.4, 14.8, 0.4], [1.2, 3.9, 1.2], P["sand2"], f, mat=SMOOTH, studs=False, solid=False)
 for k in (-0.8, 0, 0.8):
@@ -210,8 +212,8 @@ f, m = shops["Store"]
 for i, (x, c) in enumerate(((-3.6, "violet"), (-1.2, "teal"), (1.2, "coral"), (3.6, "citrine"))):
     b.part(m, "Display hat", [x, 3.83, 3.0], [1.9, 0.36, 1.9], P[c], f, mat=SMOOTH, studs=False)
     b.part(m, "Display hat", [x, 4.5, 3.0], [1.2, 1.0, 1.2], P[c], f, mat=SMOOTH, studs=False)
-b.part(m, "Hat emblem", [0, 13.35, 0.4], [6.2, 0.9, 6.2], P["coral"], f, mat=SMOOTH, studs=False, solid=False)
-b.part(m, "Hat emblem", [0, 15.0, 0.4], [3.8, 2.6, 3.8], P["coral"], f, mat=SMOOTH, studs=False, solid=False)
+b.part(m, "Hat emblem", [0, 13.35, 0.4], [6.2, 0.9, 6.2], "CF7C98", f, mat=NEON, studs=False, solid=False, shadow=False)
+b.part(m, "Hat emblem", [0, 15.0, 0.4], [3.8, 2.6, 3.8], "CF7C98", f, mat=NEON, studs=False, solid=False, shadow=False)
 b.part(m, "Hat band", [0, 14.2, 0.4], [4.0, 0.8, 4.0], P["citrine"], f, mat=SMOOTH, studs=False, solid=False)
 cluster(m, 9.6, 0.2, -2.0, 1.6, (P["violet"], P["lilac"]), 3, fr=f)
 
@@ -221,7 +223,7 @@ for i in range(3):
     b.part(m, "Signal lens", [-3.8 + i * 1.1, 5.78, 3.0], [0.56, 0.3, 0.56], "FFE7A8", f, mat=NEON, studs=False, solid=False)
 for i in range(3):
     b.part(m, "Fuel coal", [1.4 + i * 1.3, 4.15, 3.0], [1.1, 1.0, 1.1], P["ink"], f, ry(25 * i), mat=SMOOTH, studs=False)
-b.part(m, "Lantern emblem", [0, 15.05, 0.4], [2.6, 3.0, 2.6], "FFE0A0", f, mat=NEON, studs=False, solid=False)
+b.part(m, "Lantern emblem", [0, 15.05, 0.4], [2.6, 3.0, 2.6], "E0BC78", f, mat=NEON, studs=False, solid=False)
 for y, s in ((13.2, 3.6), (16.9, 3.6), (17.6, 1.8)):
     b.part(m, "Lantern cap", [0, y, 0.4], [s, 0.7, s], P["iron"], f, mat=SMOOTH, studs=False, solid=False)
 for x, z in ((9.4, 1.8), (9.6, -1.4), (-9.4, 0.8)):
@@ -230,7 +232,7 @@ for x, z in ((9.4, 1.8), (9.6, -1.4), (-9.4, 0.8)):
 f, m = shops["Book"]
 for s in (-1, 1):
     b.part(m, "Book cover", [s * 2.0, 15.0, 0.4], [4.0, 4.6, 0.5], P["grass3"], f, ry(-s * 24), mat=SMOOTH, studs=False, solid=False)
-    b.part(m, "Book page", [s * 1.9, 15.0, 0.75], [3.6, 4.1, 0.5], P["cream2"], f, ry(-s * 24), mat=SMOOTH, studs=False, solid=False)
+    b.part(m, "Book page", [s * 1.9, 15.0, 0.75], [3.6, 4.1, 0.5], "DDBC78", f, ry(-s * 24), mat=NEON, studs=False, solid=False, shadow=False)
 # One chunk per ore that is not secret, in the ore's own colour.
 text = (HERE.parent / "src/shared/Ores.luau").read_text(encoding="utf8")
 found = []
@@ -312,7 +314,11 @@ b.part(gate, "Capstone", [0, 46.4, 3.2], [11.0, 1.6, 6.6], P["slate2"])
 b.part(gate, "Cap beam", [0, 35.6, 2.6], [18.4, 1.4, 1.6], P["wood2"], studs=False)
 b.part(gate, "Painted edge", [0, 42.6, 10.2], [17.4, 4.9, 0.8], P["honey"], studs=False)
 sign = b.part(gate, "Mine sign", [0, 42.6, 10.55], [16.4, 4.0, 0.6], P["ink"], studs=False, mat=SMOOTH)
-b.lettering(sign, "CITRINE MINE", 2, "FFD76A", 30, 70)
+b.lettering(sign, "CITRINE MINE", 2, "FFC94A", 30, 70, glow=2.8)
+for yy in (40.75, 44.45):
+    b.part(gate, "Sign tube", [0, yy, 10.75], [16.2, 0.22, 0.3], "FFC44A", solid=False, shadow=False, mat=NEON)
+for s in (-1, 1):
+    b.part(gate, "Sign tube", [s * 8.1, 42.6, 10.75], [0.22, 3.92, 0.3], "FFC44A", solid=False, shadow=False, mat=NEON)
 for s in (-1, 1):
     b.part(gate, "Sign bracket", [s * 6.4, 44.2, 8.9], [1.0, 1.0, 2.4], P["iron"], studs=False, solid=False, mat=SMOOTH)
 for s in (-1, 1):

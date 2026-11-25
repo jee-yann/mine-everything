@@ -124,11 +124,11 @@ function Panel:buildCollection()
 		end)
 	end
 	self.list.CanvasSize = UDim2.fromOffset(0, math.ceil(#Ores.list / 5) * 112 + 4)
-	local bar = W.frame(page, "Progress", 2, 330, 760, 26, W.navy, 13)
-	W.stroke(bar, W.navy, 3)
-	self.barFill = W.frame(bar, "Found", 0, 0, 0, 26, W.white, 13)
+	local bar = W.frame(page, "Progress", 6, 330, 752, 24, rgb(24, 22, 48), 12)
+	W.stroke(bar, rgb(255, 246, 214), 3)
+	self.barFill = W.frame(bar, "Found", 0, 0, 0, 24, W.white, 12)
 	W.gradient(self.barFill, rgb(255, 230, 128), rgb(243, 165, 26), 90)
-	self.barLabel = W.title(bar, "", 0, 0, 760, 25, 18, W.white)
+	self.barLabel = W.title(bar, "", 0, 0, 752, 23, 18, W.white)
 	self.barLabel.ZIndex = 3
 	W.navyText(self.barLabel, 2.4)
 end

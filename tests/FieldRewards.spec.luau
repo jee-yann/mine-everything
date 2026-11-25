@@ -117,6 +117,24 @@ assert(auto.choose(state({ firstVisit = true, sinceSale = 2.1, quietFor = 0.25, 
 assert(auto.choose(state({ firstVisit = true, dailyReady = false, giftsReady = 1 })) == "Playtime")
 assert(auto.choose(state({ dailyReady = false, giftsReady = 1, giftsClaimed = 1 })) == nil, "only the first gift opens the card")
 assert(auto.choose(state({ dailyReady = false, giftsReady = 1, giftShown = true })) == nil)
+-- The skill guide starts at level 3 and only for someone who has never spent a point.
+local wanted = require(Client.SkillGuide).wanted
+assert(wanted({ onboarded = true, level = 3, points = 2, owned = 0 }))
+for _, s in { { onboarded = false, level = 3, points = 2, owned = 0 }, { onboarded = true, level = 2, points = 1, owned = 0 },
+	{ onboarded = true, level = 9, points = 0, owned = 0 }, { onboarded = true, level = 9, points = 4, owned = 1 } } do
+	assert(not wanted(s))
+end
+-- The invite reminder waits for a while of mining, prefers a level, and stops.
+local due = require(Client.InviteHint).due
+local function hint(change)
+	local s = { friends = 0, onboarded = true, shown = 0, mined = 300, sinceLevel = 3, busy = false }
+	for key, value in change do s[key] = value end
+	return due(s)
+end
+assert(hint({}) and hint({ mined = 400, sinceLevel = 900 }))
+for _, change in { { friends = 1 }, { invited = true }, { onboarded = false }, { shown = 3 }, { mined = 100 }, { sinceLevel = 900 }, { busy = true }, { shown = 1 } } do
+	assert(not hint(change))
+end
 -- Bigger payouts count for longer, within reason.
 local plan = require(Client.GoldFlow).plan
 local short, long, huge = plan(5), plan(5000), plan(5e9)

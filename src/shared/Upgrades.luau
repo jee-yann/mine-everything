@@ -147,7 +147,7 @@ function api.describe(key, level)
 		return string.format(if v >= 0.3 then "%.2fs / stone" else "%.3fs / stone", v)
 	end
 	if key == "Capacity" then
-		return v .. " ore"
+		return v .. " block limit"
 	end
 	return api.unlockTexts(level)[1]
 end

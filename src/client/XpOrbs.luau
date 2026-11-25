@@ -14,7 +14,7 @@ local function gain(hud, amount)
 	if not ring.Parent or not hud.tools.Visible then return end
 	local label = hud.xpLabel
 	if not label then
-		label = W.title(hud.root, "", 0, 0, 120, 34, 28, green)
+		label = W.title(hud.root, "", 0, 0, 340, 34, 28, green)
 		label.AnchorPoint, label.ZIndex, label.TextXAlignment = Vector2.new(0, 0.5), 46, Enum.TextXAlignment.Left
 		W.navyText(label, 3)
 		hud.xpLabel, hud.xpScale = label, W.scale(label)
@@ -23,8 +23,8 @@ local function gain(hud, amount)
 	hud.xpTotal = if now < (hud.xpUntil or 0) then hud.xpTotal + amount else amount
 	hud.xpUntil = now + 1.5
 	local at = ring.AbsolutePosition + Vector2.new(ring.AbsoluteSize.X + 10, ring.AbsoluteSize.Y / 2) - hud.root.AbsolutePosition
-	if at.X + 130 > hud.root.AbsoluteSize.X then at -= Vector2.new(ring.AbsoluteSize.X + 150, 0) end
-	label.Text, label.Position = "+" .. W.number(hud.xpTotal) .. " XP", UDim2.fromOffset(at.X, at.Y)
+	if at.X + 130 > hud.root.AbsoluteSize.X then at -= Vector2.new(ring.AbsoluteSize.X + 370, 0) end
+	label.Text, label.Position = "+" .. W.number(hud.xpTotal) .. " XP" .. (if (hud.player:GetAttribute("FriendsHere") or 0) > 0 then "  (friend bonus)" else ""), UDim2.fromOffset(at.X, at.Y)
 	label.TextTransparency, label.Visible = 0, true
 	label.UIStroke.Transparency = 0
 	Burst.pop(hud.xpScale, 1, 1.3)
