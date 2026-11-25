@@ -536,7 +536,7 @@ RunService.RenderStepped:Connect(function(dt)
 		elapsed %= 1 / 30
 		sampleAim()
 	end
-	expedition:draw()
+	expedition:draw(dt)
 	if
 		(not held and not hud.touchActions.enabled)
 		or not aimPoint

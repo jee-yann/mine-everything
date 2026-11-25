@@ -739,67 +739,101 @@ assert(
 print("PASS expansion regions, grade boundaries, ore reach, Starfall rarity, 32-bit precision, rare sampling and old saves")
 local surface = workspace.CitrineCove
 do
+	-- The guide points straight at its target from anywhere, moves with the miner, and stays on in the mine.
 	local guide = require(game.StarterPlayer.StarterPlayerScripts.Client.ExpeditionWaypoint).new()
-	local bridge = surface["Sand path and bridge"]["Bridge decking"]
-	local head = Instance.new("Part")
-	head.Anchored, head.CanCollide, head.Parent = true, false, workspace
-	local top = bridge.Position + Vector3.new(0, 4, bridge.Size.Z / 2 - 2)
-	guide:show(bridge.Position - Vector3.zAxis * 32, "Mine", Color3.new(1, 0.8, 0.2), true)
-	for _, moving in { true, false } do
-		head.Position = top
-		guide:trail(head, 10, moving)
-		local before, checked = {}, 0
+	local paths = surface["Sand path and bridge"]
+	local bridge = paths["Bridge decking"]
+	local camera = { CFrame = CFrame.lookAt(bridge.Position + Vector3.new(0, 20, 60), bridge.Position) }
+	local dt = 1 / 60
+	local function faces()
+		local shown = {}
 		for _, part in guide.anchor:GetChildren() do
-			if part.Name == "Trail chevron" and part.Transparency < 0.2 then before[part] = part.Position end
+			if part.Name == "Trail chevron" and part.Transparency < 0.5 then table.insert(shown, part) end
 		end
-		head.Position -= Vector3.zAxis * 0.25
-		guide:trail(head, 10 + 1 / 60, moving)
+		return shown
+	end
+	local function heading()
+		return (guide.to.WorldPosition - guide.from.WorldPosition).Unit
+	end
+	local target = bridge.Position + Vector3.new(41, 0, -31)
+	guide:show(target + Vector3.yAxis * 4.5, "Sell ore", Color3.new(1, 0.8, 0.2), target)
+	-- Either bank, in the canal, on a stair, up a hill: always the straight line.
+	for _, offset in { Vector3.new(41, 4, 20), Vector3.new(0, 4, 30), Vector3.new(14, -0.7, 0), Vector3.new(-90, 9, 40), Vector3.new(30, 4, 5) } do
+		local root = bridge.Position + offset
+		guide:hideTrail()
+		for i = 1, 30 do guide:trail(root, camera, dt, i * dt, true, false) end
+		local direction = heading()
+		local straight = (target - root) * Vector3.new(1, 0, 1)
+		assert((direction * Vector3.new(1, 0, 1)).Unit:Dot(straight.Unit) > 0.999, "the guide does not point at its target")
+		assert(guide.label.Text == "Sell ore" and #faces() >= 4, "guidance disappeared or changed its mind")
+		for _, part in faces() do
+			local off = (part.Position - root) * Vector3.new(1, 0, 1)
+			assert(off.Unit:Dot(straight.Unit) > 0.9, "an arrow strays from the line")
+		end
+	end
+	-- Walking carries every arrow along by exactly the same step.
+	for _, moving in { true, false } do
+		local root = bridge.Position + Vector3.new(0, 4, 24)
+		local goal = bridge.Position - Vector3.zAxis * 60
+		guide:hideTrail()
+		guide:show(goal, "Mine", Color3.new(1, 0.8, 0.2), goal)
+		for _ = 1, 60 do guide:trail(root, camera, dt, 10, moving, false) end
+		local before = {}
+		for _, part in faces() do before[part] = part.Position end
+		local step = Vector3.new(0, 0, -0.27)
+		guide:trail(root + step, camera, dt, 10, moving, false)
+		local checked = 0
 		for part, at in before do
-			if part.Transparency >= 0.2 then continue end
-			local distance = (part.Position - at) * Vector3.new(1, 0, 1)
-			assert(math.abs(distance.Magnitude - (if moving then 4.2 / 60 else 0)) < 0.01, "ground arrows drifted with the player")
+			assert(((part.Position - at - step) * Vector3.new(1, 0, 1)).Magnitude < 0.02, "an arrow lags behind the miner")
 			checked += 1
 		end
-		assert(checked >= 2, "guidance disappeared between walking frames")
+		assert(checked >= 8, "guidance disappeared between walking frames")
 	end
-	-- An approach on the outer bank follows its own bridge. A miner below the
-	-- crossing can see the nearest stairs and returns to their original objective on dry land.
-	local dryTarget = bridge.Position + Vector3.new(41, 0, -31)
-	guide:show(dryTarget, "Sell ore", Color3.new(1, 0.8, 0.2), true)
-	head.Position = bridge.Position + Vector3.new(41, 4, 20)
-	guide:trail(head, 15, false)
-	assert(#guide.path == 3 and math.abs(guide.path[1].X - head.Position.X) < 2, "missed nearby side bridge")
-	local deck
-	for _, candidate in guide.decks do
-		if math.abs(candidate.Position.X - head.Position.X) < 2 then deck = candidate end
+	-- A new target swings across, then settles on it.
+	do
+		local root = bridge.Position + Vector3.new(0, 4, 24)
+		local goal = bridge.Position + Vector3.new(-40, 0, 24)
+		guide:show(goal, "Jobs", Color3.new(1, 0.8, 0.2), goal)
+		guide:trail(root, camera, dt, 11, true, false)
+		assert((guide.to.WorldPosition - goal).Magnitude > 20, "the guide snapped to a new target")
+		for _ = 1, 90 do guide:trail(root, camera, dt, 11, true, false) end
+		assert(((guide.to.WorldPosition - goal) * Vector3.new(1, 0, 1)).Magnitude < 0.1)
 	end
-	local parent = assert(deck, "missing streamed deck").Parent
-	deck.Parent = nil
-	task.wait()
-	guide:trail(head, 15.1, false)
-	assert(not table.find(guide.decks, deck) and math.abs(guide.path[1].X - head.Position.X) > 20, "routed across an unloaded bridge")
-	deck.Parent = parent
-	task.wait()
-	guide:trail(head, 15.2, false)
-	assert(table.find(guide.decks, deck) and math.abs(guide.path[1].X - head.Position.X) < 2, "ignored newly streamed bridge")
-	head.Position = bridge.Position + Vector3.new(14, -0.7, 0)
-	guide:trail(head, 16, false)
-	assert(guide.label.Text == "Climb the steps" and guide.path[1].X > bridge.Position.X, "no nearby canal exit")
-	local paths = surface["Sand path and bridge"]
-	local steps = {}
-	for _, block in paths:GetChildren() do
-		if (block.Name == "Canal step" or block.Name == "Canal landing") and math.abs(block.Position.X - guide.path[1].X) < 0.1 then
-			table.insert(steps, block.Position.Y + block.Size.Y/2)
+	-- Underground it aims at the ore itself, above, below or beside the miner.
+	for _, offset in { Vector3.new(0, -9, -3), Vector3.new(0, 11, 0), Vector3.new(8, 1, 2), Vector3.new(0, -8, 0) } do
+		local root = bridge.Position + Vector3.new(0, -60, -60)
+		local face = root + offset
+		guide:hideTrail()
+		guide:show(face + Vector3.yAxis * 1.35, "Coal", Color3.new(0.3, 0.9, 1), face)
+		for _ = 1, 60 do guide:trail(root, camera, dt, 12, true, true) end
+		assert((guide.to.WorldPosition - face).Magnitude < 0.05 and #faces() >= 2 and guide.line.Enabled, "no arrow to the marked ore")
+		for _, part in faces() do
+			local at, up = part.Position, part.CFrame.UpVector
+			assert(at == at and up == up and up.Magnitude > 0.9 and (part.Position - root).Magnitude < offset.Magnitude + 1, "a broken arrow underground")
 		end
 	end
-	table.sort(steps)
-	assert(#steps == 8 and steps[#steps] > bridge.Position.Y and steps[1] < bridge.Position.Y - 3)
-	for i = 2, #steps do assert(steps[i] - steps[i-1] < 0.8, "canal exit riser too high") end
-	head.Position = dryTarget + Vector3.yAxis * 4
-	guide:trail(head, 17, false)
-	assert(guide.anchor.WorldPosition == dryTarget and guide.label.Text == "Sell ore", "dry objective was lost")
-	head:Destroy()
+	assert(guide.pin.AlwaysOnTop, "the ore arrow can be hidden by rock")
+	guide:clear()
+	assert(not guide.pin.Enabled and not guide.line.Enabled and #faces() == 0)
+	-- A miner in the canal still has stairs to climb.
+	local flights = {}
+	for _, block in paths:GetChildren() do
+		if block.Name == "Canal step" or block.Name == "Canal landing" then
+			local key = math.round(block.Position.X)
+			flights[key] = flights[key] or {}
+			table.insert(flights[key], block.Position.Y + block.Size.Y / 2)
+		end
+	end
+	local exits = 0
+	for _, steps in flights do
+		table.sort(steps)
+		exits += 1
+		assert(#steps == 8 and steps[#steps] > bridge.Position.Y and steps[1] < bridge.Position.Y - 3)
+		for i = 2, #steps do assert(steps[i] - steps[i - 1] < 0.8, "canal exit riser too high") end
+	end
+	assert(exits == 4)
 	guide.anchor:Destroy()
+	assert(not workspace.Terrain:FindFirstChild("Guide line start"), "the guide leaves attachments behind")
 end
 local world = World.new(Config.LandscapeSeed, surface)
 local mapCopy = surface:Clone()
