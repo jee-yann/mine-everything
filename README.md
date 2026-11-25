@@ -48,22 +48,22 @@ The leaderboard court behind spawn has two boards. **Server Miners** ranks the f
 
 ![Leaderboard court behind spawn](map/Miners-Court.jpg)
 
-Digging opens a shared route through twelve regions. Each eligible block independently rolls against its region’s percentages, using the full 32-bit cell hash so even Starfall’s 0.0004% (1 in 250,000) is exact. Some ores span many regions, some peak in one region and fade below it, and some are found in only one.
+Digging opens a shared route through twelve regions. Each eligible block independently rolls against its region’s percentages, using the full 32-bit cell hash so even Starfall’s 0.0025% (1 in 40,000) is exact. Some ores span many regions, some peak in one region and fade below it, and some are found in only one.
 
 | Region | Depth below the dig floor | Stone | Ores | Mystery |
 | --- | ---: | ---: | --- | ---: |
-| Sunstone Hollow | 0–26 | 77.98% | Coal 13%, Copper 5%, Pyrite 4% | 0.02% |
-| Iron Shelf | 27–59 | 72.4% | Iron 8%, Copper 6%, Coal 5%, Quartz 4%, Pyrite 3%, Gold 1%, Garnet 0.6% | – |
+| Sunstone Hollow | 0–26 | 77.95% | Coal 13%, Copper 5%, Pyrite 4% | 0.05% |
+| Iron Shelf | 27–59 | 72.32% | Iron 8%, Copper 6%, Coal 5%, Quartz 4%, Pyrite 3%, Gold 1%, Garnet 0.68% | – |
 | Rustroot Caverns | 60–89 | 72.8% | Iron 9%, Copper 4.5%, Quartz 4%, Garnet 3.5%, Gold 2.5%, Pyrite 1.5%, Silver 1.2%, Coal 1% | – |
 | Prism Grotto | 90–139 | 71.6% | Quartz 7%, Iron 6%, Gold 4.5%, Silver 3%, Opal 2.2%, Copper 2%, Garnet 1.5%, Diamond 1.2%, Coal 1% | – |
-| Saltglass Sinks | 140–184 | 72.2% | Silver 6%, Gold 6%, Iron 4%, Quartz 3.5%, Selenite 3%, Diamond 2.5%, Copper 1%, Opal 1%, Jade 0.8% | – |
-| Emerald Deep | 185–224 | 72.6% | Gold 7%, Diamond 4.5%, Silver 4%, Iron 3%, Jade 3%, Quartz 2.5%, Emerald 2.2%, Platinum 0.8%, Opal 0.4% | – |
-| Glowcap Hollows | 225–259 | 76.75% | Gold 5%, Diamond 5%, Iron 3%, Silver 3%, Platinum 3%, Emerald 2.5%, Jade 1.2% | 0.3% and 0.25% |
-| Midnight Fault | 260–339 | 73.2% | Obsidian 7%, Diamond 6%, Gold 4%, Platinum 3%, Iron 2%, Emerald 2%, Ruby 1%, Sapphire 0.5%, Mithril 0.4% | 0.9% |
+| Saltglass Sinks | 140–184 | 72.16% | Silver 6%, Gold 6%, Iron 4%, Quartz 3.5%, Selenite 3%, Diamond 2.5%, Copper 1%, Opal 1%, Jade 0.84% | – |
+| Emerald Deep | 185–224 | 72.46% | Gold 7%, Diamond 4.5%, Silver 4%, Iron 3%, Jade 3%, Quartz 2.5%, Emerald 2.2%, Platinum 0.84%, Opal 0.5% | – |
+| Glowcap Hollows | 225–259 | 76.55% | Gold 5%, Diamond 5%, Iron 3%, Silver 3%, Platinum 3%, Emerald 2.5%, Jade 1.2% | 0.4% and 0.35% |
+| Midnight Fault | 260–339 | 72.99% | Obsidian 7%, Diamond 6%, Gold 4%, Platinum 3%, Iron 2%, Emerald 2%, Ruby 1%, Sapphire 0.59%, Mithril 0.5% | 0.92% |
 | Frostglass Reach | 340–399 | 77.8% | Diamond 5%, Obsidian 4%, Gold 3%, Ruby 3%, Sapphire 2%, Platinum 1.5%, Mithril 1.5%, Aquamarine 1.2% | 1% |
-| Cinderheart Forge | 400–469 | 77.2% | Brimstone 7%, Obsidian 6%, Diamond 3%, Mithril 3%, Ruby 2%, Sapphire 0.6%, Moonstone 0.3% | 0.9% |
-| Abyssal Hollows | 470–549 | 84.63% | Mithril 5%, Obsidian 3%, Moonstone 3%, Diamond 2%, Ruby 1%, Meteorite 1%, Adamantite 0.25% | 0.12% |
-| Starfall Crater | 550+ | 82.8596% | Meteorite 6%, Obsidian 3%, Mithril 3%, Diamond 2%, Adamantite 1.6%, Moonstone 1.5% | 0.04% and 0.0004% |
+| Cinderheart Forge | 400–469 | 77% | Brimstone 7%, Obsidian 6%, Diamond 3%, Mithril 3%, Ruby 2%, Sapphire 0.68%, Moonstone 0.4% | 0.92% |
+| Abyssal Hollows | 470–549 | 84.45% | Mithril 5%, Obsidian 3%, Moonstone 3%, Diamond 2%, Ruby 1%, Meteorite 1%, Adamantite 0.35% | 0.2% |
+| Starfall Crater | 550+ | 82.8125% | Meteorite 6%, Obsidian 3%, Mithril 3%, Diamond 2%, Adamantite 1.6%, Moonstone 1.5% | 0.085% and 0.0025% |
 
 Mineral finds also roll a purity from 50% to 100%. Grade bonuses range from base value to double value for a perfect find. Sales and recipes use the lowest grades first. Fortune gives each mineral cut a 1-in-10 chance to yield a second piece of the same grade if the bag has room. Fair Trade adds 10% to mineral sale prices, rounded per piece.
 
