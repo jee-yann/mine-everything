@@ -1,17 +1,24 @@
 -- Run in Studio edit mode. The clone simulates the published client's permission
 -- failure after image allocation while exercising the real pixels and GUI renderer.
 local source = game.StarterPlayer.StarterPlayerScripts.Client.FieldKit
-local remote = Instance.new("Frame")
-local expected = "rbxassetid://" .. assert(source:GetAttribute("ImageId"))
-local uploaded = require(source)
-for i, key in { "Inventory", "Skills", "Achievements", "Book", "Settings" } do
-	uploaded.draw(remote, key)
-	local label = remote["Field Kit"]
-	assert(label:IsA("ImageLabel") and label.Image == expected and label.ImageRectSize == Vector2.one * 256)
-	assert(label.ImageRectOffset == Vector2.new((i - 1) % 3, math.floor((i - 1) / 3)) * 256)
-	label:Destroy()
+local tiles = {
+	Inventory = Vector2.new(0, 0), Skills = Vector2.new(1, 0), Achievements = Vector2.new(2, 0), Daily = Vector2.new(3, 0),
+	Book = Vector2.new(0, 1), Settings = Vector2.new(1, 1), Playtime = Vector2.new(2, 1),
+}
+local imageId = source:GetAttribute("ImageId")
+if imageId then
+	-- Only set once the current atlas is uploaded.
+	local remote = Instance.new("Frame")
+	local uploaded = require(source)
+	for key, tile in tiles do
+		uploaded.draw(remote, key)
+		local label = remote["Field Kit"]
+		assert(label:IsA("ImageLabel") and label.Image == "rbxassetid://" .. imageId)
+		assert(label.ImageRectSize == Vector2.one * 256 and label.ImageRectOffset == tile * 256, key)
+		label:Destroy()
+	end
+	remote:Destroy()
 end
-remote:Destroy()
 local probe = source:Clone()
 probe:SetAttribute("ImageId", nil)
 local replacement = [[
@@ -29,7 +36,7 @@ assert(edits == 1)
 probe.Source = instrumented
 local renderer = require(probe)
 local container = Instance.new("Frame")
-for _, key in { "Inventory", "Skills", "Achievements", "Book", "Settings", "Pack", "Capacity", "Titles" } do
+for _, key in { "Inventory", "Skills", "Achievements", "Book", "Settings", "Daily", "Playtime", "Pack", "Capacity", "Titles" } do
 	assert(renderer.draw(container, key))
 	local icon = container["Field Kit"]
 	assert(icon:IsA("Frame") and #icon:GetChildren() > 25 and icon:FindFirstChildWhichIsA("UIGradient", true), key)
@@ -48,4 +55,4 @@ assert(probe:GetAttribute("Allocated") and probe:GetAttribute("Released"))
 assert(not renderer.draw(container, "Power"))
 container:Destroy()
 probe:Destroy()
-print("PASS published Field Kit write denial, all five icons and three aliases")
+print("PASS published Field Kit write denial, all seven icons and three aliases")
