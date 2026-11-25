@@ -6,7 +6,7 @@ local Run = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local Audio = require(script.Parent.HarborAudio)
 local Film = require(script.Film)
-local FirstFindTitles = require(script.FirstFindTitles)
+local IntroTitles = require(script.IntroTitles)
 local BeaconPrompt = require(script.BeaconPrompt)
 local sheet = require(script.ExposureSheet)
 local W = require(script.Parent.Widgets)
@@ -64,37 +64,29 @@ local function compose(screen, safe)
 	W.round(skip, 7)
 	skip.ZIndex = 12
 	local strike, drawPrompt = BeaconPrompt(safe)
-	local heldInput, releaseFrame
-	local function drawStrike(frame, motion, contact, topEdge, bottomEdge)
-		if heldInput and (heldInput.UserInputState == Enum.UserInputState.End or heldInput.UserInputState == Enum.UserInputState.Cancel) then
-			heldInput, releaseFrame = nil, frame
-		end
-		drawPrompt(frame, motion, contact, topEdge, bottomEdge, if heldInput then math.huge else releaseFrame)
-	end
-	local title = FirstFindTitles.new(safe)
+	local title = IntroTitles.new(safe, screen)
 	return skip,
 		function(t, black, picture, motion, contact)
 			local frame = picture or 0
 			local pictureTop, pictureBottom = fitMatte(frame)
 			local pictureHeight = math.max(1, pictureBottom - pictureTop)
-			-- Leave the near shoulder clear on the wide. The player's clothing can carry lettering of its own.
-			local overShoulder = frame >= sheet.frames.establish and frame < sheet.frames.present
-				and safe.AbsoluteSize.X > 1.25 * safe.AbsoluteSize.Y
-			caption.Position = UDim2.new(if overShoulder then 0.64 else 0.5, 0, 0, pictureBottom - math.max(8, pictureHeight * 0.047))
-			caption.Size = UDim2.new(if overShoulder then 0.65 else 0.86, 0, 0, math.clamp(pictureHeight * 0.068, 27, 63))
-			drawStrike(frame, motion, contact, pictureTop, pictureBottom)
+			caption.Position = UDim2.new(0.5, 0, 0, pictureBottom - math.max(8, pictureHeight * 0.047))
+			caption.Size = UDim2.new(0.86, 0, 0, math.clamp(pictureHeight * 0.068, 27, 63))
+			drawPrompt(frame, motion, contact, pictureTop, pictureBottom)
 			local text, opacity = Film.caption(t)
 			caption.Text, caption.TextTransparency, caption.TextStrokeTransparency =
 				text, 1 - opacity, 1 - 0.62 * opacity
 			shade.BackgroundTransparency = 1 - 0.78 * opacity
 			fade.BackgroundTransparency = 1 - black
+			-- Second-half fades are true black, continuous with the mattes.
+			fade.BackgroundColor3 = if frame >= sheet.frames.aftermath then Color3.new() else ink
 			title(frame, motion, pictureTop, pictureBottom)
 		end,
 		fade,
 		strike,
-		function(frame, motion, contact, input)
-			heldInput, releaseFrame = input, nil
-			drawStrike(frame, motion, contact, fitMatte(frame))
+		-- The prompt moves at the display's rate, between the film's exposures.
+		function(frame, motion, contact)
+			drawPrompt(frame, motion, contact, fitMatte(frame))
 		end
 end
 
@@ -141,22 +133,29 @@ function Opening.play(player, net, hud)
 	local function run()
 		showOtherMiners = hideOtherMiners(player)
 		local motion = player:GetAttribute("MenuMotion") ~= false and not Gui.ReducedMotionEnabled
-		local skip, titles, curtain, strike, confirmStrike = compose(screen, safe)
-		local function tap(input)
-			if film and film.arrival and film.pictureFrame and film.arrival:requestStrike(film.pictureFrame) then
-				confirmStrike(film.pictureFrame, motion, film.arrival.contactFrame, input)
+		local skip, titles, curtain, strike, animateStrike = compose(screen, safe)
+		local advanced, filmTime, pressSound = 0, nil, nil
+		-- One press. The cap, its sound and the swing all answer it here. A held
+		-- key, a second key and a double tap find it already taken.
+		local function tap()
+			local ahead = filmTime and film and film.arrival and film.pictureFrame and film.arrival:requestStrike(film.pictureFrame)
+			if ahead then
+				-- The swing starts on the press. The clock skips the wait.
+				advanced += ahead
+				animateStrike(filmTime() * sheet.fps, motion, film.arrival.pressed)
+				pressSound(filmTime())
 				return true
 			end
 			return false
 		end
 		strike.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-				tap(input)
+				tap()
 			end
 		end)
 		strike.Activated:Connect(tap)
-		Actions:BindActionAtPriority("Light expedition route", function(_, state, input)
-			if state == Enum.UserInputState.Begin and tap(input) then
+		Actions:BindActionAtPriority("Light expedition route", function(_, state)
+			if state == Enum.UserInputState.Begin and tap() then
 				return Enum.ContextActionResult.Sink
 			end
 			return Enum.ContextActionResult.Pass
@@ -190,11 +189,8 @@ function Opening.play(player, net, hud)
 				pcall(player.RequestStreamAroundAsync, player, net:GetAttribute("Entrance") or landing, 4)
 			end)
 		end
-		local mix = Audio.origins(screen)
-		local function sound(elapsed)
-			local arrival = film.arrival
-			mix(elapsed, arrival and arrival.contactFrame, arrival and arrival.marker.signalPosition)
-		end
+		local sound, press = Audio.origins(screen)
+		pressSound = press
 		local function continueSetup()
 			Run.PreRender:Wait()
 			return not skipped and player.Character == char and root.Parent and camera == workspace.CurrentCamera
@@ -209,7 +205,7 @@ function Opening.play(player, net, hud)
 				end
 				film = Film.new(stage, screen, camera, h, motion, nil, look)
 				local black = film:expose(picture, liveCove() ~= nil)
-				titles(film.sceneTime, black, picture, motion, film.arrival.contactFrame)
+				titles(film.sceneTime, black, picture, motion, film.arrival.pressed)
 			end)
 			if film then
 				film:Destroy()
@@ -246,6 +242,9 @@ function Opening.play(player, net, hud)
 			end)
 		end
 		local start = os.clock()
+		function filmTime()
+			return os.clock() - start + advanced / sheet.fps
+		end
 		while
 			film.impact
 			and not skipped
@@ -253,19 +252,22 @@ function Opening.play(player, net, hud)
 			and root.Parent
 			and camera == workspace.CurrentCamera
 		do
-			local t = os.clock() - start
+			local t = filmTime()
 			local pictureFrame = sheet.frameAt(t)
 			if
 				pictureFrame >= sheet.frames.handoff
 				and not h.playable
 				and oldType == Enum.CameraType.Custom
-				and (root.Position - landing).Magnitude < 38
+				and not film.arrival.remote
 			then
 				resumeCamera()
 			end
 			if film.pictureFrame ~= pictureFrame then
 				local black = film:expose(pictureFrame, liveCove() ~= nil)
-				titles(film.sceneTime, black, pictureFrame, motion, film.arrival.contactFrame)
+				titles(film.sceneTime, black, pictureFrame, motion, film.arrival.pressed)
+			end
+			if pictureFrame >= sheet.frames.prompt and pictureFrame < sheet.frames.break2 + 4 then
+				animateStrike(t * sheet.fps, motion, film.arrival.pressed)
 			end
 			sound(t)
 			if t >= Film.duration then
@@ -286,11 +288,11 @@ function Opening.play(player, net, hud)
 	Actions:UnbindAction("Light expedition route")
 	Actions:UnbindAction("Watch mine origins")
 	Actions:UnbindAction("Skip mine origins")
+	local remote = finished and film ~= nil and film.arrival ~= nil and film.arrival.remote == true
 	if film then
 		film:Destroy()
 	end
 	stage:Destroy()
-	local remote = finished and (root.Position - landing).Magnitude >= 38
 	if workspace.CurrentCamera == camera then
 		if player.Character == char and h.playable and finished and not remote then
 			camera.CFrame, camera.Focus = h.playable.view, h.playable.focus

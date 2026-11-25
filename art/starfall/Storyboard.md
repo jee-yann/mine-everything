@@ -1,6 +1,6 @@
 # Where the Stars Took Root
 
-A fork of violet mineral survives the ancient impact. Millions of years later, the player's field trial is broadcast across the island. The player opens an emerald block, receives their Gem Hunter commission and strikes a beacon that sends light into the mine.
+The star that fell took root. A miner opens its vein, the cove watches on a screen, and the player walks toward it. Their strike is their introduction, and the light they free runs home into the mine. [Second-half shot list and tools](Second-half.md)
 
 The last offshore picture is frame 383. Frame 384, at 16.000 seconds on the 24 fps exposure sheet, is the first camera position inside the crater sequence. The preceding meteor, destruction, lighting and soundtrack use the approved opening.
 
@@ -12,12 +12,16 @@ The last offshore picture is frame 383. Frame 384, at 16.000 seconds on the 24 f
 | 8.75–10.00 s | Hold offshore. A faint blue light catches the headland from one side. The tree crowns cast long shadows across the terraces. The horizon trembles. After 27 empty exposures, the meteor tears diagonally across the next three, leaving cyan and magenta filaments around an incandescent core. Its light reaches the water and headland. | Pressure builds under the empty sky. The air tears just before contact. |
 | 10.00–13.50 s | Hold the same offshore view for the dry puncture, one moonlit exposure and the pin of light. The fireball opens three frames after ground contact. Violet and copper streak the terraces, and a segmented circle closes around the starburst on frame 246. | Contact cracks. The main report lands three frames later. The crater wall collapses and the echo rolls back across the water. |
 | 13.50–16.00 s | A clean view of the erupting island precedes the return wave. The old ivory-and-charcoal crest sweeps across the bottom of two full-color views of the burning island. Color splits along the trees, shore and airborne fragments. | The crest brings a rush of air. A smaller, short explosion follows three frames later as debris reaches the camera. |
-| 16.00–19.50 s | Smoke parts around the fractured rim. The violet fork cuts to a weathered mineral in the present-day mine. | Falling rock gives way to a ring and a modern pick strike. |
-| 19.50–23.50 s | The working cove appears beyond the mine. The camera introduces the player's own miner. | Water opens out on the wide. The theme enters on the player's face. |
-| 23.50–30.50 s | Three homes watch the trial on a phone, a TV and a computer. The final screen leads back to the workbench. | The score carries through the broadcast. |
-| 30.50–38.42 s | The pick splits a square ore block around the intact emerald. The player's portrait and name fill the Gem Hunter title. | The precision blow and the pick settling onto the player's shoulder punctuate the reveal. |
-| 38.42–46.96 s | The player receives the commission. At 41.50 seconds, **Light the path** accepts Space, gamepad X or a tap. The strike follows eight frames after input. | The beacon sounds on the actual contact frame. |
-| 46.96–54.375 s | The light leads into the shaft and reaches the buried crystal. The final view hands control back to the player. | The mineral answers and the harbor ambience returns. |
+| 16.00–21.08 s | One crane goes over the rim and down to the crystal in the bottom of the bowl. A low move round it as its light burns out. | Wind over the rim, cooling rock, a low held tone that dies with the light. |
+| 21.08–25.58 s | The present-day island from the mark the impact was watched from, then the lens runs under the sign and into the mine. | Silence, then the sea and the first bar of the score. |
+| 25.58–29.92 s | The miner swings twice. The vein opens on frame 674. Light rises on their face. | Steel and rock, then the crystal's tone. |
+| 29.92–31.67 s | Outside, violet light builds in the doorway and spills over the stone and the paving. | The ground, then the crystal's chord rising. The score steps back. |
+| 31.67–35.17 s | Two siblings see it on the news. They check with each other and lean in. | The tone, small, through a television. |
+| 35.17–37.17 s | A witness films the player on a phone, walking toward the mine. | Shore and footsteps. |
+| 37.17–41.92 s | The player reaches the face. **Break it open** is live from 39.25 s. | The gallery, the crystal humming behind the rock. The press has its own sound. |
+| 41.92–43.88 s | The blow on frame 1006. The fracture runs, the slabs fall and the pocket lights the player. | The break, then fragments. The theme enters on the contact. |
+| 43.88–46.83 s | The violet glass reveal with the player's own avatar and name. | Theme and light on the facets. |
+| 46.83–52.92 s | They walk out of the mine, hear it and turn back. The camera becomes the gameplay camera. | Something moves below. The last hit of the score lands before play. |
 
 ## Tune the opening in Studio
 
@@ -94,7 +98,7 @@ The small sparks above the secondary fires and the dust along the meteor use the
 
 ## Current Studio recording
 
-The restored Gem Hunter edit runs for 54.375 seconds. Its original Studio recording includes the Space press and half a second of gameplay after the handoff. [Watch the current cut with sound](Where-the-Stars-Took-Root-Current.mp4)
+The film runs 1,270 exposures (52.9 s). Pictures are Studio captures of every exposure, with a Space press at frame 967, so the recording is 51.8 s. The stereo track is a real-time Play session of the same build. [Watch the current cut with sound](Where-the-Stars-Took-Root-Current.mp4) · ![Second-half frames](Second-half-frames.jpg)
 
 ## Previous Studio recording
 

@@ -1,52 +1,77 @@
+-- The player on screen. One local copy of their dressed character gives the
+-- whole performance, with the pick on its gameplay weld. The live character
+-- keeps its own place and state and takes over again at the handoff.
 local Avatar = require(script.Parent.CinematicAvatar)
-local Players = game:GetService("Players")
+local Acting = require(script.Parent.Acting)
 local S = require(script.Parent.Scenery)
-local FieldAssay = require(script.Parent.FieldAssay)
-local ExpeditionMarker = require(script.Parent.ExpeditionMarker)
-local PrecisionCut = require(script.Parent.PrecisionCut)
-local ExpeditionCamera = require(script.Parent.ExpeditionCamera)
+local Clip = require(script.Parent.PlayerClip)
+local Glass = require(script.Parent.GlassReveal)
+local MineFace = require(script.Parent.MineFace)
+local MouthGlow = require(script.Parent.MouthGlow)
+local Witness = require(script.Parent.Witness)
+local Camera = require(script.Parent.PlayerCamera)
 local sheet = require(script.Parent.ExposureSheet)
 local F = sheet.frames
-local V, CF, A = Vector3.new, CFrame.new, CFrame.Angles
+local V, CF = Vector3.new, CFrame.new
 local Arrival = {}
 Arrival.__index = Arrival
+-- Beyond this the live character is somewhere else, so the film ends on a fade.
+Arrival.nearby = 12
 
 function Arrival.new(stage, h)
-	local player = Players:GetPlayerFromCharacter(h.root.Parent) or Players.LocalPlayer
-	local name = if player then player.DisplayName else h.root.Parent.Name
-	return setmetatable(
-		{ stage = stage, handoff = h, marker = ExpeditionMarker.new(name), proof = PrecisionCut.new() },
-		Arrival
-	)
+	return setmetatable({
+		stage = stage, handoff = h,
+		mouth = MouthGlow.new(stage, 1, true), glass = Glass.new(stage), witness = Witness.new(stage),
+	}, Arrival)
 end
+
+-- A portrait's lights, round the player's own head. They come up inside the
+-- pocket, so they are steady before the glass.
+local portrait = {
+	{ V(-2.6, 2.3, -4.6), "FFF1E2", 15, 0.85 }, -- key
+	{ V(3.4, 0.2, -4.4), "DCC8FF", 13, 0.32 }, -- fill
+	{ V(-2.7, 1.4, 2.3), "A45CFF", 9, 2.0 }, -- rims
+	{ V(2.9, 1.0, 2.3), "B682FF", 9, 2.0 },
+}
+function Arrival:light(frame)
+	local up = S.ease(frame, F.inside + 2, F.reveal - 2)
+	if frame >= F.answer then
+		up = 0
+	end
+	if up > 0 and not self.lamps then
+		self.lamps = {}
+		local u = self.unit * self.portraitDistance
+		local head = self.galleryStand * CF(0, 0, 0.3 * self.unit) * CF(self.rig.rest[self.head or self.root].Position)
+		for _, q in portrait do
+			local lamp = S.part(self.stage, "Portrait light", head * CF(q[1] * u), Vector3.one * 0.05, "FFFFFF")
+			lamp.Transparency, lamp.CastShadow = 1, false
+			table.insert(self.lamps, { part = lamp, light = S.light(lamp, q[2], q[3] * u, 0), power = q[4] })
+		end
+	end
+	for _, l in self.lamps or {} do
+		l.light.Brightness = l.power * up
+	end
+end
+
+-- Leave room in close shots for the hat this player is actually wearing.
 local function portraitFraming(character, head, u)
 	if not character or not head then
 		return 0, 1
 	end
 	local crown = head.Size.Y / 2
 	for _, item in character:GetChildren() do
-		if not item:IsA("Accessory") then
-			continue
+		local handle = item:IsA("Accessory") and item:FindFirstChild("Handle")
+		local weld = handle and handle:FindFirstChild("AccessoryWeld")
+		if handle and handle:IsA("BasePart") and weld and weld:IsA("Weld") and weld.Part1 == head then
+			local cf, half = handle.CFrame, handle.Size * 0.5
+			crown = math.max(crown, handle.Position.Y - head.Position.Y
+				+ math.abs(cf.RightVector.Y) * half.X + math.abs(cf.UpVector.Y) * half.Y + math.abs(cf.LookVector.Y) * half.Z)
 		end
-		local handle = item:FindFirstChild("Handle")
-		if not handle or not handle:IsA("BasePart") then
-			continue
-		end
-		local weld = handle:FindFirstChild("AccessoryWeld")
-		if not weld or not weld:IsA("Weld") or weld.Part1 ~= head then
-			continue
-		end
-		local cf, half = handle.CFrame, handle.Size * 0.5
-		local top = handle.Position.Y
-			- head.Position.Y
-			+ math.abs(cf.RightVector.Y) * half.X
-			+ math.abs(cf.UpVector.Y) * half.Y
-			+ math.abs(cf.LookVector.Y) * half.Z
-		crown = math.max(crown, top)
 	end
 	local extra = math.clamp(crown / u - 1.12, 0, 2.8)
 	return 0.37 * extra * u, 1 + 0.29 * extra
 end
+
 function Arrival:prepare()
 	if self.rig and not self.appearanceChanged then
 		return
@@ -54,15 +79,8 @@ function Arrival:prepare()
 	local character = self.handoff.root.Parent
 	if not self.added then
 		local function changed(item)
-			if
-				item:IsA("BasePart")
-				or item:IsA("Accoutrement")
-				or item:IsA("Clothing")
-				or item:IsA("CharacterMesh")
-				or item:IsA("BodyColors")
-				or item:IsA("SurfaceAppearance")
-				or item:IsA("Decal")
-			then
+			if item:IsA("BasePart") or item:IsA("Accoutrement") or item:IsA("Clothing") or item:IsA("CharacterMesh")
+				or item:IsA("BodyColors") or item:IsA("SurfaceAppearance") or item:IsA("Decal") then
 				self.appearanceChanged = true
 			end
 		end
@@ -74,207 +92,184 @@ function Arrival:prepare()
 		self.rig:destroy()
 	end
 	self.rig, self.appearanceChanged = fresh, false
-	self.copy = self.rig.model
-	if self.root then
-		self.root, self.head = fresh.root, self.copy:FindFirstChild("Head")
+	self.copy, self.root, self.head = fresh.model, fresh.root, fresh.model:FindFirstChild("Head")
+	local pick = self.copy:FindFirstChild("Harbor pick")
+	self.handle = pick and pick:FindFirstChild("Handle")
+	if self.handle and not fresh.indices[self.handle] then
+		self.handle = nil
 	end
+end
+
+function Arrival:site()
+	return self.replica or workspace:FindFirstChild("CitrineCove")
+end
+
+local function floorAt(site, point)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = if site then { site } else {}
+	local hit = site and workspace:Raycast(point + V(0, 4, 0), V(0, -10, 0), params)
+	return if hit then hit.Position.Y else nil
 end
 
 function Arrival:start()
 	self:prepare()
 	local h, rig = self.handoff, self.rig
 	local root = rig.root
-	self.root, self.head = root, self.copy:FindFirstChild("Head")
-	self.remote = (h.root.Position - h.landing).Magnitude >= 38
-	local headHeight = if self.head then rig.world[rig.indices[self.head]].Y - root.Position.Y else 1.5
+	local away = (h.root.Position - h.landing) * V(1, 0, 1)
+	self.remote = away.Magnitude >= Arrival.nearby or math.abs(h.root.Position.Y - h.landing.Y) > 8
+	local headHeight = if self.head then rig.rest[self.head].Y else 1.5
 	self.unit = math.clamp(math.max(headHeight / 1.55, root.Size.X / 2), 0.65, 1.85)
 	self.headroom, self.portraitDistance = portraitFraming(self.copy, self.head, self.unit)
 	local position = if self.remote then h.landing else h.root.Position
 	if self.remote then
-		local floor = math.huge
-		for _, name in { "LeftFoot", "RightFoot", "Left Leg", "Right Leg" } do
-			local foot = self.copy:FindFirstChild(name)
-			if foot then
-				floor = math.min(floor, foot.Position.Y - foot.Size.Y * 0.5)
-			end
-		end
-		local site = workspace:FindFirstChild("CitrineCove")
-		local court = site and site:FindFirstChild("Sand path and bridge")
+		local court = workspace:FindFirstChild("CitrineCove") and workspace.CitrineCove:FindFirstChild("Sand path and bridge")
 		local pad = court and court:FindFirstChild("Landing")
-		if floor < math.huge then
-			position += Vector3.yAxis * (root.Position.Y - floor - 4 + (if pad then pad.Size.Y * 0.5 else 0.11))
-		end
+		position += Vector3.yAxis * (rig.stand - 4 + (if pad then pad.Size.Y * 0.5 else 0.11))
 	end
 	if self.replayLanding then
 		position += self.replayLanding - h.landing
 	end
-	local direction = ((h.entrance or h.landing - Vector3.zAxis * 30) - h.landing) * V(1, 0, 1)
-	self.mineBearing =
-		CFrame.lookAt(position, position + (if direction.Magnitude > 0.01 then direction.Unit else -Vector3.zAxis))
-
-	self.mark = CF(position) * (if self.remote then CFrame.identity else h.root.CFrame.Rotation)
-	rig:place(self.mark)
-	self.facing = self.mineBearing
-	self.marker:place(self)
-	self.proof:place(self)
-	self.assay = FieldAssay.new(self)
+	local shift = if self.replayLanding then self.replayLanding - h.landing else Vector3.zero
+	local entrance = (h.entrance or h.landing - Vector3.zAxis * 85) + shift
+	local direction = (entrance - position) * V(1, 0, 1)
+	self.mineBearing = CFrame.lookAt(position, position + (if direction.Magnitude > 0.01 then direction.Unit else -Vector3.zAxis))
+	self.mark = CF(position) * (if self.remote then self.mineBearing.Rotation else h.root.CFrame.Rotation)
+	self.floor = position.Y - rig.stand
+	self.entrance = entrance
+	self.roadStand = self.mineBearing * CFrame.Angles(0, math.pi, 0)
+	self:block()
+	local site = self:site()
+	local post = self.mineBearing * CF(-2.6, -rig.stand, 11.8)
+	local y = floorAt(site, post.Position) or self.floor
+	self.witness:place(CF(post.X, y, post.Z) * self.mineBearing.Rotation * CFrame.Angles(0, math.rad(-22), 0))
+	self.mouth:place(CF(entrance))
 	self.lens = Instance.new("DepthOfFieldEffect")
-	self.lens.Name = "Expedition focus"
-	self.lens.NearIntensity, self.lens.FarIntensity = 0, 0.47
+	self.lens.Name, self.lens.NearIntensity, self.lens.FarIntensity = "Expedition focus", 0, 0.4
 	self.lens.Parent = self.stage.Parent
+end
+
+-- Play the blow once, offstage, and stand the player where the steel stops on
+-- the rock. Long arms and short arms all land on the same spot.
+function Arrival:block()
+	local rig, u, mine = self.rig, self.unit, self.mine
+	local at = mine.at
+	self.faceAt, self.hole = at, mine.contact
+	local stand = at * CF(mine.point.X, rig.stand, 3)
+	rig:place(Acting.perform(rig, Clip.gallery, F.contact2, stand, u))
+	self.tip = if self.handle then MineFace.tipOf(rig, self.handle, at.LookVector) else nil
+	local hit = at:PointToObjectSpace(self:tipAt())
+	self.galleryStand = at * CF(2 * mine.point.X - hit.X, rig.stand, 3 + (0.02 - hit.Z))
+	rig:place(Acting.perform(rig, Clip.gallery, F.contact2, self.galleryStand, u))
+	self.strikePoint = self:tipAt()
+end
+
+function Arrival:tipAt()
+	local rig = self.rig
+	if self.handle then
+		return rig.world[rig.indices[self.handle]] * self.tip
+	end
+	local hand = self.copy:FindFirstChild("RightHand") or self.copy:FindFirstChild("Right Arm") or rig.root
+	return (rig.world[rig.indices[hand]] * CF(0, -hand.Size.Y * 0.5, -0.6 * self.unit)).Position
+end
+
+function Arrival:palmAt()
+	local rig = self.rig
+	local hand = self.copy:FindFirstChild("LeftHand") or self.copy:FindFirstChild("Left Arm")
+	return hand and (rig.world[rig.indices[hand]] * CF(0, -hand.Size.Y * 0.5, 0)).Position
 end
 
 function Arrival:pose(frame)
 	local rig, u = self.rig, self.unit
-	local trial = frame < F.portrait
-	local walk = 1 - S.ease(frame, F.present, F.present + 22)
-	local step = math.sin(math.max(0, frame - F.present) * math.pi / 10) * walk
-	local age = frame - (if trial then F.proofStrike else self.contactFrame or F.autoStrike + 8)
-	local study = S.ease(frame, F.present + 10, F.measure + 6) * (1 - S.ease(age, -12, -6))
-	if not trial then
-		study = 0
+	local clip, stand = Clip.road, self.roadStand
+	if frame < F.enter then
+		clip, stand = Clip.plaza, self.mineBearing
+	elseif frame < F.answer then
+		clip, stand = Clip.gallery, self.galleryStand
 	end
-	local shoulder = S.ease(frame, F.portrait - 30, F.portrait - 10)
-	local lift = if trial
-		then math.max(
-			0.16 + 0.84 * S.ease(frame, F.measure - 8, F.measure + 12) * (1 - 0.82 * S.ease(age, 3, 24)),
-			shoulder
-		)
-		else 1
-	local settle = S.ease(frame, F.portrait - 24, F.portrait - 17)
-		* (1 - S.ease(frame, F.portrait - 17, F.portrait - 6))
-	local coil = S.ease(age, if trial then -14 else -8, if trial then -6 else -4)
-		* (1 - S.ease(age, if trial then -6 else -4, 0))
-	local drive = S.ease(age, -4, 0) * (1 - S.ease(age, 1, 12))
-	local follow = S.ease(age, 1, 5) * (1 - S.ease(age, 5, 16))
-	local final = S.ease(frame, F.mineRun - 12, F.mineRun + 4)
-	local active = 1 - S.ease(frame, F.mineRun + 2, F.mineRun + 16)
-	local shift = V(-0.24 * walk + 0.13 * drive, 0.055 * math.abs(step) - 0.12 * drive - 0.05 * study,
-		1.65 * walk - 0.19 * drive - 0.12 * study) * u
-	local facing = self.mineBearing.Rotation * A(0, math.rad(-8 * walk - 7 * coil + 12 * drive), 0)
-	local rootBone = rig.channels.Root or rig.channels.RootJoint
-	if rootBone then
-		local relative = self.mark:VectorToObjectSpace(self.mineBearing:VectorToWorldSpace(shift))
-		local rotation = CFrame.identity:Lerp(self.mark.Rotation:ToObjectSpace(facing), active)
-		local axes = rootBone.c0.Rotation
-		rootBone.pose = axes:Inverse() * CF(relative) * rotation * axes
+	local f = frame
+	if not self.motion then
+		-- Reduced motion holds one clear drawing for each beat of the story.
+		f = if frame < F.enter then F.witness + 40 elseif frame < F.strike then F.strike - 2 elseif frame < F.autoStrike then F.strike + 18
+			elseif frame < F.inside then frame elseif frame < F.reveal then F.reveal - 4 elseif frame < F.answer then F.reveal + 30
+			elseif frame < F.turn + 20 then F.turn else F.turn + 44
 	end
-	rig:turn("LeftHip", 24 * step - 8 * drive, -4 * drive, 1.5 * step)
-	rig:turn("RightHip", -24 * step + 8 * drive, 3 * drive, -1.5 * step)
-	rig:turn("LeftKnee", -14 * math.max(0, -step) - 7 * drive, 0, 0)
-	rig:turn("RightKnee", -14 * math.max(0, step) - 3 * drive, 0, 0)
-	rig:turn(
-		"Waist",
-		(-5 * lift + 8 * drive - 4 * coil + 8 * study) * active,
-		(9 * lift - 18 * coil + 19 * drive - 4 * final - 14 * study) * active,
-		-6 * settle + 5 * drive
-	)
-	rig:turn(
-		"LeftShoulder",
-		(-17 * step + 6 * lift + 26 * coil - 13 * drive + 32 * study) * active,
-		4 * drive,
-		(-7 * lift + 13 * coil - 8 * study) * active
-	)
-	rig:turn("LeftElbow", (11 * lift + 17 * coil + 6 * drive + 14 * study) * active, 0, 0)
-	rig:turn("LeftWrist", 0, -8 * coil, 4 * drive)
-	rig:turn(
-		"RightShoulder",
-		(13 * step + 54 * lift + 19 * settle + 47 * coil - 20 * drive - 7 * follow) * active,
-		(-11 * lift + 9 * coil + 10 * drive) * active,
-		(9 * lift + 7 * coil - 4 * drive) * active
-	)
-	rig:turn("RightElbow", (37 * lift + 15 * settle + 22 * coil - 27 * drive) * active, 0, 0)
-	rig:turn(
-		"RightWrist",
-		(-7 * lift + 17 * settle - 15 * drive) * active,
-		6 * lift * active,
-		8 * lift * active
-	)
-	rig:turn(
-		"Neck",
-		(-8 * walk - 6 * lift + 13 * final - 17 * study - (if trial then 7 else 0)) * active,
-		(21 * walk + 11 * lift - 28 * final - 7 * drive - 33 * study) * active,
-		-4 * settle
-	)
-
-	local blend = if self.remote then 0 else S.ease(frame, F.handoff + 1, F.endBlend - 1)
-	rig:place(self.mark, blend, Vector3.zero)
+	local base = Acting.perform(rig, clip, f, stand, u)
+	local blend = if self.remote then 0 else S.ease(frame, F.handoff - 4, F.endBlend - 2)
+	rig:place(base, blend, Vector3.zero)
 end
 
--- Pressing early changes when the swing and its sound land in this take.
--- Spectators who just watch get the same action on the last beat of the bar.
+-- One strike per screening. The clock then jumps straight to the wind-up.
 function Arrival:requestStrike(frame)
-	if frame < F.prompt or frame >= F.autoStrike or self.contactFrame then
-		return false
+	if frame < F.prompt or frame >= F.autoStrike or self.pressed then
+		return nil
 	end
-	self.contactFrame = frame + 8
-	return true
+	self.pressed = F.autoStrike
+	return F.autoStrike - frame
 end
 
-function Arrival:draw(t, picture)
-	local frame = picture or math.round(sheet.frameForScene(t))
+function Arrival:draw(frame)
 	self.frame = frame
 	if frame < F.prompt then
-		self.contactFrame = nil
+		self.pressed = nil
 	end
-	if frame < F.establish then
-		if self.root then
+	local away = (self.handoff.root.Position - self.handoff.landing).Magnitude >= 38
+	if frame < F.match then
+		if self.rig or self.unmask then
 			self:release()
 		end
 		return
 	end
-	if not self.root then
+	-- The player is not on the compass yet. They walk into the story later.
+	if not away and frame < F.endBlend and not self.unmask then
+		self.unmask, self.visibleAlpha = Avatar.mask(self.handoff.root.Parent)
+	end
+	-- One-time construction happens in the two dark beats.
+	if frame >= F.dark + 3 and frame < F.reveal then
+		self.glass:build()
+	end
+	if frame < F.dig - 7 then
+		if self.rig then
+			self:dismiss()
+		end
+		return
+	end
+	if not self.rig then
 		self:start()
 	elseif self.appearanceChanged then
-		self.assay:Destroy()
 		self:prepare()
-		self.rig:place(self.mark)
-		self.assay = FieldAssay.new(self)
+		self:block()
 	end
-	if frame >= F.autoStrike and not self.contactFrame then
-		self.contactFrame = F.autoStrike + 8
-	end
-	local contact = self.contactFrame or F.autoStrike + 8
 	self:pose(frame)
-	if not self.remote and frame >= F.endBlend then
-		self.copy.Parent = nil
-		if self.unmask then
-			self.unmask()
-			self.unmask, self.visibleAlpha = nil, nil
-		end
-	else
-		if not self.remote and not self.unmask then
-			self.unmask, self.visibleAlpha = Avatar.mask(self.handoff.root.Parent)
-		end
+	if frame >= F.dig and (self.remote or frame < F.endBlend) then
 		self.rig:show(self.stage)
+	else
+		self.copy.Parent = nil
 	end
-	self.proof:draw(self.stage, frame)
-	self.assay:draw(self, frame, contact)
-	self.marker:draw(self, frame, contact)
-	self.lens.Enabled = frame >= F.present and frame < F.mineRun
-	self.lens.FarIntensity = if frame >= F.commission and frame < F.beacon then 0.73 else 0.45
-	self.lens.InFocusRadius = (
-		if frame < F.measure
-			then 3.5
-			elseif frame < F.portrait then 0.94
-			elseif frame < F.commission then 2.2
-			elseif frame < F.beacon then 0.79
-			elseif frame - contact >= -2 and frame - contact < 7 then 0.62
-			else 2.2
-	) * self.unit
+	if not self.remote and frame >= F.endBlend and self.unmask then
+		self.unmask()
+		self.unmask, self.visibleAlpha = nil, nil
+	end
+	self.witness:draw(frame, self.motion, if self.head then self.head.Position - Vector3.yAxis * 0.5 * self.unit else self.root.Position)
+	self.mouth:draw(frame, self.motion)
+	if frame >= F.prompt and not self.glass.at then
+		self.glass:place(Camera.glassFrame(self), self.unit, self.unit * self.portraitDistance)
+	end
+	local eye, aim = Camera.frame(self, math.max(frame, F.witness), self.motion)
+	self.glass:draw(frame, self.motion, if frame >= F.reveal and frame < F.answer then self:palmAt() else nil, CFrame.lookAt(eye, aim))
+	self:light(frame)
+	self.lens.Enabled = frame >= F.witness and frame < F.handoff
 end
 
-function Arrival:camera(t, motion)
-	return ExpeditionCamera.frame(self, t, motion)
+function Arrival:camera(frame, motion)
+	return Camera.frame(self, frame, motion)
 end
-function Arrival:release()
-	if self.assay then
-		self.assay:Destroy()
-		self.assay = nil
-	end
-	self.contactFrame = nil
-	self.proof:hide()
-	self.marker:hide()
+
+function Arrival:dismiss()
+	self.witness.rig.model.Parent = nil
+	self.mouth:hide()
+	self.glass:hide()
+	self.glass.at = nil
 	if self.added then
 		self.added:Disconnect()
 		self.removed:Disconnect()
@@ -282,19 +277,30 @@ function Arrival:release()
 	if self.rig then
 		self.rig:destroy()
 	end
-	if self.unmask then
-		self.unmask()
-	end
 	if self.lens then
 		self.lens:Destroy()
 	end
-	self.rig, self.unmask, self.lens, self.copy = nil, nil, nil, nil
-	self.added, self.removed, self.appearanceChanged, self.visibleAlpha = nil, nil, nil, nil
-	self.head, self.root, self.frame, self.mineBearing = nil, nil, nil, nil
+	for _, l in self.lamps or {} do
+		l.part:Destroy()
+	end
+	self.rig, self.lens, self.copy, self.handle, self.lamps = nil, nil, nil, nil, nil
+	self.added, self.removed, self.appearanceChanged = nil, nil, nil
+	self.head, self.root, self.mineBearing = nil, nil, nil
 end
+
+function Arrival:release()
+	self:dismiss()
+	if self.unmask then
+		self.unmask()
+	end
+	self.unmask, self.visibleAlpha, self.pressed = nil, nil, nil
+end
+
 function Arrival:Destroy()
 	self:release()
-	self.proof:Destroy()
-	self.marker:Destroy()
+	self.witness:Destroy()
+	self.mouth:Destroy()
+	self.glass:Destroy()
 end
+
 return Arrival

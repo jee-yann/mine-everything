@@ -51,13 +51,13 @@ function Island.new(stage, base, live)
 		ledges:PivotTo(base * coast:GetPivot())
 		ledges.Parent = set
 	end
-	local hot, weathered = Outcrop.new(false), Outcrop.new(true)
+	local hot = Outcrop.new(false)
 	hot:PivotTo(base)
 	local self = setmetatable({
 		set = set, stage = stage, base = base, live = live or base, vault = vault,
 		changes = changes, parcels = parcels, trees = trees, index = 1, last = -1,
 		tide = TideFront.new(stage, base), faults = FaultField.new(stage, base),
-		hot = hot, weathered = weathered,
+		hot = hot,
 	}, Island)
 	local felled = 0
 	for i, tree in trees do
@@ -120,20 +120,10 @@ function Island:maskStationLabels(active)
 	end
 end
 
-function Island:draw(t, modern, showReplica, showWitness)
-	self:maskStationLabels(modern == true and not showReplica and showWitness ~= false)
+function Island:draw(t, modern, showReplica, cleanSigns)
+	self:maskStationLabels(modern == true and not showReplica and cleanSigns == true)
 	self.set.Parent = if not modern or showReplica then self.stage else nil
 	self.hot.Parent = if not modern and t >= clock.waveLaunch then self.set else nil
-	local weatheredFrame = if showReplica then self.base else self.live
-	if modern and showWitness ~= false then
-		if self.witnessFrame ~= weatheredFrame then
-			self.weathered:PivotTo(weatheredFrame)
-			self.witnessFrame = weatheredFrame
-		end
-		self.weathered.Parent = self.stage
-	else
-		self.weathered.Parent = nil
-	end
 	if self.modern ~= modern or t < self.last then
 		for _, parcel in self.parcels do
 			parcel.Parent = self.vault
@@ -182,7 +172,6 @@ function Island:Destroy()
 	self.tide:Destroy()
 	self.faults:Destroy()
 	self.hot:Destroy()
-	self.weathered:Destroy()
 	self.set:Destroy()
 	self.vault:Destroy()
 end
