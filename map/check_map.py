@@ -208,7 +208,7 @@ def traps(parts, step=1.0):
 
 PROPS = {"Wild stone", "Bush", "Flower", "Grass tuft", "Crate", "Barrel", "Ore sack", "Lamp post", "Lamp foot", "Bench seat", "Bench back", "Trunk", "Pine trunk",
          "Palm trunk", "Leaf crown", "Pine crown", "Palm leaf", "Crystal facet", "Cliff ledge", "Ledge turf", "Hanging vine", "Reed", "Fence post", "Fence rail", "Banner cloth",
-         "Planter wall", "Step newel", "Falling water", "Current", "Bank stone", "Spring stone", "Whitewater"}
+         "Planter wall", "Step newel", "Falling water", "Current", "Bank stone", "Spring stone", "Whitewater", "Cable head", "Survey trail", "Path slab", "Step cheek", "Stone step", "Compass needle", "Rail"}
 
 
 def clipping(parts):

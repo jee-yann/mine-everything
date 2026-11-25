@@ -5,34 +5,60 @@ import re
 
 from cove import *  # noqa: F403
 
+def prism(parent, label, right, p, q, y0, y1, color, **k):
+    """An upright right-angled prism: the right angle at `right`, legs to p and q."""
+    lp, lq = math.dist(right, p), math.dist(right, q)
+    if lp < 0.05 or lq < 0.05:
+        return
+    # Wedge: right angle at (-Y, +Z). Local Y runs to p, local -Z runs to q.
+    ly = [(p[0] - right[0]) / lp, 0, (p[1] - right[1]) / lp]
+    lz = [-(q[0] - right[0]) / lq, 0, -(q[1] - right[1]) / lq]
+    lx = [ly[1] * lz[2] - ly[2] * lz[1], ly[2] * lz[0] - ly[0] * lz[2], ly[0] * lz[1] - ly[1] * lz[0]]
+    mid = [(p[0] + q[0]) / 2, (y0 + y1) / 2, (p[1] + q[1]) / 2]
+    b.part(parent, label, mid, [y1 - y0, lp, lq], color, rot=[[lx[i], ly[i], lz[i]] for i in range(3)], cl="WedgePart", **k)
+
+
 # ---------------------------------------------------------------- arrival plaza
 plaza = group("Harbor Plaza", "Arrival court")
-keep(CORE["Arrival court"], plaza, studs=False, solid=False, table={})
-dials = [p for p in plaza.findall("Item") if name(p) == "Compass dial"]
-for p, ink in zip(sorted(dials, key=lambda q: -max(xyz(q, "size")[1:])), (P["slate3"], "D89A33", "1E6E78", "2FA9A4")):
-    field(p, "Color3uint8", "Color3uint8", 0xFF000000 | int(ink, 16))
-    field(p, "token", "Material", SMOOTH)
-for p in plaza.findall("Item"):
+dials = [p for p in CORE["Arrival court"].findall("Item") if name(p) == "Compass dial"]
+for p in list(CORE["Arrival court"].findall("Item")):
     if name(p).startswith("Compass"):
-        cf = prop(p, "CFrame").find("Y")
-        cf.text = f"{float(cf.text) + 0.07:.4f}"
+        CORE["Arrival court"].remove(p)
+keep(CORE["Arrival court"], plaza, studs=False, solid=False, table={})
+# Four discs, each a tenth of a stud prouder than the one round it.
+for k, (p, ink) in enumerate(zip(sorted(dials, key=lambda q: -max(xyz(q, "size")[1:])), (P["slate3"], "D89A33", "1E6E78", "2FA9A4"))):
+    d, top = max(xyz(p, "size")[1:]), 24.76 + 0.1 * k
+    b.part(plaza, "Compass dial", [0, (24.5 + top) / 2, 93], [top - 24.5, d, d], ink, rot=rz(90), solid=False, mat=SMOOTH, shape=2, shadow=False)
 b.pad(plaza, "Basalt rim", 0, 82, 112, 74, 23.4, 24.24, P["slate2"], 20)
 b.pad(plaza, "Painted promenade", 0, 82, 109, 71, 23.6, 24.32, P["stone"], 18.5)
 b.pad(plaza, "Promenade band", 0, 82, 99, 61, 23.8, 24.40, P["slate2"], 16)
 b.pad(plaza, "Painted promenade", 0, 82, 96, 58, 23.8, 24.48, P["stone3"], 15)
 b.pad(plaza, "Promenade inlay", 0, 93, 44, 42, 23.8, 24.64, P["stone"], 13)
-# An eight-point star, long points to the cardinals.
-for i in range(8):
-    long = i % 2 == 0
-    f = Frame(0, 25.0, 93, i * 45)
-    L, w = (8.2, 1.5) if long else (4.8, 1.1)
+# An eight-point star. Every point is cut to fit the next, so no two pieces share any ground.
+STAR = dict(solid=False, shadow=False, mat=SMOOTH)
+
+
+def rose(a, d):
+    return (d * math.sin(math.radians(a)), 93 + d * math.cos(math.radians(a)))
+
+
+for a in (0, 90, 180, 270):
+    tip, mid = rose(a, 8.6), rose(a, 2.0 * math.cos(math.radians(45)))
     for s in (-1, 1):
-        # Half a point: an upright wedge laid flat, right angle on the centre line.
-        rot = [[0, s, 0], [1, 0, 0], [0, 0, 1]] if s < 0 else [[0, s, 0], [1, 0, 0], [0, 0, 1]]
-        rot = [[0, float(s), 0], [float(-s), 0, 0], [0, 0, 1.0]]
-        b.part(plaza, "Compass needle", [s * w / 2, 0.12 + (0 if long else -0.05), L / 2], [0.18, w, L], (P["cream2"] if s > 0 else P["citrine"]) if long else (P["citrine2"] if s > 0 else P["honey"]), f,
-               matmul(rot, [[1, 0, 0], [0, -1, 0], [0, 0, -1]]), "WedgePart", studs=False, solid=False, mat=SMOOTH, shadow=False)
-b.part(plaza, "Compass spindle", [0, 25.24, 93], [0.26, 1.6, 1.6], P["violet"], rot=rz(90), studs=False, solid=False, mat=SMOOTH, shape=2, shadow=False)
+        notch = rose(a + s * 45, 2.0)
+        ink = P["cream2" if s > 0 else "citrine"]
+        prism(plaza, "Compass needle", mid, (0, 93), notch, 24.9, 25.15, ink, **STAR)
+        prism(plaza, "Compass needle", mid, tip, notch, 24.9, 25.15, ink, **STAR)
+        # Half of the short point between this long point and the next.
+        shoulder = (notch[0] + (tip[0] - notch[0]) * 0.3, notch[1] + (tip[1] - notch[1]) * 0.3)
+        small = rose(a + s * 45, 5.6)
+        ux, uz = math.sin(math.radians(a + s * 45)), math.cos(math.radians(a + s * 45))
+        along = shoulder[0] * ux + (shoulder[1] - 93) * uz
+        foot = rose(a + s * 45, along)
+        ink = P["citrine2" if s > 0 else "honey"]
+        prism(plaza, "Compass needle", foot, notch, shoulder, 24.9, 25.15, ink, **STAR)
+        prism(plaza, "Compass needle", foot, small, shoulder, 24.9, 25.15, ink, **STAR)
+b.part(plaza, "Compass spindle", [0, 25.15, 93], [0.2, 1.5, 1.5], P["violet"], rot=rz(90), solid=False, mat=SMOOTH, shape=2, shadow=False)
 # The avenue: one lighter line from spawn to the bridge.
 b.box(plaza, "Central concourse", -7, 7, 24.0, 24.58, 49.2, 71.7, P["sand"])
 for s in (-1, 1):
@@ -56,15 +82,6 @@ for s in (-1, 1):
         flowers(plaza, s * px - 2.4, 26.5, z - 1.2, 5, 1.2, ("violet", "lilac", "cream2"))
     bench(plaza, s * 20.5, 24.5, 99, -90 * s)
     bench(plaza, s * 33, 24.5, 100, 180)
-
-# A signpost where the three roads part.
-post = group("Harbor Plaza", "Signpost")
-b.part(post, "Sign foot", [18.5, 24.9, 48], [2.4, 1.2, 2.4], P["slate3"])
-b.part(post, "Sign post", [18.5, 29.4, 48], [1.0, 9.0, 1.0], P["wood2"], studs=False)
-for y, text, yaw, tone in ((32.6, "MINE", 4, "honey"), (30.7, "LIGHTHOUSE", -34, "teal"), (28.8, "ORE YARD", 34, "coral")):
-    f = Frame(18.5, y, 48, yaw)
-    board = b.part(post, "Sign board", [0.6 if yaw < 0 else -0.6, 0, 0.75], [6.4, 1.5, 0.5], P[tone], f, studs=False)
-    b.lettering(board, text, 2, "FFF8E6", 50, 46)
 
 # ---------------------------------------------------------------- market
 @thing
@@ -120,7 +137,7 @@ def stall(key, parent, x, z, yaw, y=24.5, tone="coral", tone2="cream2", title=""
     s = xyz(mat, "size")
     b.part(m, "Pad rim", [0, 0.02, pad_z], [s[0] + 0.9, 0.2, s[2] + 0.9], P["citrine2"], f, studs=False, solid=True, mat=SMOOTH)
     tag = b.adopt(m, next(c for c in CORE[key].findall("Item") if name(c) == "Name tag"))
-    move(tag, f.at([0, tag_h + 6.2, 0]))
+    move(tag, f.at([0, tag_h + 9.0, 0]))
     station(tag)
     return f, m
 
@@ -148,8 +165,8 @@ fire = b.part(m, "Forge fire", [-3.6, 4.0, -0.8], [2.2, 1.4, 0.4], "FF9A3C", f, 
 b.light(fire, "FF9A4A", 11, 0.5)
 b.part(m, "Chimney", [-3.6, 13.6, -2.2], [2.6, 5.4, 2.6], P["slate2"], f)
 b.part(m, "Chimney cap", [-3.6, 16.5, -2.2], [3.3, 0.8, 3.3], P["slate3"], f)
-b.part(m, "Pick emblem haft", [1.8, 15.3, 0.6], [0.9, 6.6, 0.9], P["wood3"], f, rz(-34), mat=SMOOTH, studs=False, solid=False)
-b.part(m, "Pick emblem head", [3.4, 17.9, 0.6], [6.2, 1.2, 1.2], "9FE8EE", f, rz(-34), mat=SMOOTH, studs=False, solid=False, shine=0.1)
+b.part(m, "Pick emblem haft", [1.0, 14.7, 0.4], [0.96, 4.6, 0.96], P["wood3"], f, rz(-34), mat=SMOOTH, studs=False, solid=False)
+b.part(m, "Pick emblem head", [2.4, 16.9, 0.4], [4.6, 1.1, 1.2], "9FE8EE", f, rz(-34), mat=SMOOTH, studs=False, solid=False, shine=0.1)
 barrel(m, *f.at([8.9, 0, 1.0]), tone="teal")
 
 # The four services stand in an arc and face spawn.
@@ -315,7 +332,9 @@ for s in (-1, 1):
     b.box(front, "Weathered sandstone", min(s * 31.5, s * 36.5), max(s * 31.5, s * 36.5), 23.0, 35.6, -12, 5.0, P["clay"])
     b.box(front, "Grass shelf", min(s * 31.2, s * 37.0), max(s * 31.2, s * 37.0), 35.6, 37.0, -12.2, 5.4, P["grass2"])
 for s in (-1, 1):
-    b.box(front, "Weathered sandstone", min(s * 31.45, s * 34.2), max(s * 31.45, s * 34.2), 23.0, 37.9, -64, -12.1, P["clay"])
+    b.box(front, "Weathered sandstone", min(s * 31.3, s * 34.2), max(s * 31.3, s * 34.2), 23.0, 37.9, -51, -12.1, P["clay"])
+    # Turf beside the rear slope, so the towers stand on level ground.
+    b.box(front, "Ridgeline turf", min(s * 30.0, s * 31.4), max(s * 30.0, s * 31.4), 35.6, 36.03, -59, -51, P["grass3"])
 # Over the hall. It starts above the stone canopy.
 b.pad(front, "Weathered sandstone", 0, -24.2, 66, 52.0, 38.02, 41.9, P["amber"], 2)
 b.pad(front, "Grass shelf", 0, -24.2, 67, 53.0, 41.9, 43.4, P["grass"], 2.4)
@@ -378,18 +397,21 @@ for s in (-1, 1):
         mesa(north, s * x, z, w, d, 23, top, c)
     for x, z, w, d, top in ((114.5, -68, 10, 10, 41, ), (121.5, -60, 7, 9, 45.5)):
         mesa(north, s * x, z, w, d, 24, top, 3)
-    mesa(north, s * 88, -44, 20, 16, 24, 42, 4)
-    for x, z, y, kind in ((130, -24, 45, pine), (131, -33, 45, pine), (130, -48, 53.5, leafy), (124, -74, 49, pine), (131, -76, 49, pine), (130, -6, 36, leafy), (88, -44, 42, pine), (114.5, -69, 41, pine)):
+    mesa(north, s * 90.5, -41.4, 13, 10, 24, 42, 3)
+    for x, z, y, kind in ((130, -24, 45, pine), (131, -33, 45, pine), (130, -48, 53.5, leafy), (124, -74, 49, pine), (131, -76, 49, pine), (130, -6, 36, leafy), (90.5, -41.4, 42, pine), (114.5, -69, 41, pine)):
         kind(north, s * x, z, y, rng.uniform(0.9, 1.15))
 
 # The ridge trail keeps its line. Posts and planting mark it.
 ridge = group("Citrine Highlands", "Ridge dressing")
 for s in (-1, 1):
+    # Round the outside of both towers, from the head of the slope to the long trail.
+    slab_path(ridge, [(s * 103.8, -50.4), (s * 100.5, -57), (s * 91.6, -62.8), (s * 78.6, -67.6)], 5.8, 35.86)
+for s in (-1, 1):
     for x, z, y in ((110.5, -12, 27.8), (104, -62, 35.9), (92, -71, 35.9)):
         pine(ridge, s * x, z, y - 0.1, rng.uniform(0.85, 1.15))
     for x, z in ((54, -62), (14, -63), (76, -60)):
         rock(ridge, s * x, 35.9, z, rng.uniform(2.2, 3.2), ("stone2", "slate2", "stone"))
-    for x, z, y in ((109.6, -2, 25.4), (109.4, -24, 29.6), (96, -52, 35.2), (44, -64, 36.0), (30, -63.4, 36.0), (89, -64.5, 36.0)):
+    for x, z, y in ((109.6, -2, 25.4), (109.4, -24, 29.6), (44, -64, 36.0), (30, -63.4, 36.0), (86, -58.2, 36.0)):
         bush(ridge, s * x, y, z, rng.uniform(0.9, 1.3), bloom=("lilac", "citrine2", "coral")[int(x) % 3])
         flowers(ridge, s * x + 2.2, y, z + 1.6, 4, 1.0)
     lamp(ridge, s * 66, 36.0, -64.5, lit=True)
@@ -454,10 +476,10 @@ for x, z in ((56.4, 14), (74.6, 8), (60.0, 21)):
 yard = group("Citrine Highlands", "Ore siding")
 terrace(yard, -87, 21, 34, 46, 23.0, 29.0, 6, 0, "stone2", "clay")
 b.pad(yard, "Yard floor", -87, 21, 30, 42, 28.4, 29.12, P["path2"], 5)
-steps(yard, -68.2, 14, 9, 24.0, 29.1, 7.4, 90)
-steps(yard, -87, 46.6, 9, 24.0, 29.1, 7.2, 0)
-fence(yard, [(-70.6, 20), (-70.6, 37), (-75, 43), (-81, 43.4)], 29.1)
-fence(yard, [(-93, 43.4), (-99, 43.2), (-103.4, 38), (-103.4, 4)], 29.1)
+climb(yard, -87, 21, 0, 90, 17.4, 9, 24.0, 29.0, 7.4, along=7)
+climb(yard, -87, 21, 0, 0, 23.4, 9, 24.0, 29.0, 7.2)
+fence(yard, [(-70.6, 21.4), (-70.6, 37), (-75, 43), (-79.6, 43.4)], 29.0)
+fence(yard, [(-94.4, 43.4), (-99, 43.2), (-103.4, 38), (-103.4, 4)], 29.0)
 # The adit: rails come out of the hill and end at the tipple over the dock.
 mesa(front, -93, -8.6, 34, 13.2, 23.0, 41.0, 3)
 for s in (-1, 1):
@@ -536,13 +558,14 @@ ore_pile(dock, -52.5, 21.9, 35.6, 3.4, ("slate2", "citrine", "honey"), 9)
 east = group("Citrine Highlands", "Compass gardens")
 terrace(east, 89, 24, 34, 40, 23.0, 29.0, 6, 0, "grass", "clay", cap="Grass shelf")
 b.pad(east, "Garden walk", 82, 24, 12, 34, 28.4, 29.14, P["path"], 4)
-steps(east, 70.2, 36, 9, 24.0, 29.1, 7.4, -90)
-steps(east, 89, 46.8, 9, 24.0, 29.1, 7.2, 0)
-fence(east, [(72.6, 30), (72.6, 8), (77, 4.6), (100, 4.6)], 29.0)
+# The west way up comes in at the cut corner, where there is ground to stand on.
+climb(east, 74.8, 41.2, -45, 0, 0, 6, 24.0, 29.0, 6.0)
+climb(east, 89, 24, 0, 0, 20.4, 9, 24.0, 29.0, 7.2)
+fence(east, [(72.6, 35.6), (72.6, 8), (77, 4.6), (100, 4.6)], 29.0)
 fence(east, [(98, 43.8), (102, 42), (105.6, 37), (105.6, 12)], 29.0)
 beacon = group("Harbor Plaza", "Beacon Point")
 mesa(beacon, 95.2, 24, 18, 20, 28.6, 35.0, 4)
-steps(beacon, 81.6, 24, 8, 29.1, 35.0, 9.0, -90)
+climb(beacon, 95.2, 24, 0, -90, 9.7, 8, 29.0, 35.0, 9.0)
 for i in range(6):
     w = 10.4 - i * 0.75
     b.pad(beacon, "Beacon tower", 97, 24, w, w, 34.8 + i * 4.6, 34.8 + (i + 1) * 4.6, P["cream2" if i % 2 else "coral"], w * 0.28)
@@ -569,13 +592,13 @@ b.pad(east, "Pavilion roof", 82, 12, 8.4, 8.4, 37.6, 38.6, P["violet"], 2.4)
 b.pad(east, "Pavilion roof", 82, 12, 4.6, 4.6, 38.6, 39.6, P["plum"], 1.3)
 crystal(east, 82, 39.5, 12, 3.4, 1.4, P["lilac"])
 cluster(east, 82, 29.7, 12, 1.7, (P["citrine"], P["citrine2"], P["honey"]), 4)
-for x, z in ((74.9, 21), (81, 41.2), (98.6, 37.6)):
+for x, z in ((75.6, 32.4), (98.6, 37.6)):
     b.pad(east, "Flower bed", x, z, 4.4, 5.0, 29.0, 29.6, P["umber"], 1.2)
     flowers(east, x, 29.5, z, 9, 1.7, (("citrine2", "honey", "cream2"), ("violet", "lilac", "pink"), ("coral", "pink", "cream2"))[int(x + z) % 3])
 leafy(east, 101, 9, 29.0, 1.0, ("pink", "pink", "cream2"))
 leafy(east, 92, 9, 29.0, 0.85, ("lilac", "violet", "lilac"))
 leafy(east, 101, 39.5, 29.0, 0.95, ("pink", "cream2", "pink"))
-lamp(east, 74.6, 29.1, 28, lit=True)
+lamp(east, 74.6, 29.1, 16.4, lit=True)
 bench(east, 91.6, 29.1, 36.6, 0)
 
 # ---------------------------------------------------------------- south: hall of miners and the open shore
@@ -706,19 +729,6 @@ def inset(poly, d):
     return out
 
 
-def prism(parent, label, right, p, q, y0, y1, color, **k):
-    """An upright right-angled prism: the right angle at `right`, legs to p and q."""
-    lp, lq = math.dist(right, p), math.dist(right, q)
-    if lp < 0.05 or lq < 0.05:
-        return
-    # Wedge: right angle at (-Y, +Z). Local Y runs to p, local -Z runs to q.
-    ly = [(p[0] - right[0]) / lp, 0, (p[1] - right[1]) / lp]
-    lz = [-(q[0] - right[0]) / lq, 0, -(q[1] - right[1]) / lq]
-    lx = [ly[1] * lz[2] - ly[2] * lz[1], ly[2] * lz[0] - ly[0] * lz[2], ly[0] * lz[1] - ly[1] * lz[0]]
-    mid = [(p[0] + q[0]) / 2, (y0 + y1) / 2, (p[1] + q[1]) / 2]
-    b.part(parent, label, mid, [y1 - y0, lp, lq], color, rot=[[lx[i], ly[i], lz[i]] for i in range(3)], cl="WedgePart", **k)
-
-
 @thing
 def ring(parent, poly, outer, label, y0, y1, ink, **k):
     """A band between an inner outline and `outer` studs further out."""
@@ -830,14 +840,15 @@ for i in range(n):
 
 # ---------------------------------------------------------------- roads and meadows
 roads = group("Roads")
-slab_path(roads, [(-34.4, 18), (-44, 20), (-54, 18.4), (-61.0, 14.2)], 6, 24.0)
-slab_path(roads, [(34.4, 18), (43, 20), (51, 21), (56, 29), (62.9, 36)], 6, 24.0)
+slab_path(roads, [(-34.4, 18), (-43, 18.6), (-51.6, 16.4), (-58.4, 14.2)], 6, 24.0)
+slab_path(roads, [(34.4, 18), (41, 19.6)], 6, 24.0)
 for s in (-1, 1):
     b.box(roads, "Bridge apron", s * 41 - 3.4, s * 41 + 3.4, 23.2, 24.2, 47.9, 51.4, P["stone2"])
-slab_path(roads, [(-61, 79), (-76, 72), (-87, 61), (-87, 53.7)], 6, 24.0)
-slab_path(roads, [(61, 79), (76, 72), (89, 61.2), (89, 53.9)], 6, 24.0)
-slab_path(roads, [(-92.6, 56.6), (-104, 47), (-114, 26), (-116, 8)], 5, 24.0)
-slab_path(roads, [(94.8, 57), (106, 47), (114, 26), (116, 8)], 5, 24.0)
+slab_path(roads, [(47.8, 47.6), (56, 46.4), (65.6, 48.4)], 6, 24.0)
+slab_path(roads, [(-61, 79), (-76, 72), (-87, 62.2), (-87, 55.2)], 6, 24.0)
+slab_path(roads, [(61, 79), (76, 72), (89, 62.2), (89, 55.2)], 6, 24.0)
+slab_path(roads, [(-93.4, 58), (-104, 47), (-114, 26), (-116, 8)], 5, 24.0)
+slab_path(roads, [(95.4, 58), (106, 47), (114, 26), (116, 8)], 5, 24.0)
 slab_path(roads, [(-60, 104.5), (-66, 110)], 5, 24.0, "sand2")
 slab_path(roads, [(60, 104.5), (66, 110)], 5, 24.0, "sand2")
 meadow = group("Meadow planting")
@@ -847,19 +858,18 @@ for s in (-1, 1):
     mesa(hills, s * 96, 93, 40, 30, 23.6, 27.4, 7, s * 6, "grass2", capy=1.3)
     mesa(hills, s * 102, 96, 25, 21, 27.2, 31.4, 6, s * 14, "grass", capy=1.4)
     mesa(hills, s * 106, 98, 13, 12, 31.2, 35.0, 4, s * 24, "grass2", capy=1.3)
-    steps(hills, s * 74.4, 93, 8, 24.0, 27.5, 5.4, -s * 96)
-    steps(hills, s * 87.6, 94.5, 7, 27.4, 31.5, 5.6, -s * 84)
+    climb(hills, s * 96, 93, s * 6, -s * 90, 20.7, 8, 24.0, 27.4, 5.4)
+    climb(hills, s * 102, 96, s * 14, -s * 90, 13.2, 7, 27.4, 31.4, 5.6)
     mesa(hills, s * 113, 58, 18, 18, 23.6, 28.6, 5, s * 8, "grass2", capy=1.3)
-    mesa(hills, s * 72, 61, 15, 12, 23.6, 26.0, 4, -s * 12, "grass2", capy=1.1)
-    mesa(hills, s * 62, 70, 9, 9, 23.6, 25.6, 3, s * 10, "grass", capy=1.0)
+    mesa(hills, s * 69.5, 58.5, 15, 12, 23.6, 26.0, 4, -s * 12, "grass2", capy=1.2)
     leafy(hills, s * 106, 98, 35.0, 1.35, ("leafgold", "citrine", "honey") if s < 0 else ("pink", "cream2", "pink"))
     bench(hills, s * 94, 31.4, 91, -s * 96)
-    for x, z, y in ((84, 100, 27.4), (88, 84, 27.4), (111, 84, 27.4), (117, 60, 28.6), (109, 54, 28.6), (72, 61, 26.0)):
+    for x, z, y in ((84, 100, 27.4), (88, 84, 27.4), (111, 84, 27.4), (117, 60, 28.6), (109, 54, 28.6), (69.5, 58.5, 26.0)):
         (pine if z > 90 else leafy)(hills, s * x, z, y, rng.uniform(0.85, 1.1))
     for x, z, w, d, t in ((52, 112, 24, 14, "grass2"), (80, 72, 20, 10, "grass2"), (30, 48.4, 18, 5, "grass2")):
         b.pad(hills, "Meadow patch", s * x, z, w, d, 23.4, 23.9, P[t], 4)
 # Groves where they close a view or shelter a corner. Open lawn between them.
-GROVES = [(-98, 74, 4), (98, 74, 4), (-78, 112, 4), (78, 112, 4), (-104, 112, 4), (104, 112, 4), (-52, 9, 2), (-60, 49, 3), (62, 49, 3), (-101, 58, 2), (101, 58, 2)]
+GROVES = [(-98, 74, 4), (98, 74, 4), (-78, 112, 4), (78, 112, 4), (-104, 112, 4), (104, 112, 4), (-52, 9, 2), (-60, 49, 3), (62, 53, 3), (-101, 58, 2), (101, 58, 2)]
 for x, z, n in GROVES:
     for k in range(n):
         a = k * 2.4 + x

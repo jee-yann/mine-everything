@@ -213,6 +213,8 @@ class Builder:
                 bad = self.worst(made, dx != 0 or dz != 0, reach > 0)
                 if bad is None and label in LEVEL and not self.level(made):
                     bad = 5.0
+                if bad is None and reach > 0 and self.in_the_way(made):
+                    bad = 5.0
                 if bad is None:
                     for rec in made:
                         self.settle(rec)
@@ -233,6 +235,17 @@ class Builder:
                     for rec in made:
                         self.settle(rec)
                     print("tight:", label, [round(v, 1) for v in made[0]["at"]], round(best[0], 2))
+
+    def in_the_way(self, made):
+        """True if any of a prop stands on a path or a stair."""
+        foot = min(r["lo"][1] for r in made)
+        for r in made:
+            if r["lo"][1] > foot + 0.6:
+                continue
+            for q in self.near(r):
+                if q["label"] in WAYS and q["owner"] != r["owner"] and abs(q["hi"][1] - foot) < 2 and penetration(dict(r, h=[v + 0.3 for v in r["h"]]), q) > 0:
+                    return True
+        return False
 
     def level(self, made):
         """True if every foot of a prop stands on something."""
@@ -439,6 +452,7 @@ def stud_all(item):
         field(item, "token", face, STUD if min(spans[face]) >= 0.95 else 0)
 
 
+WAYS = {"Path slab", "Survey trail", "Trail bend", "Cross-ridge trail", "Stone step"}
 LEVEL = {"bench", "crate", "barrel", "lamp", "banner", "sack"}
 
 

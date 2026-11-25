@@ -144,12 +144,23 @@ for p in tram.findall("Item"):
             b.part(tram, "Receiving hopper wall", [x, y + 0.5, z + s * 1.85], [5.4, 2.0, 0.5], P["plank"], solid=False)
 keep(CORE["Moving cabins"], group("Citrine Highlands", "Moving cabins"), solid=False)
 trail = group("Citrine Highlands", "Cableway trail")
+for p in list(CORE["Cableway trail"].findall("Item")):
+    x, z = abs(xyz(p, "CFrame")[0]), xyz(p, "CFrame")[2]
+    if name(p) in ("Survey trail", "Trail bend") and x < 108 and z < -42:
+        # The old way led through the towers. A path round them replaces it.
+        CORE["Cableway trail"].remove(p)
+    elif name(p) == "Survey trail" and x < 112:
+        # A little longer at the top, to meet it.
+        cf = prop(p, "CFrame")
+        up = 1 if float(cf.find("R12").text) > 0 else -1
+        for k, row in zip("XYZ", ("R02", "R12", "R22")):
+            cf.find(k).text = f"{float(cf.find(k).text) + up * 1.2 * float(cf.find(row).text):.4f}"
+        prop(p, "size").find("Z").text = f"{xyz(p, 'size')[2] + 2.4:.4f}"
+    elif name(p) == "Rear roof slope":
+        prop(p, "size").find("X").text = "60.2"
 keep(CORE["Cableway trail"], trail)
 for p in trail.findall("Item"):
     lift = {"Survey trail": 0.3, "Trail bend": 0.42, "Cross-ridge trail": 0.3}.get(name(p), 0)
-    if lift and (79 if name(p) == "Trail bend" else 93) < abs(xyz(p, "CFrame")[0]) < 108 and xyz(p, "CFrame")[2] < -42:
-        # Here the trail dips to the height of the ridge.
-        lift += 0.3 if name(p) == "Trail bend" else 0.2
     cf = prop(p, "CFrame").find("Y")
     cf.text = f"{float(cf.text) + lift:.4f}"
     if lift:
@@ -442,12 +453,19 @@ def steps(parent, x, z, w, y0, y1, depth, yaw, tone="stone", label="Stone step")
     f = Frame(x, 0, z, yaw)
     for i in range(n):
         top = y0 + (y1 - y0) * (i + 1) / n
-        b.part(parent, label, [0, (y0 - 0.3 + top) / 2, depth / 2 - run * (i + 0.5)], [w, top - y0 + 0.3, run + 0.05], P[tone if i % 2 else "stone2"], f)
+        b.part(parent, label, [0, (y0 - 0.3 + top) / 2, depth / 2 - run * (i + 0.5)], [w, top - y0 + 0.3, run], P[tone if i % 2 else "stone2"], f)
     for s in (-1, 1):
         # A sloping kerb, with a block to finish it top and bottom.
         b.part(parent, "Step cheek", [s * (w / 2 + 0.6), (y0 + y1) / 2 + 0.25, 0], [1.2, y1 - y0 + 0.5, depth], P["slate2"], f, ry(180), "WedgePart")
-        b.part(parent, "Step newel", [s * (w / 2 + 0.6), y1 + 0.4, -depth / 2 - 0.5], [1.8, 2.2, 1.8], P["slate2"], f)
-        b.part(parent, "Step newel", [s * (w / 2 + 0.6), y0 + 0.6, depth / 2 + 0.5], [1.8, 1.8, 1.8], P["slate2"], f)
+        b.part(parent, "Step newel", [s * (w / 2 + 0.6), y1 + 0.75, -depth / 2 - 0.92], [1.8, 1.6, 1.8], P["slate2"], f)
+        b.part(parent, "Step newel", [s * (w / 2 + 0.6), y0 + 0.6, depth / 2 + 0.9], [1.8, 1.8, 1.8], P["slate2"], f)
+
+
+def climb(parent, x, z, yaw, side, half, w, y0, y1, depth, along=0):
+    """Steps that end exactly at one side of a terrace. `half` is the reach of its turf on that side."""
+    f = Frame(x, 0, z, yaw)
+    g = f.sub(0, 0, 0, side).at([along, 0, half + depth / 2])
+    steps(parent, g[0], g[2], w, y0, y1, depth, yaw + side)
 
 
 laid = 0
