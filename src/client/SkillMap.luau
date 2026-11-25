@@ -115,9 +115,22 @@ function Map.new(parent, player, net, close)
 		end
 		item.setBadge = stateBadge(b, 57, 48)
 		b.Activated:Connect(function()
-			if os.clock() >= (self.suppressClickUntil or 0) then
-				self:select(node.id)
+			local now = os.clock()
+			if now < (self.suppressClickUntil or 0) then
+				return
 			end
+			-- A second tap on the same skill within 0.35 s buys it, whether or not it was already
+			-- selected, so players with points saved up can spend them without the footer button.
+			-- The server still checks points and prerequisites.
+			local last = self.lastTap
+			if last and last.id == node.id and now - last.at <= 0.35 then
+				self.lastTap = nil
+				self:select(node.id)
+				net.Action:FireServer("Skill", node.id)
+				return
+			end
+			self.lastTap = { id = node.id, at = now }
+			self:select(node.id)
 		end)
 		b.SelectionGained:Connect(function()
 			if Input.PreferredInput == Enum.PreferredInput.Gamepad then
@@ -459,7 +472,7 @@ function Map:refresh()
 	if not self.selected then
 		self.title.Text, self.title.TextColor3 =
 			if count == #Skills.nodes then "Skill tree complete" else "Choose a skill", W.gold
-		self.detail.Text, self.learn.Visible = "Drag to explore. Select a skill to see its effect.", false
+		self.detail.Text, self.learn.Visible = "Drag to explore. Tap a skill to read it; double-tap to buy it.", false
 		self.path.Text = "Earn 1 point each time you level up. Each skill costs 1 point."
 	end
 end

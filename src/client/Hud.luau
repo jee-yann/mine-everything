@@ -1,5 +1,6 @@
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Ores = require(Shared.Ores)
+local Purity = require(Shared.OrePurity)
 local GuiService = game:GetService("GuiService")
 local LevelRing = require(script.Parent.LevelRing)
 local StarterGui = game:GetService("StarterGui")
@@ -68,22 +69,25 @@ function Hud.new(player, net, mobile)
 	end)
 	self.status = W.text(wallet, "", 0, 52, 210, 17, 13, W.gold, true)
 	W.outlineText(self.status, 1.5)
-	local haul = clearFrame(root, "Haul", 0, 0, 215, 79)
+	local haul = clearFrame(root, "Haul", 0, 0, 250, 79)
 	self.haul, self.rows = haul, {}
 	self.haulTitle = W.title(haul, "Your haul", 10, 4, 99, 24, 20, W.white, true)
-	self.pack = W.title(haul, "", 100, 4, 105, 24, 17, W.white)
-	local track = W.frame(haul, "Capacity", 10, 30, 195, 5, W.ink, 3)
+	self.pack = W.title(haul, "", 100, 4, 140, 24, 17, W.white)
+	local track = W.frame(haul, "Capacity", 10, 30, 230, 5, W.ink, 3)
 	self.fill = W.frame(track, "Ore", 0, 0, 0, 5, W.green, 3)
 	self.haulPulse = W.scale(self.haulTitle)
-	self.haulValue = W.text(haul, "", 10, 58, 195, 18, 13, W.gold, true)
+	self.haulValue = W.text(haul, "", 10, 58, 230, 18, 13, W.gold, true)
 	for _, ore in Ores.list do
-		local row = W.frame(haul, ore.name, 10, 38, 195, 20, W.panel)
+		local row = W.frame(haul, ore.name, 10, 38, 230, 20, W.panel)
 		row.BackgroundTransparency = 1
 		local sample = W.frame(row, "Ore sample", 1, 3, 14, 14, ore.color, 2)
 		sample.Rotation = 15
 		W.stroke(sample, W.ink, 1.5)
-		W.text(row, ore.name, 21, 0, 120, 20, 16, W.white, true)
-		local quantity = W.title(row, "", 137, 0, 58, 20, 17, W.white)
+		W.text(row, ore.name, 21, 0, 98, 20, 16, W.white, true)
+		-- What this stack adds to the sale: its base price in gold, then the purity bonus in aqua.
+		local worth = W.text(row, "", 112, 0, 76, 20, 13, W.gold, true)
+		worth.Name, worth.RichText, worth.TextXAlignment = "Worth", true, Enum.TextXAlignment.Right
+		local quantity = W.title(row, "", 190, 0, 40, 20, 17, W.white)
 		quantity.Name, quantity.TextXAlignment = "Quantity", Enum.TextXAlignment.Right
 		quantity.TextColor3 = ore.color:Lerp(W.white, 0.5)
 		self.rows[ore.name] = row
@@ -590,6 +594,11 @@ function Hud:refresh()
 		local ore = entry.ore
 		local row = self.rows[ore.name]
 		row.Quantity.Text = "×" .. entry.amount
+		local broker, double = p:GetAttribute("SkillBroker"), if p:GetAttribute("DoubleGold") then 2 else 1
+		local grades = Purity.decode(p:GetAttribute("Grades" .. ore.name))
+		local total = Purity.quote(ore, entry.amount, grades, entry.amount, broker) * double
+		local base = Purity.unitPrice(ore, nil, broker) * entry.amount * double
+		row.Worth.Text = W.number(base) .. " G" .. (if total > base then W.colored(" +" .. W.number(total - base), W.aqua) else "")
 		row.Position, row.Visible = UDim2.fromOffset(10, 38 + (i - 1) * 20), true
 	end
 	local visible = #held
@@ -601,7 +610,7 @@ function Hud:refresh()
 		.. " G"
 	local haulHeight = footerY + (if visible > 0 then 22 else 0)
 	if self.haul.Size.Y.Offset ~= haulHeight then
-		self.haul.Size = UDim2.fromOffset(215, haulHeight)
+		self.haul.Size = UDim2.fromOffset(250, haulHeight)
 		self.layout()
 	end
 	local status = p:GetAttribute("SaveStatus")
@@ -793,6 +802,41 @@ function Hud:notice(title, detail, color)
 	self.speech.Visible = not self.overlay.Visible
 	self.message.TextTransparency = 0.35
 	W.tween(self.message, 0.16, { TextTransparency = 0 })
+end
+-- Trying to mine with a full pack: a short buzz, the no-entry cursor and the "Bag full!" heading
+-- shake and pop, and a notice says what to do. Throttled so holding the button doesn't spam it.
+function Hud:bagFull()
+	local now = os.clock()
+	if now < (self.bagFullAt or 0) then
+		return
+	end
+	self.bagFullAt = now + 0.9
+	Audio.denied()
+	local surface = if self.mobile then "Tap ↑ Surface" else "Press R to surface"
+	self:notice("Bag full!", surface .. ", then sell your haul to keep mining", fullRed)
+	if self.player:GetAttribute("MenuMotion") == false or GuiService.ReducedMotionEnabled then
+		return
+	end
+	local function shake(gui, scale)
+		if not gui then
+			return
+		end
+		task.spawn(function()
+			if scale then
+				scale.Scale = 1.3
+				W.tween(scale, 0.45, { Scale = 1 })
+			end
+			for _, angle in { -16, 13, -9, 5, 0 } do
+				W.tween(gui, 0.06, { Rotation = angle })
+				task.wait(0.06)
+			end
+		end)
+	end
+	local badge = self.denied.Parent
+	self.deniedScale = self.deniedScale or W.scale(badge)
+	shake(badge, self.deniedScale)
+	shake(self.haulTitle, self.haulPulse)
+	shake(self.edgeCount, self.edgeCountPulse)
 end
 function Hud:guide(title, detail, visible)
 	if os.clock() < (self.untilTime or 0) then

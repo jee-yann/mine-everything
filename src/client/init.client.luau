@@ -260,7 +260,7 @@ UIS:GetPropertyChangedSignal("PreferredInput"):Connect(function()
 end)
 
 net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, normal)
-	if kind == "achievement" or kind == "titleUnlocked" or kind == "aura" then
+	if kind == "achievement" or kind == "titleUnlocked" or kind == "aura" or kind == "levelUp" then
 		hud.unlocks:show(kind, a)
 	elseif kind == "skillLearned" then
 		fx:chime(1.32)
@@ -373,6 +373,7 @@ net.Dust.OnClientEvent:Connect(function(point, spread, ore, finds, normal, loot)
 end)
 
 require(script.Podiums).start(player, hud)
+require(script.FriendMarkers)(player, hud)
 
 Players.PlayerAdded:Connect(Swing.observe)
 for _, other in Players:GetPlayers() do
@@ -457,6 +458,9 @@ local function sampleAim()
 	local cap = (player:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1])
 	local space = cap - (player:GetAttribute("Used") or 0)
 	if hud.touchActions.enabled and (space <= 0 or not ready) then
+		if held and space <= 0 and ready then
+			hud:bagFull()
+		end
 		release()
 	end
 	local power = Upgrades.items.Power.values[player:GetAttribute("Power") or 1]
@@ -473,6 +477,9 @@ local function sampleAim()
 	fx:aim(cells)
 	local valid = cells ~= nil and #cells == 1
 	hud:aimAt(screen, valid, locked ~= nil or (cells ~= nil and space <= 0))
+	if held and cells ~= nil and space <= 0 then
+		hud:bagFull()
+	end
 	hud.reticle.Visible = centerAim and not hud.cursor.Visible
 	if centerAim then
 		hud.reticle.BackgroundColor3 = if valid then W.aqua else W.white

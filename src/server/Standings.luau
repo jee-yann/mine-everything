@@ -32,13 +32,16 @@ local function draw(board, scores, levels, empty)
 		local podium = board["Podium " .. i]
 		local row = rows[i]
 		podium:SetAttribute("StandingName", row and row.name)
-		podium:SetAttribute(if levels then "StandingLevel" else "StandingDepth", row and row.score)
+		podium:SetAttribute("StandingLevel", if levels and row then row.score else nil)
+		podium:SetAttribute("StandingDepth", if not levels and row then row.score else nil)
 		podium:SetAttribute("StandingId", row and row.id)
 	end
 end
 
-local function refreshGlobal(board, names)
-	local ok, page = pcall(Data.globalDepths)
+-- The court has room for two boards, so the global one alternates between the deepest miners
+-- and the highest levels across servers.
+local function refreshGlobal(board, names, levels)
+	local ok, page = pcall(if levels then Data.globalLevels else Data.globalDepths)
 	if not ok then
 		board.Standings.Lettering.Title.Text = "GLOBAL RECORDS OFFLINE"
 		if not board["Podium 1"]:GetAttribute("StandingId") then
@@ -71,8 +74,8 @@ local function refreshGlobal(board, names)
 		names[id] = currentNames[id]
 		row.name = names[id] or ("Miner #" .. id)
 	end
-	board.Standings.Lettering.Title.Text = "DEEPEST DESCENT"
-	draw(board, scores, false, "No depth records yet")
+	board.Standings.Lettering.Title.Text = if levels then "GLOBAL LEVELS" else "DEEPEST DESCENT"
+	draw(board, scores, levels, if levels then "No level records yet" else "No depth records yet")
 end
 
 function Standings.start(court)
@@ -82,10 +85,12 @@ function Standings.start(court)
 		court.Global.Standings.Lettering.Title.Text = "PRACTICE DEPTHS"
 	else
 		task.spawn(function()
-			local names = {}
+			local names, levels = {}, false
 			while true do
-				refreshGlobal(court.Global, names)
-				task.wait(60)
+				-- 12 s per view keeps ordered-store reads well under the request budget.
+				refreshGlobal(court.Global, names, levels)
+				levels = not levels
+				task.wait(12)
 			end
 		end)
 	end
@@ -102,7 +107,13 @@ function Standings.start(court)
 			end
 			draw(court.Server, levels, true, "Waiting for miners")
 			if practice then
-				draw(court.Global, depths, false, "Mine deeper to set a record")
+				local showLevels = math.floor(os.clock() / 12) % 2 == 1
+				court.Global.Standings.Lettering.Title.Text = if showLevels then "PRACTICE LEVELS" else "PRACTICE DEPTHS"
+				if showLevels then
+					draw(court.Global, levels, true, "Waiting for miners")
+				else
+					draw(court.Global, depths, false, "Mine deeper to set a record")
+				end
 			end
 			task.wait(2)
 		end

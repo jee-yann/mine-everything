@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 local Config = require(game:GetService("ReplicatedStorage").Shared.GameConfig)
 local Profile = require(script.Parent.Profile)
 local Field = require(game.ReplicatedStorage.Shared.FieldRewards)
+local Expeditions = require(game.ReplicatedStorage.Shared.Expeditions)
 local Data = {}
 local store
 local function getStore()
@@ -45,6 +46,7 @@ function Data.snapshot(p)
 		petName = p.petName,
 		bestDepth = p.bestDepth,
 		levels = table.clone(p.levels),
+		progression = p.progression,
 		preferences = table.clone(p.preferences),
 		bag = table.clone(p.bag),
 		grades = grades,
@@ -60,6 +62,31 @@ end
 
 function Data.globalDepths()
 	return depthStore():GetSortedAsync(false, 5, 1):GetCurrentPage()
+end
+
+-- Miner levels share the court's global board with depths, so they get their own ranking.
+local function levelStore()
+	return DSS:GetOrderedDataStore(Config.StoreName .. "_Levels", if RunService:IsStudio() then "studio" else "live")
+end
+
+function Data.globalLevels()
+	return levelStore():GetSortedAsync(false, 5, 1):GetCurrentPage()
+end
+
+local function indexLevel(session, userId, level)
+	if level == session.indexedLevel then
+		return
+	end
+	local ok, result = pcall(function()
+		return levelStore():UpdateAsync(tostring(userId), function(previous)
+			return if (previous or 0) == level then nil else level
+		end)
+	end)
+	if ok then
+		session.indexedLevel = level
+	else
+		warn("Could not update global level for", userId, result)
+	end
 end
 
 local function indexDepth(session, userId, blocks)
@@ -193,8 +220,9 @@ function Data.save(player, session, release)
 	local depth = Profile.depthRecord(snapshot)
 	if not release or depth ~= session.indexedDepth then
 		if writeSnapshot(player, session, snapshot, false) then
-			-- Finish the ranking update while we still own the profile.
+			-- Finish the ranking updates while we still own the profile.
 			indexDepth(session, player.UserId, depth)
+			indexLevel(session, player.UserId, Expeditions.level(snapshot.xp or 0))
 		end
 	end
 	if release and session.writable then
@@ -220,6 +248,7 @@ function Data.resetProgress(player, session)
 		session.shiftAt = os.time()
 		if session.writable then
 			indexDepth(session, player.UserId, 0)
+			indexLevel(session, player.UserId, 1)
 		end
 	end
 	session.resetting = nil

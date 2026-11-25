@@ -55,6 +55,7 @@ local voices = {
 	Mine = sound("Grip pop", pop, 0.09, 0.78),
 	Select = sound("Switch pop", pop, 0.15, 1.21),
 	Reward = sound("Reward bubbles", pop, 0.18, 1.26),
+	Denied = sound("Pack full buzz", "rbxassetid://15675081158", 0.2, 0.62),
 }
 for _, voice in voices do
 	if voice.SoundId == pop then
@@ -72,6 +73,9 @@ function Audio.preview()
 end
 function Audio.menu(open)
 	play(if open then "Open" else "Close")
+end
+function Audio.denied()
+	play("Denied")
 end
 function Audio.interact()
 	play("Interact")

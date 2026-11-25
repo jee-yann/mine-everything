@@ -3,13 +3,25 @@ local Ores = require(script.Parent.Ores)
 local Config = require(script.Parent.GameConfig)
 -- Power level N mines stone grade N (GameConfig.StoneGrades) and any ore with hardness N or less.
 -- Power prices are listed one by one: each was tuned so a normal player spends a set time in
--- each region (minutes near the top, an hour or two at the bottom). Speed and Capacity grow
+-- each region (minutes near the top, an hour or two at the bottom).
+-- Speed and Capacity have long curves so the workshop keeps paying out for months: early levels
+-- are cheap and frequent, mid levels slow down, and the last levels are a long grind. Prices grow
 -- geometrically from `base` by `growth`.
+-- Speed: seconds per plain stone, 0.8 * level^-0.301 (0.80 at level 1, 0.40 at 10, 0.20 at 100).
+local speedValues = {}
+for level = 1, 100 do
+	speedValues[level] = math.round(800 * level ^ (-math.log(4) / math.log(100))) / 1000
+end
+-- Capacity: quadratic growth, 8 + 6(L-1) + 2(L-1)^2 slots (8, 16, 28, 44, 64 ... 3,284 at 40).
+local capacityValues = {}
+for level = 1, 40 do
+	capacityValues[level] = 8 + 6 * (level - 1) + 2 * (level - 1) ^ 2
+end
 local upgrades = {
 	Speed = {
-		values = { 0.80, 0.64, 0.51, 0.40, 0.32, 0.25, 0.20, 0.16, 0.13, 0.11 },
+		values = speedValues,
 		base = 30,
-		growth = 2.75,
+		growth = 1.18,
 		icon = "»",
 		color = rgb(255, 200, 80),
 	},
@@ -20,13 +32,19 @@ local upgrades = {
 		color = rgb(255, 147, 100),
 	},
 	Capacity = {
-		values = { 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128 },
+		values = capacityValues,
 		firstPrice = 8,
 		base = 24,
-		growth = 2.5,
+		growth = 1.5,
 		icon = "▣",
 		color = rgb(137, 231, 142),
 	},
+}
+-- Saves from before the long curves (progression 1) stored levels on the old, shorter tables.
+-- They are moved to the first new level that is at least as good.
+local legacy = {
+	Speed = { 0.80, 0.64, 0.51, 0.40, 0.32, 0.25, 0.20, 0.16, 0.13, 0.11 },
+	Capacity = { 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128 },
 }
 local api = {
 	pickNames = {
@@ -53,6 +71,20 @@ assert(
 	"one pick per stone grade"
 )
 assert(#upgrades.Power.prices == #upgrades.Power.values - 1, "one price per Power upgrade")
+
+function api.migrateLevel(key, level)
+	local old = legacy[key] and legacy[key][level]
+	if not old then
+		return level
+	end
+	local values = upgrades[key].values
+	for newLevel, value in values do
+		if (key == "Speed" and value <= old) or (key == "Capacity" and value >= old) then
+			return newLevel
+		end
+	end
+	return #values
+end
 
 function api.price(key, level)
 	local item = upgrades[key]
@@ -112,7 +144,7 @@ end
 function api.describe(key, level)
 	local v = upgrades[key].values[level]
 	if key == "Speed" then
-		return string.format("%.2fs / stone", v)
+		return string.format(if v >= 0.3 then "%.2fs / stone" else "%.3fs / stone", v)
 	end
 	if key == "Capacity" then
 		return v .. " ore"

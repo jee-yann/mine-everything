@@ -7,14 +7,23 @@ function Page.attendance(menu)
 	local _, detail, claim = menu:row(1, "Seven-day gem card", "Crystal", W.violet)
 	local stamps = {}
 	detail.Text = ""
+	-- Each day is a small enamel tile in the menu's style: bold numbers, today's tile breathing in
+	-- gold, and a pop with a check when it is claimed.
 	for i, amount in Field.stamps do
-		local cell = W.frame(detail, "Day " .. i, (i - 1) * 34, 3, 31, 22, W.ink, 5)
-		local label = W.text(cell, "+" .. amount, 0, 0, 31, 22, 14, W.white)
-		stamps[i] = { cell = cell, label = label }
+		local cell = W.frame(detail, "Day " .. i, (i - 1) * 35, 2, 32, 29, W.ink, 7)
+		local stroke = W.stroke(cell, W.line, 1.5)
+		local label = W.title(cell, "+" .. amount, 0, 1, 32, 27, 17, W.white)
+		label.TextXAlignment = Enum.TextXAlignment.Center
+		W.outlineText(label, 1)
+		stamps[i] = { cell = cell, label = label, stroke = stroke, scale = W.scale(cell) }
 	end
 	claim.Activated:Connect(function()
 		menu.net.Action:FireServer("Stamp")
 	end)
+	local shownCount, pulseDay
+	local function motion()
+		return menu.player:GetAttribute("MenuMotion") ~= false and not game:GetService("GuiService").ReducedMotionEnabled
+	end
 	table.insert(menu.updates, function()
 		local today = menu.net:GetAttribute("OrderDay")
 		local last = menu.player:GetAttribute("StampDay") or 0
@@ -23,13 +32,37 @@ function Page.attendance(menu)
 		local day = if ready then count % #Field.stamps + 1 else math.max(1, count)
 		for i, stamp in stamps do
 			local collected = if ready then i < day else i <= count
-			stamp.cell.BackgroundColor3 = if collected then W.green elseif i == day then W.violet else W.ink
+			local isToday = ready and i == day
+			stamp.cell.BackgroundColor3 = if collected then W.green elseif isToday then W.violet else W.ink
+			stamp.stroke.Color = if isToday then W.gold elseif collected then W.green:Lerp(W.white, 0.4) else W.line
+			stamp.stroke.Thickness = if isToday then 2.5 else 1.5
 			stamp.label.Text = if collected then "✓" else "+" .. Field.stamps[i]
 			stamp.label.TextColor3 = if collected then W.ink elseif i == #stamps then W.gold else W.white
 		end
+		-- A claim just landed: pop the stamped tile.
+		if shownCount and count > shownCount and motion() then
+			local stamp = stamps[(count - 1) % #stamps + 1]
+			stamp.scale.Scale = 1.45
+			W.tween(stamp.scale, 0.35, { Scale = 1 })
+		end
+		shownCount = count
+		pulseDay = if ready then day else nil
 		claim.Text = if ready then "Claim +" .. Field.stamps[day] else "Claimed"
 		claim.BackgroundColor3 = if ready then W.violet else W.muted
 		claim.Interactable, claim.AutoButtonColor = ready, ready
+	end)
+	task.defer(function()
+		local t = 0
+		while detail.Parent and menu.overlay.Visible do
+			t += task.wait(1 / 20)
+			for i, stamp in stamps do
+				if i == pulseDay and motion() then
+					stamp.scale.Scale = 1 + 0.07 * (0.5 + 0.5 * math.sin(t * 4))
+				elseif stamp.scale.Scale ~= 1 and i ~= pulseDay then
+					stamp.scale.Scale = 1
+				end
+			end
+		end
 	end)
 	local _, description, collect = menu:row(2, "Time in the cove", "Jobs", W.aqua)
 	local shown

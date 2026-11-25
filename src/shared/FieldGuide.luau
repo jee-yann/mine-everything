@@ -5,7 +5,7 @@ local Skills = require(script.Parent.Skills)
 Guide.skills, Guide.byId = Skills.nodes, Skills.byId
 Guide.petNames = { Pebble = true, Chips = true, Granite = true, Chip = true, Pip = true, Flint = true }
 Guide.achievements = {
-	{ id = "PocketChange", name = "Pocket Change", ore = "Coal", goal = 1 },
+	{ id = "PocketChange", name = "Pocket Change", ore = "Coal", goal = 10 },
 	{ id = "CleanSale", name = "All Pay, No Gravel", goal = 1, detail = "Sell a haul made entirely of ore." },
 	{ id = "PickUpgrade", name = "Pick Me Up", goal = 1, detail = "Upgrade your pickaxe’s Power at the workshop." },
 	{
@@ -41,16 +41,8 @@ Guide.achievements = {
 	{ id = "Ice", name = "Ice in My Pockets", ore = "Diamond", goal = 10 },
 	{ id = "Envy", name = "Green With Envy", ore = "Emerald", goal = 5 },
 }
--- Coal has Pocket Change already. The other first finds use the lifetime
--- cut counts, which also recognizes a find made before the achievement existed.
-for _, ore in Ores.list do
-	if not ore.host and ore.name ~= "Coal" then
-		table.insert(Guide.achievements, {
-			id = "First" .. ore.name, name = "First " .. ore.name, ore = ore.name, goal = 1,
-			detail = "Mine your first " .. ore.name .. ".",
-		})
-	end
-end
+-- First finds are recorded in the Ore Index, not as achievements, so every ore award here asks
+-- for a real haul. Earlier "First <ore>" badges were retired with the 30-ore expansion.
 Guide.awardsById = {}
 -- Keep previously awarded, retired badges readable in existing saves.
 Guide.storedAwards = { Sandwich = true, Pressure = true, Penny = true, Traffic = true, Variety = true }

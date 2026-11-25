@@ -55,6 +55,7 @@ function Geology.new(seed)
 end
 -- Finite winding passages turn through their own rock tile. Their closed ends
 -- keep opening one cave from instantiating a whole underground network.
+local hollow
 local function passage(along, across, row, length, middle, phase)
 	if along < 0 or along > length then
 		return false
@@ -66,6 +67,48 @@ local function passage(along, across, row, length, middle, phase)
 	local taper = math.min(1, (along + 0.6) / 2, (length - along + 0.6) / 2)
 	return ((across - bend) / width) ^ 2 + ((row - floor) / 1.85) ^ 2 < taper
 end
+-- One tile in five holds a different kind of cave instead of a winding passage: a domed chamber,
+-- a tall drop through the whole band, or a shape found only in its region (a wide frozen hall in
+-- Frostglass Reach, a straight lava tube in Cinderheart Forge, a cluster of small grottos in
+-- Glowcap Hollows). Every shape stays inside its tile and band, so caves still never cross a
+-- stone-grade boundary or reach the hall.
+local function ellipsoid(dx, dy, dz, rx, ry, rz)
+	return (dx / rx) ^ 2 + (dy / ry) ^ 2 + (dz / rz) ^ 2 < 1
+end
+function hollow(h, x, z, row)
+	local band = row % 16
+	if row < 8 or band < 2 or band > 14 then
+		return false
+	end
+	local cx, cz = 12 + bit32.extract(h, 15, 4), 12 + bit32.extract(h, 19, 4)
+	local kind = bit32.extract(h, 13, 2)
+	local region = Config.layer((row + 0.5) * Config.Cell).name
+	if kind == 3 and region == "Frostglass Reach" then
+		-- A wide, low hall with a flat floor.
+		return band >= 7 and ellipsoid(x - cx, band - 8, z - cz, 11, 3, 7)
+	elseif kind == 3 and region == "Cinderheart Forge" then
+		-- A round lava tube running straight across the tile.
+		return x >= 3 and x <= 36 and ellipsoid(0, band - 8, z - cz, 1, 2.3, 2.3)
+	elseif kind == 3 and region == "Glowcap Hollows" then
+		-- Three small grottos joined at their edges.
+		for i = 0, 2 do
+			local gx, gz = cx + (i - 1) * 5, cz + (if i == 1 then 3 else -1)
+			if band >= 6 and ellipsoid(x - gx, band - 8, z - gz, 3.9, 2.6, 3.9) then
+				return true
+			end
+		end
+		return false
+	elseif kind == 2 then
+		-- A long vertical drop with a landing at the bottom.
+		local r = 1.6 + bit32.extract(h, 25, 1) * 0.7
+		return ellipsoid(x - cx, 0, z - cz, r, 1, r) or (band >= 11 and ellipsoid(x - cx, band - 12.5, z - cz, 4, 1.8, 4))
+	end
+	-- A domed chamber with a level floor.
+	local rx, rz = 5 + bit32.extract(h, 25, 2), 5 + bit32.extract(h, 27, 2)
+	local cy = 7 + bit32.extract(h, 23, 2)
+	return band >= cy - 2 and ellipsoid(x - cx, band - cy, z - cz, rx, 3.4, rz)
+end
+
 function Geology:isCave(p)
 	local row = -1 - p.Y
 	if row < 3 then
@@ -81,7 +124,7 @@ function Geology:isCave(p)
 	local tx, tz, ty = math.floor(p.X / 40), math.floor(p.Z / 40), math.floor(row / 16)
 	local h = hash(self.seed, tx, ty, tz)
 	if h % 5 == 0 then
-		return false
+		return hollow(h, p.X % 40, p.Z % 40, row)
 	end
 	local x, z = p.X % 40, p.Z % 40
 	if bit32.btest(h, 8) then
@@ -124,6 +167,10 @@ function Geology:feature(p)
 		along, across, phase, length, h = -p.Z - 7, p.X, 0, 30, 0
 	else
 		h = hash(self.seed, math.floor(p.X / 40), math.floor(row / 16), math.floor(p.Z / 40))
+		if h % 5 == 0 then
+			-- Chambers, drops and regional caves carry no crates, eggs or lava.
+			return nil
+		end
 		local x, z = p.X % 40, p.Z % 40
 		if bit32.btest(h, 8) then
 			x, z = z, x

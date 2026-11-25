@@ -101,7 +101,7 @@ function Menu.new(root, player, net, close)
 	self.status = W.text(footer, "", 8, 0, 442, 28, 15, W.white)
 	self.status.TextScaled = true
 	local statusFont = Instance.new("UITextSizeConstraint")
-	statusFont.MinTextSize, statusFont.MaxTextSize, statusFont.Parent = 12, 15, self.status
+	statusFont.MinTextSize, statusFont.MaxTextSize, statusFont.Parent = 15, 19, self.status
 	self.sellAll = W.button(footer, "Sell all", 242, 3, 210, 44, W.gold, "Sell entire pack", "Select")
 	self.sellAll.TextScaled = true
 	local sellFont = Instance.new("UITextSizeConstraint")
@@ -145,7 +145,7 @@ end
 function Menu:sizeListings()
 	local height = self.designHeight or 408
 	local selling = self.page == "Sell"
-	local footerHeight = if selling then 50 else 28
+	local footerHeight = if selling then 50 else 34
 	self.mainList.Size = UDim2.fromOffset(458, height - (if self.page == "Menu" then 99 else 107 + footerHeight))
 	self.tabViewport.Size = UDim2.fromOffset(458, height - 170)
 	self.footer.Size, self.footer.Position = UDim2.fromOffset(458, footerHeight), UDim2.fromOffset(11, height - footerHeight - 9)
@@ -188,8 +188,12 @@ function Menu:row(i, name, icon, color)
 	if icon then Icons.draw(plate, icon, 5, 5, 36, color) end
 	local title = W.title(row, name, 67, 3, 249, 27, 21, W.white, true)
 	W.outlineText(title, 1.1)
-	local detail = W.text(row, "", 67, 29, 249, 31, 15, W.muted, true)
-	detail.TextWrapped = true
+	-- Row details carry prices and recipes, so they fill their space (up to 18 pt, at least 15)
+	-- instead of staying small inside a big card.
+	local detail = W.text(row, "", 67, 28, 249, 33, 18, W.muted, true)
+	detail.TextWrapped, detail.TextScaled = true, true
+	local detailFont = Instance.new("UITextSizeConstraint")
+	detailFont.MinTextSize, detailFont.MaxTextSize, detailFont.Parent = 15, 18, detail
 	local cues = { Gear = "Buy", Jobs = "Job", Settings = "Select", Store = "Select" }
 	local button = W.button(row, "Action", 322, 12, 113, 38, color, "", cues[self.page])
 	return title, detail, button
@@ -427,7 +431,7 @@ function Menu:pack()
 			local value = Purity.quote(entry.ore, entry.amount, grades, entry.amount, self.player:GetAttribute("SkillBroker")) * multiplier
 			item.row.Position, item.row.Visible = UDim2.fromOffset(1, 1 + (i - 1) * 69), true
 			item.count.Text = "×" .. entry.amount
-			local grade = if low then (if low == high then low .. "%" else low .. "–" .. high .. "%") .. " pure"
+			local grade = if low then (if low == high then Purity.text(low) else Purity.text(low) .. "–" .. Purity.text(high)) .. " pure"
 				else W.unitPrice(value / entry.amount)
 			item.detail.Text = grade .. "  ·  " .. W.goldAmount(value) .. " G in pack"
 		end

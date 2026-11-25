@@ -14,6 +14,7 @@ local Profile = {}
 function Profile.new()
 	return {
 		version = 1,
+		progression = 2,
 		introSeen = false,
 		firstTrip = {},
 		gold = 0,
@@ -177,7 +178,7 @@ function Profile.valid(p)
 		if type(p.bestPurity) ~= "table" then return false end
 		for name, percent in p.bestPurity do
 			local ore = Ores.byName[name]
-			if not ore or ore.host or not integer(percent, 100) or not Purity.validGrade(tostring(percent)) then return false end
+			if not ore or ore.host or type(percent) ~= "number" or not Purity.valid(percent) then return false end
 		end
 	end
 	if p.grades ~= nil then
@@ -316,6 +317,13 @@ function Profile.upgradeSave(p)
 		p.gold += math.floor(24 * 2.5 ^ (level - 1) + 0.5)
 	end
 	p.levels.Radius = nil
+	-- Move workshop levels from the short pre-expansion tables onto the long curves.
+	if (p.progression or 1) < 2 then
+		for _, key in { "Speed", "Capacity" } do
+			p.levels[key] = Upgrades.migrateLevel(key, p.levels[key])
+		end
+		p.progression = 2
+	end
 	if p.xp == nil then
 		p.xp = 0
 		for name, count in p.bag do
@@ -422,7 +430,7 @@ function Profile.recordCut(p, name, depth, random)
 			units = 2
 		end
 		local stock = p.grades[name] or {}
-		local key = tostring(grade)
+		local key = Purity.key(grade)
 		stock[key] = (stock[key] or 0) + units
 		p.grades[name] = stock
 		record = grade > (p.bestPurity[name] or 0)
