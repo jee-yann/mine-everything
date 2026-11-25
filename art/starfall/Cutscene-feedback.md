@@ -41,7 +41,7 @@ First-time playback, spawn replay, consecutive underground replays, three skip p
 
 The 35-second cinematic and the next half-second of gameplay played through at normal speed on Windows. A second encode preserved more of the brief stereo pick strike. The finished movie was checked against captured stereo output and a simulated 280–6,500 Hz mono phone speaker. The strike, flake landing and glint all remained distinct in that simulation. Phone framing was tested in Studio's device emulator.
 
-[Watch the field-sample recording with sound](Where-the-Stars-Took-Root-Field-Sample.mp4) · [See six Studio frames](Field-sample-sequence.jpg)
+[See six Studio frames](Field-sample-sequence.jpg)
 
 ## Earlier gallery and cart edit
 

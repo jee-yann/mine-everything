@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="achievements">
-<path d="M12 7 H52 L59 14 V47 L51 56 H13 L5 48 V15 Z" fill="#36404A" stroke="#202936" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M12 6 H51 L58 13 V45 L50 53 H13 L5 46 V14 Z" fill="#EB9167" stroke="#202936" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="12" cy="14" r="1.55" fill="#202936"/>
-<circle cx="50.5" cy="45.5" r="1.55" fill="#202936"/>
-<path d="M22 19 H15 Q15 29 24 30 M41 19 H48 Q47 29 39 30" fill="none" stroke="#202936" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path fill="#202936" d="M21 14.5 H42 L40 26 Q38.5 32.5 34 34 V38 Q34 40 39 40 H41 V44 H22 V40 H24 Q29 40 29 38 V34 Q24 32.5 22.5 26 Z"/>
-<path fill="#EB9167" d="M27 19 H29.7 L30.5 25 L28.5 25 Z"/>
-</svg>
