@@ -28,6 +28,7 @@ do
 end
 local Config, Ores, Upgrades = require(shared.GameConfig), require(shared.Ores), require(shared.Upgrades)
 local Skills = require(shared.Skills)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local owned = Skills.read(player)
 player.AttributeChanged:Connect(function(key)
 	local id = key:match("^Skill(.+)$")
@@ -267,6 +268,8 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		if hud.menu.map then
 			hud.menu.map:showPurchase(a)
 		end
+		local skill = Skills.byId[a]
+		if skill then hud.unlocks:show("skill", skill.name, skill.detail, skill.icon) end
 	elseif kind == "pulse" then
 		if player:GetAttribute("MenuMotion") ~= false then fx:pulse(a, point) end
 		fx:chime(0.78)
@@ -318,6 +321,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		if a > 0 then
 			fx:chime(1.45)
 			receipt:show(a, point, spread, finds)
+			hud.soldAt = os.clock()
 			if hud.overlay.Visible and hud.menu.page == "Sell" then
 				hud.menu.status.Text = string.format("Sold %s %s   ·   +%s G", W.goldAmount(point), finds or (if point == 1 then "block" else "blocks"), W.goldAmount(a))
 			end
@@ -368,6 +372,22 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		else
 			hud:notice(point, "", if a then W.green else W.gold)
 		end
+	elseif kind == "rebirth" then
+		hud.menu.rebirthPending = nil
+		if a then
+			release()
+			fx:clearOreLights()
+			fx:chime(1.8)
+			hud:setShop(false)
+			hud.unlocks:show("rebirth", "Rebirth " .. point, Rebirth.perks[1].text(point) .. "  ·  " .. Rebirth.perks[2].text(point))
+			hud:notice("A new run begins!", "Your bonuses are permanent", W.rebirth)
+		elseif hud.overlay.Visible and hud.menu.page == "Rebirth" then
+			hud.menu.rebirth:message(point)
+		else
+			hud:notice(point, "", W.gold)
+		end
+	elseif kind == "rebirthAnnounce" then
+		hud:milestone("REBIRTH " .. point, a .. " was reborn!", W.rebirth)
 	elseif kind == "upgrade" then
 		fx:chime(1.55)
 		hud:workshop(point, spread)
@@ -594,7 +614,8 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 	local duration = Skills.cutTime(
-		Upgrades.items.Speed.values[player:GetAttribute("Speed") or 1],
+		Upgrades.items.Speed.values[player:GetAttribute("Speed") or 1]
+			* Rebirth.cutMultiplier(player:GetAttribute("Rebirths") or 0),
 		aimOre,
 		Config.strength(target.Y - origin.Y),
 		player:GetAttribute("TemperCharges"),

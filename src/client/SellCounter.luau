@@ -1,5 +1,6 @@
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Ores = require(Shared.Ores)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Purity = require(Shared.OrePurity)
 local W, Slider = require(script.Parent.Widgets), require(script.Parent.Slider)
 local SellCounter = {}
@@ -71,7 +72,7 @@ function SellCounter.build(menu)
 	local empty = W.text(menu.list, "Your pack is empty", 0, 8, 447, 45, 18, W.muted)
 	table.insert(menu.updates, function()
 		local player = menu.player
-		local multiplier = if player:GetAttribute("DoubleGold") then 2 else 1
+		local multiplier = Rebirth.saleMultiplier(player)
 		local value, blocks = (player:GetAttribute("BagValue") or 0) * multiplier, 0
 		for _, ore in Ores.list do
 			local count = player:GetAttribute("Held" .. ore.name) or 0

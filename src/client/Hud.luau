@@ -1,5 +1,6 @@
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Ores = require(Shared.Ores)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Purity = require(Shared.OrePurity)
 local GuiService = game:GetService("GuiService")
 local LevelRing = require(script.Parent.LevelRing)
@@ -23,6 +24,7 @@ local hotbar = {
 	{ page = "Achievements", code = Enum.KeyCode.H },
 	{ page = "Book", code = Enum.KeyCode.J },
 	{ page = "Settings", code = Enum.KeyCode.P },
+	{ page = "Rebirth", code = Enum.KeyCode.U },
 	{ page = "Daily", code = Enum.KeyCode.L },
 	{ page = "Playtime", code = Enum.KeyCode.G },
 }
@@ -181,7 +183,7 @@ function Hud.new(player, net, mobile)
 	end
 	local tileStep = SideButtons.size + 24
 	local menuRail = clearFrame(root, "Menu buttons", 0, 0, 2 * tileStep, 2 * tileStep + 68)
-	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, SideButtons.size + 18, 2 * tileStep)
+	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, SideButtons.size + 18, 3 * tileStep)
 	self.sideKeys = {}
 	local settingsButton = SideButtons.round(menuRail, "Settings", shortcutLetters.Settings)
 	settingsButton.button.Position = UDim2.fromOffset(0, 2 * tileStep)
@@ -201,13 +203,20 @@ function Hud.new(player, net, mobile)
 			self:openPage(key)
 		end)
 	end
+	local rebirth = SideButtons.tile(rewardRail, "Rebirth", "Rebirth", shortcutLetters.Rebirth)
+	rebirth.button.Position = UDim2.fromOffset(0, 6)
+	rebirth.button.Activated:Connect(function()
+		self:toggleHotbarPage("Rebirth")
+	end)
+	self.rebirthTile, self.navDots.Rebirth = rebirth, SideButtons.badge(rebirth)
+	table.insert(self.sideKeys, rebirth.key)
 	local daily = SideButtons.tile(rewardRail, "Daily", "Daily", shortcutLetters.Daily)
-	daily.button.Position = UDim2.fromOffset(0, 6)
+	daily.button.Position = UDim2.fromOffset(0, 6 + tileStep)
 	daily.button.Activated:Connect(function()
 		self:toggleHotbarPage("Daily")
 	end)
 	local gift = SideButtons.tile(rewardRail, "Playtime", "Gift", shortcutLetters.Playtime)
-	gift.button.Position = UDim2.fromOffset(0, 6 + tileStep)
+	gift.button.Position = UDim2.fromOffset(0, 6 + 2 * tileStep)
 	gift.button.Activated:Connect(function()
 		self:toggleHotbarPage("Playtime")
 	end)
@@ -517,11 +526,14 @@ function Hud.new(player, net, mobile)
 			-- The reward rail sits under the haul card, or beside it when the haul is long.
 			local haulBottom = rightY + (66 + self.haul.Size.Y.Offset) * s + 12
 			local rewardHeight = rewardRail.Size.Y.Offset
-			rewardRailScale.Scale = railScale
-			if haulBottom + rewardHeight * railScale <= height - margin then
+			local fitBelow = (height - margin - haulBottom) / rewardHeight
+			if fitBelow >= 0.6 then
+				rewardRailScale.Scale = math.min(railScale, fitBelow)
 				W.anchor(rewardRail, 1, 0, UDim2.fromOffset(width - margin - 2, haulBottom))
 			else
-				W.anchor(rewardRail, 1, 0, UDim2.fromOffset(width - margin - 268 * s, rightY + 66 * s))
+				local top = rightY + 66 * s
+				rewardRailScale.Scale = math.max(0.45, math.min(railScale, (height - margin - top) / rewardHeight))
+				W.anchor(rewardRail, 1, 0, UDim2.fromOffset(width - margin - 268 * s, top))
 			end
 		end
 		local touchGui = gui.Parent:FindFirstChild("TouchGui")
@@ -706,7 +718,7 @@ function Hud:refresh()
 		local ore = entry.ore
 		local row = self.rows[ore.name]
 		row.Quantity.Text = "×" .. entry.amount
-		local broker, double = p:GetAttribute("SkillBroker"), if p:GetAttribute("DoubleGold") then 2 else 1
+		local broker, double = p:GetAttribute("SkillBroker"), Rebirth.saleMultiplier(p)
 		local grades = Purity.decode(p:GetAttribute("Grades" .. ore.name))
 		local total = Purity.quote(ore, entry.amount, grades, entry.amount, broker) * double
 		local base = Purity.unitPrice(ore, nil, broker) * entry.amount * double
@@ -718,7 +730,7 @@ function Hud:refresh()
 	local footerY = 47 + visible * 20
 	self.haulValue.Position = UDim2.fromOffset(14, footerY)
 	self.haulValue.Text = "Sell value   "
-		.. W.number((p:GetAttribute("BagValue") or 0) * (if p:GetAttribute("DoubleGold") then 2 else 1))
+		.. W.number((p:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(p))
 		.. " G"
 	local haulHeight = footerY + (if visible > 0 then 27 else 4)
 	if self.haul.Size.Y.Offset ~= haulHeight then
@@ -982,6 +994,8 @@ end
 -- The two reward tiles: a badge when something can be claimed, and the time to the next gift.
 function Hud:refreshRewards()
 	self.dailyBadge.Visible = self.menu:attention("Daily")
+	local reborn = self.navDots.Rebirth.Visible
+	SideButtons.setReady(self.rebirthTile, reborn, if reborn then "Ready!" else "Rebirth")
 	SideButtons.setReady(self.dailyTile, self.dailyBadge.Visible, if self.dailyBadge.Visible then "Claim!" else "Daily")
 	local ready, left = Field.giftState(self.player, workspace:GetServerTimeNow())
 	self:setGiftReady(ready > 0, if ready > 0 then "Claim!" elseif left then W.clock(left) else "Gift", ready)

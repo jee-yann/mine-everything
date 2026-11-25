@@ -20,6 +20,7 @@ local tints = {
 	Settings = { rgb(214, 223, 235), rgb(125, 144, 170) },
 	Daily = { rgb(255, 159, 200), rgb(227, 69, 138) },
 	Playtime = { rgb(207, 174, 255), rgb(129, 80, 230) },
+	Rebirth = { rgb(255, 150, 150), rgb(214, 52, 78) },
 }
 
 local function outline(label, thickness)

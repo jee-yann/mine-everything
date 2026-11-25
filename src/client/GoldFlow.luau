@@ -100,6 +100,45 @@ function Flow:coin(from, delay)
 	W.tween(coin, delay, { Position = UDim2.fromOffset(finish.X, finish.Y) }).Completed:Once(function() coin:Destroy() end)
 end
 
+-- "+12" in green beside the total, for what each tick added.
+function Flow:tick(amount)
+	local hud = self.hud
+	local menu = hud.menu
+	local icon = self:target()
+	local label = self.gain
+	if not icon or amount <= 0 then
+		if label then label.Visible = false end
+		return
+	end
+	if not label then
+		label = W.title(hud.root, "", 0, 0, 150, 40, 32, W.green, true)
+		label.Name, label.ZIndex = "Gold gain", 46
+		W.navyText(label, 3.2)
+		self.gain, self.gainScale = label, W.scale(label)
+	end
+	local origin = hud.root.AbsolutePosition
+	if icon == menu.purseCoin then
+		-- The purse has no room beside its total, so it hangs from the purse's lower right corner.
+		local corner = menu.purse.AbsolutePosition + menu.purse.AbsoluteSize - origin
+		label.AnchorPoint, label.TextXAlignment = Vector2.new(1, 0.5), Enum.TextXAlignment.Right
+		label.Position = UDim2.fromOffset(corner.X - 10, corner.Y)
+	else
+		local total = hud.gold
+		local at = total.AbsolutePosition - origin
+		label.AnchorPoint, label.TextXAlignment = Vector2.new(0, 0.5), Enum.TextXAlignment.Left
+		label.Position = UDim2.fromOffset(at.X + total.TextBounds.X + 12, at.Y + total.AbsoluteSize.Y / 2)
+	end
+	label.Text, label.Visible = "+" .. W.goldAmount(amount), true
+	label.TextTransparency, label.UIStroke.Transparency = 0, 0
+	Burst.pop(self.gainScale, 1, 1.25)
+	self.gainUntil = os.clock() + 0.55
+	task.delay(0.56, function()
+		if os.clock() < self.gainUntil then return end
+		W.tween(label, 0.25, { TextTransparency = 1 })
+		W.tween(label.UIStroke, 0.25, { Transparency = 1 })
+	end)
+end
+
 function Flow:run(serial)
 	local from = self.from
 	self.from = nil
@@ -119,8 +158,10 @@ function Flow:run(serial)
 		if self.serial ~= serial then return end
 		-- More can arrive while counting. It joins the climb.
 		amount = self.goal - base
+		local before = self.shown
 		self.shown = math.round(base + amount * i / ticks)
 		self:paint()
+		self:tick(self.shown - before)
 		local _, scale = self:target()
 		if scale then
 			local rest = scale:GetAttribute("Rest")

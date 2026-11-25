@@ -48,26 +48,30 @@ The leaderboard court behind spawn has two boards. **Server Miners** ranks the f
 
 ![Leaderboard court behind spawn](map/Miners-Court.jpg)
 
-Digging opens a shared route through twelve regions. Each eligible block independently rolls against its region’s percentages, using the full 32-bit cell hash so even Starfall’s 0.0004% (1 in 250,000) is exact. Some ores span many regions, some peak in one region and fade below it, and some are found in only one.
+Digging opens a shared route through twelve regions. Each eligible block independently rolls against its region’s percentages, using the full 32-bit cell hash so even Starfall’s 0.0025% (1 in 40,000) is exact. Some ores span many regions, some peak in one region and fade below it, and some are found in only one.
 
 | Region | Depth below the dig floor | Stone | Ores | Mystery |
 | --- | ---: | ---: | --- | ---: |
-| Sunstone Hollow | 0–26 | 77.98% | Coal 13%, Copper 5%, Pyrite 4% | 0.02% |
-| Iron Shelf | 27–59 | 72.4% | Iron 8%, Copper 6%, Coal 5%, Quartz 4%, Pyrite 3%, Gold 1%, Garnet 0.6% | – |
+| Sunstone Hollow | 0–26 | 77.95% | Coal 13%, Copper 5%, Pyrite 4% | 0.05% |
+| Iron Shelf | 27–59 | 72.32% | Iron 8%, Copper 6%, Coal 5%, Quartz 4%, Pyrite 3%, Gold 1%, Garnet 0.68% | – |
 | Rustroot Caverns | 60–89 | 72.8% | Iron 9%, Copper 4.5%, Quartz 4%, Garnet 3.5%, Gold 2.5%, Pyrite 1.5%, Silver 1.2%, Coal 1% | – |
 | Prism Grotto | 90–139 | 71.6% | Quartz 7%, Iron 6%, Gold 4.5%, Silver 3%, Opal 2.2%, Copper 2%, Garnet 1.5%, Diamond 1.2%, Coal 1% | – |
-| Saltglass Sinks | 140–184 | 72.2% | Silver 6%, Gold 6%, Iron 4%, Quartz 3.5%, Selenite 3%, Diamond 2.5%, Copper 1%, Opal 1%, Jade 0.8% | – |
-| Emerald Deep | 185–224 | 72.6% | Gold 7%, Diamond 4.5%, Silver 4%, Iron 3%, Jade 3%, Quartz 2.5%, Emerald 2.2%, Platinum 0.8%, Opal 0.4% | – |
-| Glowcap Hollows | 225–259 | 76.75% | Gold 5%, Diamond 5%, Iron 3%, Silver 3%, Platinum 3%, Emerald 2.5%, Jade 1.2% | 0.3% and 0.25% |
-| Midnight Fault | 260–339 | 73.2% | Obsidian 7%, Diamond 6%, Gold 4%, Platinum 3%, Iron 2%, Emerald 2%, Ruby 1%, Sapphire 0.5%, Mithril 0.4% | 0.9% |
+| Saltglass Sinks | 140–184 | 72.16% | Silver 6%, Gold 6%, Iron 4%, Quartz 3.5%, Selenite 3%, Diamond 2.5%, Copper 1%, Opal 1%, Jade 0.84% | – |
+| Emerald Deep | 185–224 | 72.46% | Gold 7%, Diamond 4.5%, Silver 4%, Iron 3%, Jade 3%, Quartz 2.5%, Emerald 2.2%, Platinum 0.84%, Opal 0.5% | – |
+| Glowcap Hollows | 225–259 | 76.55% | Gold 5%, Diamond 5%, Iron 3%, Silver 3%, Platinum 3%, Emerald 2.5%, Jade 1.2% | 0.4% and 0.35% |
+| Midnight Fault | 260–339 | 72.99% | Obsidian 7%, Diamond 6%, Gold 4%, Platinum 3%, Iron 2%, Emerald 2%, Ruby 1%, Sapphire 0.59%, Mithril 0.5% | 0.92% |
 | Frostglass Reach | 340–399 | 77.8% | Diamond 5%, Obsidian 4%, Gold 3%, Ruby 3%, Sapphire 2%, Platinum 1.5%, Mithril 1.5%, Aquamarine 1.2% | 1% |
-| Cinderheart Forge | 400–469 | 77.2% | Brimstone 7%, Obsidian 6%, Diamond 3%, Mithril 3%, Ruby 2%, Sapphire 0.6%, Moonstone 0.3% | 0.9% |
-| Abyssal Hollows | 470–549 | 84.63% | Mithril 5%, Obsidian 3%, Moonstone 3%, Diamond 2%, Ruby 1%, Meteorite 1%, Adamantite 0.25% | 0.12% |
-| Starfall Crater | 550+ | 82.8596% | Meteorite 6%, Obsidian 3%, Mithril 3%, Diamond 2%, Adamantite 1.6%, Moonstone 1.5% | 0.04% and 0.0004% |
+| Cinderheart Forge | 400–469 | 77% | Brimstone 7%, Obsidian 6%, Diamond 3%, Mithril 3%, Ruby 2%, Sapphire 0.68%, Moonstone 0.4% | 0.92% |
+| Abyssal Hollows | 470–549 | 84.45% | Mithril 5%, Obsidian 3%, Moonstone 3%, Diamond 2%, Ruby 1%, Meteorite 1%, Adamantite 0.35% | 0.2% |
+| Starfall Crater | 550+ | 82.8125% | Meteorite 6%, Obsidian 3%, Mithril 3%, Diamond 2%, Adamantite 1.6%, Moonstone 1.5% | 0.085% and 0.0025% |
 
 Mineral finds also roll a purity from 50% to 100%. Grade bonuses range from base value to double value for a perfect find. Sales and recipes use the lowest grades first. Fortune gives each mineral cut a 1-in-10 chance to yield a second piece of the same grade if the bag has room. Fair Trade adds 10% to mineral sale prices, rounded per piece.
 
 The percentages apply to solid rock beneath the dirt floor. Cave air yields no material.
+
+### Rebirth
+
+After mining a Starfall in the current run, a miner can rebirth from the Rebirth button (U). A rebirth resets gold, the pack, workshop levels (Power, Speed, Backpack) and field supplies, and keeps the XP level and skills, gems, the Index, achievements, titles, pets, quests and deepest descent. Each rebirth adds permanent bonuses: ×(1 + rebirths) gold from ore sales, +25% mining XP and 5% faster cutting (up to 25%). Rebirth 1 also shows the count beside the miner's name on the Server miners board. Perks and milestones are data in `src/shared/Rebirth.luau`, so new rewards can be added there.
 
 At the amber Sell counter, tap **E** (or tap the prompt on mobile) to choose a material. The slider starts at one. Drag it, use **−** and **+**, or choose **Select all** for that ore. The sale button shows the quantity, ore and exact gold payout. It also shows how many of that material will remain in your pack. Press the sale button to trade the selection. **Sell entire pack** shows the total block count and payout for everything you carry. Holding the stall prompt for 0.65 seconds quick-sells the pack for the displayed amount.
 
@@ -75,7 +79,7 @@ Buy pickaxe Power, swing Speed and backpack Capacity with gold at the Workshop. 
 
 Field Supplies crafts items from your bag. Two copper and three coal make a survey flare that lights a tunnel and points toward a natural cave within ten blocks. Four coal temper your pick for 25 successful hard cuts. Quick-cut wax doubles your speed for twelve cuts. Diamond teeth use iron and gems to break six plain stone blocks almost instantly. A cave pulse opens the nearby rock for prospecting. The pet compass lets an equipped companion point out exposed ore.
 
-**Daily** (L) holds a seven-day reward card: one claim per UTC day, and missing a day keeps your place. **Gift** (G) holds playtime gifts at 5 and 10 minutes, then every 10 minutes up to an hour. They reset at midnight UTC. The rewards are placeholders. Change what each day and gift holds in `src/shared/FieldRewards.luau`.
+**Daily** (L) holds a seven-day reward card: one claim per UTC day, and missing a day keeps your place. **Gift** (G) holds playtime gifts at 5 and 10 minutes, then every 10 minutes up to an hour. They reset at midnight UTC. The daily card opens by itself two seconds after the first sale that follows onboarding, and shortly after joining on later days. The rewards are placeholders. Change what each day and gift holds in `src/shared/FieldRewards.luau`.
 
 ![Backpack showing one coal worth five gold](map/Backpack-preview.jpg)
 

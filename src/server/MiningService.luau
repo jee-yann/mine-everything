@@ -6,6 +6,7 @@ local Pattern = require(Shared.BlockPattern)
 local Profile = require(script.Parent.Profile)
 local Expeditions = require(Shared.Expeditions)
 local Skills = require(Shared.Skills)
+local Rebirth = require(Shared.Rebirth)
 local Mining = {}
 
 function Mining.validPoint(v)
@@ -75,7 +76,7 @@ function Mining.start(world, net, sessions, sync)
 		end
 		local ore = world:oreAt(point)
 		local duration, tempered = Skills.cutTime(
-			Profile.stat(p, "Speed"),
+			Profile.stat(p, "Speed") * Rebirth.cutMultiplier(p.rebirths),
 			ore,
 			Config.strength(point.Y - world.origin.Y),
 			p.temper,

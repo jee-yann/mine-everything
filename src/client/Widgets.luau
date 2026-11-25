@@ -1,5 +1,6 @@
 local TweenService = game:GetService("TweenService")
 local Audio = require(script.Parent.HarborAudio)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Purity = require(game:GetService("ReplicatedStorage").Shared.OrePurity)
 local W = {}
 local rgb = Color3.fromRGB
@@ -7,6 +8,7 @@ W.ink, W.panel, W.card, W.line = rgb(18, 24, 44), rgb(30, 41, 65), rgb(48, 61, 8
 W.white, W.muted, W.gold, W.aqua, W.green =
 	rgb(255, 253, 245), rgb(206, 220, 234), rgb(255, 209, 76), rgb(88, 224, 252), rgb(110, 236, 150)
 W.pink, W.violet, W.orange = rgb(255, 128, 191), rgb(186, 149, 255), rgb(255, 165, 90)
+W.rebirth = rgb(255, 128, 140)
 W.ruby, W.ocean, W.grape = rgb(183, 63, 48), rgb(9, 115, 150), rgb(121, 66, 177)
 local off = UDim2.fromOffset
 function W.round(obj, r)
@@ -281,7 +283,7 @@ function W.unitPrice(value)
 end
 function W.possiblePrice(ore, player)
 	local low, high = Purity.priceRange(ore, player:GetAttribute("SkillBroker"))
-	local multiplier = if player:GetAttribute("DoubleGold") then 2 else 1
+	local multiplier = Rebirth.saleMultiplier(player)
 	local amount = W.number(low * multiplier)
 	if low ~= high then amount ..= "–" .. W.number(high * multiplier) end
 	return amount .. " G"

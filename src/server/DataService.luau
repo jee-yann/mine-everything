@@ -46,6 +46,8 @@ function Data.snapshot(p)
 		drake = p.drake,
 		petName = p.petName,
 		bestDepth = p.bestDepth,
+		rebirths = p.rebirths,
+		runStarfalls = p.runStarfalls,
 		levels = table.clone(p.levels),
 		progression = p.progression,
 		preferences = table.clone(p.preferences),

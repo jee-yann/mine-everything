@@ -2,6 +2,7 @@ local Collection = game:GetService("CollectionService")
 local Prompts = game:GetService("ProximityPromptService")
 local Run = game:GetService("RunService")
 local Audio = require(script.Parent.HarborAudio)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local W = require(script.Parent.Widgets)
 local Aura = {}
 local tag = "MiningInteractionPad"
@@ -72,7 +73,7 @@ function Aura.start(player, hud)
 	local function updateSellPrompt(prompt)
 		prompt.Enabled = not hud.overlay.Visible
 		local blocks = player:GetAttribute("Used") or 0
-		local value = (player:GetAttribute("BagValue") or 0) * (if player:GetAttribute("DoubleGold") then 2 else 1)
+		local value = (player:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(player)
 		prompt.ObjectText = if blocks == 0
 			then "Pack empty"
 			else string.format(
@@ -88,7 +89,7 @@ function Aura.start(player, hud)
 			updateSellPrompt(prompt)
 		end
 	end
-	for _, attribute in { "Used", "BagValue", "DoubleGold" } do
+	for _, attribute in { "Used", "BagValue", "DoubleGold", "Rebirths" } do
 		player:GetAttributeChangedSignal(attribute):Connect(refreshSellPrompts)
 	end
 	refreshSellPrompts()

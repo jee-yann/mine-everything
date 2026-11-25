@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 local Gui = game:GetService("GuiService")
 local Input = game:GetService("UserInputService")
 local Upgrades, Expeditions, Ores = require(Shared.Upgrades), require(Shared.Expeditions), require(Shared.Ores)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Settings = require(script.Parent.Settings)
 local SellCounter = require(script.Parent.SellCounter)
 local GuideButton = require(script.Parent.GuideButton)
@@ -13,6 +14,7 @@ local W, Icons = require(script.Parent.Widgets), require(script.Parent.Icons)
 local FieldPages = require(script.Parent.FieldPages)
 local Field = require(Shared.FieldRewards)
 local RewardsPanel, IndexPanel = require(script.Parent.RewardsPanel), require(script.Parent.IndexPanel)
+local RebirthPanel = require(script.Parent.RebirthPanel)
 local Guide = require(Shared.FieldGuide)
 local Purity = require(Shared.OrePurity)
 local Skills = require(Shared.Skills)
@@ -49,6 +51,7 @@ Menu.pages = {
 	Playtime = { name = "Playtime gifts", color = W.violet },
 	Store = { name = "Outfitters", color = W.pink },
 	Pack = { name = "My backpack", color = W.gold },
+	Rebirth = { name = "Rebirth", color = W.rebirth },
 }
 function Menu.new(root, player, net, close)
 	local self = setmetatable({ player = player, net = net, prices = {}, updates = {} }, Menu)
@@ -169,7 +172,7 @@ function Menu:layout(width, height, touch)
 	-- Give landscape phones larger type and touch targets by scrolling the rows
 	-- inside the card. Keep the header, footer and close button within safe bounds.
 	self.touchLayout = touch
-	for _, panel in { self.rewards, self.index } do
+	for _, panel in { self.rewards, self.index, self.rebirth } do
 		panel.card:layout(Vector2.new(width, height), touch)
 	end
 	local shortLandscape = width > height and (touch or height < 470)
@@ -243,7 +246,8 @@ function Menu:gear()
 		if key == "Capacity" then
 			return W.number(Skills.capacity(Upgrades.items.Capacity.values[level], owned)) .. " ore"
 		elseif key == "Speed" then
-			local seconds = Skills.cutTime(Upgrades.items.Speed.values[level], Ores.byName.Stone, 1, 0, owned)
+			local base = Upgrades.items.Speed.values[level] * Rebirth.cutMultiplier(self.player:GetAttribute("Rebirths") or 0)
+			local seconds = Skills.cutTime(base, Ores.byName.Stone, 1, 0, owned)
 			return string.format("%.2fs / stone", seconds)
 		end
 		return Upgrades.describe(key, level)
@@ -435,7 +439,7 @@ function Menu:pack()
 		end
 		for i, entry in held do
 			local item = rows[entry.ore.name]
-			local multiplier = if self.player:GetAttribute("DoubleGold") then 2 else 1
+			local multiplier = Rebirth.saleMultiplier(self.player)
 			local grades = Purity.decode(self.player:GetAttribute("Grades" .. entry.ore.name))
 			local low, high = Purity.range(grades)
 			local value = Purity.quote(entry.ore, entry.amount, grades, entry.amount, self.player:GetAttribute("SkillBroker")) * multiplier
@@ -518,6 +522,8 @@ function Menu:attention(key)
 				return true
 			end
 		end
+	elseif key == "Rebirth" then
+		return Rebirth.ready(p:GetAttribute("RunStarfalls") or 0)
 	elseif key == "Achievements" then
 		for _, award in Guide.achievements do
 			if
@@ -604,7 +610,7 @@ function Menu:store()
 	return #Catalog
 end
 local function shortcuts(self)
-	local destinations = { "Daily", "Playtime", "Inventory", "Skills", "Achievements", "Book", "Jobs", "Settings", "Pets", "Miners" }
+	local destinations = { "Daily", "Playtime", "Inventory", "Skills", "Achievements", "Book", "Jobs", "Rebirth", "Settings", "Pets", "Miners" }
 	for i, key in destinations do
 		local page = Menu.pages[key]
 		local color = if page then page.color else W.aqua
@@ -628,7 +634,8 @@ local function shortcuts(self)
 		end)
 		local icon = if key == "Miners" then "Crew" elseif key == "Inventory" then "Pack" else key
 		Icons.draw(button, icon, 9, 16, 38, color)
-		local caption = W.title(button, if page then page.name else "Server miners", 51, 0, 158, 71, 17, W.ink, true)
+		local caption = W.title(button, if page then page.name else "Server miners", 51, 0, 158, 68, 19, W.white, true)
+		W.navyText(caption, 2.4)
 		if key == "Jobs" then
 			table.insert(self.updates, function()
 				caption.Text = page.name
@@ -723,8 +730,11 @@ function Menu:open(key)
 	elseif key == "Book" then
 		self.index = self.index or IndexPanel.new(self)
 		wide = self.index
+	elseif key == "Rebirth" then
+		self.rebirth = self.rebirth or RebirthPanel.new(self)
+		wide = self.rebirth
 	end
-	for _, panel in { self.rewards, self.index } do
+	for _, panel in { self.rewards, self.index, self.rebirth } do
 		if panel ~= wide then panel.card.modal.Visible = false end
 	end
 	self.modal.Visible = key ~= "Skills" and not wide
@@ -855,7 +865,7 @@ function Menu:guideTrade()
 			or ((step == "Dig" or step == "Return") and full)
 		if wantsSale and self.sellAll.Interactable then
 			target = self.sellAll
-			local value = (self.player:GetAttribute("BagValue") or 0) * (if self.player:GetAttribute("DoubleGold") then 2 else 1)
+			local value = (self.player:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(self.player)
 			hint = "Sell all for " .. W.goldAmount(value) .. " G"
 		elseif step == "Upgrade" or step == "Sell" then
 			target = self.closeButton
@@ -939,7 +949,7 @@ function Menu:refresh()
 		self.sub.Text = string.format("%s %s in pack", W.goldAmount(used), if used == 1 then "block" else "blocks")
 	elseif self.page == "Pack" then
 		local cap = p:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1]
-		local value = (p:GetAttribute("BagValue") or 0) * (if p:GetAttribute("DoubleGold") then 2 else 1)
+		local value = (p:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(p)
 		self.sub.Text = string.format("%d / %d slots   ·   %s G", p:GetAttribute("Used") or 0, cap, W.number(value))
 	elseif self.page == "Gear" then
 		self.sub.Text = ""

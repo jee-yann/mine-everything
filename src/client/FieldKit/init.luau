@@ -14,6 +14,7 @@ local tiles = {
 	Book = Vector2.new(0, 1),
 	Settings = Vector2.new(1, 1),
 	Playtime = Vector2.new(2, 1),
+	Rebirth = Vector2.new(3, 1),
 }
 tiles.Pack, tiles.Capacity, tiles.Titles = tiles.Inventory, tiles.Inventory, tiles.Achievements
 

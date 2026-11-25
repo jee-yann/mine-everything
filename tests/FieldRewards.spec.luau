@@ -109,6 +109,12 @@ for _, change in { { onboarded = false }, { sinceReady = 1 }, { quietFor = 0 }, 
 	assert(auto.choose(state(change)) == nil)
 end
 assert(auto.choose(state({ dailyReady = false, giftsReady = 1 })) == "Playtime")
+-- On a first visit it waits for the sale after the first expedition, then two seconds.
+assert(auto.choose(state({ firstVisit = true })) == nil)
+assert(auto.choose(state({ firstVisit = true, sinceSale = 1.9 })) == nil)
+assert(auto.choose(state({ firstVisit = true, sinceSale = 2, quietFor = 0 })) == nil, "it waits for the gold to land")
+assert(auto.choose(state({ firstVisit = true, sinceSale = 2.1, quietFor = 0.25, sinceReady = 2 })) == "Daily")
+assert(auto.choose(state({ firstVisit = true, dailyReady = false, giftsReady = 1 })) == "Playtime")
 assert(auto.choose(state({ dailyReady = false, giftsReady = 1, giftsClaimed = 1 })) == nil, "only the first gift opens the card")
 assert(auto.choose(state({ dailyReady = false, giftsReady = 1, giftShown = true })) == nil)
 -- Bigger payouts count for longer, within reason.

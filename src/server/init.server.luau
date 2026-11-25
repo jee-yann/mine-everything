@@ -14,6 +14,7 @@ local Preferences = require(Rep.Shared.Preferences)
 local Passes = require(script.Passes)
 local equipKit = require(script.ProspectorKit)
 local Pickaxe = require(script.Pickaxe)
+local Rebirth = require(Rep.Shared.Rebirth)
 local Data, Profile, Mining = require(script.DataService), require(script.Profile), require(script.MiningService)
 local PIXELII_USER_ID = 45241447
 
@@ -78,6 +79,8 @@ local function sync(player, p, awardName)
 	player:SetAttribute("DrakeUnlocked", p.drake == true)
 	player:SetAttribute("PetName", p.petName)
 	player:SetAttribute("SkillPoints", Guide.points(p.xp, p.skills))
+	player:SetAttribute("Rebirths", p.rebirths)
+	player:SetAttribute("RunStarfalls", p.runStarfalls)
 	player.leaderstats.Level.Value = E.level(p.xp)
 	player:SetAttribute("Gold", p.gold)
 	player:SetAttribute("Gems", p.gems)
@@ -340,6 +343,35 @@ local function action(player, key, option, value)
 		net.Feedback:FireClient(player, "progressReset", ok, message)
 		return
 	end
+	if key == "Rebirth" then
+		-- `option` is the rebirth count the client saw, so a repeated request can't rebirth twice.
+		if s.resetting or shuttingDown or s.travel or option ~= s.profile.rebirths then
+			return
+		end
+		local count = Profile.rebirth(s.profile)
+		if not count then
+			net.Feedback:FireClient(player, "rebirth", false, "Mine a Starfall this run to rebirth.")
+			return
+		end
+		local char = player.Character
+		if char then
+			char:SetAttribute("MiningSwing", nil)
+			mineFit(char, false)
+			moveCharacter(char, CFrame.new(landing))
+			task.spawn(Pickaxe.equip, player, char)
+		end
+		s.climb, s.lavaUntil = nil, nil
+		sync(player, s.profile)
+		applySkills(player, s.profile)
+		task.spawn(Data.save, player, s)
+		net.Feedback:FireClient(player, "rebirth", true, count)
+		for _, other in Players:GetPlayers() do
+			if other ~= player then
+				net.Feedback:FireClient(other, "rebirthAnnounce", player.DisplayName, count)
+			end
+		end
+		return
+	end
 	if s.resetting then
 		return
 	end
@@ -560,7 +592,8 @@ local function action(player, key, option, value)
 			end
 		end)
 	elseif key == "Sell" then
-		local gold, award, quantity = Profile.sell(p, if player:GetAttribute("DoubleGold") then 2 else 1, option, value)
+		local multiplier = (if player:GetAttribute("DoubleGold") then 2 else 1) * Rebirth.goldMultiplier(p.rebirths)
+		local gold, award, quantity = Profile.sell(p, multiplier, option, value)
 		if gold == nil then
 			return
 		end

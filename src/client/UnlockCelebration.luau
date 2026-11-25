@@ -1,4 +1,5 @@
--- The big moments, one after another: levels, new ores, achievements, titles, jobs and upgrades. Each is
+-- The big moments, one after another: levels, skills, new ores, achievements, titles, jobs, upgrades and
+-- rebirths. Each is
 -- a bright tile that drops in with turning rays, a shine and confetti.
 local W = require(script.Parent.Widgets)
 local Icons = require(script.Parent.Icons)
@@ -15,6 +16,8 @@ local kinds = {
 	levelUp = { "LEVEL UP!", "Skills", rgb(166, 245, 154), rgb(52, 178, 74) },
 	achievement = { "ACHIEVEMENT!", "Achievements", rgb(255, 230, 128), rgb(243, 165, 26) },
 	job = { "JOB COMPLETE!", "Jobs", rgb(255, 208, 138), rgb(240, 138, 58) },
+	skill = { "SKILL UNLOCKED!", "Skills", rgb(166, 245, 154), rgb(52, 178, 74) },
+	rebirth = { "REBIRTH!", "Rebirth", rgb(255, 150, 150), rgb(214, 52, 78) },
 	upgrade = { "UPGRADED!", "Power", rgb(140, 240, 220), rgb(24, 160, 150) },
 }
 
@@ -92,7 +95,7 @@ function Celebration:present(item)
 	small.MinTextSize, small.MaxTextSize, small.Parent = 12, 21, detail
 	W.navyText(detail, 2.4)
 	if item.gold then self.hud.goldFlow:hold(0.7, medal) end
-	Audio.unlock(kind == "titleUnlocked" or kind == "levelUp")
+	Audio.unlock(kind == "titleUnlocked" or kind == "levelUp" or kind == "rebirth")
 	if motion then
 		Burst.drop(group, center)
 		task.delay(0.36, function()
@@ -100,7 +103,7 @@ function Celebration:present(item)
 			Burst.pop(medalScale, 1, 1.35)
 			Burst.shine(body, 22)
 			local at = group.AbsolutePosition + Vector2.new(group.AbsoluteSize.X / 2, group.AbsoluteSize.Y * 0.4) - root.AbsolutePosition
-			Burst.confetti(root, at.X, at.Y, if kind == "levelUp" then 34 else 22, if ore then { top, bottom, W.white, W.gold } else nil)
+			Burst.confetti(root, at.X, at.Y, if kind == "rebirth" then 48 elseif kind == "levelUp" then 34 else 22, if ore then { top, bottom, W.white, W.gold } else nil)
 		end)
 	end
 	task.wait(if quick then 1.7 else 2.5)
