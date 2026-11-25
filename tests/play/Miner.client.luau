@@ -345,7 +345,6 @@ local function test()
 		end, 16, "opening returns camera and HUD")
 		waitFor(function() return math.abs(gameplayEffects.Volume - effects.Volume) < 0.001 end, 2, "gameplay sound restored after film")
 	end
-	local ownerVision
 	do
 		local marker = workspace.Terrain:WaitForChild("First expedition waypoint", 4)
 		waitFor(function() return marker.Destination.Enabled end, 4, "mine waypoint after the opening")
@@ -384,13 +383,9 @@ local function test()
 			guide.anchor:Destroy()
 		end
 	end
-	if p.UserId == 45241447 then
-		ownerVision = p.PlayerGui:WaitForChild("OwnerOreVision", 3)
-		assert(ownerVision and not ownerVision.ResetOnSpawn, "Pixelii receives ore vision")
-	else
-		assert(not p.PlayerGui:FindFirstChild("OwnerOreVision"), "ore vision granted to another player")
-		assert(not gui.SafeArea.Location:FindFirstChild("X-ray controls") and not n:FindFirstChild("Scan", true))
-	end
+	-- The owner-only X-ray tool was removed; nobody gets its controls or its scan remote.
+	assert(not p.PlayerGui:FindFirstChild("OwnerOreVision"), "no X-ray tool")
+	assert(not gui.SafeArea.Location:FindFirstChild("X-ray controls") and not n:FindFirstChild("Scan", true))
 	waitFor(function()
 		local mount = p.Character.HumanoidRootPart:FindFirstChild("Lamp mount")
 		return mount and mount:FindFirstChildOfClass("PointLight") and p.Character:GetAttribute("MiningViewReady")
@@ -505,7 +500,7 @@ local function test()
 	for _, key in { "Power", "Speed", "Capacity" } do
 		assert(controls.Equipment[key]:FindFirstChild(key .. " icon"), "equipment icon " .. key)
 	end
-	assert(gui.SafeArea["Action dock"]:FindFirstChild("Achievements"))
+	assert(gui.SafeArea["Menu buttons"]:FindFirstChild("Achievements") and gui.SafeArea["Reward buttons"]:FindFirstChild("Playtime"))
 	local safe = gui.SafeArea
 	assert(
 		safe.Mine.BackgroundTransparency == 1 and not safe:FindFirstChild("Auto mine"),
@@ -537,7 +532,7 @@ local function test()
 		waitFor(function()
 			return safe.AbsoluteSize == size and safe["Edge shortcuts"].Visible
 		end, 3, "compact HUD")
-		assert(not safe.Haul.Visible and not safe["Current job"].Visible and not safe["Action dock"].Visible)
+		assert(not safe.Haul.Visible and not safe["Current job"].Visible and not safe["Menu buttons"].Visible and not safe["Reward buttons"].Visible)
 		local pack = safe["Edge shortcuts"].Pack
 		local menuButton = safe["Edge shortcuts"].Menu
 		assert(pack.AbsoluteSize.Y >= 44 and menuButton.AbsoluteSize.Y >= 44, "edge tap targets")
@@ -731,7 +726,8 @@ local function test()
 		tapKey(Enum.KeyCode.Tab)
 		waitFor(function() return roster.Miners.Visible end, 2, "reopen roster")
 		do
-			assert(not safe["Action dock"]:FindFirstChild("Keybind", true), "letter badges removed")
+			local rail = safe["Menu buttons"]
+			assert(rail.Inventory.Key.Text == "B" and rail.Settings.Key.Text == "P" and rail.Book.Key.Visible, "keycaps on the side buttons")
 			tapKey(Enum.KeyCode.O)
 			game:GetService("RunService").Heartbeat:Wait()
 			assert(not overlay.Visible, "O is reserved for the camera")
@@ -956,66 +952,6 @@ local function test()
 				end
 			end
 		end
-		local visionBadge
-		local function pressX()
-			input:SendKey(true, Enum.KeyCode.X)
-			input:SendKey(false, Enum.KeyCode.X)
-		end
-		if ownerVision then
-			visionBadge = gui.SafeArea.Location:WaitForChild("Ore vision status", 3)
-			assert(visionBadge and not visionBadge.Visible, "ore vision starts off")
-			local reply = table.pack(ownerVision.Scan:InvokeServer(nil))
-			assert(reply.n == 3 and typeof(reply[3]) == "buffer", "owner scan returns only its local snapshot")
-			pressX()
-			waitFor(function()
-				return visionBadge.Visible
-			end, 2, "X enables ore vision")
-			waitFor(function() return ownerVision:FindFirstChild("Coal") end, 3, "nearby ores shown by default")
-			assert(not ownerVision:FindFirstChild("Ore waypoints") and not ownerVision:FindFirstChild("Starfall"))
-			local filters = gui.SafeArea["X-ray ore filters"]
-			clickButton(gui.SafeArea.Location["X-ray controls"].Filters)
-			waitFor(function() return filters.Visible end, 2, "ore filters open")
-			clickButton(filters.None)
-			waitFor(function() return not ownerVision:FindFirstChildWhichIsA("BoxHandleAdornment") end, 2, "empty filter clears highlights")
-			clickButton(filters.Starfall)
-			waitFor(function() return visionBadge.Text:find("0 nearby", 1, true) end, 3, "Starfall filter respects the local range")
-			assert(not ownerVision:FindFirstChildWhichIsA("BoxHandleAdornment"))
-			clickButton(filters.Starfall)
-			clickButton(filters.Copper)
-			waitFor(function() return ownerVision:FindFirstChild("Copper") end, 3, "show nearby copper alone")
-			assert(not ownerVision:FindFirstChild("Coal"))
-			input:SendKey(true, Enum.KeyCode.LeftShift)
-			pressX()
-			input:SendKey(false, Enum.KeyCode.LeftShift)
-			waitFor(function() return not filters.Visible and visionBadge.Visible end, 2, "Shift-X closes filters while tracking")
-			clickButton(gui.SafeArea.Location["X-ray controls"].Filters)
-			clickButton(filters.All)
-			clickButton(filters.Close)
-			waitFor(function() return ownerVision:FindFirstChildWhichIsA("BoxHandleAdornment") end, 3, "buried ore visible before the first cut")
-			local top = origin + Vector3.yAxis * config.FloorY
-			local playerCell = ((p.Character.HumanoidRootPart.Position - top) / config.Cell):Floor()
-			local spawned = {}
-			for _, part in workspace.CitrineCove.MineBlocks:GetChildren() do spawned[part.Position] = true end
-			for _, box in ownerVision:GetChildren() do
-				if not box:IsA("BoxHandleAdornment") then continue end
-				local at = (box.Adornee.CFrame * box.CFrame).Position
-				local cell = ((at - top) / config.Cell):Floor()
-				assert((cell - playerCell).Magnitude <= 10 and not spawned[at] and not ores.byName[box.Name].host)
-			end
-			local old = ownerVision:FindFirstChildWhichIsA("BoxHandleAdornment")
-			r:FireServer("moveOreVision")
-			waitFor(function()
-				local box = ownerVision:FindFirstChildWhichIsA("BoxHandleAdornment")
-				if old.Parent or not box then return false end
-				local at = (box.Adornee.CFrame * box.CFrame).Position
-				local cell = ((at - top) / config.Cell):Floor()
-				return (cell - playerCell - Vector3.xAxis * 24).Magnitude <= 10
-			end, 4, "moving across chunks replaces out-of-range markers")
-			r:FireServer("position")
-			waitFor(function()
-				return ((p.Character.HumanoidRootPart.Position - top) / config.Cell):Floor() == playerCell
-			end, 3, "returned to the shaft")
-		end
 		-- Drill the two starter shafts through the real cut protocol before aiming at ore.
 		for _, x in { -0.5, 0.5, -1.5, 1.5 } do
 			for _, y in (if math.abs(x) == 0.5 then { -0.5, -1.5 } else { -0.5 }) do
@@ -1038,23 +974,6 @@ local function test()
 		local startingHaul = p:GetAttribute("Used")
 		local aim, aimNormal = visibleOre("Coal")
 		assert(aim, "expected visible coal in the test field")
-		local coalMarker
-		if ownerVision then
-			waitFor(function()
-				for _, box in ownerVision:GetChildren() do
-					if
-						box:IsA("BoxHandleAdornment")
-						and box.Adornee
-						and (box.Adornee.CFrame * box.CFrame).Position == aim
-						and box.AlwaysOnTop
-					then
-						coalMarker = box
-						return true
-					end
-				end
-				return false
-			end, 3, "newly exposed coal marked through walls")
-		end
 		camera.CameraType = Enum.CameraType.Scriptable
 		local root = p.Character.HumanoidRootPart
 		local eye = root.Position + Vector3.yAxis * math.min(1.3, root.Size.Y * 0.6)
@@ -1226,20 +1145,6 @@ local function test()
 				and popup["Ore popup"].Purity.Text:find("%d+%% pure"),
 			"popup location and label"
 		)
-		if ownerVision then
-			waitFor(function()
-				return not coalMarker.Parent
-			end, 2, "mined ore marker clears")
-			pressX()
-			waitFor(function()
-				return not visionBadge.Visible and not ownerVision:FindFirstChildWhichIsA("BoxHandleAdornment")
-			end, 2, "X removes remaining ore markers")
-			pressX()
-			waitFor(function()
-				return ownerVision:FindFirstChild("Copper") ~= nil
-			end, 2, "X restores nearby ore markers")
-			pressX()
-		end
 		waitFor(function()
 			return not popup.Parent
 		end, 2, "popup fades out")

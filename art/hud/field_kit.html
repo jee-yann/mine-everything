@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 512, 256 px tiles, on a clear
+     background. Tile order must match the tiles table in src/client/FieldKit/init.luau.
+     Render with render_field_kit.py, then bake with bake_field_kit.py.
+     Style: one navy outline around each icon's silhouette (the #ol filter), nothing dark
+     inside, flat colours with soft shade shapes, white glints and a soft cast shadow. -->
+<html><head><meta charset="utf-8"><style>
+  html, body { margin: 0; width: 1024px; height: 512px; background: transparent; overflow: hidden; }
+  .ico { position: absolute; width: 208px; height: 208px; overflow: visible; filter: drop-shadow(7px 11px 0 #29264a38); }
+</style></head><body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- Round 5: one navy outline around each icon's silhouette and nothing dark inside.
+         The outline comes from this filter (a rounded dilation of the icon's shape, filled navy and
+         placed under it), so the parts themselves carry no strokes; parts are told apart by colour. -->
+    <filter id="ol" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.6" result="blur"/>
+      <feComponentTransfer in="blur" result="grow"><feFuncA type="linear" slope="14" intercept="-0.4"/></feComponentTransfer>
+      <feFlood flood-color="#29264a"/>
+      <feComposite in2="grow" operator="in" result="line"/>
+      <feMerge><feMergeNode in="line"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="c-packA"><rect x="18" y="18" width="64" height="74" rx="22"/></clipPath>
+    <clipPath id="c-sack"><path d="M32 36 C14 46 10 68 16 81 C23 93 77 93 84 81 C90 68 86 46 68 36 Z"/></clipPath>
+    <clipPath id="c-packC"><rect x="18" y="26" width="64" height="66" rx="18"/></clipPath>
+    <clipPath id="c-bowl"><path d="M22 18 H78 C78 46 66 60 50 60 C34 60 22 46 22 18 Z"/></clipPath>
+    <clipPath id="c-gear"><path id="gearShape" d="M43 8 h14 l2.4 11 a32 32 0 0 1 9 3.8 l9.4 -6 l9.9 9.9 l-6 9.4 a32 32 0 0 1 3.8 9 L97 43 v14 l-11 2.4 a32 32 0 0 1 -3.8 9 l6 9.4 l-9.9 9.9 l-9.4 -6 a32 32 0 0 1 -9 3.8 L57 97 H43 l-2.4 -11 a32 32 0 0 1 -9 -3.8 l-9.4 6 l-9.9 -9.9 l6 -9.4 a32 32 0 0 1 -3.8 -9 L3 57 V43 l11 -2.4 a32 32 0 0 1 3.8 -9 l-6 -9.4 l9.9 -9.9 l9.4 6 a32 32 0 0 1 9 -3.8 Z"/></clipPath>
+    <clipPath id="c-cal"><rect x="14" y="20" width="72" height="68" rx="14"/></clipPath>
+    <path id="spark" d="M0 -9 Q1.8 -1.8 9 0 Q1.8 1.8 0 9 Q-1.8 1.8 -9 0 Q-1.8 -1.8 0 -9Z"/>
+    <path id="star5" d="M0 -14 l4.2 8.6 l9.5 1.4 l-6.9 6.7 l1.6 9.4 L0 7.7 l-8.5 4.4 l1.6 -9.4 l-6.9 -6.7 l9.5 -1.4 Z"/>
+    <path id="star5r" d="M0 -14 l4.2 8.6 l9.5 1.4 l-6.9 6.7 l1.6 9.4 L0 7.7 Z"/>
+
+    <!-- Bag A: leather backpack with a flap and gold buckle -->
+    <symbol id="i-packA" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M37 22 C37 6 63 6 63 22" fill="none" stroke="#8a4526" stroke-width="7" stroke-linecap="round"/>
+        <rect x="9" y="52" width="15" height="30" rx="7" fill="#a5592f"/>
+        <rect x="76" y="52" width="15" height="30" rx="7" fill="#8a4526"/>
+        <rect x="18" y="18" width="64" height="74" rx="22" fill="#d27c46"/>
+        <g clip-path="url(#c-packA)">
+          <ellipse cx="94" cy="64" rx="30" ry="52" fill="#b9632f"/>
+          <rect x="18" y="85" width="64" height="10" fill="#a9572b"/>
+        </g>
+        <path d="M18 44 C18 27 30 18 44 18 H56 C70 18 82 27 82 44 C82 51 76 53 70 53 H30 C24 53 18 51 18 44 Z" fill="#8f4624"/>
+        <path d="M22 40 C22 28 32 22 44 22 H56 C68 22 76 28 78 38 C70 34 30 34 22 40 Z" fill="#a85631"/>
+        <rect x="29" y="63" width="42" height="23" rx="10" fill="#eb9d62"/>
+        <rect x="29" y="78" width="42" height="8" rx="4" fill="#d9854e"/>
+        <rect x="45" y="44" width="10" height="17" rx="3" fill="#6a3018"/>
+        <rect x="42" y="55" width="16" height="12" rx="3.5" fill="#ffc93a"/>
+        <rect x="47" y="59" width="6" height="4" rx="1.5" fill="#c98a14"/>
+        <path d="M29 34 C31 28 36 25 42 24" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none" opacity=".9"/>
+        <path d="M35 69 h12" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".8"/>
+      </g>
+    </symbol>
+
+    <!-- Bag B: drawstring loot sack with ore peeking out -->
+    <symbol id="i-packB" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M44 12 L54 20 L44 34 L34 20 Z" fill="#5fe6ff"/>
+        <path d="M44 12 L54 20 L44 34 Z" fill="#22b3dd"/>
+        <circle cx="60" cy="24" r="10" fill="#ffc83a"/>
+        <path d="M60 14 A10 10 0 0 1 60 34 Z" fill="#f09a1c"/>
+        <path d="M28 20 L37 16 L41 26 L31 31 Z" fill="#ff5a6e"/>
+        <path d="M32 36 C14 46 10 68 16 81 C23 93 77 93 84 81 C90 68 86 46 68 36 Z" fill="#d79a5c"/>
+        <g clip-path="url(#c-sack)">
+          <ellipse cx="92" cy="70" rx="28" ry="44" fill="#ba7c42"/>
+          <rect x="10" y="84" width="80" height="12" fill="#b07238"/>
+          <rect x="26" y="56" width="18" height="16" rx="4" fill="#e8b47a" transform="rotate(-8 35 64)"/>
+        </g>
+        <path d="M30 30 Q50 38 70 30 L72 40 Q50 48 28 40 Z" fill="#b57841"/>
+        <path d="M28 36 Q50 44 72 36 L72 42 Q50 50 28 42 Z" fill="#ffd37a"/>
+        <circle cx="62" cy="42" r="6" fill="#ffd37a"/>
+        <path d="M60 46 Q58 56 52 60" stroke="#ffd37a" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M64 46 Q68 56 74 58" stroke="#f0b84f" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M22 60 C22 52 26 48 30 46" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none" opacity=".85"/>
+        <circle cx="41" cy="18" r="2" fill="#fff"/>
+        <circle cx="56" cy="20" r="2.4" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Bag C: adventurer's backpack with a rolled bedroll and zip pocket -->
+    <symbol id="i-packC" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <rect x="10" y="50" width="12" height="30" rx="6" fill="#1f8f86"/>
+        <rect x="78" y="50" width="12" height="30" rx="6" fill="#18766f"/>
+        <rect x="18" y="26" width="64" height="66" rx="18" fill="#33c2b3"/>
+        <g clip-path="url(#c-packC)">
+          <ellipse cx="94" cy="62" rx="28" ry="48" fill="#25a094"/>
+          <rect x="18" y="84" width="64" height="10" fill="#1f8f86"/>
+        </g>
+        <rect x="16" y="8" width="68" height="20" rx="10" fill="#ff6a4d"/>
+        <rect x="16" y="20" width="68" height="8" rx="4" fill="#e04d33"/>
+        <circle cx="76" cy="18" r="8" fill="#ffb39f"/>
+        <circle cx="76" cy="18" r="3.5" fill="#e04d33"/>
+        <rect x="30" y="6" width="7" height="24" rx="2" fill="#8a4526"/>
+        <rect x="58" y="6" width="7" height="24" rx="2" fill="#8a4526"/>
+        <rect x="27" y="52" width="46" height="32" rx="11" fill="#4fdccc"/>
+        <rect x="27" y="76" width="46" height="8" rx="4" fill="#38c4b5"/>
+        <rect x="31" y="56" width="38" height="5" rx="2.5" fill="#ffd23f"/>
+        <rect x="58" y="56" width="7" height="12" rx="3" fill="#ffd23f"/>
+        <path d="M26 42 C27 36 30 33 35 32" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none" opacity=".9"/>
+        <path d="M22 13 h10" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".85"/>
+        <path d="M33 67 h10" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".8"/>
+      </g>
+    </symbol>
+
+    <!-- Skills: lightning bolt -->
+    <symbol id="i-bolt" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M58 6 L22 56 H46 L38 94 L80 38 H56 L66 6 Z" fill="#ffd23f"/>
+        <path d="M56 38 H80 L38 94 L46 56 Z" fill="#f5a31e"/>
+        <path d="M55 13 L34 44" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <use href="#spark" transform="translate(84 74) scale(.8)" fill="#fff"/>
+        <use href="#spark" transform="translate(18 20) scale(.6)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Achievements: gold trophy -->
+    <symbol id="i-trophy" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M27 26 C10 26 12 51 33 51 M73 26 C90 26 88 51 67 51" fill="none" stroke="#ffc12e" stroke-width="6" stroke-linecap="round"/>
+        <path d="M43 58 H57 L60 74 H40 Z" fill="#f39a1c"/>
+        <rect x="26" y="72" width="48" height="17" rx="5" fill="#b4633a"/>
+        <rect x="26" y="83" width="48" height="6" rx="3" fill="#8f4b29"/>
+        <rect x="40" y="76" width="20" height="5" rx="2" fill="#ffd96a"/>
+        <path d="M22 18 H78 C78 46 66 60 50 60 C34 60 22 46 22 18 Z" fill="#ffc12e"/>
+        <g clip-path="url(#c-bowl)"><path d="M58 10 H84 V66 H40 C56 56 60 40 58 10 Z" fill="#f39a1c"/></g>
+        <ellipse cx="50" cy="19" rx="28" ry="6.5" fill="#d98a1a"/>
+        <ellipse cx="50" cy="20.5" rx="24" ry="4" fill="#b96d10"/>
+        <path d="M30 30 C30 40 33 47 38 52" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <circle cx="33" cy="26" r="2.4" fill="#fff"/>
+        <use href="#spark" transform="translate(86 10) scale(.8)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Index: book lying at an angle with a gem on the cover -->
+    <symbol id="i-book" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M10 50 L50 70 L92 48 V58 L50 80 L10 60 Z" fill="#1f4fa8"/>
+        <path d="M50 66 L91 45 V54 L50 75 Z" fill="#fff6e4"/>
+        <path d="M50 71 L91 50 V54 L50 75 Z" fill="#eadcbf"/>
+        <path d="M10 46 L52 24 L92 44 L50 66 Z" fill="#3f8ff0"/>
+        <path d="M51 24.5 L92 44 L74 53 Q66 36 51 24.5 Z" fill="#2f7ae0"/>
+        <path d="M10 46 L50 66 V76 L10 56 Z" fill="#2a64c8"/>
+        <path d="M64 60 V82 L69 78 L74 79 V55 Z" fill="#ff4f62"/>
+        <path d="M69 57.5 V78 L74 79 V55 Z" fill="#d93a50"/>
+        <path d="M20 45 L44 32" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <path d="M51 18 L64 28 H38 Z" fill="#b5f5ff"/>
+        <path d="M51 18 L64 28 H51 Z" fill="#6fe8ff"/>
+        <path d="M38 28 H64 L51 48 Z" fill="#3fcdf0"/>
+        <path d="M51 28 H64 L51 48 Z" fill="#1fa8d4"/>
+        <circle cx="46" cy="24" r="2" fill="#fff"/>
+        <use href="#spark" transform="translate(82 18) scale(.7)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Settings: steel cog -->
+    <symbol id="i-gear" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <g transform="translate(6 4) scale(.88)">
+          <use href="#gearShape" transform="translate(0 7)" fill="#71809a"/>
+          <use href="#gearShape" fill="#cdd7e4"/>
+          <g clip-path="url(#c-gear)"><circle cx="74" cy="76" r="42" fill="#a7b5c9"/></g>
+          <circle cx="50" cy="50" r="16" fill="#6c7a94"/>
+          <path d="M34 50 A16 16 0 0 1 66 50 Z" fill="#56637c"/>
+          <path d="M22 38 q6 -12 20 -16" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/>
+        </g>
+      </g>
+    </symbol>
+
+    <!-- Daily (placeholder): calendar with a star day -->
+    <symbol id="i-daily" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <rect x="14" y="26" width="72" height="68" rx="14" fill="#b7bed3"/>
+        <rect x="14" y="20" width="72" height="68" rx="14" fill="#ffffff"/>
+        <g clip-path="url(#c-cal)">
+          <rect x="10" y="18" width="80" height="22" fill="#ff4f62"/>
+          <rect x="62" y="18" width="30" height="22" fill="#df3a50"/>
+          <rect x="62" y="40" width="30" height="50" fill="#e9edf5"/>
+        </g>
+        <g fill="#d3d9e7"><rect x="23" y="48" width="12" height="10" rx="3"/><rect x="41" y="48" width="12" height="10" rx="3"/><rect x="23" y="66" width="12" height="10" rx="3"/><rect x="41" y="66" width="12" height="10" rx="3"/></g>
+        <rect x="27" y="9" width="10" height="20" rx="5" fill="#6b7393"/>
+        <rect x="63" y="9" width="10" height="20" rx="5" fill="#6b7393"/>
+        <use href="#star5" transform="translate(69 64) scale(.95)" fill="#ffd23f"/>
+        <use href="#star5r" transform="translate(69 64) scale(.95)" fill="#f5a31e"/>
+        <path d="M22 31 q2 -5 9 -5" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/>
+      </g>
+    </symbol>
+
+    <!-- Playtime (placeholder): red gift box with a gold ribbon -->
+    <symbol id="i-gift" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M50 30 q-22 -22 -28 -8 q-3 8 28 8 q17 -23 26 -9 q4 8 -26 9" fill="#ffc83a"/>
+        <path d="M50 30 q17 -23 26 -9 q4 8 -26 9" fill="#f5a31e"/>
+        <path d="M62 52 L84 44 V81 L62 90 Z" fill="#c92a42"/>
+        <rect x="14" y="52" width="48" height="38" rx="3" fill="#ff4d5e"/>
+        <path d="M66 36 L89 28 V45 L66 53 Z" fill="#e03a50"/>
+        <path d="M9 36 L32 28 H89 L66 36 Z" fill="#ff8a96"/>
+        <rect x="9" y="36" width="57" height="17" rx="3" fill="#ff6573"/>
+        <rect x="14" y="53" width="48" height="4" fill="#d9374b"/>
+        <rect x="31" y="36" width="14" height="54" fill="#ffc83a"/>
+        <rect x="31" y="53" width="14" height="4" fill="#e8971c"/>
+        <path d="M31 36 L54 28 H68 L45 36 Z" fill="#ffd96a"/>
+        <path d="M72 48.8 L78 46.6 V83.5 L72 86 Z" fill="#f0a01c"/>
+        <path d="M76.5 33.5 L82.5 31.3 V42.7 L76.5 45 Z" fill="#f0a01c"/>
+        <path d="M28 21 q2 -3 6 -2" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <rect x="14" y="40" width="12" height="4" rx="2" fill="#fff"/>
+        <rect x="19" y="61" width="4" height="16" rx="2" fill="#fff" opacity=".6"/>
+        <use href="#spark" transform="translate(8 74) scale(.9)" fill="#fff"/>
+        <use href="#spark" transform="translate(92 14) scale(.7)" fill="#fff"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+  <!-- Inventory -->
+  <svg class="ico" style="left:20px;top:14px"><use href="#i-packA"/></svg>
+  <!-- Skills -->
+  <svg class="ico" style="left:276px;top:14px"><use href="#i-bolt"/></svg>
+  <!-- Achievements -->
+  <svg class="ico" style="left:532px;top:14px"><use href="#i-trophy"/></svg>
+  <!-- Daily -->
+  <svg class="ico" style="left:788px;top:14px"><use href="#i-daily"/></svg>
+  <!-- Index -->
+  <svg class="ico" style="left:20px;top:270px"><use href="#i-book"/></svg>
+  <!-- Settings -->
+  <svg class="ico" style="left:276px;top:270px"><use href="#i-gear"/></svg>
+  <!-- Playtime -->
+  <svg class="ico" style="left:532px;top:270px"><use href="#i-gift"/></svg>
+</body></html>

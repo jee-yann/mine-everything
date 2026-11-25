@@ -50,9 +50,6 @@ report.OnServerEvent:Connect(function(player, stage, detail)
 		local x = if inputTest then 0 elseif player.UserId % 2 == 0 then -4 else 5
 		char:PivotTo(CFrame.new(n:GetAttribute("Origin") + Vector3.new(x, 2.5, -2.5 * config.Cell)))
 		char.HumanoidRootPart.Anchored = true
-	elseif inputTest and stage == "moveOreVision" then
-		local root = player.Character.HumanoidRootPart
-		root.CFrame += Vector3.xAxis * (24 * config.Cell)
 	elseif stage == "depthSample" then
 		local root = player.Character.HumanoidRootPart
 		root.Anchored = true

@@ -10,6 +10,7 @@ local Audio = require(script.Parent.HarborAudio)
 local Roster = require(script.Parent.MinerRoster)
 local TouchActions = require(script.Parent.TouchActions)
 local Celebration = require(script.Parent.UnlockCelebration)
+local SideButtons = require(script.Parent.SideButtons)
 local Hud = {}
 Hud.__index = Hud
 local Input = game:GetService("UserInputService")
@@ -20,7 +21,14 @@ local hotbar = {
 	{ page = "Achievements", code = Enum.KeyCode.H },
 	{ page = "Book", code = Enum.KeyCode.J },
 	{ page = "Settings", code = Enum.KeyCode.P },
+	{ page = "Daily", code = Enum.KeyCode.L },
+	{ page = "Playtime", code = Enum.KeyCode.G },
 }
+-- Shortcut letters shown on the side buttons' keycaps.
+local shortcutLetters = {}
+for _, slot in hotbar do
+	shortcutLetters[slot.page] = slot.code.Name
+end
 local function card(parent, name, x, y, w, h, top, bottom)
 	local f = W.frame(parent, name, x, y, w, h, W.panel, 13)
 	W.stroke(f, W.ink, 2)
@@ -144,32 +152,51 @@ function Hud.new(player, net, mobile)
 			)
 		end)
 	end
-	local dockWidth = 476
-	local dock = clearFrame(root, "Action dock", 0, 0, dockWidth, 82)
+	-- Side buttons (desktop): menus in a rail on the left with a round Settings button above them,
+	-- rewards in a rail on the right. Touch and small screens use the Pack and Menu shortcuts instead.
 	self.hotbarPages = {}
 	self.navDots = {}
 	self.jobDot = W.dot(jobTap, -12, 1)
 	self.levelDot = W.pointBadge(self.levelRing.button, 0, -9)
-	local navX = 0
 	for _, slot in hotbar do
-		local key = slot.page
-		self.hotbarPages[slot.code] = key
-		local tint = Menu.pages[key].color
-		local width = if key == "Achievements" then 116 else 84
-		local b = W.clearButton(dock, key, navX, 0, width, 82, "Open")
-		navX += width + 6
-		Icons.draw(b, if key == "Inventory" then "Pack" else key, (width - 58) / 2, 0, 58, tint)
-		local caption = W.title(b, if key == "Book" then "Index" else key, 0, 55, width, 25, 17, W.white)
-		W.outlineText(caption, 2.2)
-		if key == "Skills" then
-			self.navDots[key] = W.pointBadge(b, -4, 1)
-		elseif key == "Achievements" or key == "Book" then
-			self.navDots[key] = W.dot(b, -19, 3)
+		self.hotbarPages[slot.code] = slot.page
+	end
+	local tileStep = SideButtons.size + 22
+	local menuRail = clearFrame(root, "Menu buttons", 0, 0, SideButtons.size + 14, 82 + 4 * tileStep - 22)
+	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, SideButtons.size + 14, 2 * tileStep)
+	self.sideKeys = {}
+	local settingsButton = SideButtons.round(menuRail, "Settings", shortcutLetters.Settings)
+	settingsButton.button.Activated:Connect(function()
+		self:openPage("Settings")
+	end)
+	table.insert(self.sideKeys, settingsButton.key)
+	for i, key in { "Inventory", "Skills", "Achievements", "Book" } do
+		local caption = if key == "Book" then "Index" elseif key == "Achievements" then "Awards" else key
+		local tile = SideButtons.tile(menuRail, key, caption, shortcutLetters[key])
+		tile.button.Position = UDim2.fromOffset(0, 82 + (i - 1) * tileStep)
+		table.insert(self.sideKeys, tile.key)
+		if key ~= "Inventory" then
+			self.navDots[key] = SideButtons.badge(tile, if key == "Book" then "NEW" else "!")
 		end
-		b.Activated:Connect(function()
+		tile.button.Activated:Connect(function()
 			self:openPage(key)
 		end)
 	end
+	-- Placeholders until the reward systems exist: Daily opens the seven-day gem card (on the Jobs
+	-- page for now) and Playtime only says it is coming. setGiftReady drives the ready wiggle.
+	local daily = SideButtons.tile(rewardRail, "Daily", "Daily", shortcutLetters.Daily)
+	daily.button.Position = UDim2.fromOffset(0, 14)
+	daily.button.Activated:Connect(function()
+		self:toggleHotbarPage("Daily")
+	end)
+	local gift = SideButtons.tile(rewardRail, "Playtime", "Gift", shortcutLetters.Playtime)
+	gift.button.Position = UDim2.fromOffset(0, 14 + tileStep)
+	gift.button.Activated:Connect(function()
+		self:toggleHotbarPage("Playtime")
+	end)
+	self.giftTile, self.giftBadge = gift, SideButtons.badge(gift)
+	table.insert(self.sideKeys, daily.key)
+	table.insert(self.sideKeys, gift.key)
 	local shortcuts = W.frame(root, "Edge shortcuts", 0, 0, 76, 100, W.ink)
 	shortcuts.BackgroundTransparency = 1
 	local function shortcut(key, tint, caption)
@@ -264,7 +291,8 @@ function Hud.new(player, net, mobile)
 		end
 	end)
 	local walletScale, taskScale, haulScale = W.scale(wallet), W.scale(taskCard), W.scale(haul)
-	local locScale, dockScale, speechScale = W.scale(loc), W.scale(dock), W.scale(speech)
+	local locScale, speechScale = W.scale(loc), W.scale(speech)
+	local menuRailScale, rewardRailScale = W.scale(menuRail), W.scale(rewardRail)
 	local toolScale = W.scale(tools)
 	local legacyChat
 	local chatWindow = game:GetService("TextChatService"):FindFirstChildOfClass("ChatWindowConfiguration")
@@ -288,8 +316,6 @@ function Hud.new(player, net, mobile)
 		walletScale.Scale, taskScale.Scale, haulScale.Scale, speechScale.Scale = s, s, s, s
 		toolScale.Scale = s
 		locScale.Scale = s
-		local navScale = math.clamp(math.min(width / 1120, height / 655), 0.98, 1.65)
-		dockScale.Scale = navScale
 		local full = GuiService:GetInsetArea(Enum.ScreenInsets.None)
 		self.viewportOffset = full.Min
 		local core = GuiService:GetInsetArea(Enum.ScreenInsets.CoreUISafeInsets)
@@ -327,7 +353,8 @@ function Hud.new(player, net, mobile)
 		local rosterHeight, browsing = self.roster:layout(s, margin, edge, rosterRoom, rosterOnDemand)
 		self.roster.panel.Visible = playing and (not rosterOnDemand or browsing)
 		shortcuts.Visible = playing and edge and not typing and not (browsing and narrow)
-		dock.Visible = playing and not edge
+		menuRail.Visible = playing and not edge
+		rewardRail.Visible = playing and not edge
 		taskCard.Visible = playing and not edge and not browsing
 		haul.Visible = playing and not edge and not browsing
 		wallet.Visible = playing and not (edge and (typing or (browsing and narrow)))
@@ -428,10 +455,39 @@ function Hud.new(player, net, mobile)
 				1,
 				UDim2.new(0, margin, 1, -bottom - 46 * s - (if self.status.Text == "" then 0 else 18 * s))
 			)
-			W.anchor(dock, 0.5, 1, UDim2.new(0.5, 0, 1, -margin))
 			local rightY = margin + rosterHeight + 4
 			W.anchor(taskCard, 1, 0, UDim2.new(1, -margin, 0, rightY))
 			W.anchor(haul, 1, 0, UDim2.new(1, -margin, 0, rightY + 55 * s))
+			-- The menu rail fills the left side between the chat window and the wallet, shrinking to fit.
+			local keyboard = not rosterOnDemand
+			for _, cap in self.sideKeys do
+				cap.Visible = keyboard
+			end
+			local railScale = math.clamp(math.min(width / 1500, height / 900), 0.7, 1.2)
+			local walletTop = height - margin - (46 + 52) * s - (if self.status.Text == "" then 0 else 18 * s)
+			local topLimit = margin + 6
+			for _, chat in { chatWindow, chatInput } do
+				if chat and chat.Enabled and chat.AbsoluteSize.Y > 0 then
+					local pos = chat.AbsolutePosition - root.AbsolutePosition
+					if pos.X < margin + 130 * railScale then
+						topLimit = math.max(topLimit, pos.Y + chat.AbsoluteSize.Y + 8)
+					end
+				end
+			end
+			local menuHeight = menuRail.Size.Y.Offset
+			local room = walletTop - 12 - topLimit
+			menuRailScale.Scale = math.max(0.45, math.min(railScale, room / menuHeight))
+			local menuTop = topLimit + math.max(0, (room - menuHeight * menuRailScale.Scale) / 2)
+			W.anchor(menuRail, 0, 0, UDim2.fromOffset(margin + 4, menuTop))
+			-- The reward rail sits under the haul card, or beside it when the haul is long.
+			local haulBottom = rightY + (55 + self.haul.Size.Y.Offset) * s + 12
+			local rewardHeight = rewardRail.Size.Y.Offset
+			rewardRailScale.Scale = railScale
+			if haulBottom + rewardHeight * railScale <= height - margin then
+				W.anchor(rewardRail, 1, 0, UDim2.fromOffset(width - margin, haulBottom))
+			else
+				W.anchor(rewardRail, 1, 0, UDim2.fromOffset(width - margin - 262 * s, rightY + 55 * s))
+			end
 		end
 		local touchGui = gui.Parent:FindFirstChild("TouchGui")
 		local jump = touchGui and touchGui:FindFirstChild("JumpButton", true)
@@ -451,7 +507,7 @@ function Hud.new(player, net, mobile)
 		meter.Size = UDim2.new(1, -20, 0, 7)
 		self.meterHeadroom = -meter.Position.Y.Offset * speechScale.Scale
 		local footer = if touchLayout and width < height then 136 else margin
-		local speechBottom = if edge then footer else margin + 82 * navScale + 8
+		local speechBottom = if edge then footer else margin + 24
 		local speechSize = Vector2.new(speechWidth, speech.Size.Y.Offset)
 		W.anchor(
 			speech,
@@ -535,6 +591,13 @@ function Hud:openPage(key)
 	self.reticle.Visible = false
 end
 function Hud:toggleHotbarPage(key)
+	if key == "Playtime" then
+		Audio.denied()
+		self:notice("Playtime gifts", "Coming soon: a free gift for every stretch of mining.", W.violet)
+		return
+	elseif key == "Daily" then
+		key = "Jobs"
+	end
 	local menu = self.menu
 	local samePage = menu.page == key or (key == "Inventory" and menu.tabLists[menu.page] ~= nil)
 	if self.overlay.Visible and samePage and not menu.closing then
@@ -544,6 +607,12 @@ function Hud:toggleHotbarPage(key)
 		Audio.menu(true)
 		self:openPage(key)
 	end
+end
+-- Playtime gift tile: `ready` makes it wiggle and say Ready!; otherwise `caption` (a countdown) shows.
+function Hud:setGiftReady(ready, caption, count)
+	SideButtons.setReady(self.giftTile, ready, caption)
+	self.giftBadge.Text = tostring(count or "!")
+	self.giftBadge.Visible = ready
 end
 function Hud:setShop(open)
 	if open then

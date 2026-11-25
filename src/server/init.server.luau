@@ -222,13 +222,6 @@ local function join(player)
 	applySkills(player, session.profile)
 	player:SetAttribute("IntroSeen", session.profile.introSeen)
 	player:SetAttribute("ProfileReady", true)
-	if player.UserId == PIXELII_USER_ID then
-		local gui = Instance.new("ScreenGui")
-		gui.Name, gui.ResetOnSpawn = "OwnerOreVision", false
-		require(script.OreVision)(gui, player, world)
-		script.OwnerOreVision:Clone().Parent = gui
-		gui.Parent = player:WaitForChild("PlayerGui")
-	end
 end
 world.grid.onFeature = function(player, kind, item)
 	local s, char = sessions[player], player.Character
