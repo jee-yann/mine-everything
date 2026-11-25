@@ -69,6 +69,10 @@ Mineral finds also roll a purity from 50% to 100%. Grade bonuses range from base
 
 The percentages apply to solid rock beneath the dirt floor. Cave air yields no material.
 
+### Rebirth
+
+After mining a Starfall in the current run, a miner can rebirth from the Rebirth button (U). A rebirth resets gold, the pack, workshop levels (Power, Speed, Backpack) and field supplies, and keeps the XP level and skills, gems, the Index, achievements, titles, pets, quests and deepest descent. Each rebirth adds permanent bonuses: ×(1 + rebirths) gold from ore sales, +25% mining XP and 5% faster cutting (up to 25%). Rebirth 1 also shows the count beside the miner's name on the Server miners board. Perks and milestones are data in `src/shared/Rebirth.luau`, so new rewards can be added there.
+
 At the amber Sell counter, tap **E** (or tap the prompt on mobile) to choose a material. The slider starts at one. Drag it, use **−** and **+**, or choose **Select all** for that ore. The sale button shows the quantity, ore and exact gold payout. It also shows how many of that material will remain in your pack. Press the sale button to trade the selection. **Sell entire pack** shows the total block count and payout for everything you carry. Holding the stall prompt for 0.65 seconds quick-sells the pack for the displayed amount.
 
 Buy pickaxe Power, swing Speed and backpack Capacity with gold at the Workshop. The first upgrades cost 36 gold for the Copper Pick, 30 gold for faster swings, and 8 gold for the larger backpack.

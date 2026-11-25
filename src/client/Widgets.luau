@@ -1,5 +1,6 @@
 local TweenService = game:GetService("TweenService")
 local Audio = require(script.Parent.HarborAudio)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Purity = require(game:GetService("ReplicatedStorage").Shared.OrePurity)
 local W = {}
 local rgb = Color3.fromRGB
@@ -227,7 +228,7 @@ function W.unitPrice(value)
 end
 function W.possiblePrice(ore, player)
 	local low, high = Purity.priceRange(ore, player:GetAttribute("SkillBroker"))
-	local multiplier = if player:GetAttribute("DoubleGold") then 2 else 1
+	local multiplier = Rebirth.saleMultiplier(player)
 	local amount = W.number(low * multiplier)
 	if low ~= high then amount ..= "–" .. W.number(high * multiplier) end
 	return amount .. " G"

@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 local Gui = game:GetService("GuiService")
 local Input = game:GetService("UserInputService")
 local Upgrades, Expeditions, Ores = require(Shared.Upgrades), require(Shared.Expeditions), require(Shared.Ores)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Settings = require(script.Parent.Settings)
 local SellCounter = require(script.Parent.SellCounter)
 local GuideButton = require(script.Parent.GuideButton)
@@ -44,6 +45,7 @@ Menu.pages = {
 	Book = { name = "Ore index", color = W.green },
 	Store = { name = "Outfitters", color = W.pink },
 	Pack = { name = "My backpack", color = W.gold },
+	Rebirth = { name = "Rebirth", color = W.violet },
 }
 function Menu.new(root, player, net, close)
 	local self = setmetatable({ player = player, net = net, prices = {}, updates = {} }, Menu)
@@ -238,7 +240,8 @@ function Menu:gear()
 		if key == "Capacity" then
 			return W.number(Skills.capacity(Upgrades.items.Capacity.values[level], owned)) .. " ore"
 		elseif key == "Speed" then
-			local seconds = Skills.cutTime(Upgrades.items.Speed.values[level], Ores.byName.Stone, 1, 0, owned)
+			local base = Upgrades.items.Speed.values[level] * Rebirth.cutMultiplier(self.player:GetAttribute("Rebirths") or 0)
+			local seconds = Skills.cutTime(base, Ores.byName.Stone, 1, 0, owned)
 			return string.format("%.2fs / stone", seconds)
 		end
 		return Upgrades.describe(key, level)
@@ -425,7 +428,7 @@ function Menu:pack()
 		end
 		for i, entry in held do
 			local item = rows[entry.ore.name]
-			local multiplier = if self.player:GetAttribute("DoubleGold") then 2 else 1
+			local multiplier = Rebirth.saleMultiplier(self.player)
 			local grades = Purity.decode(self.player:GetAttribute("Grades" .. entry.ore.name))
 			local low, high = Purity.range(grades)
 			local value = Purity.quote(entry.ore, entry.amount, grades, entry.amount, self.player:GetAttribute("SkillBroker")) * multiplier
@@ -505,6 +508,8 @@ function Menu:attention(key)
 				return true
 			end
 		end
+	elseif key == "Rebirth" then
+		return Rebirth.ready(p:GetAttribute("RunStarfalls") or 0)
 	elseif key == "Achievements" then
 		for _, award in Guide.achievements do
 			if
@@ -591,7 +596,7 @@ function Menu:store()
 	return #Catalog
 end
 local function shortcuts(self)
-	local destinations = { "Inventory", "Skills", "Achievements", "Book", "Jobs", "Settings", "Pets", "Miners" }
+	local destinations = { "Inventory", "Skills", "Achievements", "Book", "Jobs", "Rebirth", "Settings", "Pets", "Miners" }
 	for i, key in destinations do
 		local page = Menu.pages[key]
 		local color = if page then page.color else W.aqua
@@ -640,6 +645,77 @@ local function shortcuts(self)
 	end
 	return math.ceil(#destinations / 2)
 end
+-- Rebirth: the requirement and the Rebirth button (press twice to confirm), each perk now and
+-- after the next rebirth, the milestones, and what a rebirth keeps and resets.
+function Menu:rebirth()
+	local p = self.player
+	local need = Rebirth.requirement
+	local title, detail, button = self:row(1, "Rebirth", "Rebirth", W.violet)
+	detail.RichText = true
+	local confirming = false
+	table.insert(self.updates, function()
+		local found = p:GetAttribute("RunStarfalls") or 0
+		local ready = Rebirth.ready(found) and p:GetAttribute("ProfileReady") == true
+		title.Text = "Rebirth " .. (p:GetAttribute("Rebirths") or 0) + 1
+		if not ready then confirming = false end
+		detail.Text = requirement(string.format("Mine a %s this run  %d/%d", need.ore, math.min(found, need.count), need.count), found >= need.count)
+		if self.rebirthPending then
+			setButton(button, "Rebirthing…", W.muted, false)
+		elseif confirming then
+			setButton(button, "Confirm", W.gold, true)
+		else
+			setButton(button, "Rebirth", if ready then W.violet else unmet, ready)
+		end
+	end)
+	button.Activated:Connect(function()
+		if self.rebirthPending or not Rebirth.ready(p:GetAttribute("RunStarfalls") or 0) then return end
+		if not confirming then
+			confirming = true
+			self.status.Text = "Resets gold, your pack, workshop levels and supplies. Press Confirm to rebirth."
+		else
+			confirming = false
+			self.rebirthPending = true
+			self.net.Action:FireServer("Rebirth", p:GetAttribute("Rebirths") or 0)
+			self.status.Text = "Rebirthing…"
+		end
+		self:refresh()
+	end)
+	local rows = 1
+	local perkIcons = { Gold = "Coins", XP = "Skills", Cut = "Tempo" }
+	for _, perk in Rebirth.perks do
+		rows += 1
+		local title, perkDetail, perkButton = self:row(rows, perk.name, perkIcons[perk.id] or "Rebirth", W.gold)
+		perkButton.Interactable, perkButton.AutoButtonColor = false, false
+		table.insert(self.updates, function()
+			local n = p:GetAttribute("Rebirths") or 0
+			title.Text = perk.name
+			perkDetail.Text = if n > 0 then "Now " .. perk.text(n) .. "  ·  next " .. perk.text(n + 1)
+				else "After your first rebirth: " .. perk.text(1)
+			perkButton.Text = perk.text(n + 1)
+		end)
+	end
+	for _, milestone in Rebirth.milestones do
+		rows += 1
+		local _, mDetail, mButton = self:row(rows, milestone.name, "Achievements", W.orange)
+		mButton.Interactable, mButton.AutoButtonColor = false, false
+		mDetail.Text = milestone.detail
+		table.insert(self.updates, function()
+			local done = (p:GetAttribute("Rebirths") or 0) >= milestone.at
+			mButton.Text = if done then "Unlocked" else "Rebirth " .. milestone.at
+			mButton.BackgroundColor3 = if done then W.green else W.orange
+		end)
+	end
+	for _, info in {
+		{ "You keep", "Level and skills, gems, Index, achievements, titles, pets, quests and deepest descent.", "Book", W.green, "Kept" },
+		{ "Resets", "Gold, your pack, Power, Speed, Backpack and field supplies.", "Pack", unmet, "Reset" },
+	} do
+		rows += 1
+		local _, infoDetail, infoButton = self:row(rows, info[1], info[3], info[4])
+		infoDetail.Text = info[2]
+		infoButton.Text, infoButton.Interactable, infoButton.AutoButtonColor = info[5], false, false
+	end
+	return rows
+end
 local builders = {
 	Menu = shortcuts,
 	Gear = Menu.gear,
@@ -657,6 +733,7 @@ local builders = {
 	Book = Field.index,
 	Pack = Menu.pack,
 	Store = Menu.store,
+	Rebirth = Menu.rebirth,
 }
 function Menu:showInventoryTab(key, animate)
 	if not self.tabUpdates then
@@ -745,6 +822,7 @@ function Menu:open(key)
 		elseif key == "Settings" then "Changes take effect immediately."
 		elseif key == "Book" then "The first layer is dirt. Odds apply to solid rock."
 		elseif key == "Store" then "Permanent passes for this experience."
+		elseif key == "Rebirth" then "Start a new run with permanent bonuses."
 		else "Upgrades stay equipped between visits."
 	if isTab then
 		self:showInventoryTab(key, switchingTabs and self.preferences.values.MenuMotion)
@@ -805,7 +883,7 @@ function Menu:guideTrade()
 			or ((step == "Dig" or step == "Return") and full)
 		if wantsSale and self.sellAll.Interactable then
 			target = self.sellAll
-			local value = (self.player:GetAttribute("BagValue") or 0) * (if self.player:GetAttribute("DoubleGold") then 2 else 1)
+			local value = (self.player:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(self.player)
 			hint = "Sell all for " .. W.goldAmount(value) .. " G"
 		elseif step == "Upgrade" then
 			target = self.closeButton
@@ -887,7 +965,7 @@ function Menu:refresh()
 			W.goldAmount(used), if used == 1 then "block" else "blocks")
 	elseif self.page == "Pack" then
 		local cap = p:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1]
-		local value = (p:GetAttribute("BagValue") or 0) * (if p:GetAttribute("DoubleGold") then 2 else 1)
+		local value = (p:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(p)
 		self.sub.Text = string.format("%d / %d slots   ·   %s G", p:GetAttribute("Used") or 0, cap, W.number(value))
 	elseif self.page == "Gear" then
 		self.sub.Text = W.goldAmount(p:GetAttribute("Gold") or 0) .. " gold available"
@@ -903,6 +981,10 @@ function Menu:refresh()
 			end
 		end
 		self.sub.Text = found .. " / " .. #Ores.list .. " materials discovered"
+	elseif self.page == "Rebirth" then
+		local n = p:GetAttribute("Rebirths") or 0
+		self.sub.Text = if n > 0 then string.format("Rebirth %d    ·    %s", n, Rebirth.perks[1].text(n))
+			else "No rebirths yet"
 	else
 		self.sub.Text = "Game passes"
 	end

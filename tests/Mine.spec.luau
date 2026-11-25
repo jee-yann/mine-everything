@@ -711,6 +711,42 @@ do
 	local starfall = hits(layers[last], "Starfall", { 5, 6, 7, 8, 9 }, 1000000) -- expect 125
 	assert(starfall >= 92 and starfall <= 158, "Starfall sampled " .. starfall .. " times in five million blocks")
 	print("SAMPLE Sunstone", sunstone, "per million; Starfall", starfall, "per five million")
+	-- Rebirth: locked until a Starfall is mined this run; resets the run and keeps the miner.
+	do
+		local Rebirth = require(Shared.Rebirth)
+		assert(Rebirth.goldMultiplier(1) == 2 and Rebirth.xpMultiplier(2) == 1.5)
+		assert(Rebirth.cutMultiplier(1) == 0.95 and Rebirth.cutMultiplier(20) == 1 - Rebirth.cutCap)
+		local run = Profile.new()
+		run.gold, run.flares, run.temper, run.xp = 5000, 2, 3, 4000
+		run.levels = { Speed = 12, Power = 9, Capacity = 7 }
+		run.skills.Reach, run.gems, run.bestDepth, run.title = true, 40, 900, 2
+		Profile.recordCut(run, "Coal", 10, Random.new(1))
+		assert(Profile.rebirth(run) == nil and run.gold == 5000, "no rebirth before a Starfall")
+		Profile.recordCut(run, "Starfall", 600, Random.new(2))
+		assert(run.runStarfalls == 1 and Profile.valid(run))
+		local xpBefore = run.xp
+		assert(Profile.rebirth(run) == 1, "rebirth after a Starfall")
+		assert(run.gold == 0 and run.flares == 0 and run.temper == 0 and next(run.bag) == nil and next(run.grades) == nil)
+		assert(run.levels.Speed == 1 and run.levels.Power == 1 and run.levels.Capacity == 1, "workshop resets")
+		assert(run.xp == xpBefore and run.skills.Reach and run.gems == 40 and run.bestDepth == 900 and run.title == 2)
+		assert(run.discoveries.Starfall and run.counts.Starfall == 1 and run.bestPurity.Coal, "the Index stays")
+		assert(run.runStarfalls == 0 and Profile.rebirth(run) == nil, "the next rebirth needs a new Starfall")
+		assert(Profile.valid(run))
+		-- Rebirth XP bonus: one rebirth gives 25% more XP per cut, rounded.
+		local plain, reborn = Profile.new(), Profile.new()
+		reborn.rebirths = 1
+		Profile.recordCut(plain, "Copper", 40, Random.new(3))
+		Profile.recordCut(reborn, "Copper", 40, Random.new(3))
+		assert(reborn.xp == math.floor(plain.xp * 1.25 + 0.5), "rebirth XP bonus")
+		-- Saves from before rebirths count their Starfalls toward this run.
+		local legacy = Profile.new()
+		legacy.rebirths, legacy.runStarfalls, legacy.counts = nil, nil, { Starfall = 2 }
+		Profile.upgradeSave(legacy)
+		assert(legacy.rebirths == 0 and legacy.runStarfalls == 2 and Profile.valid(legacy))
+		local saved = Data.snapshot(run)
+		assert(saved.rebirths == 1 and saved.runStarfalls == 0, "rebirth fields save")
+		print("PASS rebirth unlock, reset, kept progress, XP bonus and legacy saves")
+	end
 	-- A save from before the expansion still loads, with its picks, pack and discoveries.
 	local oldSave = Profile.new()
 	oldSave.levels = { Speed = 7, Power = 6, Capacity = 8 }

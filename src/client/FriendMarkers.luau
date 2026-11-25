@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Expeditions = require(Shared.Expeditions)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local W = require(script.Parent.Widgets)
 
 local MARKER, CARD = 30, Vector2.new(196, 74)
@@ -31,7 +32,7 @@ return function(player: Player, hud: any)
 		local rank = Expeditions.ranks[friend:GetAttribute("EquippedTitle") or 1]
 		name.Text = friend.DisplayName
 		title.Text = string.format("%s  ·  Lv %d", if rank then rank.name else "Miner", level)
-		local value = (friend:GetAttribute("BagValue") or 0) * (if friend:GetAttribute("DoubleGold") then 2 else 1)
+		local value = (friend:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(friend)
 		haul.Text = string.format("Haul %s / %s  ·  %s G", W.number(friend:GetAttribute("Used") or 0),
 			W.number(friend:GetAttribute("PackSlots") or 8), W.number(value))
 	end
