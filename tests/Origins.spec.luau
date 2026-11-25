@@ -9,7 +9,7 @@ local lighting = game.Lighting
 local landing = workspace.CitrineCove["Sand path and bridge"].Landing.Position + Vector3.yAxis * 4
 local mapSize = #workspace.CitrineCove:GetDescendants()
 -- Underground replays can use the private copy of today's harbor while the live map streams.
-for _, name in {"Spring run", "Canal step", "Roof strut", "Loading bin", "Wagon unload platform", "Wharf step", "Planked rail crossing"} do
+for _, name in {"Spring run", "Canal step", "Roof strut", "Adit lintel", "Headframe deck", "Lookout deck", "Shop sign", "Beacon gallery", "Mine sign"} do
 	local live = assert(workspace.CitrineCove:FindFirstChild(name, true), name)
 	local found = false
 	for _, part in source.CoveReplay:GetDescendants() do
