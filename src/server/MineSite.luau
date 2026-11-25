@@ -33,10 +33,6 @@ function MineSite.bind(map, world)
 	map:PivotTo(CFrame.new(world.origin))
 	local market = map["Shore market"]
 	local harbor = map["Harbor Plaza"]
-	local landing = map["Sand path and bridge"].Landing
-	local bench = require(game.ReplicatedStorage.Shared.FieldBench)
-	local samples = bench.build(bench.location(landing.Position + Vector3.yAxis * 4))
-	samples.Parent = map
 	local stations = {
 		Sell = market.Sell["Service mat"].Service,
 		Shop = market.Upgrades["Service mat"].Service,
@@ -53,7 +49,6 @@ function MineSite.bind(map, world)
 	end
 	return {
 		spawn = map["Sand path and bridge"].Landing,
-		samples = samples:FindFirstChild("Consult samples", true),
 		stations = stations,
 		court = harbor["Miners Court"],
 	}

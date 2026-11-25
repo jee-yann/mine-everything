@@ -58,6 +58,11 @@ def rz(d):
 I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
 
+# What stays bare: water, cut crystal, lettered boards, small inlays.
+BARE = {"Falling water", "Falls lip", "Current", "Whitewater", "Spring run", "Falls bed", "Plunge pool", "Pool water", "Spill water", "Lagoon", "Surf line",
+        "Lily pad", "Lily", "Reed", "Crystal facet", "Crystal point", "Compass needle", "Adit dark", "Shop sign", "Sign board", "Mine sign"}
+
+
 class Frame:
     """A place to build from: a position and a turn. +Z is the front of whatever stands there."""
 
@@ -124,11 +129,14 @@ class Builder:
             for c in range(3):
                 ET.SubElement(cf, f"R{r}{c}").text = f"{m[r][c]:.7f}"
         field(it, "Color3uint8", "Color3uint8", 0xFF000000 | int(color, 16))
-        field(it, "token", "Material", mat)
         x, y, z = size
         spans = {"TopSurface": (x, z), "BottomSurface": (x, z), "LeftSurface": (y, z), "RightSurface": (y, z),
                  "FrontSurface": (x, y), "BackSurface": (x, y)}
-        on = studs if studs is not None else mat == PLASTIC
+        # Anything built wears studs wherever a face can show one.
+        on = label not in BARE and mat not in (NEON, GLASS) and shape is None and not alpha and max(min(v) for v in spans.values()) >= 0.95
+        if on:
+            mat = PLASTIC
+        field(it, "token", "Material", mat)
         for face in FACES:
             # A face under one stud across cannot show a whole one.
             field(it, "token", face, STUD if on and min(spans[face]) >= 0.95 else 0)
@@ -203,6 +211,8 @@ class Builder:
                         fn()
                         made, self.trial, self.shift = self.trial, None, [0.0, 0.0, 0.0]
                 bad = self.worst(made, dx != 0 or dz != 0, reach > 0)
+                if bad is None and label in LEVEL and not self.level(made):
+                    bad = 5.0
                 if bad is None:
                     for rec in made:
                         self.settle(rec)
@@ -223,6 +233,20 @@ class Builder:
                     for rec in made:
                         self.settle(rec)
                     print("tight:", label, [round(v, 1) for v in made[0]["at"]], round(best[0], 2))
+
+    def level(self, made):
+        """True if every foot of a prop stands on something."""
+        foot = min(r["lo"][1] for r in made)
+        for r in made:
+            if r["lo"][1] > foot + 0.1:
+                continue
+            for s in (-0.7, 0.7):
+                for t in (-0.7, 0.7):
+                    x, z = (r["at"][i] + r["m"][i][0] * r["h"][0] * s + r["m"][i][2] * r["h"][2] * t for i in (0, 2))
+                    y = self.ground(x, z, foot + 0.6, r["owner"])
+                    if y is None or abs(y - foot) > 0.2:
+                        return False
+        return True
 
     def ground(self, x, z, high, owner):
         """The top of the first solid thing below (x, high, z)."""
@@ -413,6 +437,9 @@ def stud_all(item):
              "FrontSurface": (x, y), "BackSurface": (x, y)}
     for face in FACES:
         field(item, "token", face, STUD if min(spans[face]) >= 0.95 else 0)
+
+
+LEVEL = {"bench", "crate", "barrel", "lamp", "banner", "sack"}
 
 
 def footprint(item):

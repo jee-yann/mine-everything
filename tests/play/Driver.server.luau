@@ -90,12 +90,10 @@ report.OnServerEvent:Connect(function(player, stage, detail)
 			Gear = island["Shore market"].Upgrades["Service mat"],
 			Store = island["Harbor Plaza"].Store.Counter,
 			Book = island["Harbor Plaza"].Book.Counter,
-			Samples = island["Field sample bench"]["Catalogue plate"],
 			Supplies = island["Harbor Plaza"].Supplies.Counter,
 		}
 		if positions[detail] then
-			local approach = if detail == "Samples" then Vector3.new(0, 1, 3) else Vector3.yAxis * 3
-			player.Character:PivotTo(CFrame.new(positions[detail].Position + approach))
+			player.Character:PivotTo(CFrame.new(positions[detail].Position + Vector3.yAxis * 3))
 			player.Character.HumanoidRootPart.Anchored = true
 		end
 	elseif stage == "closePage" then

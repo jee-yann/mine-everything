@@ -51,7 +51,7 @@ def keep(src, parent, only=None, studs=True, table=GREEN, solid=True):
         for p in it.iter("Item"):
             if p.get("class") in ("Part", "WedgePart", "SpawnLocation"):
                 recolor(p, table)
-                if studs and int(prop(p, "Material").text) in (PLASTIC, SMOOTH, 800, 816, 788) and "ater" not in name(p) and name(p) != "Lagoon":
+                if studs and int(prop(p, "Material").text) in (PLASTIC, SMOOTH, 512, 800, 816, 788, 1088) and "ater" not in name(p) and name(p) != "Lagoon":
                     stud_all(p)
                 if solid and prop(p, "CanCollide") is not None and prop(p, "CanCollide").text == "true":
                     b.solids.append(footprint(p))
@@ -82,6 +82,10 @@ primary = ET.SubElement(root.find("Properties"), "Ref", name="PrimaryPart")
 primary.text = origin.get("referent")
 
 hall = group("Working gallery")
+# The hall's old timbers stood on ground that can be dug away. Its new ones hang from the walls.
+for p in list(CORE["Working gallery"].findall("Item")):
+    if name(p) in ("Timber upright", "Timber foot", "Roof strut", "Roof bearing", "Wall rail"):
+        CORE["Working gallery"].remove(p)
 keep(CORE["Working gallery"], hall, table={"86CA67": P["grass"]})
 for p in hall.findall("Item"):
     k = name(p)
@@ -103,10 +107,16 @@ for p in list(isle.findall("Item")):
         isle.remove(p)
 paths = group("Sand path and bridge")
 STEP = {"86CA67": P["grass"]}
+for p in list(CORE["Sand path and bridge"].findall("Item")):
+    if name(p) == "Rail post":
+        CORE["Sand path and bridge"].remove(p)
 keep(CORE["Sand path and bridge"], paths)
 for p in paths.findall("Item"):
     ink = {"Canal step": P["stone2"], "Canal landing": P["stone"], "Bridge decking": P["wood2"], "Bridge bearer": P["wood2"],
            "Rail post": P["wood2"], "Portal paving": P["stone"], "Mine path": P["path"]}.get(name(p))
+    if name(p) == "Mine path":
+        # From the square to the bridge.
+        prop(p, "size").find("Z").text, prop(p, "CFrame").find("Z").text = "2.7", "26.79"
     if ink:
         field(p, "Color3uint8", "Color3uint8", 0xFF000000 | int(ink, 16))
 high = group("Citrine Highlands")
@@ -116,14 +126,37 @@ for m in group("Citrine Highlands", "Outer meadows").findall("Item"):
         for p in m.findall("Item"):
             ink = {"Timber deck": P["wood2"], "Footboard": P["plank"], "Bridge pile": P["wood2"], "Painted cap": P["citrine"], "Handrail": P["wood"]}[name(p)]
             field(p, "Color3uint8", "Color3uint8", 0xFF000000 | int(ink, 16))
-keep(CORE["Ridge tramway"], group("Citrine Highlands", "Ridge tramway"), studs=False)
-keep(CORE["Moving cabins"], group("Citrine Highlands", "Moving cabins"), studs=False, solid=False)
+tram = group("Citrine Highlands", "Ridge tramway")
+for p in list(CORE["Ridge tramway"].findall("Item")):
+    if name(p) == "Receiving hopper cheek":
+        CORE["Ridge tramway"].remove(p)
+    elif name(p) == "Rail" and xyz(p, "size")[0] > 0.4:
+        # Tower legs and rungs, thick enough for a stud.
+        for k in "XY":
+            prop(p, "size").find(k).text = "1.1" if xyz(p, "size")[2] > 20 else "0.96"
+keep(CORE["Ridge tramway"], tram)
+for p in tram.findall("Item"):
+    if name(p) == "Receiving hopper floor":
+        # A square-cornered bin. Its rim stays under the tipping bucket.
+        x, y, z = xyz(p, "CFrame")
+        for s in (-1, 1):
+            b.part(tram, "Receiving hopper wall", [x + s * 2.95, y + 0.5, z], [0.5, 2.0, 4.2], P["wood"], solid=False)
+            b.part(tram, "Receiving hopper wall", [x, y + 0.5, z + s * 1.85], [5.4, 2.0, 0.5], P["plank"], solid=False)
+keep(CORE["Moving cabins"], group("Citrine Highlands", "Moving cabins"), solid=False)
 trail = group("Citrine Highlands", "Cableway trail")
 keep(CORE["Cableway trail"], trail)
 for p in trail.findall("Item"):
     lift = {"Survey trail": 0.3, "Trail bend": 0.42, "Cross-ridge trail": 0.3}.get(name(p), 0)
+    if lift and (79 if name(p) == "Trail bend" else 93) < abs(xyz(p, "CFrame")[0]) < 108 and xyz(p, "CFrame")[2] < -42:
+        # Here the trail dips to the height of the ridge.
+        lift += 0.3 if name(p) == "Trail bend" else 0.2
     cf = prop(p, "CFrame").find("Y")
     cf.text = f"{float(cf.text) + lift:.4f}"
+    if lift:
+        # Thick enough to reach the ground it lies on.
+        deep = min((prop(p, "size").find(k) for k in "XYZ"), key=lambda e: float(e.text))
+        deep.text = f"{float(deep.text) + 0.5:.4f}"
+        cf.text = f"{float(cf.text) - 0.25:.4f}"
     ink = {"Ridgeline turf": P["grass3"], "Mine roof slope": P["grass"], "Rear roof slope": P["grass"], "Survey trail": P["path"],
            "Trail bend": P["path"], "Cross-ridge trail": P["path"], "Tower footing": P["slate2"]}[name(p)]
     field(p, "Color3uint8", "Color3uint8", 0xFF000000 | int(ink, 16))
@@ -273,6 +306,7 @@ def palm(parent, x, z, y=24, s=1.0, yaw=0):
         b.part(parent, "Palm trunk", [px + 0.12 * i * s, py + 0.9 * s, 0], [(1.35 - 0.08 * i) * s, 1.9 * s, (1.35 - 0.08 * i) * s], P["wood3" if i % 2 else "wood"], f, rz(-4 - 2 * i))
         px += 0.14 * i * s
         py += 1.75 * s
+    b.part(parent, "Palm crown", [px + 0.7 * s, py + 0.57 * s, 0], [1.5 * s, 1.2 * s, 1.5 * s], P["grass"], f, solid=False)
     for i in range(6):
         g = f.sub(px + 0.7 * s, py + (0.44 + 0.09 * (i % 3)) * s, 0, i * 60)
         b.part(parent, "Palm leaf", [0, 0.05 * s, 1.7 * s], [1.7 * s, 0.4 * s, 3.4 * s], P["grass3"], g, rx(6), solid=False)
@@ -314,7 +348,7 @@ def lamp(parent, x, y, z, tone="FFD79A", tall=7.0, lit=True, yaw=0):
     b.part(parent, "Lamp foot", [0, 0.4, 0], [2.0, 0.8, 2.0], P["slate3"], f)
     b.part(parent, "Lamp post", [0, tall / 2 + 0.4, 0], [0.9, tall, 0.9], P["wood2"], f, studs=False)
     b.part(parent, "Lamp collar", [0, tall + 0.4, 0], [1.9, 0.5, 1.9], P["slate3"], f)
-    glass = b.part(parent, "Lamp glass", [0, tall + 1.4, 0], [1.0, 1.4, 1.0], "FFC15E", f, mat=NEON, solid=False, shadow=False)
+    glass = b.part(parent, "Lamp glass", [0, tall + 1.4, 0], [1.0, 1.5, 1.0], "FFC15E", f, mat=NEON, solid=False, shadow=False)
     b.part(parent, "Lamp roof", [0, tall + 2.4, 0], [1.9, 0.5, 1.9], P["honey"], f, studs=False)
     b.part(parent, "Lamp finial", [0, tall + 3.0, 0], [0.9, 0.7, 0.9], P["citrine"], f, solid=False, mat=SMOOTH)
     if lit:
@@ -328,7 +362,7 @@ def bench(parent, x, y, z, yaw=0):
     for s in (-1, 1):
         b.part(parent, "Bench leg", [s * 2.2, 0.7, 0], [1.0, 1.4, 1.8], P["slate3"], f)
     b.part(parent, "Bench seat", [0, 1.6, 0.1], [6.2, 0.5, 2.0], P["plank"], f)
-    b.part(parent, "Bench back", [0, 2.9, -0.85], [6.2, 1.5, 0.4], P["wood"], f, rx(-8))
+    b.part(parent, "Bench back", [0, 2.65, -0.65], [6.2, 1.6, 0.5], P["wood"], f)
 
 
 @fitted(3.2, must=True)
@@ -342,11 +376,9 @@ def crate(parent, x, y, z, s=2.4, yaw=0, tone="plank"):
 @fitted(3.2)
 def barrel(parent, x, y, z, tone="wood", s=1.0):
     f = Frame(x, y, z, rng.uniform(0, 45))
-    b.part(parent, "Barrel", [0, 1.4 * s, 0], [2.0 * s, 2.8 * s, 2.0 * s], P[tone], f, studs=False)
-    b.part(parent, "Barrel", [0, 1.36 * s, 0], [1.96 * s, 2.68 * s, 1.96 * s], P[tone], f, ry(45), studs=False)
-    for k in (0.55, 2.25):
-        for t in (0, 45):
-            b.part(parent, "Barrel hoop", [0, k * s, 0], [(2.14 - t * 0.001) * s, (0.3 - t * 0.0012) * s, (2.14 - t * 0.001) * s], P["iron"], f, ry(t), studs=False, solid=False, mat=SMOOTH)
+    b.pad(parent, "Barrel", 0, 0, 2.2 * s, 2.2 * s, 0, 2.8 * s, P[tone], 0.6 * s, f)
+    for k in (0.4, 2.05):
+        b.pad(parent, "Barrel hoop", 0, 0, 2.4 * s, 2.4 * s, k * s, (k + 0.35) * s, P["iron"], 0.655 * s, f)
 
 
 @fitted(3.2)
@@ -370,16 +402,21 @@ def cart(parent, x, y, z, yaw=0, load=("slate2", "citrine", "slate")):
     f = Frame(x, y, z, yaw)
     for sx in (-1, 1):
         for sz in (-1.15, 1.15):
-            b.part(parent, "Flanged wheel", [sx * 2.1, 0.75, sz], [0.4, 1.5, 1.5], P["iron"], f, mat=SMOOTH, studs=False, shape=2)
-    b.part(parent, "Wagon bed", [0, 1.35, 0], [3.8, 0.6, 5.4], P["iron"], f)
+            # The tread stands on the rail. The flange runs down inside it.
+            b.part(parent, "Flanged wheel", [sx * 2.1, 0.75, sz], [0.4, 1.5, 1.5], P["iron"], f, mat=SMOOTH, shape=2)
+            b.part(parent, "Wheel flange", [sx * 1.78, 0.75, sz], [0.2, 1.9, 1.9], P["ink"], f, mat=SMOOTH, shape=2)
+        b.part(parent, "Axle", [0, 0.75, sx * 1.15], [3.3, 0.4, 0.4], P["ink"], f, mat=SMOOTH)
+    b.part(parent, "Wagon frame", [0, 1.25, 0], [2.6, 0.6, 5.4], P["ink"], f)
+    b.part(parent, "Wagon bed", [0, 1.85, 0], [3.8, 0.6, 5.4], P["iron"], f)
     for s in (-1, 1):
-        b.part(parent, "Wagon side", [s * 1.95, 2.7, 0], [0.5, 2.4, 5.4], P["iron2"], f, rz(-s * 6))
-        b.part(parent, "Wagon end", [0, 2.7, s * 2.6], [3.8, 2.4, 0.5], P["iron2"], f)
-    b.part(parent, "Wagon rim", [0, 3.95, 0], [4.7, 0.35, 0.5], P["citrine"], f.sub(0, 0, 2.65), studs=False)
-    b.part(parent, "Wagon rim", [0, 3.95, 0], [4.7, 0.35, 0.5], P["citrine"], f.sub(0, 0, -2.65), studs=False)
+        b.part(parent, "Wagon side", [s * 1.95, 3.2, 0], [0.5, 2.1, 5.4], P["iron2"], f)
+        b.part(parent, "Wagon end", [0, 3.2, s * 2.45], [3.4, 2.1, 0.5], P["iron2"], f)
+        b.part(parent, "Wagon rim", [0, 4.4, s * 2.5], [4.6, 0.3, 0.7], P["citrine"], f)
+        b.part(parent, "Wagon rim", [s * 1.95, 4.4, 0], [0.7, 0.3, 4.3], P["citrine"], f)
+    b.part(parent, "Wagon load", [0, 2.8, 0], [3.4, 1.3, 4.4], P[load[0]], f)
     for i in range(7):
-        k = rng.uniform(1.1, 1.8)
-        b.part(parent, "Fractured stone", [rng.uniform(-1.1, 1.1), 3.4 + rng.uniform(0, 0.9), rng.uniform(-1.9, 1.9)], [k, k * 0.8, k], P[load[i % len(load)]], f,
+        k = rng.uniform(1.0, 1.4)
+        b.part(parent, "Fractured stone", [rng.uniform(-0.75, 0.75), 3.7 + rng.uniform(0, 0.9), rng.uniform(-1.4, 1.4)], [k, k * 0.8, k], P[load[i % len(load)]], f,
                matmul(ry(rng.uniform(0, 90)), rz(rng.uniform(-20, 20))), mat=SMOOTH, solid=False, studs=False)
 
 
@@ -452,6 +489,8 @@ def banner(parent, x, y, z, yaw, tone, mark):
     b.part(parent, "Banner pole", [0, 5.6, 0], [0.7, 10.4, 0.7], P["wood2"], f, studs=False)
     b.part(parent, "Banner arm", [1.3, 10.2, 0], [3.4, 0.5, 0.5], P["wood2"], f, studs=False)
     b.part(parent, "Banner cloth", [1.55, 7.5, 0], [2.6, 5.0, 0.3], P[tone], f, studs=False, solid=False, mat=SMOOTH)
-    b.part(parent, "Banner tail", [1.55, 4.6, 0], [1.84, 1.84, 0.28], P[tone], f, rz(45), studs=False, solid=False, mat=SMOOTH)
+    for s in (-1, 1):
+        # The point of the cloth: two wedges that meet under it.
+        b.part(parent, "Banner tail", [1.55 - s * 0.65, 4.35, 0], [0.3, 1.3, 1.3], P[tone], f, [[0, 0, s], [0, -1, 0], [s, 0, 0]], "WedgePart", solid=False)
     b.part(parent, "Banner mark", [1.55, 7.7, 0], [1.2, 1.2, 0.5], P[mark], f, rz(45), studs=False, solid=False, mat=SMOOTH)
     b.part(parent, "Banner finial", [0, 11.1, 0], [1.0, 1.0, 1.0], P["citrine"], f, ry(45), studs=False, solid=False, mat=SMOOTH)

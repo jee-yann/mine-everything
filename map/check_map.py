@@ -3,6 +3,7 @@
   flicker   two faces within a hair of each other, both the first thing a ray meets
   clipping  a prop standing inside something it does not belong to
   traps     ground a miner can fall to and cannot jump or walk out of
+  floating  anything that touches nothing on its way down to the ground
 """
 
 import sys
@@ -238,6 +239,39 @@ def clipping(parts):
     return hits
 
 
+def floating(parts):
+    """Groups of touching parts that never reach the island."""
+    live = [p for p in parts if p.alpha < 0.9 and p.name != "Outer cliff boundary" and "Moving cabins" not in p.path and "Ore tender" not in p.path]
+    cell = defaultdict(list)
+    for n, p in enumerate(live):
+        for x in range(int(p.lo[0] // 8), int(p.hi[0] // 8) + 1):
+            for z in range(int(p.lo[2] // 8), int(p.hi[2] // 8) + 1):
+                cell[x, z].append(n)
+    root = list(range(len(live)))
+
+    def find(n):
+        while root[n] != n:
+            root[n] = root[root[n]]
+            n = root[n]
+        return n
+    for group in cell.values():
+        for i, n in enumerate(group):
+            p = live[n]
+            for m in group[i + 1:]:
+                q = live[m]
+                if find(n) == find(m) or (p.lo > q.hi + 0.04).any() or (q.lo > p.hi + 0.04).any():
+                    continue
+                p.h += 0.04
+                if overlap(p, q) > 0:
+                    root[find(n)] = find(m)
+                p.h -= 0.04
+    groups = defaultdict(list)
+    for n, p in enumerate(live):
+        groups[find(n)].append(p)
+    # The island is the biggest group.
+    return sorted(groups.values(), key=len)[:-1]
+
+
 def objects(parts):
     """Draw the map again to learn which parts belong to one object."""
     import cove
@@ -252,7 +286,7 @@ def objects(parts):
 if __name__ == "__main__":
     parts = load()
     objects(parts)
-    what = sys.argv[1:] or ["flicker", "clipping", "traps"]
+    what = sys.argv[1:] or ["flicker", "clipping", "traps", "floating"]
     print(len(parts), "parts")
     if "flicker" in what:
         f = flicker(parts)
@@ -269,3 +303,11 @@ if __name__ == "__main__":
         print("TRAPS", len(t), "pockets")
         for p in t[:40]:
             print("  ", p)
+    if "floating" in what:
+        loose = floating(parts)
+        print("FLOATING", len(loose), "groups")
+        seen = Counter()
+        for g in loose:
+            seen[g[0].path.split("/")[-1], g[0].name] += 1
+            if seen[g[0].path.split("/")[-1], g[0].name] <= 3:
+                print("  ", len(g), g[0].path.split("/")[-1], g[0].name, np.round(g[0].pos, 1), round(min(float(p.lo[1]) for p in g), 2))

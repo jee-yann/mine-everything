@@ -465,7 +465,6 @@ local function test()
 		Gear = map["Shore market"].Upgrades["Service mat"],
 		Store = map["Harbor Plaza"].Store.Counter,
 		Book = map["Harbor Plaza"].Book.Counter,
-		Samples = map["Field sample bench"]["Catalogue plate"],
 		Supplies = map["Harbor Plaza"].Supplies.Counter,
 	}
 	local function visit(key, activate)
@@ -482,10 +481,10 @@ local function test()
 			service:InputHoldEnd()
 		end
 	end
-	visit("Samples", true)
-	waitFor(function() return overlay.Visible and menu.Listings:FindFirstChild("Iron Shelf") end, 5, "consult samples at the physical bench")
+	visit("Book", true)
+	waitFor(function() return overlay.Visible and menu.Listings:FindFirstChild("Iron Shelf") end, 5, "open the Ore Index at its stall")
 	r:FireServer("closePage")
-	waitFor(function() return not overlay.Visible end, 5, "leave the sample bench")
+	waitFor(function() return not overlay.Visible end, 5, "leave the Ore Index stall")
 	local roster = gui.SafeArea["Server leaderboard"]
 	assert(not game.StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.PlayerList))
 	if game.UserInputService.PreferredInput == Enum.PreferredInput.Touch then

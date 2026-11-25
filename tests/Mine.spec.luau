@@ -812,9 +812,9 @@ for _, part in mapCopy["Offshore water"]:GetDescendants() do
 	end
 end
 do
-	local allowed = { [Enum.Material.Plastic] = true, [Enum.Material.SmoothPlastic] = true, [Enum.Material.Neon] = true, [Enum.Material.Metal] = true, [Enum.Material.Wood] = true }
+	local allowed = { [Enum.Material.Plastic] = true, [Enum.Material.SmoothPlastic] = true, [Enum.Material.Neon] = true, [Enum.Material.Metal] = true }
 	for _, part in mapCopy:GetDescendants() do
-		if part:IsA("BasePart") and part.Transparency < 1 and not part:FindFirstAncestor("EditFace") and not part:FindFirstAncestor("Working gallery") then
+		if part:IsA("BasePart") and part.Transparency < 1 and not part:FindFirstAncestor("EditFace") then
 			assert(allowed[part.Material], "off-style material " .. part.Material.Name .. " on " .. part:GetFullName())
 		end
 	end
@@ -961,7 +961,7 @@ do
 				end
 			end
 			assert(near < 0.1, "a wagon is off its rails")
-			assert(math.abs(part.Position.Y - part.Size.Y / 2 - (tracks[1].Position.Y + tracks[1].Size.Y / 2)) < 0.55, "a wagon floats")
+			assert(math.abs(part.Position.Y - part.Size.Y / 2 - (tracks[1].Position.Y + tracks[1].Size.Y / 2)) < 0.03, "a wagon is not on top of its rails")
 		end
 	end
 	assert(wheels >= 8)
@@ -1090,6 +1090,19 @@ do
 	end
 end
 local gallery = mapCopy["Working gallery"]
+do
+	-- The hall's timbers hang from its walls. Every layer of ground can be dug from under them.
+	local posts, lowest = 0, math.huge
+	for _, part in gallery:GetChildren() do
+		if part.Name == "Wall corbel" or part.Name == "Wall wale" or part.Name == "Timber upright" then
+			posts += if part.Name == "Timber upright" then 1 else 0
+			lowest = math.min(lowest, part.Position.Y - part.Size.Y / 2 - world.origin.Y)
+			assert(math.abs(math.abs(part.Position.X - world.origin.X) + part.Size.X / 2 - Config.HallHalfWidth) < 0.02, part.Name .. " is not held by the wall")
+		end
+	end
+	assert(posts == 8 and lowest > 1.2, "a mine timber stands on ground that can be dug")
+	assert(not mapCopy:FindFirstChild("Field sample bench"), "the sample table is back in the square")
+end
 for _, x in { 1 - Config.HallHalfWidth, -21, -10, 0, 10, 21, Config.HallHalfWidth - 1 } do
 	for z = Config.HallBack + 1, Config.HallFront - 1, 2 do
 		local roof = workspace:Raycast(world.origin + Vector3.new(x, 7, z), Vector3.yAxis * 8, onMap)
@@ -1293,7 +1306,21 @@ do
 			and receive.X < empty.X and empty.X < feed.X, "ore must travel west, tip and return empty")
 		local ready, bin = false, false
 		for _, item in tram:GetChildren() do
-			if item.Name == "Receiving hopper floor" then
+			if item.Name == "Receiving hopper wall" then
+				-- The bucket tips over the bin without touching it.
+				for phase = 0.4, 0.62, 0.01 do
+					local hook, tip = relay.sample(w, e, phase)
+					local bucket = CFrame.new(world.origin + hook) * CFrame.new(0, -3.25, 0) * CFrame.Angles(0, 0, tip) * CFrame.new(0, -1.25, 0)
+					local size = car["Ore bucket"].Size / 2
+					for x = -1, 1, 2 do
+						for y = -1, 1, 2 do
+							local corner = bucket * Vector3.new(size.X * x, size.Y * y, 0)
+							local off = item.CFrame:PointToObjectSpace(corner)
+							assert(math.abs(off.X) > item.Size.X / 2 or math.abs(off.Y) > item.Size.Y / 2 or math.abs(off.Z) > item.Size.Z / 2 + size.Z, "the bucket hits its bin")
+						end
+					end
+				end
+			elseif item.Name == "Receiving hopper floor" then
 				bin = bin or (item.Position - (world.origin + receive + Vector3.new(-1, -8.89, 0))).Magnitude < 0.02
 			elseif item.Name == "Ore feed spout" then
 				local endA = item.Position + item.CFrame.LookVector*item.Size.Z/2

@@ -3,7 +3,7 @@
 local finder = game:GetService("PathfindingService")
 local spawnAt = workspace.CitrineCove["Sand path and bridge"].Landing.Position + Vector3.new(0, 1, -3)
 local goals = {
-	["the mine"] = { 0, 25, -4 }, Sell = { -19.5, 25, 20 }, Upgrades = { 19.5, 25, 20 }, Jobs = { -20, 25, 66 }, Outfitters = { 20, 25, 66 },
+	["the mine"] = { 0, 25, -4 }, Sell = { -21.5, 25, 23 }, Upgrades = { 21.5, 25, 23 }, Jobs = { -20, 25, 66 }, Outfitters = { 20, 25, 66 },
 	Supplies = { -34, 25, 86 }, ["Ore Index"] = { 34, 25, 86 }, ["the ore yard"] = { -84, 30.2, 24 }, ["the adit"] = { -92, 30.2, 2 },
 	["the dock"] = { -62, 25.4, 33 }, ["the gardens"] = { 82, 30.2, 32 }, ["the lighthouse"] = { 88.6, 36.2, 24 }, ["the lookout"] = { 0, 26.4, 143 },
 	["the west hill"] = { -99, 32.6, 92 }, ["the east hill"] = { 99, 32.6, 92 }, ["the boards"] = { -27, 25.6, 116 }, ["the beach"] = { 60, 25, 130 },
