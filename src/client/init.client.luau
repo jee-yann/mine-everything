@@ -506,9 +506,8 @@ local function sampleAim()
 		local ore = Ores.byName[hit.Instance.Name]
 		local worth = if ore.secret and not player:GetAttribute("Found" .. ore.name)
 			then "???"
-			else W.possiblePrice(ore, player)
-		local stats = "Hardness " .. Config.strength(center.Y - origin.Y) .. "  ·  " .. worth
-		hud:guide("Mine " .. string.lower(targetName(ore, center)), instruction or (if mobile then stats else "Hold to mine  ·  " .. stats), true)
+			else W.colored(W.possiblePrice(ore, player), W.gold)
+		hud:guide("Mine " .. string.lower(targetName(ore, center)), instruction or (if mobile then worth else "Hold to mine  ·  " .. worth), true)
 	else
 		hud:guide("", "", false)
 	end

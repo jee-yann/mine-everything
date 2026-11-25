@@ -795,6 +795,8 @@ function Hud:workshop(key, level)
 end
 function Hud:notice(title, detail, color)
 	self.untilTime = os.clock() + 2.1
+	-- Notices can carry any text. Only the guide's own lines use colour tags.
+	self.detail.RichText = false
 	self.message.Text, self.message.TextColor3, self.detail.Text = title, color or W.white, detail or ""
 	if self.overlay.Visible then
 		self.menu.status.Text = title
@@ -842,7 +844,7 @@ function Hud:guide(title, detail, visible)
 	if os.clock() < (self.untilTime or 0) then
 		return
 	end
-	self.speech.Visible = visible
+	self.speech.Visible, self.detail.RichText = visible, true
 	self.message.Text, self.message.TextColor3, self.detail.Text = title, W.white, detail
 end
 return Hud
