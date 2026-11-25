@@ -46,7 +46,7 @@ end
 
 function Settings:slider(menu, i, key, muteKey, title, tint)
 	local row = W.frame(menu.list, title, 1, 1 + (i - 1) * 69, 447, 62, W.card, 10)
-	W.enamel(row, tint:Lerp(W.panel, 0.68), W.panel)
+	W.rowPanel(row, tint)
 	W.title(row, title, 14, 1, 216, 26, 19, W.white, true)
 	local percent = W.title(row, "", 302, 1, 75, 26, 17, tint)
 	local mute = W.button(row, "Mute", 390, 9, 45, 44, tint, "", "Select")
@@ -86,9 +86,9 @@ end
 
 function Settings:resetRow(menu)
 	local row = W.frame(menu.list, "Reset progress", 1, 208, 447, 62, W.card, 10)
-	W.enamel(row, W.ruby:Lerp(W.panel, 0.45), W.panel)
+	W.rowPanel(row, W.ruby)
 	local title = W.title(row, "Reset progress", 14, 5, 282, 25, 20, W.white, true)
-	local detail = W.text(row, "Start this miner again at level 1.", 14, 32, 297, 21, 14, W.muted, true)
+	local detail = W.text(row, "Start this miner again at level 1.", 14, 32, 297, 21, 18, W.white, true)
 	local review = W.button(row, "Review", 322, 9, 113, 44, W.muted, "Reset…", "Select")
 	local erase = W.button(row, "Erase", 165, 9, 145, 44, W.ruby, "Erase progress", "Select")
 	erase.TextColor3 = W.white

@@ -7,23 +7,33 @@ local counterStyles = {
 	Book = { "ORE INDEX", Color3.fromRGB(148, 237, 156) },
 	Supplies = { "SUPPLIES", Color3.fromRGB(255, 194, 108) },
 }
+-- The plate a customer stands on: the service's name in bright type with a mark either side.
 local function markCounter(pad, style)
 	local gui = Instance.new("SurfaceGui")
 	gui.Name, gui.Face, gui.SizingMode = "Interaction pad", Enum.NormalId.Top, Enum.SurfaceGuiSizingMode.FixedSize
-	gui.CanvasSize, gui.LightInfluence, gui.Parent = Vector2.new(120, 240), 0.15, pad
+	gui.CanvasSize, gui.LightInfluence, gui.Brightness, gui.Parent = Vector2.new(312, 600), 0, 1.7, pad
 	local panel = Instance.new("Frame")
-	panel.Position, panel.Size = UDim2.fromScale(0.03, 0.06), UDim2.fromScale(0.94, 0.88)
-	panel.BorderSizePixel, panel.BackgroundColor3, panel.BackgroundTransparency =
-		0, style[2]:Lerp(Color3.fromRGB(34, 38, 49), 0.65), 0.12
-	panel.ClipsDescendants, panel.Parent = true, gui
-	local edge = Instance.new("UIStroke")
-	edge.Thickness, edge.Color, edge.Parent = 3, style[2], panel
+	panel.Size, panel.BackgroundTransparency, panel.ClipsDescendants = UDim2.fromScale(1, 1), 1, true
+	panel.Parent = gui
+	-- The face's long side runs up the canvas, so everything is laid out on its side.
 	local label = Instance.new("TextLabel")
 	label.Text, label.Font, label.TextScaled = style[1], Enum.Font.FredokaOne, true
-	label.Rotation, label.AnchorPoint = 90, Vector2.new(0.5, 0.5)
-	label.Size, label.Position = UDim2.fromOffset(180, 54), UDim2.fromScale(0.5, 0.5)
-	label.BackgroundTransparency, label.TextColor3, label.TextStrokeTransparency, label.Parent =
-		1, Color3.fromRGB(255, 251, 228), 0.42, panel
+	label.Rotation, label.AnchorPoint, label.Position = 90, Vector2.new(0.5, 0.5), UDim2.fromScale(0.56, 0.5)
+	label.Size, label.BackgroundTransparency = UDim2.fromOffset(540, 150), 1
+	label.TextColor3 = Color3.fromRGB(255, 253, 240)
+	local outline = Instance.new("UIStroke")
+	outline.Thickness, outline.Color, outline.LineJoinMode, outline.Parent =
+		9, style[2]:Lerp(Color3.fromRGB(20, 18, 40), 0.72), Enum.LineJoinMode.Round, label
+	label.Parent = panel
+	-- Chevrons toward the counter.
+	for i = 1, 3 do
+		local arrow = Instance.new("TextLabel")
+		arrow.Name, arrow.Text, arrow.Font, arrow.TextSize = "Arrow", "▲", Enum.Font.FredokaOne, 62
+		arrow.Rotation, arrow.AnchorPoint = 90, Vector2.new(0.5, 0.5)
+		arrow.Size, arrow.Position = UDim2.fromOffset(90, 70), UDim2.new(0.86, 0, 0.5, (i - 2) * 96)
+		arrow.BackgroundTransparency, arrow.TextColor3, arrow.TextTransparency = 1, style[2], if i == 2 then 0 else 0.35
+		arrow.Parent = panel
+	end
 	pad:SetAttribute("AuraColor", style[2])
 	pad:AddTag("MiningInteractionPad")
 end

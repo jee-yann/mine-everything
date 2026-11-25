@@ -1,4 +1,4 @@
--- The side buttons: square stud-textured tiles holding a FieldKit sticker icon, a caption, the keyboard
+-- The side buttons: square enamel tiles holding a FieldKit sticker icon, a caption, the keyboard
 -- shortcut's letter and an optional red badge. Menus sit in a rail on the left and rewards on
 -- the right (Hud lays them out). The art is drawn in art/hud/field_kit.html.
 local W = require(script.Parent.Widgets)
@@ -28,11 +28,12 @@ local function outline(label, thickness)
 	stroke.Parent = label
 end
 
--- Just the letter, tucked into the tile's lower right. It never makes the tile bigger.
-function SideButtons.letter(parent, key, x, y)
-	local cap = W.title(parent, key, x, y, 22, 22, 19, W.white)
-	cap.Name, cap.ZIndex = "Key", 5
-	outline(cap, 2.4)
+-- The shortcut as plain text, [B], sitting on the lower right corner, half on the button and half off.
+function SideButtons.letter(parent, key, x, y, size)
+	local cap = W.title(parent, "[" .. key .. "]", 0, 0, 44, 28, size or 23, W.white)
+	W.anchor(cap, 0.5, 0.5, UDim2.fromOffset(x, y))
+	cap.Name, cap.ZIndex = "Key", 7
+	outline(cap, 2.8)
 	return cap
 end
 
@@ -47,17 +48,16 @@ function SideButtons.tile(parent, key, caption, shortcut)
 	face.ZIndex = 2
 	W.stroke(face, NAVY, 4)
 	W.gradient(face, tint[1], tint[2], 90)
-	W.studs(face, RADIUS, 22, 0.1)
 	local rim = W.frame(face, "Rim", 3, 3, SIZE - 6, SIZE - 6, W.white, RADIUS - 3)
 	rim.BackgroundTransparency, rim.ZIndex = 1, 2
 	W.stroke(rim, W.white, 2.5).Transparency = 0.55
-	local icon = W.frame(face, "Icon", 12, 2, SIZE - 24, SIZE - 24, W.white)
+	local icon = W.frame(face, "Icon", 12, 1, SIZE - 24, SIZE - 24, W.white)
 	icon.BackgroundTransparency, icon.ZIndex = 1, 3
 	FieldKit.draw(icon, key)
-	local label = W.title(face, caption, -8, SIZE - 27, SIZE + 16, 24, 17, W.white)
+	local label = W.title(face, caption, -8, SIZE - 31, SIZE + 16, 24, 17, W.white)
 	label.Name, label.ZIndex = "Caption", 4
 	outline(label, 2.6)
-	local cap = SideButtons.letter(face, shortcut, SIZE - 25, SIZE - 48)
+	local cap = SideButtons.letter(face, shortcut, SIZE - 5, SIZE + 1)
 	-- A small lean on hover, on top of the shared press-and-hover scale.
 	button.MouseEnter:Connect(function()
 		W.tween(face, 0.12, { Rotation = -3 })
@@ -81,7 +81,7 @@ function SideButtons.round(parent, key, shortcut)
 	local icon = W.frame(face, "Icon", 6, 5, 42, 42, W.white)
 	icon.BackgroundTransparency, icon.ZIndex = 1, 3
 	FieldKit.draw(icon, key)
-	local cap = SideButtons.letter(face, shortcut, 34, 35)
+	local cap = SideButtons.letter(face, shortcut, 48, 49)
 	button.MouseEnter:Connect(function()
 		W.tween(icon, 0.25, { Rotation = 60 })
 	end)

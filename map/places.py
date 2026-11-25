@@ -67,12 +67,12 @@ b.pad(plaza, "Bridge apron", 0, 46, 20, 6.2, 23.4, 24.5, P["stone"], 2.4)
 for s in (-1, 1):
     # The middle of the square is for walking. Lamps and banners stand at its edges.
     lamp(plaza, s * 11.6, 24.3, 47.4, lit=True)
-    lamp(plaza, s * 17, 24.5, 104, lit=True)
-    lamp(plaza, s * 30, 24.5, 108, lit=False)
+    # Nothing stands between spawn and the boards: it is where people take pictures.
+    lamp(plaza, s * 42.5, 24.3, 107.2, lit=True)
 
 # Four planters frame the compass. Benches face it.
 for s in (-1, 1):
-    for px, z, sz in ((41, 70.5, 1), (25, 110, -1)):
+    for px, z, sz in ((41, 70.5, 1), (47.6, 100.4, -1)):
         f = Frame(s * px, 0, z, 0)
         b.pad(plaza, "Planter wall", 0, 0, 10, 8, 24.4, 26.0, P["slate2"], 2, f)
         b.pad(plaza, "Planter earth", 0, 0, 8.4, 6.4, 24.4, 26.2, P["umber"], 1.5, f)
@@ -80,8 +80,7 @@ for s in (-1, 1):
         leafy(plaza, s * px, z, 26.5, 0.8, ("leafgold", "citrine", "honey") if sz > 0 else ("lilac", "violet", "lilac"))
         flowers(plaza, s * px + 2.4, 26.5, z + 1.2, 5, 1.2)
         flowers(plaza, s * px - 2.4, 26.5, z - 1.2, 5, 1.2, ("violet", "lilac", "cream2"))
-    bench(plaza, s * 20.5, 24.5, 99, -90 * s)
-    bench(plaza, s * 33, 24.5, 100, 180)
+    bench(plaza, s * 39.6, 24.5, 100.2, -90 * s)
 
 # ---------------------------------------------------------------- market
 @thing
@@ -119,7 +118,10 @@ def stall(key, parent, x, z, yaw, y=24.5, tone="coral", tone2="cream2", title=""
     # Sign
     b.part(m, "Sign frame", [0, 10.2, d / 2 + 1.0], [w - 1.6, 2.9, 0.6], P["wood2"], f, studs=False)
     board = b.part(m, "Shop sign", [0, 10.2, d / 2 + 1.2], [w - 2.2, 2.3, 0.6], P["navy"], f, studs=False, mat=SMOOTH)
-    b.lettering(board, title, 2, "FFE9B0", 40, 64)
+    b.lettering(board, title, 2, "FFF0B4", 40, 66, glow=2.6)
+    # A lit tube above and below the name.
+    for yy in (8.86, 11.54):
+        b.part(m, "Sign tube", [0, yy, d / 2 + 1.36], [w - 2.0, 0.2, 0.3], P[tone], f, solid=False, shadow=False, mat=NEON)
     # Two lanterns under the awning, one lit for the counter.
     for s in (-1, 1):
         b.part(m, "Lantern cord", [s * (w / 2 - 2.4), 7.8, d / 2 + 0.4], [0.16, 1.5, 0.16], P["iron"], f, solid=False, mat=SMOOTH, studs=False)
@@ -134,8 +136,13 @@ def stall(key, parent, x, z, yaw, y=24.5, tone="coral", tone2="cream2", title=""
     for c in list(mat.findall("Item")):
         if c.get("class") == "PointLight":
             mat.remove(c)
-    s = xyz(mat, "size")
-    b.part(m, "Pad rim", [0, 0.02, pad_z], [s[0] + 0.9, 0.2, s[2] + 0.9], P["citrine2"], f, studs=False, solid=True, mat=SMOOTH)
+    # The pad: a dark plate in a lit ring on a stone base, low enough to walk over.
+    field(mat, "Color3uint8", "Color3uint8", 0xFF000000 | int("2B2850", 16))
+    field(mat, "token", "Material", SMOOTH)
+    prop(mat, "size").find("X").text, prop(mat, "size").find("Z").text = "7.2", "3.75"
+    b.pad(m, "Pad base", 0, pad_z, 9.6, 5.6, -0.1, 0.1, P["slate2"], 1.3, f)
+    b.pad(m, "Pad glow", 0, pad_z, 8.7, 4.75, 0.0, 0.16, P[tone], 1.0, f, mat=NEON, solid=False, shadow=False)
+    b.pad(m, "Pad plate", 0, pad_z, 8.1, 4.2, 0.0, 0.22, "2B2850", 0.85, f, mat=SMOOTH, solid=False, shadow=False)
     tag = b.adopt(m, next(c for c in CORE[key].findall("Item") if name(c) == "Name tag"))
     move(tag, f.at([0, tag_h + 9.0, 0]))
     station(tag)
@@ -219,7 +226,6 @@ for y, s in ((13.2, 3.6), (16.9, 3.6), (17.6, 1.8)):
     b.part(m, "Lantern cap", [0, y, 0.4], [s, 0.7, s], P["iron"], f, mat=SMOOTH, studs=False, solid=False)
 for x, z in ((9.4, 1.8), (9.6, -1.4), (-9.4, 0.8)):
     barrel(m, *f.at([x, 0, z]), tone="wood3")
-crate(m, *f.at([-9.6, 0, -2.6]), 2.4, 8)
 
 f, m = shops["Book"]
 for s in (-1, 1):
@@ -662,7 +668,7 @@ for s in (-1, 1):
     palm(shore, s * 52, 128, 23.9, 1.2, 40)
     palm(shore, s * 66, 136, 23.9, 1.0, 110)
     palm(shore, s * 58, 141, 23.9, 1.15, 200)
-    lamp(shore, s * 7.4, 24.4, 119, lit=False)
+    lamp(shore, s * 6.8, 24.4, 121.5, lit=False)
 b.part(shore, "Spyglass post", [0, 26.6, 148.2], [0.8, 2.8, 0.8], P["iron"], studs=False, mat=SMOOTH)
 b.part(shore, "Spyglass", [0, 28.2, 148.4], [0.9, 0.9, 3.2], P["citrine"], rot=rx(-6), studs=False, mat=SMOOTH)
 # A boat riding at anchor outside the boundary.

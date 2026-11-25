@@ -14,20 +14,16 @@ Field.daily = {
 	{ name = "Citrine cache", gold = 500, gems = 15, flares = 2, icon = "Playtime" },
 }
 
--- Gifts for time played today: at 5 and 10 minutes, then one every minute.
-local minutes = { 5, 10 }
-for _ = 1, 6 do
-	table.insert(minutes, minutes[#minutes] + 1)
-end
+-- Gifts for time played today: at 5 and 10 minutes, then every 10 minutes up to an hour.
+local minutes = { 5, 10, 20, 30, 40, 50, 60 }
 local prizes = {
 	{ name = "Pocket change", gold = 25, icon = "Coins" },
 	{ name = "Gem chip", gems = 1, icon = "Crystal" },
-	{ name = "Coins", gold = 15, icon = "Coins" },
-	{ name = "Coins", gold = 20, icon = "Coins" },
+	{ name = "Coin stack", gold = 50, icon = "Coins" },
 	{ name = "Survey flare", flares = 1, icon = "Beacon" },
-	{ name = "Coins", gold = 30, icon = "Coins" },
-	{ name = "Gem chip", gems = 1, icon = "Crystal" },
-	{ name = "Gift chest", gold = 75, gems = 3, icon = "Playtime" },
+	{ name = "Coin pouch", gold = 100, icon = "Coins" },
+	{ name = "Gem pair", gems = 2, icon = "Crystal" },
+	{ name = "Gift chest", gold = 250, gems = 5, icon = "Playtime" },
 }
 Field.gifts = {}
 for i, reward in prizes do

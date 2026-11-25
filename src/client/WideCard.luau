@@ -1,6 +1,7 @@
--- A large stud-textured menu card with a bright header, optional tabs and a body. The rewards and the
+-- A large menu card with a bright header, optional tabs and a body. The rewards and the
 -- ore index are built on it.
 local W, Icons = require(script.Parent.Widgets), require(script.Parent.Icons)
+local Burst = require(script.Parent.Burst)
 local Card = {}
 Card.__index = Card
 local rgb = Color3.fromRGB
@@ -87,10 +88,12 @@ function Card:layout(area, touch)
 	self.body.ScrollingEnabled = height < self.size.Y
 	self.body.ScrollBarThickness = if height < self.size.Y then 8 else 0
 end
-function Card:enter(animate)
+function Card:enter(animate, arriving)
 	local center = UDim2.fromScale(0.5, 0.5)
 	self.modal.Visible = true
-	if animate then
+	if animate and arriving then
+		Burst.drop(self.modal, center)
+	elseif animate then
 		self.modal.Position = UDim2.new(0.5, 0, 0.5, 60)
 		W.tween(self.modal, 0.22, { Position = center })
 	else
@@ -100,11 +103,12 @@ end
 
 -- Pale rays behind an icon, turning slowly with the card's own light.
 function Card.rays(parent, x, y, length, count)
-	local clip = W.frame(parent, "Rays", 0, 0, 0, 0, W.white)
-	clip.Size, clip.BackgroundTransparency, clip.ClipsDescendants = UDim2.fromScale(1, 1), 1, true
+	local edge = 7
+	local clip = W.frame(parent, "Rays", edge, edge, 0, 0, W.white)
+	clip.Size, clip.BackgroundTransparency, clip.ClipsDescendants = UDim2.new(1, -2 * edge, 1, -2 * edge), 1, true
 	for i = 1, count or 6 do
 		local ray = W.frame(clip, "Ray", 0, 0, length * 2, length * 0.17, W.white)
-		W.anchor(ray, 0.5, 0.5, UDim2.fromOffset(x, y))
+		W.anchor(ray, 0.5, 0.5, UDim2.fromOffset(x - edge, y - edge))
 		ray.Rotation, ray.BackgroundTransparency = (i - 1) * 180 / (count or 6) + 15, 0.87
 	end
 	return clip

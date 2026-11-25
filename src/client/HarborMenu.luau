@@ -17,16 +17,17 @@ local Guide = require(Shared.FieldGuide)
 local Purity = require(Shared.OrePurity)
 local Skills = require(Shared.Skills)
 local SkillMap = require(script.Parent.SkillMap)
+local Burst = require(script.Parent.Burst)
 local Menu = {}
 Menu.__index = Menu
 local rgb = Color3.fromRGB
 local themes = {
-	[W.aqua] = ColorSequence.new(rgb(27, 83, 135), rgb(19, 129, 132)),
-	[W.gold] = ColorSequence.new(rgb(144, 64, 47), rgb(175, 107, 28)),
-	[W.violet] = ColorSequence.new(rgb(66, 59, 137), rgb(140, 65, 131)),
-	[W.green] = ColorSequence.new(rgb(39, 91, 76), rgb(14, 119, 127)),
-	[W.orange] = ColorSequence.new(rgb(135, 57, 57), rgb(176, 97, 43)),
-	[W.pink] = ColorSequence.new(rgb(111, 51, 119), rgb(169, 68, 96)),
+	[W.aqua] = ColorSequence.new(rgb(134, 214, 255), rgb(47, 130, 230)),
+	[W.gold] = ColorSequence.new(rgb(255, 226, 120), rgb(240, 150, 30)),
+	[W.violet] = ColorSequence.new(rgb(207, 174, 255), rgb(129, 80, 230)),
+	[W.green] = ColorSequence.new(rgb(166, 245, 154), rgb(52, 178, 74)),
+	[W.orange] = ColorSequence.new(rgb(255, 208, 138), rgb(240, 138, 58)),
+	[W.pink] = ColorSequence.new(rgb(255, 159, 200), rgb(227, 69, 138)),
 }
 local inventoryTabs = { "Inventory", "Pets", "Kit", "Passes" }
 Menu.pages = {
@@ -61,43 +62,34 @@ function Menu.new(root, player, net, close)
 	self.overlay = shade
 	local modal = W.frame(shade, "Harbor menu", 0, 0, 480, 408, W.panel, 18)
 	modal.Active = true
-	W.stroke(modal, W.navy, 4)
-	self.trim = W.enamel(modal, W.grape, W.panel)
-	W.studs(modal, 18, 26, 0.4)
+	W.enamelPanel(modal, rgb(58, 54, 104), rgb(34, 32, 66), 18)
 	W.anchor(modal, 0.5, 0.5, UDim2.fromScale(0.5, 0.5))
 	self.scale = W.scale(modal)
 	self.modal = modal
 	local header = W.frame(modal, "Marquee", 7, 7, 466, 73, W.aqua, 12)
 	self.header = header
-	self.headerGradient = W.enamel(header, W.ink, W.ocean)
-	W.stroke(header, W.navy, 3)
-	W.studs(header, 12)
-	local headerRim = W.frame(header, "Rim", 2, 2, 462, 69, W.white, 10)
-	headerRim.BackgroundTransparency = 1
-	W.stroke(headerRim, W.white, 2).Transparency = 0.72
+	self.headerGradient = W.enamelPanel(header, W.white, W.aqua, 12)
 	for i = 1, 3 do
 		local stripe = W.frame(header, "Sunburst", 323 + i * 17, 10, 10, 52, W.white, 4)
 		stripe.Rotation, stripe.BackgroundTransparency = 22, 0.76
 	end
 	self.iconWell = W.frame(header, "Badge", 12, 11, 50, 50, W.white, 12)
-	W.stroke(self.iconWell, W.ink, 2)
+	W.stroke(self.iconWell, W.navy, 3)
 	self.heading = W.title(header, "", 74, 2, 316, 42, 33, W.white, true)
 	W.navyText(self.heading, 3)
 	self.sub = W.text(header, "", 76, 42, 313, 24, 17, W.white, true)
 	self.sub.Name = "Summary"
-	W.outlineText(self.sub, 1)
-	self.sub.TextScaled = true
+	W.navyText(self.sub, 1.8)
+	W.largest(self.sub, 20, 13)
 	-- What the miner can spend, wherever gold is spent or earned.
-	local purse = W.frame(header, "Purse", 254, 37, 144, 31, W.navy, 15)
-	purse.BackgroundTransparency, purse.Visible = 0.25, false
-	Icons.draw(purse, "Coins", 6, 2, 27)
-	self.gold = W.title(purse, "0", 36, 0, 102, 30, 22, W.gold, true)
-	self.gold.TextScaled = true
-	local goldFont = Instance.new("UITextSizeConstraint")
-	goldFont.MinTextSize, goldFont.MaxTextSize, goldFont.Parent = 12, 22, self.gold
+	local purse = W.frame(header, "Purse", 218, 11, 178, 51, W.navy, 25)
+	purse.BackgroundTransparency, purse.Visible = 0.2, false
+	self.purseCoin = Icons.draw(purse, "Coins", 10, 5, 40)
+	self.purseScale = self.purseCoin:FindFirstChildOfClass("UIScale")
+	self.purseScale:SetAttribute("Rest", self.purseScale.Scale)
+	self.gold = W.title(purse, "0", 56, 1, 114, 49, 36, W.gold, true)
+	W.navyText(self.gold, 3)
 	self.purse = purse
-	local summaryFont = Instance.new("UITextSizeConstraint")
-	summaryFont.MinTextSize, summaryFont.MaxTextSize, summaryFont.Parent = 12, 17, self.sub
 	local closeButton = W.closeButton(header, 404, 9, 55)
 	self.closeButton = closeButton
 	closeButton.Activated:Connect(close)
@@ -115,23 +107,19 @@ function Menu.new(root, player, net, close)
 	pager.TouchInputEnabled, pager.ScrollWheelInputEnabled, pager.GamepadInputEnabled = false, false, false
 	pager.Animated, pager.Parent = false, viewport
 	self.tabViewport, self.pager, self.tabLists = viewport, pager, {}
-	local footer = W.frame(modal, "Status", 11, 371, 458, 28, W.ink, 8)
+	local footer = W.frame(modal, "Status", 11, 371, 458, 28, W.navy, 8)
 	self.footer = footer
 	self.status = W.text(footer, "", 8, 0, 442, 28, 15, W.white)
-	self.status.TextScaled = true
-	local statusFont = Instance.new("UITextSizeConstraint")
-	statusFont.MinTextSize, statusFont.MaxTextSize, statusFont.Parent = 15, 19, self.status
+	W.largest(self.status, 21, 13)
 	self.sellAll = W.button(footer, "Sell all", 242, 3, 210, 44, W.gold, "Sell entire pack", "Select")
-	self.sellAll.TextScaled = true
-	local sellFont = Instance.new("UITextSizeConstraint")
-	sellFont.MaxTextSize, sellFont.Parent = 20, self.sellAll
+	W.largest(self.sellAll, 19, 12)
 	self.sellAll.Visible = false
 	self.sellAll.Activated:Connect(function()
 		if self.page == "Sell" and self.overlay.Visible and self.sellAll.Interactable then
 			self.net.Action:FireServer("Sell")
 		end
 	end)
-	local tabs = W.frame(modal, "Inventory tabs", 11, 85, 458, 32, W.ink, 8)
+	local tabs = W.frame(modal, "Inventory tabs", 11, 85, 458, 32, W.navy, 8)
 	self.tabs = tabs
 	self.tabButtons = {}
 	local tabX = 4
@@ -142,7 +130,7 @@ function Menu.new(root, player, net, close)
 		self.tabLists[key] = tabList
 		local caption = if key == "Inventory" then "Titles" elseif key == "Kit" then "Supplies" else key
 		local width = 110
-		local b = W.button(tabs, key, tabX, 2, width, 28, Menu.pages[key].color, caption, "Select")
+		local b = W.button(tabs, key, tabX, 2, width, 28, rgb(92, 86, 152), caption, "Select")
 		tabX += width + 4
 		self.tabButtons[key] = b
 		b.Activated:Connect(function()
@@ -168,7 +156,7 @@ function Menu:sizeListings()
 	self.mainList.Size = UDim2.fromOffset(458, height - (if self.page == "Menu" then 99 else 107 + footerHeight))
 	self.tabViewport.Size = UDim2.fromOffset(458, height - 170)
 	self.footer.Size, self.footer.Position = UDim2.fromOffset(458, footerHeight), UDim2.fromOffset(11, height - footerHeight - 9)
-	self.status.Size, self.status.TextWrapped = UDim2.fromOffset(if selling then 226 else 442, footerHeight), selling
+	self.status.Size = UDim2.fromOffset(if selling then 226 else 442, footerHeight)
 	self.sellAll.Visible = selling
 end
 local function revealRow(list, row)
@@ -204,19 +192,16 @@ function Menu:layout(width, height, touch)
 end
 function Menu:row(i, name, icon, color)
 	local row = W.frame(self.list, name, 1, 1 + (i - 1) * 69, 447, 62, W.card, 10)
-	W.enamel(row, color:Lerp(W.panel, 0.76), W.panel)
-	W.frame(row, "Color tab", 0, 12, 4, 38, color, 2)
-	local plate = W.frame(row, "Badge", 9, 8, 46, 46, color, 9)
-	W.stroke(plate, W.ink, 2)
+	W.rowPanel(row, color)
+	local plate = W.frame(row, "Badge", 9, 8, 46, 46, W.white, 10)
+	W.gradient(plate, W.white, color, 90)
+	W.stroke(plate, W.navy, 3)
 	if icon then Icons.draw(plate, icon, 5, 5, 36, color) end
 	local title = W.title(row, name, 67, 3, 249, 27, 21, W.white, true)
-	W.outlineText(title, 1.1)
-	-- Row details carry prices and recipes, so they fill their space (up to 18 pt, at least 15)
-	-- instead of staying small inside a big card.
-	local detail = W.text(row, "", 67, 28, 249, 33, 18, W.muted, true)
-	detail.TextWrapped, detail.TextScaled = true, true
-	local detailFont = Instance.new("UITextSizeConstraint")
-	detailFont.MinTextSize, detailFont.MaxTextSize, detailFont.Parent = 15, 18, detail
+	W.navyText(title, 2.4)
+	local detail = W.text(row, "", 67, 28, 249, 33, 18, W.white, true)
+	if self.page ~= "Gear" then W.largest(detail, 19, 12) end
+	W.outlineText(detail, 1)
 	local cues = { Gear = "Buy", Jobs = "Job", Settings = "Select", Store = "Select" }
 	local button = W.button(row, "Action", 322, 12, 113, 38, color, "", cues[self.page])
 	return title, detail, button
@@ -249,10 +234,7 @@ local function ingredients(recipe, bag)
 	return table.concat(parts, "   ")
 end
 local function twoLines(detail)
-	detail.Position, detail.Size, detail.TextSize = UDim2.fromOffset(67, 26), UDim2.fromOffset(251, 35), 13
-	detail.TextScaled = true
-	local font = Instance.new("UITextSizeConstraint")
-	font.MinTextSize, font.MaxTextSize, font.Parent = 9, 13, detail
+	detail.Position, detail.Size = UDim2.fromOffset(67, 26), UDim2.fromOffset(251, 35)
 end
 function Menu:gear()
 	local owned = Skills.read(self.player)
@@ -271,17 +253,18 @@ function Menu:gear()
 		local title, detail, b = self:row(i, item.label or key, key, item.color)
 		self.gearButtons[key] = b
 		detail.Name, detail.RichText = "Requirements", true
-		W.outlineText(detail, 1)
+		detail:FindFirstChildOfClass("UIStroke"):Destroy()
+		W.navyText(detail, 2.2)
 		local row = title.Parent
 		row.Position, row.Size = UDim2.fromOffset(1, 1 + (i - 1) * 91), UDim2.fromOffset(447, 85)
-		row["Color tab"].Size, row.Badge.Position = UDim2.fromOffset(4, 61), UDim2.fromOffset(9, 19)
+	row.Badge.Position = UDim2.fromOffset(10, 19)
 		title.Size, title.TextSize = UDim2.fromOffset(250, 29), 23
-		local benefit = W.text(row, "", 67, 30, 250, 20, 16, W.aqua, true)
+		local benefit = W.text(row, "", 67, 30, 250, 20, 17, W.white, true)
 		benefit.Name = "Benefit"
-		-- What the miner has, over what it costs. Always both, in type that can be read at a glance.
+		W.outlineText(benefit, 1)
+		-- The price. Until there is enough gold, how much of it the miner has too.
 		detail.Position, detail.Size, detail.Font = UDim2.fromOffset(67, 50), UDim2.fromOffset(250, 32), Enum.Font.FredokaOne
-		detail:FindFirstChildOfClass("UITextSizeConstraint"):Destroy()
-		detail.TextScaled, detail.TextWrapped, detail.TextSize = false, false, 26
+		detail.TextSize = 26
 		b.Position, b.Size = UDim2.fromOffset(322, 19), UDim2.fromOffset(113, 48)
 		b.TextWrapped = true
 		b.TextSize = 19
@@ -309,7 +292,8 @@ function Menu:gear()
 			end
 			local gold = self.player:GetAttribute("Gold") or 0
 			local ready = gold >= price
-			detail.Text = W.colored(W.goldAmount(gold), if ready then W.green else unmet) .. " / " .. W.colored(W.goldAmount(price) .. " G", W.gold)
+			detail.Text = if ready then W.colored(W.goldAmount(price) .. " G", W.green)
+				else W.colored(W.goldAmount(gold), unmet) .. " / " .. W.colored(W.goldAmount(price) .. " G", W.gold)
 			local caption = if ready then "Upgrade" else "Need " .. W.goldAmount(price - gold) .. " G"
 			setButton(b, caption, if ready then W.green else unmet, ready)
 		end)
@@ -364,7 +348,7 @@ function Menu:supplies()
 		local _, detail, button = self:row(i, item.name, if key == "Flare" then "Crystal" else "Power", W.aqua)
 		twoLines(detail)
 		detail.RichText = true
-		button.TextSize = 13
+		button.TextSize = 15
 		button.Activated:Connect(function()
 			self.net.Action:FireServer("Supply", key)
 		end)
@@ -757,23 +741,24 @@ function Menu:open(key)
 		self.page, self.wide = key, wide
 		wide:open(key)
 		wide.card:layout(self.overlay.AbsoluteSize, self.touchLayout)
-		wide.card:enter(fresh and self.preferences.values.MenuMotion)
+		wide.card:enter(fresh and self.preferences.values.MenuMotion, self.arrival)
+		if self.arrival and wide.welcome then wide:welcome() end
+		self.arrival = nil
 		self:refresh()
 		return
 	end
 	self.wide = nil
 	self.tabs.Visible, self.tabViewport.Visible, self.mainList.Visible = isTab, isTab, not isTab
 	for k, b in self.tabButtons do
-		b.BackgroundColor3 = if key == k then W.white else Menu.pages[k].color
+		b.BackgroundColor3 = if key == k then rgb(110, 214, 82) else rgb(92, 86, 152)
 	end
 	self.mainList:ClearAllChildren()
 	if self.icon then
 		self.icon:Destroy()
 	end
 	self.page, self.heading.Text = key, page.name
-	self.headerGradient.Color = themes[page.color] or ColorSequence.new(rgb(55, 72, 143), rgb(37, 109, 153))
+	self.headerGradient.Color = themes[page.color] or themes[W.aqua]
 	self:sizeListings()
-	self.trim.Color = ColorSequence.new(page.color:Lerp(W.panel, 0.46), W.panel)
 	self.icon =
 		Icons.draw(self.iconWell, if key == "Kit" or key == "Supplies" then "Pack" else key, 5, 5, 40, page.color)
 	self.status.Text = if key == "Store"
@@ -786,7 +771,7 @@ function Menu:open(key)
 		elseif key == "Kit" then "Restock at Field Supplies beside the market."
 		elseif key == "Supplies" then "Bring mined materials to craft your supplies."
 		elseif key == "Gear" then "Spend gold to upgrade your equipment."
-		elseif key == "Sell" then "Sell one ore type above, or sell your whole pack →"
+		elseif key == "Sell" then "Sell one ore, or everything."
 		elseif key == "Passes" then "Visit Outfitters for game passes."
 		elseif key == "Achievements" then "Mine, explore and try new things. ??? reveals when you find the ore."
 		elseif key == "Pack" then "Take your haul to the amber Sell counter."
@@ -845,6 +830,18 @@ function Menu:close()
 		end
 	end)
 end
+-- A bought upgrade: its row flashes, its badge swells and paper flies from it.
+function Menu:upgraded(key)
+	local row = self.page == "Gear" and self.overlay.Visible and self.mainList:FindFirstChild(key)
+	if not row or not Burst.allowed(self.player) then return end
+	local flash = W.frame(row, "Flash", 0, 0, 0, 0, W.white, 10)
+	flash.Size, flash.BackgroundTransparency, flash.ZIndex = UDim2.fromScale(1, 1), 0.15, 8
+	W.tween(flash, 0.5, { BackgroundTransparency = 1 }).Completed:Once(function() flash:Destroy() end)
+	local scale = row.Badge:FindFirstChildOfClass("UIScale") or W.scale(row.Badge)
+	Burst.pop(scale, 1, 1.5)
+	local at = row.Badge.AbsolutePosition + row.Badge.AbsoluteSize / 2 - self.overlay.AbsolutePosition
+	Burst.confetti(self.overlay, at.X, at.Y, 16, { Upgrades.items[key].color, W.white, W.gold }, 0.7)
+end
 function Menu:guideTrade()
 	local step = self.player:GetAttribute("ExpeditionStep")
 	local gold = self.player:GetAttribute("Gold") or 0
@@ -860,11 +857,8 @@ function Menu:guideTrade()
 			target = self.sellAll
 			local value = (self.player:GetAttribute("BagValue") or 0) * (if self.player:GetAttribute("DoubleGold") then 2 else 1)
 			hint = "Sell all for " .. W.goldAmount(value) .. " G"
-		elseif step == "Upgrade" then
+		elseif step == "Upgrade" or step == "Sell" then
 			target = self.closeButton
-			hint = if gold >= price then "Visit the Upgrades stall" else "Mine for " .. W.goldAmount(price - gold) .. " more G"
-		elseif step == "Sell" then
-			target, hint = self.closeButton, "Your pack is empty. Mine a new haul"
 		elseif step == "Return" or step == "Ore" or step == "Dig" then
 			target, hint = self.closeButton, "Follow the marker back to the mine"
 		end
@@ -889,7 +883,7 @@ function Menu:guideTrade()
 			target, hint = self.closeButton, "Take your first haul to Sell"
 		end
 	end
-	if hint then self.sub.Text = hint end
+	if hint and self.page == "Gear" then self.status.Text = hint end
 	if target and target ~= self.guideButton.button and Input.PreferredInput == Enum.PreferredInput.Gamepad then
 		Gui.SelectedObject = target
 	end
@@ -901,8 +895,8 @@ function Menu:refresh()
 	end
 	local p = self.player
 	self.purse.Visible = self.page == "Gear" or self.page == "Sell"
-	self.gold.Text = W.goldAmount(p:GetAttribute("Gold") or 0) .. " G"
-	self.sub.Size = UDim2.fromOffset(if self.purse.Visible then 172 else 313, 24)
+	self.sub.Size = UDim2.fromOffset(if self.purse.Visible then 140 else 313, 26)
+	self.heading.Position = UDim2.fromOffset(74, if self.page == "Gear" then 15 else 2)
 	if self.page == "Menu" then
 		self.sub.Text = ""
 	elseif self.page == "Inventory" then
@@ -948,7 +942,7 @@ function Menu:refresh()
 		local value = (p:GetAttribute("BagValue") or 0) * (if p:GetAttribute("DoubleGold") then 2 else 1)
 		self.sub.Text = string.format("%d / %d slots   ·   %s G", p:GetAttribute("Used") or 0, cap, W.number(value))
 	elseif self.page == "Gear" then
-		self.sub.Text = "Spend gold on gear"
+		self.sub.Text = ""
 	elseif self.page == "Jobs" then
 		self.sub.Text = string.format("%d / %d quests collected", p:GetAttribute("Jobs") or 0, #Expeditions.jobs)
 	elseif self.page == "Settings" then

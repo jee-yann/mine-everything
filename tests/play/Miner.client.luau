@@ -632,7 +632,7 @@ local function test()
 			assert(wide.Body.Daily["Day 1"].Claim.Interactable and not wide.Body.Daily["Day 2"].Claim.Interactable, "day 1 is ready")
 		elseif page == "Playtime" then
 			assert(p:GetAttribute("GiftClock") and not wide.Body.Playtime["Gift 1"].Claim.Interactable, "the first gift takes five minutes")
-			n.Action:FireServer("Gift", 8)
+			n.Action:FireServer("Gift", 7)
 			task.wait(0.3)
 			assert(p:GetAttribute("GiftClaims") == 0, "a gift was given early")
 		end
@@ -750,7 +750,7 @@ local function test()
 		waitFor(function() return roster.Miners.Visible end, 2, "reopen roster")
 		do
 			local rail = safe["Menu buttons"]
-			assert(rail.Inventory.Face.Key.Text == "B" and rail.Settings.Face.Key.Text == "P" and rail.Book.Face.Key.Visible, "letters on the side buttons")
+			assert(rail.Inventory.Face.Key.Text == "[B]" and rail.Settings.Face.Key.Text == "[P]" and rail.Book.Face.Key.Visible, "letters on the side buttons")
 			tapKey(Enum.KeyCode.O)
 			game:GetService("RunService").Heartbeat:Wait()
 			assert(not overlay.Visible, "O is reserved for the camera")
@@ -1183,12 +1183,9 @@ local function test()
 		task.wait(0.85)
 		do
 			-- The reason shows where the player is aiming, and grows there.
-			local feedback, reason = safe.Feedback, nil
-			for _, label in feedback:GetDescendants() do
-				if label:IsA("TextLabel") and label.Text == "Needs Power 2!" then reason = label end
-			end
-			local middle = feedback.AbsolutePosition + feedback.AbsoluteSize / 2
-			assert(reason and feedback.Visible and feedback.UIScale.Scale > 1.2, "no reason shown for a locked block")
+			local reason = safe.Blocked
+			local middle = reason.AbsolutePosition + reason.AbsoluteSize / 2
+			assert(reason.Visible and reason.ContentText:find("Needs Power 2!") and not safe.Feedback.Visible, "no reason shown for a locked block")
 			assert((middle - (cursor.AbsolutePosition + cursor.AbsoluteSize / 2)).Magnitude < 190, "the reason left the cursor")
 		end
 		assert(not lamp.Enabled, "locked ore lit up while holding mine")
@@ -1441,7 +1438,7 @@ local function test()
 		waitFor(function()
 			local gear = menu.Listings:FindFirstChild(key)
 			local affordable = saleGold >= price
-			return gear and gear.Requirements.ContentText:match("/ (%d+) G") == tostring(price)
+			return gear and gear.Requirements.ContentText == (if affordable then price .. " G" else saleGold .. " / " .. price .. " G")
 				and gear.Action.Interactable == affordable
 		end, 3, "correct cost of " .. key .. " after selling")
 	end

@@ -77,6 +77,32 @@ end
 function Audio.denied()
 	play("Denied")
 end
+-- One coin of a payout. A few voices take turns, so a long run overlaps instead of cutting itself off.
+local coins, nextCoin = {}, 0
+for i = 1, 5 do
+	local voice = sound("Coin " .. i, "rbxassetid://9113849492", 0.15, 1.5)
+	voice.PlaybackRegionsEnabled, voice.PlaybackRegion = true, NumberRange.new(0.07, 0.27)
+	coins[i] = voice
+end
+function Audio.coin(progress)
+	nextCoin = nextCoin % #coins + 1
+	local voice = coins[nextCoin]
+	voice.PlaybackSpeed = 1.35 + 0.5 * progress + (nextCoin % 2) * 0.05
+	voice.TimePosition = voice.PlaybackRegion.Min
+	voice:Play()
+end
+-- An XP orb arriving. Soft, and a step higher for each orb of a block.
+local orbs = {}
+for i = 1, 5 do
+	local voice = sound("XP orb " .. i, pop, 0.085, 1.5 * 2 ^ ((i - 1) * 2 / 12))
+	voice.PlaybackRegionsEnabled, voice.PlaybackRegion = true, NumberRange.new(0, 0.16)
+	orbs[i] = voice
+end
+function Audio.orb(i)
+	local voice = orbs[(i - 1) % #orbs + 1]
+	voice.TimePosition = 0
+	voice:Play()
+end
 function Audio.interact()
 	play("Interact")
 end

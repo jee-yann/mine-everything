@@ -53,9 +53,10 @@ snapshot.stampCount = 8
 assert(not Profile.valid(snapshot))
 print("PASS gem card rollover, missed days, duplicate claims, recipes, saved charges, first-upgrade aura")
 
--- Gifts at 5 and 10 minutes, then every minute.
+-- Gifts at 5 and 10 minutes, then every 10 minutes, the last at an hour.
 assert(Field.gifts[1].minutes == 5 and Field.gifts[2].minutes == 10)
-for i = 3, #Field.gifts do assert(Field.gifts[i].minutes == Field.gifts[i - 1].minutes + 1) end
+for i = 3, #Field.gifts do assert(Field.gifts[i].minutes == Field.gifts[i - 1].minutes + 10) end
+assert(Field.gifts[#Field.gifts].minutes == 60 and Field.maxGiftTime == 3600)
 local visit = { profile = p }
 local start = 20101 * 86400
 Field.trackGifts(visit, start)
@@ -93,9 +94,27 @@ assert(not Profile.valid(older))
 -- What the client shows from the two attributes.
 local miner = { GetAttribute = function(_, key) return ({ GiftClock = 1000, GiftClaims = 1 })[key] end }
 local ready, left = Field.giftState(miner, 1000 + 630)
-assert(ready == 1 and left == 30 and Field.played(miner, 1000 + 630) == 630)
+assert(ready == 1 and left == 570 and Field.played(miner, 1000 + 630) == 630)
 ready, left = Field.giftState(miner, 1000 + 99999)
 assert(ready == #Field.gifts - 1 and left == nil)
+-- The card opens by itself only at a calm moment, and once.
+local auto = require(Client.AutoRewards)
+local function state(change)
+	local s = { onboarded = true, sinceReady = 9, quietFor = 3, dailyReady = true, giftsReady = 0, giftsClaimed = 0, underground = false }
+	for key, value in change do s[key] = value end
+	return s
+end
+assert(auto.choose(state({})) == "Daily")
+for _, change in { { onboarded = false }, { sinceReady = 1 }, { quietFor = 0 }, { dailyShown = true }, { underground = true }, { dailyReady = false } } do
+	assert(auto.choose(state(change)) == nil)
+end
+assert(auto.choose(state({ dailyReady = false, giftsReady = 1 })) == "Playtime")
+assert(auto.choose(state({ dailyReady = false, giftsReady = 1, giftsClaimed = 1 })) == nil, "only the first gift opens the card")
+assert(auto.choose(state({ dailyReady = false, giftsReady = 1, giftShown = true })) == nil)
+-- Bigger payouts count for longer, within reason.
+local plan = require(Client.GoldFlow).plan
+local short, long, huge = plan(5), plan(5000), plan(5e9)
+assert(short >= 0.7 and long > short and huge <= 4)
 print("PASS daily card, playtime gifts, no offline or duplicate credit, claim-through, midnight, reconnect and old saves")
 
 local folder = Instance.new("Folder")

@@ -346,13 +346,15 @@ class Builder:
             field(it, kind, key, value)
         return it
 
-    def lettering(self, part, text, face=2, color="FFF4D6", px=40, size=None, label="Lettering", stroke="2A1C3A"):
+    def lettering(self, part, text, face=2, color="FFF4D6", px=40, size=None, label="Lettering", stroke="2A1C3A", glow=1.0):
         """Fixed type on a fixed canvas. Scaled type can come up small while a part streams in."""
         gui = self.item(part, "SurfaceGui", label)
         field(gui, "token", "Face", face)
         field(gui, "token", "SizingMode", 1)
         field(gui, "float", "PixelsPerStud", px)
         field(gui, "float", "LightInfluence", 0)
+        if glow != 1:
+            field(gui, "float", "Brightness", glow)
         t = self.item(gui, "TextLabel", text.split("\n")[0])
         u = ET.SubElement(t.find("Properties"), "UDim2", name="Size")
         for k, v in zip(("XS", "XO", "YS", "YO"), (1, 0, 1, 0)):

@@ -281,6 +281,10 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			end
 		end
 		Audio.ore(a)
+		-- The XP attribute can land just after the loot.
+		task.delay(0.06, function()
+			hud:showXP(point)
+		end)
 		if owned.LightTrail and not best.host then
 			fx:oreLight(point, owned.Constellation)
 		end
@@ -345,10 +349,10 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		if hud.overlay.Visible and hud.menu.rewards then
 			hud.menu.rewards:claimed(a, point)
 		end
-		hud:notice(spread, finds, W.gold)
+		if not hud.overlay.Visible then hud:notice(spread, finds, W.gold) end
 	elseif kind == "job" then
 		fx:chime(1.65)
-		hud:notice("+" .. W.number(point) .. " gold", a .. " completed", W.gold)
+		hud.unlocks:show("job", a, "+" .. W.number(point) .. " gold", nil, point)
 	elseif kind == "resetSoon" then
 		hud:milestone("MINE RENEWAL", "New ore in " .. a .. " seconds", W.aqua)
 		hud:notice("Mine renews in " .. a .. " seconds", "Your haul returns to the entrance with you", W.aqua)
@@ -367,7 +371,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 	elseif kind == "upgrade" then
 		fx:chime(1.55)
 		hud:workshop(point, spread)
-		hud:notice(a, Upgrades.describe(point, spread), W.green)
+		if hud.overlay.Visible then hud.menu.status.Text = a end
 	else
 		hud:notice(a, "", W.gold)
 	end
@@ -532,6 +536,14 @@ UIS.TouchTapInWorld:Connect(function(screen, processed)
 	local ray = camera:ViewportPointToRay(screen.X, screen.Y)
 	local hit = workspace:Raycast(ray.Origin, ray.Direction * minerFocus.range, params)
 	if hit then minerFocus:tap(hit.Instance) end
+end)
+
+require(script.AutoRewards).start(player, hud, function(kind)
+	if joinOpeningPending or hud.inOpening then return true end
+	return kind ~= "opening" and (passage.active or held ~= nil or hud.touchActions.enabled)
+end, function()
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	return root ~= nil and Config.inMine(root.Position - origin)
 end)
 
 local elapsed = 1

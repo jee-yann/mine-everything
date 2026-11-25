@@ -12,6 +12,7 @@ local Roster = require(script.Parent.MinerRoster)
 local TouchActions = require(script.Parent.TouchActions)
 local Celebration = require(script.Parent.UnlockCelebration)
 local SideButtons = require(script.Parent.SideButtons)
+local GoldFlow, Burst, XpOrbs = require(script.Parent.GoldFlow), require(script.Parent.Burst), require(script.Parent.XpOrbs)
 local Hud = {}
 Hud.__index = Hud
 local Input = game:GetService("UserInputService")
@@ -29,14 +30,6 @@ local hotbar = {
 local shortcutLetters = {}
 for _, slot in hotbar do
 	shortcutLetters[slot.page] = slot.code.Name
-end
-local function card(parent, name, x, y, w, h, top, bottom)
-	local f = W.frame(parent, name, x, y, w, h, W.panel, 13)
-	W.stroke(f, W.ink, 2)
-	W.enamel(f, top or W.ocean, bottom or W.panel)
-	local shine = W.frame(f, "Enamel highlight", 11, 2, w - 22, 2, W.white, 1)
-	shine.BackgroundTransparency = 0.68
-	return f
 end
 local function clearFrame(parent, name, x, y, width, height)
 	local frame = W.frame(parent, name, x, y, width, height, W.ink)
@@ -65,7 +58,9 @@ function Hud.new(player, net, mobile)
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 	local wallet = clearFrame(root, "Wallet", 0, 0, 220, 52)
 	self.wallet = wallet
-	Icons.draw(wallet, "Coins", 0, 1, 47)
+	self.coin = Icons.draw(wallet, "Coins", 0, 1, 47)
+	self.coinScale = self.coin:FindFirstChildOfClass("UIScale")
+	self.coinScale:SetAttribute("Rest", self.coinScale.Scale)
 	self.gold = W.title(wallet, "0", 50, -1, 170, 52, 52, W.gold, true)
 	self.gold.Size = UDim2.new(1, -50, 0, 52)
 	self.gold.TextScaled = true
@@ -73,6 +68,7 @@ function Hud.new(player, net, mobile)
 	goldSize.MinTextSize, goldSize.MaxTextSize, goldSize.Parent = 17, 52, self.gold
 	W.outlineText(self.gold, 3)
 	local tools = clearFrame(root, "Equipment and level", 0, 0, 200, 46)
+	self.tools = tools
 	self.levelRing = LevelRing.new(tools, function()
 		self:openPage("Skills")
 	end)
@@ -119,10 +115,17 @@ function Hud.new(player, net, mobile)
 	self.job = W.title(jobTap, "", 54, 5, 166, 26, 20, W.white, true)
 	self.jobCount = W.text(jobTap, "", 54, 30, 170, 21, 15, W.white, true)
 	W.title(jobTap, "›", 222, 6, 21, 44, 32, W.white)
-	self.ribbon = clearFrame(taskCard, "Discovery", 0, 62, 250, 52)
+	self.ribbon = W.frame(root, "Discovery", 0, 0, 330, 66, W.white, 17)
+	self.ribbon.AnchorPoint, self.ribbon.ZIndex = Vector2.new(0.5, 0), 8
+	self.ribbonPaint = W.enamelPanel(self.ribbon, Color3.fromRGB(134, 214, 255), Color3.fromRGB(47, 130, 230), 17)
 	self.ribbon.Visible = false
-	self.ribbonType = W.text(self.ribbon, "", 12, 4, 192, 17, 12, W.aqua, true)
-	self.ribbonName = W.title(self.ribbon, "", 12, 22, 192, 25, 20, W.white, true)
+	self.ribbonType = W.title(self.ribbon, "", 12, 5, 306, 24, 19, Color3.fromRGB(255, 244, 170))
+	self.ribbonName = W.title(self.ribbon, "", 12, 27, 306, 34, 26, W.white)
+	W.navyText(self.ribbonType, 2.3)
+	W.navyText(self.ribbonName, 2.8)
+	self.ribbonName.TextScaled = true
+	local ribbonFont = Instance.new("UITextSizeConstraint")
+	ribbonFont.MinTextSize, ribbonFont.MaxTextSize, ribbonFont.Parent = 12, 26, self.ribbonName
 	jobTap.Activated:Connect(function()
 		self:openPage("Jobs")
 	end)
@@ -141,10 +144,10 @@ function Hud.new(player, net, mobile)
 	surfaceShadow.ZIndex = 0
 	self.surfaceFace = W.frame(self.surface, "Face", 0, 0, 132, 46, W.white, 14)
 	self.surfacePaint = W.enamelPanel(self.surfaceFace, Color3.fromRGB(255, 230, 128), Color3.fromRGB(243, 165, 26), 14)
-	local surfaceName = W.title(self.surfaceFace, "↑ Surface", 2, 0, 116, 44, 21, W.white)
+	local surfaceName = W.title(self.surfaceFace, "↑ Surface", 2, 0, 128, 44, 22, W.white)
 	surfaceName.Name = "Caption"
 	W.navyText(surfaceName, 2.6)
-	self.surfaceKey = SideButtons.letter(self.surfaceFace, "R", 107, 21)
+	self.surfaceKey = SideButtons.letter(self.surfaceFace, "R", 126, 46)
 	W.anchor(self.surface, 0.5, 0, UDim2.new(0.5, 0, 1, 3))
 	self.surface.Activated:Connect(function()
 		net.Action:FireServer("Surface")
@@ -176,9 +179,9 @@ function Hud.new(player, net, mobile)
 	for _, slot in hotbar do
 		self.hotbarPages[slot.code] = slot.page
 	end
-	local tileStep = SideButtons.size + 15
-	local menuRail = clearFrame(root, "Menu buttons", 0, 0, 2 * tileStep, 2 * tileStep + 60)
-	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, SideButtons.size + 6, 2 * tileStep)
+	local tileStep = SideButtons.size + 24
+	local menuRail = clearFrame(root, "Menu buttons", 0, 0, 2 * tileStep, 2 * tileStep + 68)
+	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, SideButtons.size + 18, 2 * tileStep)
 	self.sideKeys = {}
 	local settingsButton = SideButtons.round(menuRail, "Settings", shortcutLetters.Settings)
 	settingsButton.button.Position = UDim2.fromOffset(0, 2 * tileStep)
@@ -245,6 +248,12 @@ function Hud.new(player, net, mobile)
 		end
 	end
 	self.speech = speech
+	-- Why the aimed block can't be mined: one label, so its two lines move as one.
+	local blocked = W.title(root, "", 0, 0, 640, 110, 24, W.white)
+	blocked.Name, blocked.RichText, blocked.Visible, blocked.ZIndex = "Blocked", true, false, 6
+	blocked.AnchorPoint, blocked.TextYAlignment = Vector2.new(0.5, 0.5), Enum.TextYAlignment.Center
+	W.navyText(blocked, 3)
+	self.blocked, self.blockedScale = blocked, W.scale(blocked)
 	for _, label in { self.message, self.detail } do
 		local size = Instance.new("UITextSizeConstraint")
 		size.MinTextSize, size.MaxTextSize, size.Parent = 10, label.TextSize, label
@@ -273,6 +282,10 @@ function Hud.new(player, net, mobile)
 		self:setShop(false)
 	end)
 	self.unlocks = Celebration.new(self)
+	self.goldFlow = GoldFlow.new(self)
+	self.menu.holdGold = function(seconds, from)
+		self.goldFlow:hold(seconds, from)
+	end
 	self.roster = Roster.new(root, function()
 		if self.layout then
 			self.layout()
@@ -307,7 +320,7 @@ function Hud.new(player, net, mobile)
 	end)
 	local walletScale, taskScale, haulScale = W.scale(wallet), W.scale(taskCard), W.scale(haul)
 	local locScale, speechScale = W.scale(loc), W.scale(speech)
-	self.speechScale, self.speechBoost, self.speechBase = speechScale, 1, 1
+	self.speechBase = 1
 	local menuRailScale, rewardRailScale = W.scale(menuRail), W.scale(rewardRail)
 	local toolScale = W.scale(tools)
 	local legacyChat
@@ -482,20 +495,24 @@ function Hud.new(player, net, mobile)
 			local railScale = math.clamp(math.min(width / 1400, height / 780), 0.78, 1.15)
 			local walletTop = height - margin - (46 + 52) * s - (if self.status.Text == "" then 0 else 18 * s)
 			local topLimit = margin + 6
-			for _, chat in { chatWindow, chatInput } do
-				if chat and chat.Enabled and chat.AbsoluteSize.Y > 0 then
-					local pos = chat.AbsolutePosition - root.AbsolutePosition
-					if pos.X < margin + 200 * railScale then
-						topLimit = math.max(topLimit, pos.Y + chat.AbsoluteSize.Y + 8)
+			if StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.Chat) and chatWindow and chatWindow.Enabled then
+				for _, chat in { chatWindow, chatInput } do
+					if chat and chat.Enabled and chat.AbsoluteSize.Y > 0 then
+						local pos = chat.AbsolutePosition - root.AbsolutePosition
+						topLimit = math.max(topLimit, pos.Y + chat.AbsoluteSize.Y + 12)
 					end
 				end
+				-- The window reports no size until it is drawn, and while it is folded away. Keep its
+				-- usual place free, so the buttons never jump or sit under it.
+				local usual = math.min(275, height * 0.4) * chatWindow.HeightScale + (if chatInput and chatInput.Enabled then 56 else 0)
+				topLimit = math.max(topLimit, math.min(usual + 12, height * 0.55))
 			end
 			local menuHeight = menuRail.Size.Y.Offset
 			local room = walletTop - 12 - topLimit
 			-- Directly under the chat window, or centred when chat is out of the way.
 			menuRailScale.Scale = math.max(0.5, math.min(railScale, room / menuHeight))
 			local slack = math.max(0, room - menuHeight * menuRailScale.Scale)
-			local menuTop = topLimit + (if topLimit > margin + 6 then math.min(slack, 14) else slack / 2)
+			local menuTop = topLimit + (if topLimit > margin + 6 then 0 else slack / 2)
 			W.anchor(menuRail, 0, 0, UDim2.fromOffset(margin + 4, menuTop))
 			-- The reward rail sits under the haul card, or beside it when the haul is long.
 			local haulBottom = rightY + (66 + self.haul.Size.Y.Offset) * s + 12
@@ -517,8 +534,9 @@ function Hud.new(player, net, mobile)
 			toolsBottom
 		)
 		local speechWidth = if edge then math.clamp(width - 175, 144, 290) else 460
-		self.speechBase = s
-		speechScale.Scale = s * self.speechBoost
+		speechScale.Scale = s
+		self.blockedScale.Scale = if edge then math.min(1, width / 560) else s
+		self.speechBase = self.blockedScale.Scale
 		speech.Size = UDim2.fromOffset(speechWidth, if edge then 46 else 62)
 		self.message.Size = UDim2.fromOffset(speechWidth - 10, if edge then 25 else 34)
 		self.detail.Position = UDim2.fromOffset(5, if edge then 25 else 35)
@@ -598,6 +616,11 @@ function Hud.new(player, net, mobile)
 	end)
 	self:refresh()
 	require(script.Parent.MenuCursor)(self)
+	game:GetService("RunService").RenderStepped:Connect(function()
+		if not self.blocked.Visible or not self.aimScreen then return end
+		-- Follow the mouse every frame, not only when the aim is sampled.
+		self:placeBlocked(if Input.PreferredInput == Enum.PreferredInput.KeyboardAndMouse then Input:GetMouseLocation() else self.aimScreen)
+	end)
 	task.spawn(function()
 		while gui.Parent do
 			task.wait(1)
@@ -646,9 +669,7 @@ function Hud:refresh()
 		return p:GetAttribute(key) or 1
 	end
 	local used, cap = p:GetAttribute("Used") or 0, (p:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1])
-	if not self.countingGold then
-		self.gold.Text = W.goldAmount(p:GetAttribute("Gold") or 0)
-	end
+	self.goldFlow:set(p:GetAttribute("Gold") or 0)
 	self.pack.Text = W.number(used) .. " / " .. W.number(cap)
 	self.edgeCount.Text = W.number(used) .. "/" .. W.number(cap)
 	local full = used >= cap
@@ -660,7 +681,7 @@ function Hud:refresh()
 	local control = Input.PreferredInput
 	local shortcut = if self.mobile then "↑" elseif control == Enum.PreferredInput.Gamepad then Input:GetStringForKeyCode(Enum.KeyCode.ButtonY) else "R"
 	shortcut = shortcut:gsub("^Button", "")
-	self.surfaceKey.Text = if self.mobile then "" else shortcut
+	self.surfaceKey.Text = if self.mobile then "" else "[" .. shortcut .. "]"
 	self.surfacePaint.Color = if full
 		then ColorSequence.new(Color3.fromRGB(255, 150, 140), Color3.fromRGB(226, 58, 70))
 		else ColorSequence.new(Color3.fromRGB(255, 230, 128), Color3.fromRGB(243, 165, 26))
@@ -798,6 +819,12 @@ function Hud:pickup(ore, amount, point)
 			end)
 	end)
 end
+-- XP gained since the last look, thrown from `point`.
+function Hud:showXP(point)
+	local amount = self.levelRing.gained or 0
+	self.levelRing.gained = 0
+	XpOrbs.show(self, amount, point)
+end
 function Hud:pointerOnControl(screen)
 	if GuiService.MenuIsOpen or Input:GetFocusedTextBox() or (self.chatInput and self.chatInput.IsFocused) then return true end
 	-- The mouse is measured from the window's corner. Gui positions start below the top bar.
@@ -809,7 +836,10 @@ function Hud:pointerOnControl(screen)
 end
 
 function Hud:aimAt(screen, valid, blocked)
-	if not screen then self.reticle.Visible = false end
+	if not screen then
+		self.reticle.Visible, self.blocked.Visible = false, false
+	end
+	self.aimScreen = screen
 	if self.speechHome then
 		local showingNotice = os.clock() < (self.untilTime or 0)
 		if screen and (valid or blocked) and (self.meter.Visible or not showingNotice) then
@@ -849,45 +879,30 @@ function Hud:milestone(kind, name, color)
 	end
 	local serial = (self.ribbonSerial or 0) + 1
 	self.ribbonSerial = serial
-	self.ribbonType.Text, self.ribbonType.TextColor3, self.ribbonName.Text = kind, color:Lerp(W.white, 0.36), name
+	self.ribbonType.Text, self.ribbonName.Text = kind, name
+	self.ribbonPaint.Color = ColorSequence.new(color:Lerp(W.white, 0.3), color:Lerp(W.navy, 0.35))
 	self.ribbon.Visible = true
-	local y = 60 + self.haul.Size.Y.Offset
-	self.ribbon.Position = UDim2.fromOffset(18, y)
-	W.tween(self.ribbon, 0.2, { Position = UDim2.fromOffset(0, y) })
-	task.delay(3.4, function()
+	local rest = UDim2.new(0.5, 0, 0, 132 * self.speechBase)
+	self.ribbon.Position = rest
+	if Burst.allowed(self.player) then
+		Burst.drop(self.ribbon, rest)
+		Burst.shine(self.ribbon, 17)
+	end
+	task.delay(4, function()
 		if self.ribbonSerial == serial then
 			self.ribbon.Visible = false
 		end
 	end)
 end
 function Hud:workshop(key, level)
-	local tint = Upgrades.items[key].color
-	if self.workshopCard then
-		self.workshopCard:Destroy()
-	end
-	local panel = card(self.root, "Upgrade fitted", 0, 0, 278, 68, tint:Lerp(W.ink, 0.32), W.panel)
-	panel.ZIndex = 30
-	W.anchor(panel, 0.5, 0, UDim2.new(0.5, 0, 0, 9))
 	local headline = if key == "Power"
 		then Upgrades.pickNames[level]
-		elseif key == "Capacity" then "Field pack expanded"
-		else "Faster pick swing"
-	W.title(panel, headline, 8, 7, 262, 29, 22, W.white)
-	local detail = W.text(panel, "", 8, 37, 262, 22, 15, W.gold)
-	local prefix = key .. "  Lv " .. level .. "   ·   "
-	W.fitText(detail, if key == "Power" then Upgrades.unlockTexts(level) else { Upgrades.describe(key, level) }, prefix)
-	self.workshopCard = panel
-	if self.player:GetAttribute("MenuMotion") ~= false then
-		local scale = W.scale(panel)
-		scale.Scale = 0.78
-		W.tween(scale, 0.21, { Scale = 1 })
-	end
-	task.delay(2.4, function()
-		if self.workshopCard == panel then
-			panel:Destroy()
-			self.workshopCard = nil
-		end
-	end)
+		elseif key == "Capacity" then "Bigger Backpack"
+		else "Faster Swings"
+	local detail = "Lv " .. (level - 1) .. " → Lv " .. level .. "  ·  "
+		.. (if key == "Power" then "Mines " .. Upgrades.unlockTexts(level)[math.min(2, #Upgrades.unlockTexts(level))] else Upgrades.describe(key, level))
+	self.menu:upgraded(key)
+	self.unlocks:show("upgrade", headline, detail, key)
 end
 function Hud:notice(title, detail, color)
 	self.untilTime = os.clock() + 2.1
@@ -901,13 +916,15 @@ function Hud:notice(title, detail, color)
 	self.message.TextTransparency = 0.35
 	W.tween(self.message, 0.16, { TextTransparency = 0 })
 end
-function Hud:boostSpeech(boost, seconds)
-	if self.speechBoost == boost then
-		return
-	end
-	self.speechBoost = boost
-	if self.boostTween then self.boostTween:Cancel() end
-	self.boostTween = W.tween(self.speechScale, seconds or 0.12, { Scale = self.speechBase * boost })
+-- Keeps the reason beside the cursor, or beside the aim dot without a mouse.
+function Hud:placeBlocked(screen)
+	local bounds = self.root.AbsoluteSize
+	local half = self.blocked.AbsoluteSize / 2
+	local at = screen + self.viewportOffset
+	local width = math.min(half.X, 260 * self.speechBase)
+	local below = at.Y + 26 + half.Y
+	if below + half.Y * 0.7 > bounds.Y then below = at.Y - 26 - half.Y end
+	self.blocked.Position = UDim2.fromOffset(math.clamp(at.X, width, math.max(width, bounds.X - width)), below)
 end
 -- Trying to mine what can't be mined: a short buzz, and the reason at the cursor grows and wiggles
 -- where it is. The no-entry cursor shakes too. Throttled so holding the button doesn't spam it.
@@ -921,10 +938,7 @@ function Hud:cantMine(full)
 	if self.player:GetAttribute("MenuMotion") == false or GuiService.ReducedMotionEnabled then
 		return
 	end
-	self:boostSpeech(1.95, 0.07)
-	task.delay(0.12, function()
-		if self.speechBoost == 1.95 then self:boostSpeech(1.4, 0.5) end
-	end)
+	Burst.pop(self.blockedScale, self.speechBase, 1.6)
 	local function shake(gui, scale)
 		if not gui then
 			return
@@ -943,7 +957,7 @@ function Hud:cantMine(full)
 	local badge = self.denied.Parent
 	self.deniedScale = self.deniedScale or W.scale(badge)
 	shake(badge, self.deniedScale)
-	shake(self.speech)
+	shake(self.blocked)
 	if full then
 		shake(self.haulTitle, self.haulPulse)
 		shake(self.edgeCount, self.edgeCountPulse)
@@ -954,13 +968,16 @@ function Hud:guide(title, detail, visible, blocked)
 	if os.clock() < (self.untilTime or 0) then
 		return
 	end
-	if not blocked then
-		self:boostSpeech(1)
-	elseif self.speechBoost < 1.4 then
-		self:boostSpeech(1.4)
+	local was = self.blocked.Visible
+	self.blocked.Visible = blocked == true
+	if blocked then
+		self.speech.Visible = false
+		self.blocked.Text = string.format('<font size="42" color="#%s">%s</font>\n<font size="23">%s</font>', fullRed:ToHex(), title, detail)
+		if not was and Burst.allowed(self.player) then Burst.pop(self.blockedScale, self.speechBase, 1.15) end
+		return
 	end
 	self.speech.Visible, self.detail.RichText = visible, true
-	self.message.Text, self.message.TextColor3, self.detail.Text = title, if blocked then fullRed else W.white, detail
+	self.message.Text, self.message.TextColor3, self.detail.Text = title, W.white, detail
 end
 -- The two reward tiles: a badge when something can be claimed, and the time to the next gift.
 function Hud:refreshRewards()

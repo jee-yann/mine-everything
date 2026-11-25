@@ -2,6 +2,8 @@
 -- Shared.FieldRewards.
 local Gui = game:GetService("GuiService")
 local Field = require(game:GetService("ReplicatedStorage").Shared.FieldRewards)
+local Burst, Audio = require(script.Parent.Burst), require(script.Parent.HarborAudio)
+local Run = game:GetService("RunService")
 local W, Icons, Card = require(script.Parent.Widgets), require(script.Parent.Icons), require(script.Parent.WideCard)
 local Panel = {}
 Panel.__index = Panel
@@ -51,6 +53,9 @@ function Panel.new(menu)
 			if card.modal.Visible then self:refresh() end
 		end
 	end)
+	Run.RenderStepped:Connect(function()
+		if card.modal.Visible then self:animate(os.clock()) end
+	end)
 	return self
 end
 
@@ -66,9 +71,12 @@ function Panel:buildDaily()
 		local tile = box(page, "Day " .. i, x, y, w, h, tints[i])
 		local scale = W.scale(tile)
 		Card.rays(tile, w / 2, h * 0.46, w * 0.9, if big then 8 else 6).ZIndex = 1
+		-- Bright turning rays, only on the day that can be claimed.
+		local sun = Burst.rays(tile, w / 2, h * 0.42, w, 9, rgb(255, 250, 190), 0.55)
+		sun.Visible = false
 		W.navyText(W.title(tile, "Day " .. i, 0, if big then 10 else 5, w, if big then 40 else 28, if big then 36 else 24, W.white), 2.8)
 		local size = if big then 128 else 56
-		Icons.draw(tile, reward.icon, (w - size) / 2, if big then 66 else 33, size, rgb(120, 225, 255))
+		local picture = Icons.draw(tile, reward.icon, (w - size) / 2, if big then 66 else 33, size, rgb(120, 225, 255))
 		local name = W.title(tile, if big then reward.name else Field.describe(reward), 4, if big then 206 else 89, w - 8, if big then 30 else 24, if big then 26 else 19, W.white)
 		W.navyText(name, 2.3)
 		if big then
@@ -89,10 +97,14 @@ function Panel:buildDaily()
 		local tick = W.title(done, "✓", 0, 0, w, h - 34, if big then 110 else 66, rgb(140, 255, 120))
 		tick.ZIndex = 5
 		W.navyText(tick, 4)
-		local glow = W.frame(tile, "Today", 0, 0, 0, 0, W.white, 18)
-		glow.Size, glow.Position, glow.BackgroundTransparency = UDim2.new(1, 8, 1, 8), UDim2.fromOffset(-4, -4), 1
+		local glow = W.frame(tile, "Today", 0, 0, 0, 0, W.white, 16)
+		glow.Size, glow.BackgroundTransparency = UDim2.fromScale(1, 1), 1
 		local rim = W.stroke(glow, W.gold, 5)
-		self.days[i] = { tile = tile, scale = scale, button = button, paint = paint, label = label, done = done, rim = rim }
+		local shade = W.frame(tile, "Later", 0, 0, 0, 0, W.navy, 16)
+		shade.Size, shade.BackgroundTransparency, shade.ZIndex, shade.Visible = UDim2.fromScale(1, 1), 0.62, 4, false
+		self.days[i] = { tile = tile, scale = scale, button = button, paint = paint, label = label, done = done, rim = rim,
+			sun = sun, shade = shade, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"),
+			pictureRest = picture:FindFirstChildOfClass("UIScale").Scale, buttonScale = button["Interaction scale"], w = w }
 	end
 	self.dailyNext = W.title(page, "", 0, 334, 764, 26, 21, W.white)
 	W.navyText(self.dailyNext, 2.4)
@@ -121,7 +133,13 @@ function Panel:buildPlaytime()
 		local well = W.frame(tile, "Picture", 7, 8, w - 14, 84, W.navy, 11)
 		well.BackgroundTransparency, well.ClipsDescendants = 0.72, true
 		Card.rays(well, (w - 14) / 2, 42, 80, 6)
-		Icons.draw(well, gift.reward.icon, (w - 14) / 2 - 29, 13, 58, rgb(120, 225, 255))
+		local sun = Burst.rays(well, (w - 14) / 2, 42, 90, 8, rgb(255, 250, 190), 0.5)
+		sun.Visible = false
+		local picture = Icons.draw(well, gift.reward.icon, (w - 14) / 2 - 29, 13, 58, rgb(120, 225, 255))
+		local glow = W.frame(tile, "Ready", 0, 0, 0, 0, W.white, 16)
+		glow.Size, glow.BackgroundTransparency = UDim2.fromScale(1, 1), 1
+		local rim = W.stroke(glow, W.gold, 5)
+		rim.Enabled = false
 		W.navyText(W.title(tile, gift.minutes .. " min", 0, 96, w, 26, 21, W.white), 2.4)
 		local line = 124
 		for part in string.gmatch(Field.describe(gift.reward), "%+[^+]+") do
@@ -146,7 +164,9 @@ function Panel:buildPlaytime()
 		local tick = W.title(done, "✓", 0, 10, w, 120, 56, rgb(140, 255, 120))
 		tick.ZIndex = 5
 		W.navyText(tick, 4)
-		self.gifts[i] = { tile = tile, scale = scale, knob = knob, button = button, paint = paint, label = label, done = done }
+		self.gifts[i] = { tile = tile, scale = scale, knob = knob, button = button, paint = paint, label = label, done = done,
+			sun = sun, rim = rim, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"),
+			pictureRest = picture:FindFirstChildOfClass("UIScale").Scale, buttonScale = button["Interaction scale"], w = w }
 	end
 	self.playedLabel = W.title(page, "", 4, 308, 250, 34, 24, W.white, true)
 	W.navyText(self.playedLabel, 2.6)
@@ -180,12 +200,63 @@ function Panel:open(key)
 	card.sub.Text = if key == "Daily" then "Come back every day. Miss one and you keep your place." else "Keep playing to unlock gifts. They reset every day."
 end
 
--- Pops the tile that was just collected.
+-- The tile that was just collected: it swells, paper flies, and what was won rises out of it.
 function Panel:claimed(kind, index)
 	local entry = if kind == "Daily" then self.days[index] else self.gifts[index]
-	if not entry or not motion(self.menu) then return end
-	entry.scale.Scale = 1.16
-	W.tween(entry.scale, 0.4, { Scale = 1 })
+	local reward = if kind == "Daily" then Field.daily[index] else Field.gifts[index] and Field.gifts[index].reward
+	if not entry or not reward then return end
+	Audio.unlock(true)
+	if not motion(self.menu) then return end
+	Burst.pop(entry.scale, 1, 1.22)
+	Burst.shine(entry.tile, 16)
+	local overlay = self.menu.overlay
+	local at = entry.tile.AbsolutePosition + entry.tile.AbsoluteSize * 0.45 - overlay.AbsolutePosition
+	Burst.confetti(overlay, at.X, at.Y, if kind == "Daily" and index == #Field.daily then 46 else 28)
+	local won = W.title(overlay, Field.describe(reward), at.X, at.Y, 420, 60, 44, rgb(255, 244, 120))
+	won.AnchorPoint, won.ZIndex = Vector2.one * 0.5, 70
+	local stroke = W.navyText(won, 4)
+	local scale = W.scale(won)
+	Burst.pop(scale, self.card.scale.Scale, 0.4)
+	W.tween(won, 1.1, { Position = UDim2.fromOffset(at.X, at.Y - 96 * self.card.scale.Scale) }).Completed:Once(function()
+		W.tween(stroke, 0.3, { Transparency = 1 })
+		W.tween(won, 0.3, { TextTransparency = 1 }).Completed:Once(function() won:Destroy() end)
+	end)
+	-- Gold goes to the wallet once the card is closed. The total on screen keeps counting either way.
+	if reward.gold then self.menu.holdGold(0.8, entry.tile) end
+end
+
+-- A welcome when the card opens by itself: paper once it has landed.
+function Panel:welcome()
+	if not motion(self.menu) then return end
+	task.delay(0.42, function()
+		if not self.card.modal.Visible then return end
+		Audio.reward(1.7)
+		local overlay, modal = self.menu.overlay, self.card.modal
+		for _, side in { 0.14, 0.86 } do
+			local at = modal.AbsolutePosition + modal.AbsoluteSize * Vector2.new(side, 0.25) - overlay.AbsolutePosition
+			Burst.confetti(overlay, at.X, at.Y, 22, nil, 1.1)
+		end
+	end)
+end
+
+-- What can be claimed keeps moving: its picture breathes and its button swells.
+function Panel:animate(now)
+	local list = if self.page == "Daily" then self.days else self.gifts
+	local moving = motion(self.menu)
+	for _, entry in list do
+		local live = entry.live == true
+		entry.sun.Visible = live
+		if live and moving then
+			local beat = (1 - math.cos(now * 5.2)) / 2
+			entry.pictureScale.Scale = entry.pictureRest * (1 + 0.16 * beat)
+			entry.picture.Rotation = math.sin(now * 5.2) * 5
+			entry.buttonScale.Scale = 1 + 0.07 * beat
+			entry.rim.Thickness = 4.5 + 2 * beat
+		elseif entry.wasLive and not live then
+			entry.pictureScale.Scale, entry.picture.Rotation, entry.buttonScale.Scale = entry.pictureRest, 0, 1
+		end
+		entry.wasLive = live
+	end
 end
 
 function Panel:refresh()
@@ -203,9 +274,10 @@ function Panel:refresh()
 			entry.done.Visible, entry.rim.Enabled = collected, claim
 			entry.label.Text = if claim then "Claim!" elseif collected then "Claimed" elseif not ready and i == done % #Field.daily + 1 then "Tomorrow" else "Locked"
 			entry.paint.Color = if claim then green elseif entry.label.Text == "Tomorrow" then blue else grey
-			entry.button.Interactable = claim
+			entry.button.Interactable, entry.live = claim, claim
+			entry.shade.Visible = ready ~= nil and not claim and not collected
 		end
-		self.dailyNext.Text = if ready then "Day " .. ready .. " is ready to claim!" else "Next reward in " .. clock
+		self.dailyNext.Text = if ready then "Your day " .. ready .. " reward: " .. Field.describe(Field.daily[ready]) else "Next reward in " .. clock
 	else
 		local played, claims = Field.played(player, now), player:GetAttribute("GiftClaims") or 0
 		local waiting = Field.giftState(player, now)
@@ -221,7 +293,8 @@ function Panel:refresh()
 			entry.done.Visible = collected
 			entry.label.Text = if collected then "Claimed" elseif open then "Claim!" else W.clock(gift.seconds - played)
 			entry.paint.Color = if open and not collected then green else grey
-			entry.button.Interactable = open and not collected
+			entry.button.Interactable, entry.live = open and not collected, open and not collected
+			entry.rim.Enabled = entry.live
 		end
 		self.trackFill.Size = UDim2.new(at / math.max(1, n - 1), 0, 1, 0)
 		self.playedLabel.Text = W.clock(math.floor(played)) .. (if played >= Field.maxGiftTime then "+ played" else " played")
