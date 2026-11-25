@@ -643,7 +643,7 @@ do
 		end
 	end
 	assert(earlyMystery, "a mystery ore exists outside the final regions")
-	-- The fine roll keeps every share exact, even Starfall's one in 250,000.
+	-- The fine roll keeps every share exact, even Starfall's one in 40,000.
 	for _, layer in layers do
 		local previous, total, listed = 0, 0, 0
 		for _, entry in Geology.thresholds[layer] do
@@ -671,7 +671,7 @@ do
 		error(name .. " is not in " .. layer.name)
 	end
 	local starfallLow, starfallHigh = band(layers[last], "Starfall")
-	assert(math.abs((starfallHigh - starfallLow) / Geology.scale - 0.000004) < 1e-9, "Starfall is one block in 250,000")
+	assert(math.abs((starfallHigh - starfallLow) / Geology.scale - 0.000025) < 1e-9, "Starfall is one block in 40,000")
 	-- Sampled with the real rolls across several seeds, rare ores land near their odds.
 	local function hits(layer, name, seeds, cells)
 		local low, high = band(layer, name)
@@ -706,10 +706,10 @@ do
 			end
 		end
 	end
-	local sunstone = hits(layers[1], "Sunstone", { 3, 17, 29, 41 }, 250000) -- expect 200
-	assert(sunstone > 150 and sunstone < 250, "Sunstone sampled " .. sunstone .. " times in a million blocks")
-	local starfall = hits(layers[last], "Starfall", { 5, 6, 7, 8, 9 }, 1000000) -- expect 20
-	assert(starfall >= 6 and starfall <= 38, "Starfall sampled " .. starfall .. " times in five million blocks")
+	local sunstone = hits(layers[1], "Sunstone", { 3, 17, 29, 41 }, 250000) -- expect 500
+	assert(sunstone > 420 and sunstone < 580, "Sunstone sampled " .. sunstone .. " times in a million blocks")
+	local starfall = hits(layers[last], "Starfall", { 5, 6, 7, 8, 9 }, 1000000) -- expect 125
+	assert(starfall >= 92 and starfall <= 158, "Starfall sampled " .. starfall .. " times in five million blocks")
 	print("SAMPLE Sunstone", sunstone, "per million; Starfall", starfall, "per five million")
 	-- A save from before the expansion still loads, with its picks, pack and discoveries.
 	local oldSave = Profile.new()
