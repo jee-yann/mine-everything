@@ -4,39 +4,67 @@ local V = Vector3.new
 local Waypoint = {}
 Waypoint.__index = Waypoint
 
-local arrowCount, spacing, near = 4, 4.8, 2.8
+-- A straight guide from the miner to the target. Everything is placed from the miner's own position
+-- each frame, with no route and no raycasts, so it never lags behind or changes its mind.
+local count = 5
+local outside = { near = 3.6, gap = 4.6, speed = 6, scale = 1.25, start = V(0, -2.35, 0), line = 0.5 }
+local inside = { near = 1.6, gap = 1.35, speed = 2.6, scale = 0.6, start = V(0, 1, 0), line = 0.3 }
 local arms = {
 	CFrame.new(-0.62, 0, 0) * CFrame.Angles(0, -0.64, 0),
 	CFrame.new(0.62, 0, 0) * CFrame.Angles(0, 0.64, 0),
 }
+local dark = Color3.fromRGB(39, 30, 35)
 
-local function strip(parent, name, size)
+local function bar(parent, name, material)
 	local part = Instance.new("Part")
-	part.Name, part.Size, part.Material = name, size, Enum.Material.Neon
+	part.Name, part.Material = name, material
 	part.Anchored, part.CanCollide, part.CanTouch, part.CanQuery, part.CastShadow = true, false, false, false, false
 	part.Transparency, part.Parent = 1, parent
 	return part
 end
 
-local function makeChevrons(parent)
-	local marks = {}
-	for i = 1, arrowCount do
+local function build(self)
+	self.marks, self.moving, self.frames = {}, {}, {}
+	for i = 1, count do
 		local mark = { face = {}, border = {} }
 		for arm = 1, 2 do
-			mark.border[arm] = strip(parent, "Chevron edge", V(0.66, 0.09, 2.39))
-			mark.border[arm].Material, mark.border[arm].Color = Enum.Material.SmoothPlastic, Color3.fromRGB(39, 30, 35)
-			mark.face[arm] = strip(parent, "Trail chevron", V(0.41, 0.12, 2.12))
+			mark.border[arm] = bar(self.anchor, "Chevron edge", Enum.Material.SmoothPlastic)
+			mark.border[arm].Color = dark
+			mark.face[arm] = bar(self.anchor, "Trail chevron", Enum.Material.Neon)
+			table.insert(self.moving, mark.border[arm])
+			table.insert(self.moving, mark.face[arm])
 		end
-		marks[i] = mark
+		self.marks[i] = mark
 	end
-	return marks
+	local from, to = Instance.new("Attachment"), Instance.new("Attachment")
+	from.Name, to.Name = "Guide line start", "Guide line end"
+	from.Parent, to.Parent = workspace.Terrain, workspace.Terrain
+	local line = Instance.new("Beam")
+	line.Name, line.Attachment0, line.Attachment1 = "Guide line", from, to
+	line.FaceCamera, line.Segments, line.CurveSize0, line.CurveSize1 = true, 1, 0, 0
+	line.LightEmission, line.LightInfluence = 0.5, 0
+	line.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.12, 0.62),
+		NumberSequenceKeypoint.new(1, 0.4),
+	})
+	line.Enabled, line.Parent = false, self.anchor
+	self.from, self.to, self.line = from, to, line
+	self.anchor.Destroying:Once(function()
+		from:Destroy()
+		to:Destroy()
+	end)
 end
 
-local function hideMark(mark)
-	if not mark.visible then return end
-	mark.visible = false
-	for i = 1, 2 do
-		mark.face[i].Transparency, mark.border[i].Transparency = 1, 1
+local function resize(self, style)
+	if self.style == style then return end
+	self.style = style
+	self.tip.TextSize = if style == inside then 42 else 27
+	for _, mark in self.marks do
+		for arm = 1, 2 do
+			mark.border[arm].Size = V(0.66, 0.09, 2.39) * style.scale
+			mark.face[arm].Size = V(0.41, 0.12, 2.12) * style.scale
+		end
 	end
 end
 
@@ -44,12 +72,15 @@ function Waypoint.new(root)
 	local anchor = Instance.new("Attachment")
 	anchor.Name, anchor.Parent = "First expedition waypoint", workspace.Terrain
 	local pin = Instance.new("BillboardGui")
-	pin.Name, pin.Size = "Destination", UDim2.fromOffset(154, 56)
+	pin.Name, pin.Size = "Destination", UDim2.fromOffset(154, 72)
 	pin.LightInfluence, pin.Enabled, pin.Parent = 0, false, anchor
 	local label = W.title(pin, "", 0, 0, 154, 26, 19, W.gold)
 	label.Name = "TextLabel"
 	W.outlineText(label, 2.3)
-	local tip = W.title(pin, "▼", 0, 22, 154, 30, 27, W.gold)
+	local distance = W.title(pin, "", 0, 23, 154, 18, 14, W.white)
+	distance.Name = "Distance"
+	W.outlineText(distance, 2)
+	local tip = W.title(pin, "▼", 0, 38, 154, 30, 27, W.gold)
 	W.outlineText(tip, 2.3)
 	local glow = Instance.new("Highlight")
 	glow.Name, glow.DepthMode = "Expedition target", Enum.HighlightDepthMode.Occluded
@@ -57,238 +88,157 @@ function Waypoint.new(root)
 	glow.Enabled, glow.Parent = false, anchor
 	local edge
 	if root then
-		edge = W.title(root, "➤", 0, 0, 34, 34, 26, W.gold)
+		edge = W.title(root, "▶", 0, 0, 40, 40, 34, W.gold)
 		edge.Name, edge.AnchorPoint, edge.Visible = "Expedition direction", Vector2.one * 0.5, false
 		W.outlineText(edge, 2.4)
 	end
-	local self = setmetatable({ anchor = anchor, pin = pin, label = label, tip = tip, glow = glow, edge = edge }, Waypoint)
-	anchor.Destroying:Once(function()
-		if self.addedCrossing then
-			self.addedCrossing:Disconnect()
-			self.removedCrossing:Disconnect()
-		end
-	end)
-	return self
+	return setmetatable({ anchor = anchor, pin = pin, label = label, distance = distance, tip = tip, glow = glow, edge = edge }, Waypoint)
+end
+
+local function hide(mark)
+	if not mark.visible then return end
+	mark.visible = false
+	for i = 1, 2 do
+		mark.face[i].Transparency, mark.border[i].Transparency = 1, 1
+	end
+end
+
+function Waypoint:hideTrail()
+	if not self.marks then return end
+	for _, mark in self.marks do hide(mark) end
+	self.line.Enabled, self.aim, self.base = false, nil, nil
 end
 
 function Waypoint:clear()
 	self.pin.Enabled, self.glow.Enabled, self.glow.Adornee = false, false, nil
 	if self.edge then self.edge.Visible = false end
-	if self.marks then
-		for _, mark in self.marks do hideMark(mark) end
-	end
+	self:hideTrail()
 end
 
-function Waypoint:show(position, text, tint, surface, part)
-	self.destination, self.destinationLabel = position, text
+-- `goal` is the thing itself. `position` is where its name floats.
+function Waypoint:show(position, text, tint, goal, part)
+	self.goal = goal or position
 	self.anchor.WorldPosition = position
 	self.label.Text, self.label.TextColor3, self.tip.TextColor3 = text, tint, tint
-	self.pin.AlwaysOnTop, self.pin.Enabled = surface, true
+	-- The arrow stays on top, even over a rock that is being mined.
+	self.pin.AlwaysOnTop, self.pin.Enabled = true, true
 	self.glow.Adornee, self.glow.Enabled = part, part ~= nil
 	self.glow.FillColor, self.glow.OutlineColor = tint, tint
 	if self.edge then self.edge.TextColor3 = tint end
 end
 
-function Waypoint:placeMark(mark, flat, forward, eyeY, strength, now)
-	-- Reuse the sampled ground plane while crossing a small patch. XY
-	-- and heading still follow the actual route every rendered frame.
-	if not mark.sample or (mark.sample - flat).Magnitude > 0.7 or math.abs(eyeY - mark.eyeY) > 1.5
-		or (not mark.hit and now >= mark.retry) then
-		mark.sample, mark.eyeY, mark.retry = flat, eyeY, now + 0.25
-		local hit = workspace:Raycast(flat + V(0, eyeY + 1, 0), -Vector3.yAxis * 15, self.ground)
-		if hit and hit.Normal.Y > 0.77 and hit.Position.Y < eyeY - 1
-			and (hit.Position.Y >= self.waterFloor or hit.Instance.Name == "Canal step" or hit.Instance.Name == "Canal landing") then
-			mark.hit, mark.normal = hit.Position, hit.Normal
-		else
-			mark.hit = nil
-		end
-	end
-	if not mark.hit then hideMark(mark) return end
-	local normal, hit = mark.normal, mark.hit
-	local height = hit.Y - (normal.X * (flat.X - hit.X) + normal.Z * (flat.Z - hit.Z)) / normal.Y
-	local center = flat + V(0, height, 0) + normal * 0.16
-	local tangent = forward - normal * normal:Dot(forward)
-	local at = CFrame.lookAt(center, center + tangent, normal)
-	for j, offset in arms do
-		local base = at * offset
-		mark.border[j].CFrame, mark.border[j].Transparency = base, 1 - 0.92 * strength
-		mark.face[j].CFrame = base + normal * 0.061
-		mark.face[j].Color, mark.face[j].Transparency = self.label.TextColor3, 1 - strength
-	end
-	mark.visible = true
-end
-
--- Lay a short section of the route on fixed ground intervals. Walking toward
--- a chevron passes it naturally, even between updates of the tutorial objective.
-local function flat(position)
-	return V(position.X, 0, position.Z)
-end
-
-local function shortestCrossing(decks, start, target)
-	local best, nearest, farthest = math.huge, nil, nil
-	for _, deck in decks do
-		local center = flat(deck.Position)
-		local half = deck.Size.Z / 2
-		local sign = if target.Z < center.Z then 1 else -1
-		if (target.Z - center.Z) * sign >= -half or (start.Z - center.Z) * sign <= -half then continue end
-		local nearEnd = center + Vector3.zAxis * (half * sign)
-		local farEnd = center - Vector3.zAxis * (half * sign)
-		local onDeck = math.abs(start.X - center.X) <= deck.Size.X / 2 and math.abs(start.Z - center.Z) <= half
-		local distance = if onDeck then (start - farEnd).Magnitude else (start - nearEnd).Magnitude + half * 2
-		distance += (farEnd - target).Magnitude
-		if distance < best then
-			best, nearest, farthest = distance, if onDeck then nil else nearEnd, farEnd
-		end
-	end
-	return nearest, farthest
-end
-
--- A side bridge or stair can stream in after the main deck (and leave again).
--- Track only the route pieces that are present on this client.
-function Waypoint:watchCrossings(island, paths, bridge)
-	if self.addedCrossing then
-		self.addedCrossing:Disconnect()
-		self.removedCrossing:Disconnect()
-	end
-	self.bridge, self.decks, self.exits = bridge, { bridge }, {}
-	self.waterFloor = bridge.Position.Y - 1.7
-	local function listFor(part)
-		if part.Name == "Timber deck" and part.Parent and part.Parent.Name == "Creek crossing" then
-			return self.decks
-		elseif part.Name == "Canal landing" and part.Parent == paths then
-			return self.exits
-		end
-	end
-	local function attach(part)
-		local list = listFor(part)
-		if list and not table.find(list, part) then table.insert(list, part) end
-	end
-	self.addedCrossing = island.DescendantAdded:Connect(attach)
-	self.removedCrossing = island.DescendantRemoving:Connect(function(part)
-		local list = if part.Name == "Timber deck" then self.decks elseif part.Name == "Canal landing" then self.exits else nil
-		local i = list and table.find(list, part)
-		if i then table.remove(list, i) end
-	end)
-	local highlands = island:FindFirstChild("Citrine Highlands")
-	local meadows = highlands and highlands:FindFirstChild("Outer meadows")
-	if meadows then
-		for _, part in meadows:GetDescendants() do attach(part) end
-	end
-	for _, part in paths:GetChildren() do attach(part) end
-end
-
-function Waypoint:trail(head, now, motion)
-	local island = workspace:FindFirstChild("CitrineCove")
-	local paths = island and island:FindFirstChild("Sand path and bridge")
-	local bridge = paths and paths:FindFirstChild("Bridge decking")
-	if not head or not bridge or math.abs(head.Position.Y - bridge.Position.Y) > 13 then
-		if self.marks then for _, mark in self.marks do hideMark(mark) end end
+function Waypoint:trail(position, camera, dt, now, motion, underground)
+	if not self.marks then build(self) end
+	local style = if underground then inside else outside
+	resize(self, style)
+	-- Only the height is eased, so a jump or a stair does not shake the line.
+	local base = position + style.start
+	if not self.base or math.abs(self.base - base.Y) > 8 then self.base = base.Y end
+	self.base += (base.Y - self.base) * (1 - math.exp(-dt * (if underground then 24 else 10)))
+	base = V(base.X, self.base, base.Z)
+	local goal = if underground then self.goal else V(self.goal.X, math.max(self.goal.Y + 0.65, math.min(base.Y, self.goal.Y + 2)), self.goal.Z)
+	-- A new target swings the line across instead of snapping it.
+	self.aim = if self.aim and (self.aim - goal).Magnitude > 0.01 then self.aim:Lerp(goal, 1 - math.exp(-dt * 12)) else goal
+	local delta = self.aim - base
+	local length = delta.Magnitude
+	if length < style.near then
+		for _, mark in self.marks do hide(mark) end
+		self.line.Enabled = false
 		return
 	end
-	if not self.marks then
-		self.marks = makeChevrons(self.anchor)
-		self.path = {}
-		self.ground = RaycastParams.new()
-		self.ground.FilterType, self.ground.RespectCanCollide = Enum.RaycastFilterType.Include, true
-	end
-	if self.groundIsland ~= island then
-		self.ground.FilterDescendantsInstances = { island }
-		self.groundIsland = island
-		for _, mark in self.marks do mark.sample = nil end
-	end
-	local root = head.AssemblyRootPart or head
-	local start, target = flat(root.Position), flat(self.destination)
-	if self.bridge ~= bridge then
-		self:watchCrossings(island, paths, bridge)
-	end
-	table.clear(self.path)
-	local exit
-	if root.Position.Y < bridge.Position.Y + 1.35
-		and math.abs(start.Z - bridge.Position.Z) < 11 and math.abs(start.X - bridge.Position.X) < 63 then
-		local best = math.huge
-		for _, landing in self.exits do
-			local distance = (start - flat(landing.Position)).Magnitude
-			if distance < best then best, exit = distance, landing end
-		end
-	end
-	if exit then
-		local foot = flat(exit.Position)
-		local up = if math.abs(foot.X - bridge.Position.X) > 22 then 1 else -1
-		local top = foot + Vector3.zAxis * (9.4 * up)
-		local onStairs = math.abs(start.X - foot.X) < exit.Size.X / 2 and (start.Z - foot.Z) * up > -1.1
-		if not onStairs then table.insert(self.path, foot) end
-		table.insert(self.path, top)
-		self.anchor.WorldPosition = top + Vector3.yAxis * (bridge.Position.Y + 2)
-		self.label.Text = "Climb the steps"
-	else
-		self.anchor.WorldPosition, self.label.Text = self.destination, self.destinationLabel
-		local entry, far = shortestCrossing(self.decks, start, target)
-		if entry then table.insert(self.path, entry) end
-		if far then table.insert(self.path, far) end
-		table.insert(self.path, target)
-	end
+	local forward = delta / length
+	self.from.WorldPosition, self.to.WorldPosition = base + forward * style.near * 0.6, self.aim
+	self.line.Enabled = length > style.near + 1
+	self.line.Width0, self.line.Width1 = style.line * 0.6, style.line * 1.5
+	self.line.Color = ColorSequence.new(self.label.TextColor3)
 
-	local length, previous = 0, start
-	for _, point in self.path do
-		length += (point - previous).Magnitude
-		previous = point
-	end
-	local travel = if motion then now * 4.2 else 0
-	local first = math.floor((length - near + travel) / spacing)
-	for i = 0, arrowCount - 1 do
-		local index = first - i
-		local mark = self.marks[index % arrowCount + 1]
-		local along = length + travel - index * spacing
-		if along > length - 1.5 then hideMark(mark) continue end
-		local remaining, segmentStart = along, start
-		for _, stop in self.path do
-			local segment = stop - segmentStart
-			local distance = segment.Magnitude
-			if remaining > distance or distance < 0.001 then
-				remaining -= distance
-				segmentStart = stop
-				continue
-			end
-			local forward = segment / distance
-			local flat = segmentStart + forward * remaining
-			local fade = math.min(along - near, near + arrowCount * spacing - along, length - 1.5 - along)
-			self:placeMark(mark, flat, forward, head.Position.Y, math.clamp(fade / 0.8, 0, 1), now)
-			break
+	local span = count * style.gap
+	local flow = if motion then now * style.speed % style.gap else 0
+	local frames, n = self.frames, 0
+	-- Neon washes pale colours out, so it gets a deeper shade of the same one.
+	local hue, saturation, value = self.label.TextColor3:ToHSV()
+	local ink = Color3.fromHSV(hue, math.min(1, saturation * 1.25), value * 0.82)
+	for i, mark in self.marks do
+		local along = style.near + (i - 1) * style.gap + flow
+		local fade = math.min(along - style.near + (if motion then 0 else 1), style.near + span - along, length - along - style.near * 0.3)
+		local strength = math.clamp(fade / (style.gap * 0.3), 0, 1)
+		local center = base + forward * along
+		-- Turned to the camera in the mine, where a target can be overhead or underfoot.
+		local up = Vector3.yAxis
+		if camera then
+			-- Outside, only leaned that way, so a low camera still sees the whole arrow.
+			local eye = (camera.CFrame.Position - center).Unit
+			up = if underground then eye else up + eye * 0.7
 		end
+		up -= forward * up:Dot(forward)
+		if up.Magnitude < 0.05 then
+			up = Vector3.xAxis - forward * forward.X
+			if up.Magnitude < 0.05 then up = Vector3.zAxis end
+		end
+		up = up.Unit
+		local at = CFrame.lookAt(center, center + forward, up)
+		for arm, offset in arms do
+			local placed = at * CFrame.new(offset.Position * style.scale) * offset.Rotation
+			frames[n + 1], frames[n + 2] = placed, placed + up * (0.061 * style.scale)
+			n += 2
+			mark.border[arm].Transparency = 1 - 0.92 * strength
+			mark.face[arm].Color, mark.face[arm].Transparency = ink, 1 - strength
+		end
+		mark.visible = true
 	end
+	workspace:BulkMoveTo(self.moving, frames, Enum.BulkMoveMode.FireCFrameChanged)
 end
 
-function Waypoint:draw(camera, motion, aimed, outdoorHead)
+-- Where the arrow at the edge of the screen points. Continuous all the way round, so it slides.
+local function screenDirection(camera, position)
+	local at = camera.CFrame:PointToObjectSpace(position)
+	local ahead = math.clamp(-at.Z / math.max(at.Magnitude, 0.001), 0, 1)
+	local direction = Vector2.new(at.X, -at.Y * ahead)
+	if direction.Magnitude < 0.05 then return Vector2.new(if at.X < 0 then -1 else 1, 0) end
+	return direction.Unit
+end
+
+function Waypoint:draw(camera, motion, aimed, head, underground, dt)
 	if not self.pin.Enabled then return end
 	local now = os.clock()
-	self:trail(outdoorHead, now, motion)
+	dt = dt or 1 / 60
+	local root = head and head.Parent and (head.AssemblyRootPart or head)
+	if root then
+		self:trail(root.Position, camera, dt, now, motion, underground)
+		local away = (self.goal - root.Position).Magnitude
+		self.distance.Visible = not underground and away > 14
+		if self.distance.Visible then self.distance.Text = string.format("%d studs", math.round(away)) end
+	else
+		self:hideTrail()
+	end
 	if self.glow.Adornee then
 		-- When the pick is already aimed here its normal mining rim takes over.
 		self.glow.OutlineTransparency = if self.glow.Adornee == aimed then 1 else 0.12
 	end
 	local beat = if motion then (1 - math.cos(now * 4.8)) * 0.5 else 0
-	local lift = beat * 0.62
-	self.pin.StudsOffsetWorldSpace = V(0, lift, 0)
+	self.pin.StudsOffsetWorldSpace = V(0, beat * 0.62, 0)
 	if not self.edge or not camera then return end
 	local position = self.anchor.WorldPosition
-	local screen, inside = camera:WorldToViewportPoint(position)
-	self.edge.Visible = not inside
-	if inside then return end
-	local size = camera.ViewportSize
-	local direction = Vector2.new(screen.X - size.X / 2, screen.Y - size.Y / 2)
-	if screen.Z <= 0 then
-		local localPoint = camera.CFrame:PointToObjectSpace(position)
-		-- Directly behind always points sideways; never ask a walking player to look at their feet.
-		direction = Vector2.new(if localPoint.X < 0 then -1 else 1, 0)
+	local _, seen = camera:WorldToViewportPoint(position)
+	self.edge.Visible = not seen
+	if seen then
+		self.heading = nil
+		return
 	end
-	if direction.Magnitude < 0.001 then direction = Vector2.yAxis end
+	local direction = screenDirection(camera, position)
+	local angle = math.atan2(direction.Y, direction.X)
+	if self.heading then
+		local turn = (angle - self.heading + math.pi) % (2 * math.pi) - math.pi
+		angle = self.heading + turn * (1 - math.exp(-dt * 16))
+	end
+	self.heading = angle
+	direction = Vector2.new(math.cos(angle), math.sin(angle))
 	local bounds = self.edge.Parent.AbsoluteSize
-	local x = math.max(1, bounds.X * 0.31)
-	local y = math.max(1, bounds.Y * 0.26)
+	local x, y = math.max(1, bounds.X * 0.31), math.max(1, bounds.Y * 0.26)
 	local rim = direction / math.max(math.abs(direction.X) / x, math.abs(direction.Y) / y)
-	if motion then rim += direction.Unit * (5 * beat) end
+	if motion then rim += direction * (5 * beat) end
 	self.edge.Position = UDim2.new(0.5, rim.X, 0.5, rim.Y)
-	self.edge.Rotation = math.deg(math.atan2(direction.Y, direction.X))
+	self.edge.Rotation = math.deg(angle)
 end
 
 return Waypoint

@@ -32,9 +32,9 @@ function Guide:hide()
 	self.nextUpdate, self.searchKind, self.latestBlock = nil, nil, nil
 end
 
-function Guide:mark(position, text, tint, surface, part)
+function Guide:mark(position, text, tint, goal, part)
 	self.marked = true
-	self.waypoint:show(position, text, tint, surface, part)
+	self.waypoint:show(position, text, tint, goal, part)
 end
 
 -- Rank exposed, mineable blocks only. Prefer a real ore, then the next dirt layer
@@ -75,7 +75,9 @@ function Guide:pickBlock(head, kind)
 				score = (delta - forwards.Unit * Config.Cell).Magnitude
 			end
 		end
-		if block == previous then score -= 3 end
+		-- Stay on one block until it breaks. Looking around must not send the arrow elsewhere,
+		-- though a real ore still beats the dirt or stone already marked.
+		if block == previous then score -= 30 end
 		if kind == "Ore" or kind == "Sell" or kind == "OreOnly" then
 			if not ore.host then
 				score -= 110
@@ -135,9 +137,9 @@ function Guide:station(name, label, color, head, inMine, mobile)
 		for _, part in Collection:GetTagged("MiningInteractionPad") do
 			if (part.Position - pos).Magnitude < 0.5 then pad = part break end
 		end
-		self:mark(pos + Vector3.yAxis * 4.5, label, color, true, pad)
+		self:mark(pos + Vector3.yAxis * 4.5, label, color, pos, pad)
 		if (head.Position - pos).Magnitude > (self.net:GetAttribute(name .. "Range") or 10) + 2 then
-			return "Follow the arrows to " .. label
+			return "Follow the arrow to " .. label
 		end
 	end
 	if mobile then return "Tap the prompt on the " .. label .. " pad" end
@@ -172,7 +174,7 @@ function Guide:objective(head, inMine, depth, mobile, full, step)
 			local nearPortal = (head.Position - entrance).Magnitude < 13 or
 				(head.Position.Z < entrance.Z and math.abs(head.Position.X - entrance.X) < Config.HallHalfWidth)
 			self:mark(if nearPortal then floor + Vector3.yAxis * 3 else entrance + Vector3.yAxis * 4,
-				if nearPortal then "Dig floor" else "Mine", W.gold, true)
+				if nearPortal then "Dig floor" else "Mine", W.gold, if nearPortal then floor else entrance)
 		end
 		return title, if step == "Dig" then "Cross the bridge and enter the mine" else "Follow the arrow into the mine"
 	end
@@ -182,7 +184,7 @@ function Guide:objective(head, inMine, depth, mobile, full, step)
 	if block then
 		local ore = Ores.byName[block.Name]
 		local name = if ore.secret and not p:GetAttribute("Found" .. ore.name) then "Ore" else ore.name
-		self:mark(face + Vector3.yAxis * 1.35, name, if ore.host then W.gold else W.aqua, false, block)
+		self:mark(face + Vector3.yAxis * 1.35, name, if ore.host then W.gold else W.aqua, face, block)
 		self.mineTarget = block
 		return title, action .. " on the marked " .. string.lower(name)
 	end
@@ -191,7 +193,7 @@ function Guide:objective(head, inMine, depth, mobile, full, step)
 		return title, "Use ↑ Surface to find softer rock"
 	end
 	local floor = self.net:GetAttribute("DigFloor")
-	if floor then self:mark(floor + Vector3.yAxis * 2, "Dig floor", W.gold, true) end
+	if floor then self:mark(floor + Vector3.yAxis * 2, "Dig floor", W.gold, floor) end
 	return title, "Walk closer, then " .. action:sub(1, 1):lower() .. action:sub(2)
 end
 
@@ -212,7 +214,7 @@ function Guide:update(head, inMine, depth, mobile, full, aimed)
 		if not self.marked then self.waypoint:clear() end
 	end
 	local motion = self.player:GetAttribute("MenuMotion") ~= false and not Gui.ReducedMotionEnabled
-	self.outdoorHead, self.motion, self.aimed = if inMine then nil else head, motion, aimed
+	self.head, self.underground, self.motion, self.aimed = head, inMine, motion, aimed
 	local control = self.control
 	local spotlight = self.surfaceSale and self.hud and control and control.Visible and control.Parent.Visible
 		and not Gui.MenuIsOpen and not Input:GetFocusedTextBox() and not (self.hud.chatInput and self.hud.chatInput.IsFocused)
@@ -239,8 +241,8 @@ function Guide:update(head, inMine, depth, mobile, full, aimed)
 	return self.title, self.help
 end
 
-function Guide:draw()
-	self.waypoint:draw(workspace.CurrentCamera, self.motion, self.aimed, self.outdoorHead)
+function Guide:draw(dt)
+	self.waypoint:draw(workspace.CurrentCamera, self.motion, self.aimed, self.head, self.underground, dt)
 end
 
 return Guide

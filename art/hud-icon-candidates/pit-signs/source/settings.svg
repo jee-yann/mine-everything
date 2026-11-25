@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="settings">
-<path d="M12 7 H52 L59 14 V47 L51 56 H13 L5 48 V15 Z" fill="#36404A" stroke="#202936" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M12 6 H51 L58 13 V45 L50 53 H13 L5 46 V14 Z" fill="#AEB9DB" stroke="#202936" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="12" cy="14" r="1.55" fill="#202936"/>
-<circle cx="50.5" cy="45.5" r="1.55" fill="#202936"/>
-<path d="M19 16 V43 M31.5 14 V44 M44 16 V43" fill="none" stroke="#202936" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
-<path fill="#202936" d="M14 20 H24 V28 H14 Z M26.5 32 H36.5 V40 H26.5 Z M39 21 H49 V29 H39 Z"/>
-<path d="M17 24 H21 M29.5 36 H33.5 M42 25 H46" fill="none" stroke="#AEB9DB" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
