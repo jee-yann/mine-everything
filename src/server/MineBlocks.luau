@@ -29,7 +29,31 @@ function Blocks:reset(seed)
 	self.folder:ClearAllChildren()
 	self.chunks = {}
 	self.starterCuts = {}
+	self.planted = {}
 	self.geology = Geology.new(seed)
+end
+-- What a cell is made of: its rock, unless something was planted there.
+function Blocks:material(p)
+	local planted = self.planted and self.planted[p]
+	return if planted then planted.material else self.geology:material(p)
+end
+-- Puts `ore` in cell `p`, replacing a block already shown there. A practice block takes any pick.
+function Blocks:plant(p, ore, practice)
+	self.planted[p] = { material = ore.material, practice = practice }
+	local chunk, i = self:slot(p, false)
+	local part = chunk and chunk[i]
+	if part then
+		local faces = part:GetAttribute("OpenFaces") or 0
+		part:Destroy()
+		chunk[i] = nil
+		for face = 0, 5 do
+			if bit32.btest(faces, 2 ^ face) then self:expose(p, face, {}) end
+		end
+	end
+end
+function Blocks:practice(p)
+	local planted = self.planted and self.planted[p]
+	return planted ~= nil and planted.practice == true
 end
 function Blocks:cellAt(point)
 	return ((point - self.top) / cell):Floor()
@@ -58,7 +82,7 @@ function Blocks:oreAt(p)
 	if value then
 		return Ores.byName[value.Name]
 	end
-	return Ores.byMaterial[self.geology:material(p)]
+	return Ores.byMaterial[self:material(p)]
 end
 
 local oreIds = {}
@@ -131,13 +155,14 @@ function Blocks:expose(p, face, open)
 		return
 	end
 	if not part then
-		local material = self.geology:material(p)
+		local material = self:material(p)
 		if material == air then
 			chunk[i] = false
 			table.insert(open, p)
 			return
 		end
 		part = brick(self, p, material)
+		if self:practice(p) then part:SetAttribute("Practice", true) end
 		chunk[i] = part
 	end
 	local old = part:GetAttribute("OpenFaces") or 0
@@ -188,6 +213,7 @@ function Blocks:take(p)
 		return nil
 	end
 	chunk[i] = false
+	if self.planted then self.planted[p] = nil end
 	if p.Y == -1 and p.X >= -5 and p.X <= -3 and p.Z >= -3 and p.Z <= -2 then
 		self.starterCuts[p] = os.clock() + 75
 	end

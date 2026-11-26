@@ -1,3 +1,4 @@
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local E = require(game.ReplicatedStorage.Shared.Expeditions)
 local function equip(player, char)
 	local human = char:WaitForChild("Humanoid", 8)
@@ -59,7 +60,7 @@ local function equip(player, char)
 	title.Size, title.BackgroundTransparency, title.Font = UDim2.fromScale(1, 1), 1, Enum.Font.FredokaOne
 	title.TextScaled, title.TextColor3, title.TextStrokeColor3, title.TextStrokeTransparency =
 		true, gold, Color3.fromRGB(32, 27, 45), 0.12
-	title.TextWrapped = true
+	title.TextWrapped, title.RichText = true, true
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MinTextSize, limit.MaxTextSize, limit.Parent = 5, 14, title
 	title.Parent = nameplate
@@ -75,7 +76,7 @@ local function equip(player, char)
 		clasp.C0 = binding.C0 * CFrame.new(0, 0.36 * scale, 0.442 * scale)
 		nameplate.StudsOffsetWorldSpace = Vector3.new(0, torso.Size.Y / 2 + 1.85, 0)
 		local tier, rank = E.rank(E.level(player:GetAttribute("MiningXP") or 0))
-		title.Text = player.DisplayName .. "\n" .. (E.ranks[player:GetAttribute("EquippedTitle") or tier] or rank).name
+		title.Text = player.DisplayName .. Rebirth.richBadge(player:GetAttribute("Rebirths") or 0) .. "\n" .. (E.ranks[player:GetAttribute("EquippedTitle") or tier] or rank).name
 		bag.Color = ({
 			fabric,
 			Color3.fromRGB(64, 126, 119),
@@ -87,7 +88,7 @@ local function equip(player, char)
 	end
 	fit()
 	local signals = { torso:GetPropertyChangedSignal("Size"):Connect(fit) }
-	for _, key in { "Capacity", "MiningXP", "EquippedTitle" } do
+	for _, key in { "Capacity", "MiningXP", "EquippedTitle", "Rebirths" } do
 		table.insert(signals, player:GetAttributeChangedSignal(key):Connect(fit))
 	end
 	kit.Destroying:Once(function()

@@ -156,6 +156,17 @@ assert(hint({}) and hint({ mined = 400, sinceLevel = 900 }))
 for _, change in { { friends = 1 }, { invited = true }, { onboarded = false }, { shown = 3 }, { mined = 100 }, { sinceLevel = 900 }, { busy = true }, { shown = 1 } } do
 	assert(not hint(change))
 end
+-- The rebirth guide asks only while a rebirth is ready, and gives up after three times.
+local rebirthWanted = require(Client.RebirthGuide).wanted
+assert(rebirthWanted({ ready = true, busy = false, tries = 0 }))
+assert(not rebirthWanted({ ready = false, busy = false, tries = 0 }) and not rebirthWanted({ ready = true, busy = true, tries = 0 }))
+assert(not rebirthWanted({ ready = true, busy = false, tries = 3 }))
+-- A practice block takes any pick; a real Starfall needs its Power.
+local Pattern, Ores = require(Shared.BlockPattern), require(Shared.Ores)
+local below = Vector3.new(0, -9, 0)
+assert(#Pattern.select(Vector3.zero, below, Ores.byName.Starfall, 1, 8, true) == 1)
+local none, _, need = Pattern.select(Vector3.zero, below, Ores.byName.Starfall, 1, 8)
+assert(#none == 0 and need == Ores.byName.Starfall.hardness)
 -- Bigger payouts count for longer, within reason.
 local plan = require(Client.GoldFlow).plan
 local short, long, huge = plan(5), plan(5000), plan(5e9)

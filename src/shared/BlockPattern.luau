@@ -40,11 +40,12 @@ function Pattern.reachablePart(eye, center, normal, params, reach)
 	return nil
 end
 
-function Pattern.select(origin, center, ore, power, space)
+-- `practice` marks a Studio test block that any pick can mine.
+function Pattern.select(origin, center, ore, power, space, practice)
 	if space < 1 or not ore or center.Y >= origin.Y + Config.FloorY then
 		return {}, nil
 	end
-	local required = math.max(ore.hardness, Config.strength(center.Y - origin.Y))
+	local required = if practice then 1 else math.max(ore.hardness, Config.strength(center.Y - origin.Y))
 	if required > power then
 		return {}, ore, required
 	end

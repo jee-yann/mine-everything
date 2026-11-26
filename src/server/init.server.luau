@@ -23,6 +23,18 @@ local surface = workspace:WaitForChild("CitrineCove")
 local seeds = Random.new()
 local studioSeed = if game:GetService("RunService"):IsStudio() then script:GetAttribute("StudioMineSeed") else nil
 local world = World.new(studioSeed or seeds:NextInteger(1, 2147483646), surface)
+-- In Studio a Starfall waits in the first layer, so the find and the rebirth can be tried. Set the
+-- StudioStarfall attribute on this script to false to turn it off. Tests and live servers never get it.
+local function studioStarfall()
+	if not game:GetService("RunService"):IsStudio() then return false end
+	if Rep:GetAttribute("StudioStarfall") == true then return true end
+	return script:GetAttribute("StudioStarfall") ~= false and not Rep:GetAttribute("MiningTestMode")
+end
+world.practiceStarfall = studioStarfall()
+Rep:GetAttributeChangedSignal("StudioStarfall"):Connect(function()
+	world.practiceStarfall = studioStarfall()
+	if world.practiceStarfall and world.ready then world:plantStarfall() end
+end)
 local site = MineSite.bind(surface, world)
 local landing = site.spawn.Position + Vector3.yAxis * 4
 local minePath = surface["Sand path and bridge"]["Portal paving"]

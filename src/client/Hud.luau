@@ -206,7 +206,7 @@ function Hud.new(player, net, mobile)
 			self:openPage(key)
 		end)
 	end
-	-- Two columns when there is height for three rows, otherwise three columns.
+	-- Two columns, never more. A short screen makes the buttons smaller instead.
 	local function arrangeRail(columns)
 		if self.railColumns == columns then return end
 		self.railColumns = columns
@@ -251,6 +251,7 @@ function Hud.new(player, net, mobile)
 	local countSize = Instance.new("UITextSizeConstraint")
 	countSize.MinTextSize, countSize.MaxTextSize, countSize.Parent = 9, 12, self.edgeCount
 	local menuButton = shortcut("Menu", W.aqua, "Menu")
+	self.menuShortcut = menuButton
 	self.edgeAlert = W.dot(menuButton, -13, 2)
 	self.touchActions = TouchActions.new(root)
 	self.mine = self.touchActions.hold
@@ -308,6 +309,9 @@ function Hud.new(player, net, mobile)
 			self.layout()
 		end
 	end)
+	self.roster.onPick = function(miner)
+		self:openProfileOf(miner)
+	end
 	self.menu.showMiners = function()
 		self.roster.override = true
 		self.menu:close()
@@ -525,7 +529,6 @@ function Hud.new(player, net, mobile)
 				topLimit = math.max(topLimit, math.min(usual + 12, height * 0.55))
 			end
 			local room = walletTop - 12 - topLimit
-			arrangeRail(if room / (3 * tileStep + 68) >= railScale * 0.8 then 2 else 3)
 			local menuHeight = menuRail.Size.Y.Offset
 			-- Directly under the chat window, or centred when chat is out of the way.
 			menuRailScale.Scale = math.max(0.5, math.min(railScale, room / menuHeight))
@@ -659,6 +662,13 @@ end
 function Hud:openPage(key)
 	self.menu:open(key)
 	self.reticle.Visible = false
+end
+-- Another miner's profile, from their name on the board or the icon over their head.
+function Hud:openProfileOf(miner)
+	Audio.menu(true)
+	self:openPage("Profile")
+	local panel = self.menu.profile
+	if panel then panel:view(if miner == self.player then nil else miner) end
 end
 function Hud:toggleHotbarPage(key)
 	local menu = self.menu
@@ -924,6 +934,30 @@ function Hud:workshop(key, level)
 		.. (if key == "Power" then "Mines " .. Upgrades.unlockTexts(level)[math.min(2, #Upgrades.unlockTexts(level))] else Upgrades.describe(key, level))
 	self.menu:upgraded(key)
 	self.unlocks:show("upgrade", headline, detail, key)
+end
+-- A line in chat when anyone in the server finds Starfall.
+function Hud:announceStarfall(who)
+	local tint = Ores.byName.Starfall.color:Lerp(Color3.new(1, 1, 1), 0.3)
+	local line = "★ " .. who .. " unearthed Starfall! The rarest ore in the mine."
+	local chat = game:GetService("TextChatService")
+	if chat.ChatVersion == Enum.ChatVersion.TextChatService then
+		local channels = chat:FindFirstChild("TextChannels")
+		local general = channels and (channels:FindFirstChild("RBXGeneral") or channels:FindFirstChild("RBXSystem"))
+		if general then
+			pcall(general.DisplaySystemMessage, general,
+				string.format('<font color="#%s"><b>★ %s unearthed Starfall!</b></font> The rarest ore in the mine.', tint:ToHex(), who))
+		end
+		return
+	end
+	-- The older chat takes its system lines through SetCore, once it has started.
+	task.spawn(function()
+		for _ = 1, 10 do
+			local sent = pcall(StarterGui.SetCore, StarterGui, "ChatMakeSystemMessage",
+				{ Text = line, Color = tint, Font = Enum.Font.FredokaOne, TextSize = 18 })
+			if sent then return end
+			task.wait(0.5)
+		end
+	end)
 end
 function Hud:notice(title, detail, color)
 	self.untilTime = os.clock() + 2.1

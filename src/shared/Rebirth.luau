@@ -62,6 +62,30 @@ function Rebirth.ready(found: number): boolean
 	return found >= Rebirth.requirement.count
 end
 
+-- The badge beside a miner's name: one star in the colour of their tier, with the count on it, so
+-- Rebirth 9 is as short as Rebirth 1. Violet to 4, gold to 9, cyan to 24, then pink.
+local tiers = {
+	{ from = 1, color = Color3.fromRGB(190, 150, 255) },
+	{ from = 5, color = Color3.fromRGB(255, 206, 74) },
+	{ from = 10, color = Color3.fromRGB(110, 232, 255) },
+	{ from = 25, color = Color3.fromRGB(255, 128, 191) },
+}
+function Rebirth.tierColor(n: number): Color3
+	local color = tiers[1].color
+	for _, tier in tiers do
+		if n >= tier.from then color = tier.color end
+	end
+	return color
+end
+function Rebirth.badge(n: number): string
+	return if n > 0 then "★" .. n else ""
+end
+-- The badge as rich text, with a space before it, or "" without rebirths.
+function Rebirth.richBadge(n: number): string
+	if n <= 0 then return "" end
+	return string.format(' <font color="#%s">%s</font>', Rebirth.tierColor(n):ToHex(), Rebirth.badge(n))
+end
+
 -- Sale price multiplier for a player: the Double Gold pass and rebirths stack.
 function Rebirth.saleMultiplier(player: Player): number
 	local pass = if player:GetAttribute("DoubleGold") then 2 else 1

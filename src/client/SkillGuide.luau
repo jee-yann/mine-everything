@@ -27,7 +27,7 @@ function Guide.start(player, hud, busy)
 	end
 	game:GetService("RunService").RenderStepped:Connect(function()
 		local step = player:GetAttribute("ExpeditionStep")
-		local wanted = player:GetAttribute("ProfileReady") == true and not hud.inOpening and not Gui.MenuIsOpen and Guide.wanted({
+		local wanted = player:GetAttribute("ProfileReady") == true and not hud.inOpening and not Gui.MenuIsOpen and not hud.guidingRebirth and Guide.wanted({
 			onboarded = step == "Done" or step == "Skipped", level = player:GetAttribute("Level") or 1,
 			points = player:GetAttribute("SkillPoints") or 0,
 			owned = if next(Skills.read(player)) then 1 else 0,
