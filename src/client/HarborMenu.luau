@@ -13,7 +13,7 @@ local FieldPages = require(script.Parent.FieldPages)
 local Field = require(Shared.FieldRewards)
 local RewardsPanel, IndexPanel = require(script.Parent.RewardsPanel), require(script.Parent.IndexPanel)
 local RebirthPanel, ProfilePanel = require(script.Parent.RebirthPanel), require(script.Parent.ProfilePanel)
-local ShopPanel, CollectionPanel = require(script.Parent.ShopPanel), require(script.Parent.CollectionPanel)
+local ShopPanel, InventoryPanel, PetsPanel = require(script.Parent.ShopPanel), require(script.Parent.InventoryPanel), require(script.Parent.PetsPanel)
 local Guide = require(Shared.FieldGuide)
 local Purity = require(Shared.OrePurity)
 local Skills = require(Shared.Skills)
@@ -31,17 +31,19 @@ local themes = {
 	[W.pink] = ColorSequence.new(rgb(255, 159, 200), rgb(227, 69, 138)),
 }
 local jobTabs = { "All", "Daily", "Quests", "Collected" }
-local inventoryTabs = { "Inventory", "Kit" }
+local inventoryTabs = {}
 Menu.pages = {
 	Menu = { name = "Menu", color = W.aqua },
 	Inventory = { name = "Inventory", color = W.gold },
 	Pets = { name = "Pets", color = W.violet },
-	Trails = { name = "Trails", color = W.gold },
-	Auras = { name = "Auras", color = W.aqua },
-	Items = { name = "Items", color = W.green },
+	PetStyles = { name = "Pet Styles", color = W.violet },
+	Items = { name = "Inventory", color = W.orange },
+	MiningTrails = { name = "Mining Trails", color = W.orange },
+	PlayerFX = { name = "Player Effects", color = W.orange },
 	Forge = { name = "Forge", color = W.orange },
 	Shop = { name = "Shop", color = W.pink },
-	ShopGeodes = { name = "Geodes", color = W.violet },
+	ShopGeodes = { name = "Crates", color = W.orange },
+	ShopCrates = { name = "Crates", color = W.orange },
 	ShopPasses = { name = "Game passes", color = W.gold },
 	ShopBoosts = { name = "Boosts", color = W.green },
 	ShopGems = { name = "Gems", color = W.aqua },
@@ -203,7 +205,7 @@ function Menu:layout(width, height, touch)
 	-- Give landscape phones larger type and touch targets by scrolling the rows
 	-- inside the card. Keep the header, footer and close button within safe bounds.
 	self.touchLayout = touch
-	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.collection } do
+	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory, self.pets } do
 		panel.card:layout(Vector2.new(width, height), touch)
 	end
 	local shortLandscape = width > height and (touch or height < 470)
@@ -596,8 +598,8 @@ function Menu:attention(key)
 		local benefits = "," .. (p:GetAttribute("Passes") or "") .. ","
 		return benefits:find(",VIP,", 1, true) ~= nil
 			and (p:GetAttribute("VipChestAt") or 0) + StoreConfig.vipChest.cooldown <= workspace:GetServerTimeNow()
-	elseif key == "Pets" then
-		-- A geode waiting to be opened.
+	elseif key == "Inventory" then
+		-- A crate waiting to be opened.
 		local col = Bonuses.decode(p:GetAttribute("Collection")) or {}
 		for id, n in col.items or {} do
 			if id:match("Geode$") and n > 0 then return true end
@@ -724,14 +726,16 @@ function Menu:showInventoryTab(key, animate)
 end
 function Menu:open(key)
 	-- Older names for the pages the Shop and the Collection replaced.
-	if key == "Titles" then
-		key = "Inventory"
+	if key == "Kit" then
+		key = "Items"
 	elseif key == "Store" then
 		key = "Shop"
 	elseif key == "Passes" then
 		key = "ShopPasses"
 	elseif key == "Collection" then
 		key = "Pets"
+	elseif key == "Trails" then
+		key = "MiningTrails"
 	end
 	local page = Menu.pages[key]
 	if not page then
@@ -774,11 +778,14 @@ function Menu:open(key)
 	elseif key:match("^Shop") then
 		self.shop = self.shop or ShopPanel.new(self)
 		wide = self.shop
-	elseif key == "Pets" or key == "Trails" or key == "Auras" or key == "Items" or key == "Forge" then
-		self.collection = self.collection or CollectionPanel.new(self)
-		wide = self.collection
+	elseif key == "Inventory" or key == "Items" or key == "MiningTrails" or key == "PlayerFX" or key == "Forge" or key == "Titles" then
+		self.inventory = self.inventory or InventoryPanel.new(self)
+		wide = self.inventory
+	elseif key == "Pets" or key == "PetStyles" then
+		self.pets = self.pets or PetsPanel.new(self)
+		wide = self.pets
 	end
-	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.collection } do
+	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory, self.pets } do
 		if panel ~= wide then panel.card.modal.Visible = false end
 	end
 	self.modal.Visible = key ~= "Skills" and not wide
@@ -948,7 +955,7 @@ function Menu:refresh()
 	self.heading.Position = UDim2.fromOffset(74, if self.page == "Gear" then 15 else 2)
 	if self.page == "Menu" then
 		self.sub.Text = ""
-	elseif self.page == "Inventory" then
+	elseif self.page == "Inventory" and not self.wide then
 		local xp = p:GetAttribute("MiningXP") or 0
 		local level = Expeditions.level(xp)
 		self.sub.Text = string.format(

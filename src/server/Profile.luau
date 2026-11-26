@@ -75,6 +75,13 @@ local function validStore(store)
 	end
 	if store.starter ~= nil and type(store.starter) ~= "boolean" then return false end
 	if store.vipAt ~= nil and (type(store.vipAt) ~= "number" or store.vipAt < 0) then return false end
+	if store.testGems ~= nil and type(store.testGems) ~= "boolean" then return false end
+	if store.limited ~= nil then
+		if type(store.limited) ~= "table" then return false end
+		for key, done in store.limited do
+			if type(key) ~= "string" or done ~= true then return false end
+		end
+	end
 	return true
 end
 
@@ -585,7 +592,8 @@ function Profile.sell(p, multiplier, selectedOre, portion)
 			end
 		end
 	end
-	local amount = value * (multiplier or 1)
+	-- Gold is always whole: passes and boosts can make fractions.
+	local amount = math.floor(value * (multiplier or 1) + 0.5)
 	if quantity > 0 then p.firstTrip.sold = true end
 	p.gold += amount
 	local award = if quantity > 0 and oreOnly and Profile.used(p) == 0 then Profile.unlock(p, "CleanSale") else nil

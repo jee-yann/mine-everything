@@ -552,8 +552,8 @@ local function test()
 	end
 	safe.Size = originalSize
 	assert(not menu["Inventory tabs"]:FindFirstChild("Achievements"))
-	assert(menu["Inventory tabs"]:FindFirstChild("Kit") and not menu["Inventory tabs"]:FindFirstChild("Skills"))
-	assert(not menu["Inventory tabs"]:FindFirstChild("Passes") and not menu["Inventory tabs"]:FindFirstChild("Pets"), "pets and passes moved to their own cards")
+	assert(not menu["Inventory tabs"]:FindFirstChild("Kit") and not menu["Inventory tabs"]:FindFirstChild("Skills"))
+	assert(not menu["Inventory tabs"]:FindFirstChild("Passes") and not menu["Inventory tabs"]:FindFirstChild("Pets"), "the inventory and pets are their own cards")
 	local tabViewport = menu["Inventory pages"]
 	local pager = tabViewport.UIPageLayout
 	assert(
@@ -566,6 +566,7 @@ local function test()
 			"Pack",
 			"Settings",
 			"Inventory",
+			"Titles",
 			"Pets",
 			"Forge",
 			"Skills",
@@ -589,11 +590,11 @@ local function test()
 		local listing = ({
 			Menu = "Miners",
 			Settings = "Music volume",
-			Inventory = "Prismatic Excavator",
 			Pets = "Rock",
-			Forge = "Snack",
+			Forge = "GoldTonic",
 			Shop = "Starter Pack",
-			ShopGeodes = "Crystal Geode",
+			ShopGeodes = "Crystal Crate",
+			Titles = "Prismatic Excavator",
 			ShopPasses = "Double Gold",
 			Achievements = "Once Is Luck, Twice Is Skill",
 			Gear = "Speed",
@@ -606,12 +607,15 @@ local function test()
 				local map = overlay:FindFirstChild("Skill map")
 				return map and map.Visible and not menu.Visible
 			end
-			-- The Shop and the Collection are wide cards with a page per tab.
-			if page:match("^Shop") or page == "Pets" or page == "Forge" then
-				local wideCard = overlay:FindFirstChild(if page:match("^Shop") then "Shop" else "Collection")
-				local tab = ({ Shop = "Featured", ShopGeodes = "Geodes", ShopPasses = "Passes", Pets = "Pets", Forge = "Forge" })[page]
+			-- The Shop, the Inventory and Pets are wide cards with a page per tab.
+			local cardName = if page:match("^Shop") then "Shop" elseif page == "Pets" then "Pets"
+				elseif page == "Inventory" or page == "Titles" or page == "Forge" then "Inventory" else nil
+			if cardName then
+				local wideCard = overlay:FindFirstChild(cardName)
+				local tab = ({ Shop = "Featured", ShopGeodes = "Crates", ShopPasses = "Passes", Pets = "Pets", Forge = "Forge",
+					Inventory = "Items", Titles = "Titles" })[page]
 				local body = wideCard and wideCard.Visible and wideCard.Body:FindFirstChild(tab)
-				return body and body.Visible and body:FindFirstChild(listing, true) ~= nil and not menu.Visible
+				return body and body.Visible and (listing == nil or body:FindFirstChild(listing, true) ~= nil) and not menu.Visible
 			end
 			if page == "Book" or page == "Daily" or page == "Playtime" then
 				local card = overlay:FindFirstChild(if page == "Book" then "Ore index" else "Rewards")
@@ -625,7 +629,8 @@ local function test()
 			return overlay.Visible and menu.Listings:FindFirstChild(listing)
 		end, 5, "open " .. page)
 		local wide = if page == "Book" then overlay["Ore index"] elseif page == "Daily" or page == "Playtime" then overlay.Rewards
-			elseif page:match("^Shop") then overlay.Shop elseif page == "Pets" or page == "Forge" then overlay.Collection else nil
+			elseif page:match("^Shop") then overlay.Shop elseif page == "Pets" then overlay.Pets
+			elseif page == "Inventory" or page == "Titles" or page == "Forge" then overlay.Inventory else nil
 		local close = if page == "Skills" then overlay["Skill map"]["Map header"].Close else (wide or menu).Marquee.Close
 		assert(close.Visible and close.Modal, page .. " must release the first-person pointer")
 		if page == "Gear" and r:GetAttribute("CheckSwing") then
@@ -652,8 +657,8 @@ local function test()
 		if page == "ShopGeodes" then
 			-- Odds come before buying: every geode has its odds button.
 			assert(not overlay.Shop["Odds sheet"].Visible)
-			local pebble = overlay.Shop.Body.Geodes:FindFirstChild("Pebble Geode")
-			assert(pebble and pebble:FindFirstChild("Odds"), "each geode has an odds button")
+			local stone = overlay.Shop.Body.Crates:FindFirstChild("Stone Crate")
+			assert(stone and stone:FindFirstChild("Odds"), "each crate has an odds button")
 		end
 		if page == "Achievements" then
 			assert(not menu["Inventory tabs"].Visible)
@@ -786,7 +791,7 @@ local function test()
 					elseif page == "Skills" then
 						return overlay["Skill map"].Visible
 					elseif page == "Inventory" then
-						return tabViewport.Visible and pager.CurrentPage.Name == page
+						return overlay:FindFirstChild("Inventory") and overlay.Inventory.Visible
 					end
 					if page == "Book" then return overlay["Ore index"].Visible end
 					local row = ({ Achievements = "Practicing My Scales", Settings = "Music volume" })[page]
@@ -799,7 +804,7 @@ local function test()
 			n.Action:FireServer("EquipPet", "Rock", true)
 			waitFor(function() return p:GetAttribute("Pet") == "Rock" end, 3, "lead pet")
 			r:FireServer("openPage", "Pets")
-			local pets = overlay:WaitForChild("Collection")
+			local pets = overlay:WaitForChild("Pets")
 			waitFor(function() return overlay.Visible and pets.Visible and pets.Body.Pets.Detail["Pet name"].Visible end, 3, "pets card")
 			local name = pets.Body.Pets.Detail["Pet name"]
 			name:CaptureFocus()
@@ -1488,7 +1493,7 @@ local function test()
 	local reveal = p.PlayerGui:WaitForChild("GeodeReveal")
 	waitFor(function()
 		return reveal.Enabled and reveal.Stage.Reward.Visible and reveal.Stage.Reward.Name ~= nil
-			and reveal.Stage.Caption.Text == "WELCOME GEODE"
+			and reveal.Stage.Caption.Text == "WELCOME CRATE"
 	end, 8, "welcome geode opens")
 	local shown = false
 	for _, label in reveal.Stage.Reward:GetDescendants() do
@@ -1589,13 +1594,13 @@ local function test()
 	assert(p:GetAttribute("Used") == 0 and not overlay.Visible, "hold quick-sell empties the pack")
 	n.Action:FireServer("BuyPass", "PrismTrail")
 	waitFor(function()
-		return p:GetAttribute("Trail") == "Prism" and p.Character.HumanoidRootPart:FindFirstChild("Trail ribbon")
+		return p:GetAttribute("Ribbon") == "Prism" and p.Character.HumanoidRootPart:FindFirstChild("Trail ribbon")
 	end, 5, "the Prism Trail pass equips its trail and ribbon")
-	n.Action:FireServer("Wear", "trail", nil)
+	n.Action:FireServer("Wear", "ribbon", nil)
 	waitFor(function()
-		return p:GetAttribute("Trail") == "" and not p.Character.HumanoidRootPart:FindFirstChild("Trail ribbon")
+		return p:GetAttribute("Ribbon") == "" and not p.Character.HumanoidRootPart:FindFirstChild("Trail ribbon")
 	end, 3, "take the trail off")
-	n.Action:FireServer("Wear", "trail", "Prism")
+	n.Action:FireServer("Wear", "ribbon", "Prism")
 	local coastalAir = assert(game.Lighting:FindFirstChildOfClass("Atmosphere"))
 	local outdoorDistance = game.Lighting.FogEnd
 	r:FireServer("minedShaft")

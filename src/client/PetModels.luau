@@ -195,12 +195,223 @@ recipes.Wisp = function(piece)
 	light.Parent = core
 end
 
--- Builds `id`'s model. Returns the model and its parts with their offsets from the pivot.
-function Models.build(id)
+recipes.Mole = function(piece)
+	local fur = rgb(96, 78, 70)
+	piece("Body", Vector3.new(1.2, 0.9, 1.3), Vector3.zero, fur, nil, nil, ball)
+	piece("Snout", Vector3.new(0.4, 0.3, 0.35), Vector3.new(0, -0.05, -0.65), rgb(255, 160, 170), nil, nil, ball)
+	for _, side in { -1, 1 } do
+		piece("Claw", Vector3.new(0.4, 0.12, 0.32), Vector3.new(side * 0.55, -0.35, -0.4), rgb(255, 214, 190), rot(0, side * 20, 0))
+		piece("Shade", Vector3.new(0.3, 0.16, 0.06), Vector3.new(side * 0.2, 0.18, -0.58), rgb(30, 30, 40))
+	end
+	piece("Helmet", Vector3.new(0.8, 0.22, 0.8), Vector3.new(0, 0.48, -0.05), rgb(255, 200, 60))
+	piece("Lamp", Vector3.new(0.2, 0.2, 0.08), Vector3.new(0, 0.5, -0.45), rgb(255, 250, 200), nil, neon)
+end
+
+recipes.Frog = function(piece)
+	local skin = rgb(110, 200, 90)
+	piece("Body", Vector3.new(1.3, 0.8, 1.2), Vector3.zero, skin, nil, nil, ball)
+	piece("Belly", Vector3.new(0.9, 0.5, 0.2), Vector3.new(0, -0.12, -0.52), rgb(220, 245, 170))
+	for _, side in { -1, 1 } do
+		piece("Eye bump", Vector3.new(0.4, 0.4, 0.4), Vector3.new(side * 0.32, 0.42, -0.25), skin, nil, nil, ball)
+		piece("Eye", Vector3.new(0.22, 0.22, 0.1), Vector3.new(side * 0.32, 0.46, -0.45), eyeColor)
+		piece("Leg", Vector3.new(0.4, 0.2, 0.55), Vector3.new(side * 0.55, -0.35, 0.15), rgb(80, 170, 70))
+		piece("Moss", Vector3.new(0.3, 0.12, 0.3), Vector3.new(side * 0.2, 0.42, 0.25), rgb(60, 140, 60))
+	end
+	piece("Smile", Vector3.new(0.5, 0.06, 0.06), Vector3.new(0, 0.02, -0.6), rgb(40, 90, 40))
+end
+
+recipes.Turtle = function(piece)
+	piece("Body", Vector3.new(1.2, 0.35, 1.4), Vector3.new(0, -0.25, 0), rgb(150, 200, 120))
+	piece("Shell", Vector3.new(1.4, 0.75, 1.5), Vector3.new(0, 0.12, 0.05), rgb(150, 156, 170), nil, slate, ball)
+	for i, at in { Vector3.new(0, 0.5, 0.05), Vector3.new(0.35, 0.38, -0.3), Vector3.new(-0.35, 0.38, 0.4) } do
+		piece("Pebble", Vector3.one * (0.3 - i * 0.03), at, rgb(190, 196, 210), rot(20 * i, 30 * i, 0), slate)
+	end
+	piece("Head", Vector3.new(0.5, 0.45, 0.5), Vector3.new(0, -0.05, -0.9), rgb(160, 210, 130), nil, nil, ball)
+	eyes(piece, 0.12, 0.02, -1.13, 0.1)
+	for _, side in { -1, 1 } do
+		piece("Leg", Vector3.new(0.28, 0.25, 0.28), Vector3.new(side * 0.5, -0.4, -0.45), rgb(130, 180, 110))
+		piece("Leg", Vector3.new(0.28, 0.25, 0.28), Vector3.new(side * 0.5, -0.4, 0.5), rgb(130, 180, 110))
+	end
+end
+
+recipes.Penguin = function(piece)
+	piece("Body", Vector3.new(0.95, 1.3, 0.9), Vector3.zero, rgb(40, 50, 80), nil, nil, ball)
+	piece("Belly", Vector3.new(0.7, 0.95, 0.3), Vector3.new(0, -0.1, -0.33), rgb(245, 248, 255), nil, nil, ball)
+	piece("Beak", Vector3.new(0.2, 0.12, 0.2), Vector3.new(0, 0.28, -0.5), rgb(255, 170, 50))
+	piece("Scarf", Vector3.new(0.95, 0.16, 0.92), Vector3.new(0, 0.1, 0), rgb(120, 210, 255))
+	for _, side in { -1, 1 } do
+		local _, wing = piece("Wing", Vector3.new(0.12, 0.7, 0.4), Vector3.new(side * 0.5, -0.05, 0), rgb(30, 40, 70), rot(0, 0, side * 12))
+		wing.flap = side
+		piece("Foot", Vector3.new(0.25, 0.08, 0.3), Vector3.new(side * 0.2, -0.65, -0.15), rgb(255, 170, 50))
+	end
+	eyes(piece, 0.18, 0.42, -0.42, 0.1)
+end
+
+recipes.Bunny = function(piece)
+	local fur = rgb(245, 235, 255)
+	piece("Body", Vector3.new(1, 0.95, 1.1), Vector3.zero, fur, nil, nil, ball)
+	piece("Head", Vector3.new(0.85, 0.8, 0.8), Vector3.new(0, 0.45, -0.45), fur, nil, nil, ball)
+	for _, side in { -1, 1 } do
+		piece("Ear", Vector3.new(0.18, 0.7, 0.12), Vector3.new(side * 0.18, 1.05, -0.4), fur, rot(0, 0, -side * 10))
+		piece("Ear gem", Vector3.new(0.1, 0.45, 0.06), Vector3.new(side * 0.18, 1.05, -0.47), rgb(255, 170, 220), rot(0, 0, -side * 10), glass)
+	end
+	piece("Tail", Vector3.new(0.35, 0.35, 0.35), Vector3.new(0, 0, 0.58), rgb(200, 230, 255), nil, glass, ball)
+	piece("Nose", Vector3.new(0.1, 0.08, 0.05), Vector3.new(0, 0.38, -0.84), rgb(255, 140, 170))
+	eyes(piece, 0.2, 0.52, -0.8, 0.13)
+end
+
+recipes.Golem = function(piece)
+	local stone = rgb(120, 126, 140)
+	piece("Body", Vector3.new(1.1, 0.9, 0.8), Vector3.zero, stone, nil, slate)
+	piece("Head", Vector3.new(0.75, 0.6, 0.65), Vector3.new(0, 0.75, -0.05), rgb(140, 146, 160), nil, slate)
+	piece("Core", Vector3.new(0.3, 0.3, 0.1), Vector3.new(0, 0.05, -0.42), rgb(90, 230, 255), rot(0, 0, 45), neon)
+	for _, side in { -1, 1 } do
+		piece("Arm", Vector3.new(0.35, 0.8, 0.35), Vector3.new(side * 0.75, -0.1, 0), stone, nil, slate)
+		piece("Leg", Vector3.new(0.35, 0.35, 0.4), Vector3.new(side * 0.28, -0.6, 0), rgb(100, 106, 120), nil, slate)
+		piece("Eye", Vector3.new(0.14, 0.1, 0.06), Vector3.new(side * 0.17, 0.8, -0.4), rgb(90, 230, 255), nil, neon)
+	end
+	piece("Moss", Vector3.new(0.5, 0.1, 0.4), Vector3.new(0.1, 1.08, 0), rgb(90, 180, 90))
+end
+
+recipes.Jelly = function(piece)
+	local bell = piece("Body", Vector3.new(1.3, 0.9, 1.3), Vector3.zero, rgb(255, 150, 220), nil, glass, ball)
+	bell.Transparency = 0.3
+	piece("Glow", Vector3.new(0.6, 0.4, 0.6), Vector3.new(0, 0.05, 0), rgb(255, 210, 240), nil, neon, ball)
+	for i = 0, 4 do
+		local a = math.rad(i * 72)
+		piece("Tendril", Vector3.new(0.1, 0.7, 0.1), Vector3.new(math.cos(a) * 0.35, -0.65, math.sin(a) * 0.35), rgb(200, 140, 255), rot(0, 0, 8 * (i - 2)), neon)
+	end
+	eyes(piece, 0.2, 0.05, -0.63, 0.13)
+	local light = Instance.new("PointLight")
+	light.Color, light.Range, light.Brightness, light.Shadows = rgb(255, 160, 230), 7, 0.9, false
+	light.Parent = bell
+end
+
+recipes.Stag = function(piece)
+	local fur = rgb(240, 236, 255)
+	piece("Body", Vector3.new(0.9, 0.8, 1.5), Vector3.new(0, -0.05, 0.2), fur)
+	piece("Neck", Vector3.new(0.45, 0.7, 0.45), Vector3.new(0, 0.45, -0.45), fur, rot(-20, 0, 0))
+	piece("Head", Vector3.new(0.55, 0.5, 0.75), Vector3.new(0, 0.85, -0.75), fur)
+	for _, side in { -1, 1 } do
+		piece("Antler", Vector3.new(0.1, 0.7, 0.1), Vector3.new(side * 0.25, 1.35, -0.65), rgb(140, 240, 220), rot(0, 0, -side * 25), neon)
+		piece("Antler tip", Vector3.new(0.08, 0.4, 0.08), Vector3.new(side * 0.42, 1.55, -0.55), rgb(200, 160, 255), rot(0, 0, -side * 55), neon)
+		piece("Leg", Vector3.new(0.18, 0.55, 0.18), Vector3.new(side * 0.3, -0.65, -0.3), rgb(210, 205, 235))
+		piece("Leg", Vector3.new(0.18, 0.55, 0.18), Vector3.new(side * 0.3, -0.65, 0.7), rgb(210, 205, 235))
+	end
+	eyes(piece, 0.18, 0.92, -1.13, 0.11)
+end
+
+recipes.Phoenix = function(piece)
+	piece("Body", Vector3.new(0.8, 0.8, 1.1), Vector3.zero, rgb(255, 120, 40), nil, nil, ball)
+	piece("Head", Vector3.new(0.6, 0.6, 0.6), Vector3.new(0, 0.45, -0.5), rgb(255, 170, 60), nil, nil, ball)
+	piece("Beak", Vector3.new(0.14, 0.14, 0.25), Vector3.new(0, 0.42, -0.85), rgb(255, 220, 90))
+	piece("Crest", Vector3.new(0.1, 0.45, 0.3), Vector3.new(0, 0.85, -0.45), rgb(255, 230, 120), rot(-20, 0, 0), neon)
+	piece("Tail", Vector3.new(0.5, 0.15, 1.1), Vector3.new(0, 0.05, 0.95), rgb(255, 200, 70), rot(-15, 0, 0), neon)
+	for _, side in { -1, 1 } do
+		local _, wing = piece("Wing", Vector3.new(1.4, 0.12, 0.8), Vector3.new(side * 1, 0.15, 0.05), rgb(255, 90, 50), rot(0, 0, side * 20), neon)
+		wing.flap = side
+	end
+	eyes(piece, 0.16, 0.55, -0.78, 0.11)
+end
+
+recipes.Griffin = function(piece)
+	local gold = rgb(255, 200, 80)
+	piece("Body", Vector3.new(0.95, 0.85, 1.5), Vector3.new(0, -0.1, 0.25), rgb(214, 160, 90))
+	piece("Head", Vector3.new(0.75, 0.7, 0.7), Vector3.new(0, 0.35, -0.65), rgb(255, 250, 235))
+	piece("Beak", Vector3.new(0.2, 0.2, 0.3), Vector3.new(0, 0.25, -1.1), gold)
+	piece("Crown", Vector3.new(0.5, 0.15, 0.5), Vector3.new(0, 0.78, -0.65), gold, nil, Enum.Material.Metal)
+	piece("Tail", Vector3.new(0.2, 0.2, 0.9), Vector3.new(0, 0.05, 1.3), rgb(214, 160, 90), rot(-20, 0, 0))
+	for _, side in { -1, 1 } do
+		local _, wing = piece("Wing", Vector3.new(1.4, 0.15, 0.95), Vector3.new(side * 1.05, 0.3, 0.2), rgb(255, 245, 225), rot(0, 0, side * 24))
+		wing.flap = side
+		piece("Wing tip", Vector3.new(0.6, 0.16, 0.5), Vector3.new(side * 1.6, 0.55, 0.3), gold, rot(0, 0, side * 24), neon)
+		piece("Leg", Vector3.new(0.2, 0.45, 0.2), Vector3.new(side * 0.3, -0.65, -0.1), gold)
+	end
+	eyes(piece, 0.2, 0.45, -1.01, 0.12)
+end
+
+-- Pet styles: something the pet wears, built on the pet's own size.
+local function bounds(parts)
+	local top, back, width = 0, 0, 0
+	for _, entry in parts do
+		local at, size = entry.offset.Position, entry.part.Size
+		top = math.max(top, at.Y + size.Y / 2)
+		back = math.max(back, at.Z + size.Z / 2)
+		width = math.max(width, math.abs(at.X) + size.X / 2)
+	end
+	return top, back, width
+end
+
+function Models.style(model, parts, styleId)
+	local style = Collectibles.styleById[styleId or ""]
+	if not style then return end
+	local top, back, width = bounds(parts)
+	local body = model.PrimaryPart
+	local function piece(label, size, at, color, turn, material, shape)
+		local part = Instance.new("Part")
+		part.Name, part.Size, part.Color = label, size, color
+		part.Material = material or Enum.Material.SmoothPlastic
+		part.Anchored, part.CanCollide, part.CanTouch, part.CanQuery, part.CastShadow = true, false, false, false, false
+		if shape then part.Shape = shape end
+		local offset = CFrame.new(at) * (turn or CFrame.identity)
+		part.CFrame = model:GetPivot() * offset
+		part.Parent = model
+		table.insert(parts, { part = part, offset = offset })
+		return part, parts[#parts]
+	end
+	local color = style.color
+	if style.look == "wings" then
+		for _, side in { -1, 1 } do
+			local wing, entry = piece("Style wing", Vector3.new(1.1, 0.06, 0.7), Vector3.new(side * (width * 0.5 + 0.45), top * 0.55, 0.15),
+				color, rot(0, 0, side * 25), glass)
+			wing.Transparency = 0.25
+			entry.flap = side
+		end
+	elseif style.look == "crown" then
+		piece("Style crown", Vector3.new(0.55, 0.18, 0.55), Vector3.new(0, top + 0.09, -0.1), color, nil, Enum.Material.Metal)
+		for i = -1, 1 do
+			piece("Crown point", Vector3.new(0.1, 0.22, 0.1), Vector3.new(i * 0.2, top + 0.28, -0.1), color, rot(0, 45, 0), Enum.Material.Metal)
+		end
+		piece("Crown gem", Vector3.new(0.12, 0.12, 0.05), Vector3.new(0, top + 0.1, -0.38), Color3.fromRGB(255, 80, 120), rot(0, 0, 45), neon)
+	elseif style.look == "halo" then
+		local ring = piece("Style halo", Vector3.new(0.06, 0.7, 0.7), Vector3.new(0, top + 0.35, 0), color, rot(0, 0, 90), neon, Enum.PartType.Cylinder)
+		ring.Transparency = 0.15
+	else
+		-- Flames, the sparkle trail and the cloak are particles on the body.
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.Name = "Style " .. style.look
+		emitter.Color = ColorSequence.new(color, color:Lerp(Color3.new(1, 1, 1), 0.5))
+		emitter.LightEmission = 1
+		if style.look == "flames" then
+			emitter.Texture = "rbxasset://textures/particles/fire_main.dds"
+			emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 0) })
+			emitter.Rate, emitter.Lifetime, emitter.Speed = 18, NumberRange.new(0.4, 0.7), NumberRange.new(1, 2)
+			emitter.Acceleration, emitter.EmissionDirection = Vector3.new(0, 3, 0), Enum.NormalId.Top
+		elseif style.look == "trail" then
+			emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+			emitter.Size = NumberSequence.new(0.25, 0)
+			emitter.Rate, emitter.Lifetime, emitter.Speed = 12, NumberRange.new(0.8, 1.3), NumberRange.new(0)
+			emitter.LockedToPart = false
+		else
+			emitter.Texture = "rbxasset://textures/particles/smoke_main.dds"
+			emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1.4) })
+			emitter.Transparency = NumberSequence.new(0.5, 1)
+			emitter.Rate, emitter.Lifetime, emitter.Speed = 8, NumberRange.new(0.8, 1.2), NumberRange.new(0.2, 0.5)
+			emitter.SpreadAngle = Vector2.new(180, 180)
+		end
+		emitter.Parent = body
+	end
+	local _ = back
+end
+
+-- Builds `id`'s model, wearing pet style `styleId` if given. Returns the model and its parts with their
+-- offsets from the pivot.
+function Models.build(id, styleId)
 	local pet = Collectibles.petById[id]
 	local model, parts, piece = builder(if pet then pet.name else id)
 	;(recipes[id] or recipes.Rock)(piece)
 	model.PrimaryPart = parts[1].part
+	Models.style(model, parts, styleId)
 	return model, parts
 end
 
@@ -217,9 +428,9 @@ function Models.place(parts, pivot, flap, partsOut, framesOut)
 end
 
 -- A still model for a ViewportFrame: the pet, a camera looking at it from the front, slightly turned.
-function Models.preview(viewport, id)
+function Models.preview(viewport, id, styleId)
 	viewport:ClearAllChildren()
-	local model = Models.build(id)
+	local model = Models.build(id, styleId)
 	model:PivotTo(CFrame.Angles(0, math.rad(-28), 0))
 	model.Parent = viewport
 	local camera = Instance.new("Camera")

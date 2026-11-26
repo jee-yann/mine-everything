@@ -72,6 +72,25 @@ function Hud.new(player, net, mobile)
 	local goldSize = Instance.new("UITextSizeConstraint")
 	goldSize.MinTextSize, goldSize.MaxTextSize, goldSize.Parent = 17, 52, self.gold
 	W.outlineText(self.gold, 3)
+	-- Gems, just above the gold, with a + that opens the gem packs.
+	local gemWallet = W.clearButton(wallet, "Gem counter", 0, -42, 190, 38, "Select")
+	Icons.draw(gemWallet, "Gems", 4, 1, 36)
+	self.gemCount = W.title(gemWallet, "0", 44, 0, 110, 38, 32, Color3.fromRGB(170, 240, 255), true)
+	W.outlineText(self.gemCount, 3)
+	local gemPlus = W.frame(gemWallet, "Plus", 0, 7, 26, 26, W.white, 13)
+	W.enamelPanel(gemPlus, Color3.fromRGB(166, 245, 110), Color3.fromRGB(62, 178, 52), 13)
+	W.navyText(W.title(gemPlus, "+", 0, -2, 26, 26, 22, W.white), 2)
+	self.gemPlus = gemPlus
+	local function placePlus()
+		-- TextBounds are on-screen pixels; the wallet is scaled, so convert back before placing the +.
+		local scale = math.max(0.1, gemWallet.AbsoluteSize.X / 190)
+		gemPlus.Position = UDim2.fromOffset(math.min(158, 50 + self.gemCount.TextBounds.X / scale), 6)
+	end
+	self.gemCount:GetPropertyChangedSignal("TextBounds"):Connect(placePlus)
+	gemWallet:GetPropertyChangedSignal("AbsoluteSize"):Connect(placePlus)
+	gemWallet.Activated:Connect(function()
+		self:openPage("ShopGems")
+	end)
 	local tools = clearFrame(root, "Equipment and level", 0, 0, 200, 46)
 	self.tools = tools
 	self.levelRing = LevelRing.new(tools, function()
@@ -201,8 +220,8 @@ function Hud.new(player, net, mobile)
 		table.insert(self.sideKeys, tile.key)
 		if key == "Skills" then self.skillsTile = tile.button end
 		if key == "Rebirth" then self.rebirthTile = tile end
-		if key ~= "Inventory" and key ~= "Profile" then
-			self.navDots[key] = SideButtons.badge(tile, if key == "Book" then "NEW" elseif key == "Pets" then "OPEN" else "!")
+		if key ~= "Pets" and key ~= "Profile" then
+			self.navDots[key] = SideButtons.badge(tile, if key == "Book" then "NEW" elseif key == "Inventory" then "OPEN" else "!")
 		end
 		tile.button.Activated:Connect(function()
 			self:openPage(key)
@@ -301,6 +320,7 @@ function Hud.new(player, net, mobile)
 	self.menu = Menu.new(root, player, net, function()
 		self:setShop(false)
 	end)
+	self.menu.hud = self
 	self.unlocks = Celebration.new(self)
 	self.goldFlow = GoldFlow.new(self)
 	self.menu.holdGold = function(seconds, from)
@@ -516,7 +536,8 @@ function Hud.new(player, net, mobile)
 				cap.Visible = keyboard
 			end
 			local railScale = math.clamp(math.min(width / 1400, height / 780), 0.78, 1.15)
-			local walletTop = height - margin - (46 + 52) * s - (if self.status.Text == "" then 0 else 18 * s)
+			-- The gem counter sits on top of the wallet.
+			local walletTop = height - margin - (46 + 52 + 42) * s - (if self.status.Text == "" then 0 else 18 * s)
 			local topLimit = margin + 6
 			if StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.Chat) and chatWindow and chatWindow.Enabled then
 				for _, chat in { chatWindow, chatInput } do
@@ -675,8 +696,9 @@ end
 function Hud:toggleHotbarPage(key)
 	local menu = self.menu
 	local page = menu.page or ""
-	local samePage = page == key or (key == "Inventory" and menu.tabLists[page] ~= nil)
-		or (key == "Shop" and page:match("^Shop") ~= nil) or (key == "Pets" and menu.collection ~= nil and menu.wide == menu.collection)
+	local samePage = page == key or (key == "Shop" and page:match("^Shop") ~= nil)
+		or (key == "Inventory" and menu.inventory ~= nil and menu.wide == menu.inventory)
+		or (key == "Pets" and menu.pets ~= nil and menu.wide == menu.pets)
 	if self.overlay.Visible and samePage and not menu.closing then
 		Audio.menu(false)
 		menu:close()
@@ -705,6 +727,7 @@ function Hud:refresh()
 	end
 	local used, cap = p:GetAttribute("Used") or 0, (p:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1])
 	self.goldFlow:set(p:GetAttribute("Gold") or 0)
+	self.gemCount.Text = W.goldAmount(p:GetAttribute("Gems") or 0)
 	self.pack.Text = W.number(used) .. " / " .. W.number(cap)
 	self.edgeCount.Text = W.number(used) .. "/" .. W.number(cap)
 	local full = used >= cap

@@ -435,13 +435,10 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 	elseif kind == "freeGeode" then
 		local item = Collectibles.itemById[a]
 		fx:chime(1.75)
-		hud:notice("Free " .. (if item then item.name else "geode") .. "!", "Open it from Pets → Items", W.violet)
+		hud:notice("Free " .. (if item then item.name else "crate") .. "!", "Open it from your Inventory", W.violet)
 	elseif kind == "gemFind" then
 		fx:chime(1.7)
 		hud:notice("+1 gem", "Found in the rock", W.aqua)
-	elseif kind == "petLevel" then
-		fx:chime(1.5)
-		hud:notice((spread or "Your pet") .. " reached level " .. point, "Its bonus grew", W.violet)
 	elseif kind == "serverLuck" then
 		fx:chime(1.9)
 		hud:milestone("SERVER LUCK", a .. " gave everyone 2× luck!", W.green)

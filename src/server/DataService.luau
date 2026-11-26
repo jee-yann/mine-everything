@@ -62,7 +62,10 @@ function Data.snapshot(p)
 		discoveries = table.clone(p.discoveries),
 		viewed = table.clone(p.viewed),
 		col = Collection.copy(p.col),
-		store = { receipts = table.clone(p.store.receipts), order = table.clone(p.store.order), starter = p.store.starter, vipAt = p.store.vipAt },
+		store = {
+			receipts = table.clone(p.store.receipts), order = table.clone(p.store.order), starter = p.store.starter,
+			vipAt = p.store.vipAt, testGems = p.store.testGems, limited = if p.store.limited then table.clone(p.store.limited) else nil,
+		},
 	}
 end
 

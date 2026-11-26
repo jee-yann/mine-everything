@@ -15,7 +15,8 @@ local S, C = require(Shared.StoreConfig), require(Shared.Collectibles)
 local Config, Ores, Upgrades = require(Shared.GameConfig), require(Shared.Ores), require(Shared.Upgrades)
 local Skills, Purity, Rebirth = require(Shared.Skills), require(Shared.OrePurity), require(Shared.Rebirth)
 local Collection = require(script.Parent.Collection)
-local Store = { owned = {} }
+local DSS = game:GetService("DataStoreService")
+local Store = { owned = {}, sold = {} }
 -- The player a receipt belongs to. Tests swap this for a stand-in.
 function Store.playerFor(userId)
 	return Players:GetPlayerByUserId(userId)
@@ -101,6 +102,43 @@ function Store.leave(player)
 	Store.owned[player] = nil
 end
 
+-- Limited stock is counted across every server in one DataStore entry per item. An unpublished Studio
+-- test counts in memory instead.
+local function limitedStore()
+	return DSS:GetDataStore("EndlessMining_v1_Limited", if Run:IsStudio() then "studio" else "live")
+end
+local function unpublished()
+	return Run:IsStudio() and game.GameId == 0
+end
+-- How many of a limited item are left, as last read. Published on ReplicatedStorage as Limited<key>.
+function Store.left(item)
+	return math.max(0, item.limited - (Store.sold[item.key] or 0))
+end
+local function publishStock(item)
+	Rep:SetAttribute("Limited" .. item.key, Store.left(item))
+end
+function Store.readStock(item)
+	if not unpublished() then
+		local ok, sold = pcall(function() return limitedStore():GetAsync(item.key) end)
+		if ok and type(sold) == "number" then Store.sold[item.key] = sold end
+	end
+	publishStock(item)
+end
+-- Counts one more sold. A purchase that arrives after the last one sold is still given: it was paid.
+local function countSale(item)
+	Store.sold[item.key] = (Store.sold[item.key] or 0) + 1
+	if not unpublished() then
+		task.spawn(function()
+			local ok, sold = pcall(function()
+				return limitedStore():UpdateAsync(item.key, function(old) return (old or 0) + 1 end)
+			end)
+			if ok and type(sold) == "number" then Store.sold[item.key] = sold end
+			publishStock(item)
+		end)
+	end
+	publishStock(item)
+end
+
 -- Whether a player may buy this pass or product now, and why not.
 function Store.allowed(player, item)
 	if item.luck and player:GetAttribute("PaidRandomRestricted") ~= false then
@@ -146,6 +184,17 @@ local function deliver(player, session, product, context)
 			p.flares += 3
 			Collection.boost(p.col, "gold2", 30, now)
 		end
+	elseif product.limited then
+		p.store.limited = p.store.limited or {}
+		if not p.store.limited[product.key] then
+			p.store.limited[product.key] = true
+			countSale(product)
+		end
+		if product.pet and not p.col.pets[product.pet] then
+			p.col.pets[product.pet] = { l = 1, x = 0, s = 0 }
+			p.col.eq = { product.pet }
+		end
+		context.feedback(player, "hint", product.name .. " is yours. Only " .. product.limited .. " will ever exist!")
 	elseif product.boost then
 		Collection.boost(p.col, product.boost, product.minutes, now)
 	elseif product.key == "SellAnywhere" then
@@ -209,8 +258,11 @@ function Store.prompt(player, session, kind, key, context)
 			context.feedback(player, "hint", "You already own " .. item.name)
 			return
 		end
-	elseif item.once and session.profile.store.starter then
+	elseif item.once and (if item.limited then (session.profile.store.limited or {})[key] else session.profile.store.starter) then
 		context.feedback(player, "hint", "You already have the " .. item.name)
+		return
+	elseif item.limited and Store.left(item) <= 0 then
+		context.feedback(player, "hint", item.name .. " has sold out")
 		return
 	end
 	if item.id > 0 then
@@ -240,6 +292,16 @@ function Store.vipChest(player, session)
 end
 
 function Store.start(context)
+	for _, item in S.products do
+		if item.limited then
+			task.spawn(function()
+				while true do
+					Store.readStock(item)
+					task.wait(60)
+				end
+			end)
+		end
+	end
 	Market.PromptGamePassPurchaseFinished:Connect(function(player, id, bought)
 		if not bought then return end
 		for _, pass in S.passes do

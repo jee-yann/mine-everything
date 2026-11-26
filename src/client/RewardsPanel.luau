@@ -82,6 +82,20 @@ function Panel:buildDaily()
 		if big then
 			local list = W.title(tile, Field.describe(reward), 6, 236, w - 12, 24, 17, rgb(255, 240, 150))
 			W.navyText(list, 2.2)
+			-- The week's grand prize: a gold ribbon and twinkling stars around it.
+			local tag = W.frame(tile, "Grand prize", w / 2 - 70, -14, 140, 30, rgb(255, 80, 120), 10)
+			tag.ZIndex = 6
+			W.stroke(tag, W.navy, 3)
+			local tagText = W.title(tag, "GRAND PRIZE", 0, 0, 140, 28, 18, W.white)
+			tagText.ZIndex = 7
+			W.navyText(tagText, 2.2)
+			self.dailySparks = {}
+			for k, spot in { { 22, 60 }, { w - 34, 84 }, { 30, 170 }, { w - 40, 190 }, { w / 2 + 52, 52 } } do
+				local spark = W.title(tile, "✦", spot[1], spot[2], 24, 24, 24, rgb(255, 250, 200))
+				spark.ZIndex = 3
+				W.navyText(spark, 2)
+				table.insert(self.dailySparks, { label = spark, scale = W.scale(spark), phase = k * 1.3 })
+			end
 		end
 		local button = W.clearButton(tile, "Claim", 10, h - (if big then 62 else 43), w - 20, if big then 50 else 34, "Buy")
 		W.round(button, 11)
@@ -103,7 +117,7 @@ function Panel:buildDaily()
 		local shade = W.frame(tile, "Later", 0, 0, 0, 0, W.navy, 16)
 		shade.Size, shade.BackgroundTransparency, shade.ZIndex, shade.Visible = UDim2.fromScale(1, 1), 0.62, 4, false
 		self.days[i] = { tile = tile, scale = scale, button = button, paint = paint, label = label, done = done, rim = rim,
-			sun = sun, shade = shade, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"),
+			sun = sun, shade = shade, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"), grand = big,
 			pictureRest = picture:FindFirstChildOfClass("UIScale").Scale, buttonScale = button["Interaction scale"], w = w }
 	end
 	self.dailyNext = W.title(page, "", 0, 334, 764, 26, 21, W.white)
@@ -261,6 +275,13 @@ end
 function Panel:animate(now)
 	local list = if self.page == "Daily" then self.days else self.gifts
 	local moving = motion(self.menu)
+	if moving and self.page == "Daily" then
+		for _, spark in self.dailySparks or {} do
+			local wave = (1 + math.sin(now * 3 + spark.phase)) / 2
+			spark.scale.Scale, spark.label.TextTransparency = 0.6 + 0.6 * wave, 0.7 * (1 - wave)
+			spark.label.Rotation = math.sin(now * 1.6 + spark.phase) * 18
+		end
+	end
 	if moving and self.page == "Playtime" then
 		for _, spark in self.sparks do
 			local wave = (1 + math.sin(now * 3 + spark.phase)) / 2
@@ -303,7 +324,8 @@ function Panel:refresh()
 		local ready, done, wait = Field.dailyState(player:GetAttribute("StampCount"), player:GetAttribute("StampAt"), now)
 		for i, entry in self.days do
 			local claim, collected = i == ready, i <= done
-			entry.done.Visible, entry.rim.Enabled = collected, claim
+			-- The grand prize keeps a gold rim until it's collected.
+			entry.done.Visible, entry.rim.Enabled = collected, claim or (entry.grand and not collected)
 			entry.label.Text = if claim then "Claim!" elseif collected then "Claimed" elseif not ready and i == done % #Field.daily + 1 then "Tomorrow" else "Locked"
 			entry.paint.Color = if claim then green elseif entry.label.Text == "Tomorrow" then blue else grey
 			entry.button.Interactable, entry.live = claim, claim

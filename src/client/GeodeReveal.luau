@@ -1,7 +1,7 @@
--- Opening a geode: it shakes harder and harder, cracks in a flash of its reward's rarity colour and
--- shows what was inside: new, a pet star, or Geode Dust for a duplicate. A tap (or Skip) jumps
--- straight to the reward, and with menu motion off there is no animation at all. From the reward the
--- miner can equip it or open another of the same geode.
+-- Opening a crate: it shakes harder and harder, bursts open in a flash of its reward's rarity colour
+-- and shows what was inside: new, or Crate Dust for a duplicate. A tap (or Skip) jumps straight to
+-- the reward, and with menu motion off there is no animation at all. From the reward the miner can
+-- equip it or open another of the same crate.
 local Players = game:GetService("Players")
 local Shared = game:GetService("ReplicatedStorage").Shared
 local C, Geodes = require(Shared.Collectibles), require(Shared.Geodes)
@@ -16,28 +16,22 @@ local slate = ColorSequence.new(rgb(150, 154, 176), rgb(98, 102, 128))
 local gold = ColorSequence.new(rgb(255, 226, 120), rgb(240, 150, 30))
 
 -- The icon each kind of reward is shown with.
-local itemIcons = { food = "Pets", boost = "Boosts", geode = "Geode" }
+local kindIcons = { pet = "Pets", trail = "Power", ribbon = "Trail", aura = "Gems", style = "Pets" }
 function Reveal.icon(kind, id)
-	if kind == "pet" then return "Pets" end
-	if kind == "trail" then return "Trail" end
-	if kind == "aura" then return "Gems" end
+	if kindIcons[kind] then return kindIcons[kind] end
 	local item = C.itemById[id]
-	return if item then itemIcons[item.kind] or "Gems" else "Gems"
+	return if item and item.kind == "geode" then "Geode" else "Boosts"
 end
 
 -- What a result means, in words.
 function Reveal.outcome(kind, id, count, result)
 	local entry = C.find(kind, id)
 	if result.dust then
-		return "Duplicate · +" .. result.dust .. " Geode Dust"
-	elseif result.star then
-		return string.format("Already yours · now ★%d (+%d%% bonus)", result.star, result.star * 20)
+		return "Already yours · +" .. result.dust .. " Crate Dust"
 	elseif kind == "item" then
 		return (if count > 1 then "×" .. count .. "  ·  " else "") .. (entry.detail or "")
-	elseif kind == "pet" then
-		return "NEW PET · +" .. math.floor(entry.amount * 100 + 0.5) .. "% " .. C.bonusText[entry.bonus]
 	end
-	return "NEW " .. (if kind == "trail" then "MINING TRAIL" else "AURA")
+	return "NEW " .. string.upper(C.kindNames[kind])
 end
 
 local function button(parent, name, x, y, w, h, paint, text)
@@ -167,6 +161,14 @@ function Reveal:show()
 	local rarity = C.rarities[now.entry.rarity]
 	self.rock.Visible, self.skipButton.Visible = false, false
 	self.card.Visible = true
+	-- The crate bursts open in a flash of the reward's colour.
+	if self.player:GetAttribute("MenuMotion") ~= false then
+		local flash = Instance.new("Frame")
+		flash.Name, flash.Size, flash.BorderSizePixel, flash.ZIndex = "Burst", UDim2.fromScale(1, 1), 0, 20
+		flash.BackgroundColor3, flash.BackgroundTransparency = rarity.color:Lerp(W.white, 0.6), 0.15
+		flash.Parent = self.gui
+		W.tween(flash, 0.45, { BackgroundTransparency = 1 }).Completed:Once(function() flash:Destroy() end)
+	end
 	self.cardPaint.Color = ColorSequence.new(rarity.color:Lerp(rgb(72, 68, 124), 0.45), rgb(46, 43, 86))
 	self.rays:ClearAllChildren()
 	Burst.rays(self.rays, 200, 130, 300, 10, rarity.color, 0.7)
@@ -181,11 +183,12 @@ function Reveal:show()
 		self.preview.Visible = false
 		Icons.draw(self.iconHolder, Reveal.icon(now.kind, now.id), 0, 0, 150)
 		if now.entry.colors or now.entry.color then
+			local colors = C.colors(now.entry)
 			local swatch = W.frame(self.iconHolder, "Colour", 25, 150, 100, 10, W.white, 5)
-			W.gradient(swatch, (now.entry.colors or { now.entry.color })[1], (now.entry.colors or { now.entry.color, now.entry.color })[2], 0)
+			W.gradient(swatch, colors[1], colors[2], 0)
 		end
 	end
-	local wearable = now.kind == "trail" or now.kind == "aura" or now.kind == "pet"
+	local wearable = now.kind == "pet" or C.isCosmetic(now.kind)
 	self.equip.Visible = wearable
 	self.equipLabel.Text = if now.kind == "pet" then "Equip" else "Wear"
 	local geode = now.geode
@@ -214,7 +217,7 @@ function Reveal:wear()
 	if now.kind == "pet" then
 		self.net.Action:FireServer("EquipPet", now.id, true)
 	else
-		self.net.Action:FireServer("Wear", if now.kind == "trail" then "trail" else "aura", now.id)
+		self.net.Action:FireServer("Wear", now.kind, now.id)
 	end
 	self.equip.Visible = false
 	self.result.Text = if now.kind == "pet" then "Following you!" else "Equipped!"

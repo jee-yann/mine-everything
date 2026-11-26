@@ -9,8 +9,6 @@ local Skills = require(Shared.Skills)
 local Rebirth = require(Shared.Rebirth)
 local FriendBonus = require(Shared.FriendBonus)
 local Bonuses = require(Shared.Bonuses)
-local Collectibles = require(Shared.Collectibles)
-local Collection = require(script.Parent.Collection)
 local Mining = {}
 local luckRandom = Random.new()
 
@@ -96,45 +94,6 @@ function Mining.selection(world, character, point, normal, power, space)
 		return {}
 	end
 	return Pattern.select(world.origin, center, world:oreAt(center), power, space, world.grid:practice(world.grid:cellAt(center)))
-end
-
-Mining.compassRadius = 40
-Mining.craterRow = -1 - Config.Layers[#Config.Layers].depthBlocks
--- The centre of the nearest Starfall block within `radius` cells of `cell`, or nil. Yields between slices.
-function Mining.nearestStarfall(world, cell, radius)
-	local starfall = Ores.byName.Starfall
-	local best, bestDistance, checked = nil, math.huge, 0
-	-- A planted Starfall (the Studio practice one) counts wherever it is.
-	for at in world.grid.planted or {} do
-		local distance = (at - cell).Magnitude ^ 2
-		if distance <= radius * radius and distance < bestDistance and world.grid:oreAt(at) == starfall then
-			best, bestDistance = at, distance
-		end
-	end
-	local top = math.min(cell.Y + radius, Mining.craterRow)
-	local bottom = cell.Y - radius
-	for y = top, bottom, -1 do
-		local dy = y - cell.Y
-		local slice = radius * radius - dy * dy
-		if slice < 0 then continue end
-		local zLimit = math.floor(math.sqrt(slice))
-		for dz = -zLimit, zLimit do
-			local xLimit = math.floor(math.sqrt(slice - dz * dz))
-			for dx = -xLimit, xLimit do
-				local at = Vector3.new(cell.X + dx, y, cell.Z + dz)
-				if world.grid:oreAt(at) == starfall then
-					local distance = dx * dx + dy * dy + dz * dz
-					if distance < bestDistance then best, bestDistance = at, distance end
-				end
-			end
-			checked += 2 * xLimit + 1
-			if checked > 6000 then
-				checked = 0
-				task.wait()
-			end
-		end
-	end
-	return if best then world.grid:center(best) else nil
 end
 
 function Mining.start(world, net, sessions, sync, hooks)
@@ -285,11 +244,8 @@ function Mining.start(world, net, sessions, sync, hooks)
 		local ore = Ores.byName[name]
 		local discovery = not ore.host and not profile.discoveries[name]
 		local oldLevel = Expeditions.level(profile.xp)
-		local xpBefore = profile.xp
 		local awards, purity, units, record = Profile.recordCut(profile, name, depthBlocks, nil,
 			FriendBonus.multiplier(player:GetAttribute("FriendsHere")) * Bonuses.xp(bonus))
-		-- Equipped pets learn alongside their miner.
-		local petLevels = Collection.petXp(profile.col, math.max(1, profile.xp - xpBefore))
 		local gems = 0
 		if not ore.host and luckRandom:NextNumber() < Bonuses.gemChance(bonus) then
 			gems += 1
@@ -315,10 +271,6 @@ function Mining.start(world, net, sessions, sync, hooks)
 		local level = Expeditions.level(profile.xp)
 		if level > oldLevel then
 			net.Feedback:FireClient(player, "levelUp", level)
-		end
-		for _, id in petLevels do
-			local pet = Collectibles.petById[id]
-			net.Feedback:FireClient(player, "petLevel", id, profile.col.pets[id].l, pet and pet.name)
 		end
 		for _, rank in Expeditions.ranks do
 			if oldLevel < rank.level and level >= rank.level then
@@ -394,26 +346,6 @@ function Mining.start(world, net, sessions, sync, hooks)
 			end
 			pending[player] = nil
 			table.remove(queue, 1)
-		end
-	end)
-	-- Star Compass: while it runs, the server looks for Starfall within 40 blocks of the miner, a slice
-	-- at a time, and publishes the nearest as CompassTarget. Starfall only forms in the crater, so the
-	-- search only covers crater rows.
-	task.spawn(function()
-		while true do
-			task.wait(2)
-			for player, session in sessions do
-				local p, root = session.profile, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-				local on = (p.col.boosts.compass or 0) > os.time()
-				local found
-				if on and root and world.ready then
-					found = Mining.nearestStarfall(world, world.grid:cellAt(root.Position), Mining.compassRadius)
-				end
-				if sessions[player] == session then
-					player:SetAttribute("CompassTarget", found)
-					player:SetAttribute("CompassOn", on)
-				end
-			end
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)

@@ -105,8 +105,11 @@ local function sync(player, p, awardName)
 		player:SetAttribute("Collection", encoded)
 	end
 	player:SetAttribute("Trail", p.col.trail or "")
+	player:SetAttribute("Ribbon", p.col.ribbon or "")
 	player:SetAttribute("Aura", p.col.aura or "")
-	player:SetAttribute("PetAura", p.col.petAura or "")
+	player:SetAttribute("PetStyle", p.col.style or "")
+	-- What a Gold Bundle would pay right now, for the Shop to show.
+	player:SetAttribute("GoldBundle", Store.goldCrate(p))
 	player:SetAttribute("GeodeDust", p.col.dust)
 	player:SetAttribute("StarterBought", p.store.starter == true)
 	player:SetAttribute("VipChestAt", p.store.vipAt or 0)
@@ -245,6 +248,13 @@ local function join(player)
 	board.Parent = player
 	sessions[player], loading[player] = session, nil
 	Collection.passRewards(session.profile.col, Store.benefits(player), session.profile.preferences.TrailEnabled)
+	-- Gems for trying the Shop: 1,000 in every unpublished Studio session (not in automated tests), and
+	-- once for the game's owner.
+	local studio = session.practice and not Rep:GetAttribute("MiningTestMode")
+	if studio or (player.UserId == PIXELII_USER_ID and not session.profile.store.testGems) then
+		session.profile.gems += 1000
+		session.profile.store.testGems = true
+	end
 	updateGifts(player, session, os.time())
 	for key, value in session.profile.preferences do
 		player:SetAttribute(key, value)
@@ -595,8 +605,6 @@ local function action(player, key, option, value)
 	elseif key == "EquipPet" and type(option) == "string" and type(value) == "boolean" then
 		if Collection.equipPet(p.col, option, value) then
 			sync(player, p)
-		elseif value then
-			net.Feedback:FireClient(player, "hint", string.format("Up to %d pets can follow you. Put one away first.", C.petSlots))
 		end
 	elseif key == "Wear" and type(option) == "string" then
 		if Collection.wear(p.col, option, if type(value) == "string" then value else nil) then

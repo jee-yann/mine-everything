@@ -1,6 +1,6 @@
--- Small chips under the region name for every boost that is running: tonics, timed gold and luck,
--- the Star Compass and Server Luck (with the name of whoever bought it). Each counts down, and a tap
--- opens the Shop's boosts.
+-- Status chips in the bottom right corner for every boost that is running: tonics, timed gold and
+-- luck and Server Luck (with the name of whoever bought it). Each counts down, and a tap opens the
+-- Shop's boosts. On a phone they sit higher, clear of the touch buttons.
 local Rep = game:GetService("ReplicatedStorage")
 local C, Bonuses = require(Rep.Shared.Collectibles), require(Rep.Shared.Bonuses)
 local W, Icons = require(script.Parent.Widgets), require(script.Parent.Icons)
@@ -10,17 +10,16 @@ local looks = {
 	gold2 = { "Coins", rgb(255, 214, 90) },
 	speedTonic = { "Speed", rgb(150, 230, 255) },
 	luck2 = { "Boosts", rgb(150, 255, 140) },
-	luck3 = { "Boosts", rgb(150, 255, 140) },
-	compass = { "Rebirth", rgb(255, 236, 150) },
 	server = { "Friends", rgb(190, 255, 150) },
 }
 
 return function(hud)
 	local player = hud.player
-	local holder = W.frame(hud.root, "Boosts", 0, 0, 600, 34, W.ink)
+	local holder = W.frame(hud.root, "Boosts", 0, 0, 320, 200, W.ink)
 	holder.BackgroundTransparency = 1
 	local layout = Instance.new("UIListLayout")
-	layout.FillDirection, layout.HorizontalAlignment = Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Center
+	layout.FillDirection, layout.HorizontalAlignment = Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Right
+	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
 	layout.Padding, layout.SortOrder = UDim.new(0, 6), Enum.SortOrder.LayoutOrder
 	layout.Parent = holder
 	local chips = {}
@@ -73,12 +72,10 @@ return function(hud)
 					chips[key] = nil
 				end
 			end
-			-- Under the region name, and under the Surface button when it shows.
-			local loc = hud.layer.Parent
-			local bottom = loc.AbsolutePosition.Y + loc.AbsoluteSize.Y - hud.root.AbsolutePosition.Y
-			if hud.surface.Visible then bottom += hud.surface.AbsoluteSize.Y + 6 end
-			W.anchor(holder, 0.5, 0, UDim2.fromOffset(loc.AbsolutePosition.X - hud.root.AbsolutePosition.X + loc.AbsoluteSize.X / 2, bottom + 4))
-			holder.Visible = loc.Visible and next(seen) ~= nil
+			-- The bottom right corner; on phones above the touch buttons.
+			local size = hud.root.AbsoluteSize
+			W.anchor(holder, 1, 1, UDim2.fromOffset(size.X - 14, if hud.edgeMode then size.Y * 0.62 else size.Y - 14))
+			holder.Visible = hud.layer.Parent.Visible and next(seen) ~= nil
 			task.wait(0.5)
 		end
 	end)
