@@ -28,8 +28,16 @@ function GuideButton:point(button, motion, side)
 
 	local ring = W.frame(button, "Guide highlight", 1, 1, 0, 0, W.gold)
 	ring.Size, ring.BackgroundTransparency, ring.ZIndex = UDim2.new(1, -2, 1, -2), 1, button.ZIndex + 3
+	if side == "Spotlight" then
+		-- Around the shortcut on the corner too.
+		local low, high = require(script.Parent.SurfaceSpotlight).bounds(button)
+		local scale = math.max(0.01, button.AbsoluteSize.X / math.max(1, button.Size.X.Offset))
+		local before, after = (button.AbsolutePosition - low) / scale, (high - button.AbsolutePosition - button.AbsoluteSize) / scale
+		ring.Position = UDim2.fromOffset(-before.X - 4, -before.Y - 4)
+		ring.Size = UDim2.new(1, before.X + after.X + 8, 1, before.Y + after.Y + 8)
+	end
 	local corner = button:FindFirstChildOfClass("UICorner")
-	if corner then corner:Clone().Parent = ring end
+	if corner then corner:Clone().Parent = ring else W.round(ring, 12) end
 	W.stroke(ring, W.gold, 3)
 	self.ring = ring
 

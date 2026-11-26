@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 512, 256 px tiles, on a clear
+<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 768, 256 px tiles, on a clear
      background. Tile order must match the tiles table in src/client/FieldKit/init.luau.
      Render with render_field_kit.py, then bake with bake_field_kit.py.
      Style: one navy outline around each icon's silhouette (the #ol filter), nothing dark
      inside, flat colours with soft shade shapes, white glints and a soft cast shadow. -->
 <html><head><meta charset="utf-8"><style>
-  html, body { margin: 0; width: 1024px; height: 512px; background: transparent; overflow: hidden; }
+  html, body { margin: 0; width: 1024px; height: 768px; background: transparent; overflow: hidden; }
   .ico { position: absolute; width: 208px; height: 208px; overflow: visible; filter: drop-shadow(7px 11px 0 #29264a38); }
 </style></head><body>
 <svg width="0" height="0" style="position:absolute">
@@ -226,6 +226,90 @@
         <circle cx="46" cy="46" r="2.4" fill="#fff"/>
       </g>
     </symbol>
+
+    <!-- Power: pickaxe with a steel head, gold collar and a wrapped wooden handle -->
+    <clipPath id="c-pickhead"><path d="M18 19 Q58 -8 88 52 Q78 46 61 41 Q40 35 18 19 Z"/></clipPath>
+    <symbol id="i-pick" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M20 88 L58 36" stroke="#c27a44" stroke-width="13" stroke-linecap="round"/>
+        <path d="M24 80 L54 39" stroke="#d99358" stroke-width="4" stroke-linecap="round"/>
+        <path d="M22 86 L32 72" stroke="#8b5cf6" stroke-width="15" stroke-linecap="round"/>
+        <path d="M23 80 l7 5 M27 74 l7 5" stroke="#b08cff" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M18 19 Q58 -8 88 52 Q78 46 61 41 Q40 35 18 19 Z" fill="#cfdbea"/>
+        <g clip-path="url(#c-pickhead)">
+          <path d="M12 25 Q40 34 60 38 Q78 42 94 58 L94 72 L8 42 Z" fill="#93a6c2"/>
+          <path d="M60 10 Q80 22 90 44 L96 44 L96 4 Z" fill="#b2c1d6"/>
+        </g>
+        <path d="M14 17 L26 15 L22 26 Z" fill="#7ee3f5"/>
+        <path d="M91 54 L88 43 L81 48 Z" fill="#7ee3f5"/>
+        <rect x="48" y="25" width="19" height="17" rx="5" fill="#ffc83a" transform="rotate(-54 57.5 33.5)"/>
+        <rect x="51" y="33" width="14" height="5" rx="2.5" fill="#f5a31e" transform="rotate(-54 58 35.5)"/>
+        <path d="M30 14 Q46 7 60 10" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/>
+        <use href="#spark" transform="translate(86 18) scale(.75)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Speed: two gold chevrons racing to the right -->
+    <symbol id="i-speed" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M10 22 H36 L62 52 L36 82 H10 L36 52 Z" fill="#ffd23f"/>
+        <path d="M36 52 H62 L36 82 H10 Z" fill="#f5a31e"/>
+        <path d="M40 22 H66 L92 52 L66 82 H40 L66 52 Z" fill="#ffe27a"/>
+        <path d="M66 52 H92 L66 82 H40 Z" fill="#ffb627"/>
+        <path d="M16 27 H33" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <path d="M46 27 H63" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <use href="#spark" transform="translate(88 18) scale(.75)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Profile: a miner in a hard hat with a lamp -->
+    <clipPath id="c-coat"><path d="M14 94 C14 70 30 62 50 62 C70 62 86 70 86 94 Z"/></clipPath>
+    <symbol id="i-miner" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M14 94 C14 70 30 62 50 62 C70 62 86 70 86 94 Z" fill="#3f8ff0"/>
+        <g clip-path="url(#c-coat)"><ellipse cx="92" cy="86" rx="30" ry="30" fill="#2f74d6"/></g>
+        <path d="M43 62 H57 L54 94 H46 Z" fill="#ffc83a"/>
+        <path d="M43 62 L50 72 L57 62 Z" fill="#ffe6c4"/>
+        <circle cx="50" cy="44" r="19" fill="#ffcf9e"/>
+        <path d="M50 25 A19 19 0 0 1 69 44 A19 19 0 0 1 56 62 Q66 46 50 25 Z" fill="#f2b37c"/>
+        <circle cx="39" cy="50" r="4" fill="#ffab9a"/>
+        <circle cx="61" cy="50" r="4" fill="#ffab9a"/>
+        <path d="M27 38 C27 14 73 14 73 38 Z" fill="#ffc83a"/>
+        <path d="M60 18 C70 22 73 30 73 38 H62 Z" fill="#f5a31e"/>
+        <rect x="22" y="34" width="56" height="9" rx="4.5" fill="#f5a31e"/>
+        <circle cx="50" cy="26" r="7" fill="#fff6c8"/>
+        <circle cx="50" cy="26" r="3.5" fill="#ffd96a"/>
+        <path d="M33 30 Q35 22 42 19" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <path d="M22 84 Q22 74 28 69" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none" opacity=".85"/>
+      </g>
+    </symbol>
+
+    <!-- Friends: two miners side by side -->
+    <clipPath id="c-coat2"><path d="M44 92 C44 74 56 66 70 66 C84 66 96 74 96 92 Z"/></clipPath>
+    <symbol id="i-friends" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M44 92 C44 74 56 66 70 66 C84 66 96 74 96 92 Z" fill="#ff6fa0"/>
+        <g clip-path="url(#c-coat2)"><ellipse cx="100" cy="86" rx="20" ry="24" fill="#e2507f"/></g>
+        <circle cx="70" cy="50" r="15" fill="#ffd8b0"/>
+        <path d="M54 48 C54 30 86 30 86 48 C82 40 76 38 70 38 C62 38 58 42 54 48 Z" fill="#a0522d"/>
+        <circle cx="62" cy="55" r="3" fill="#ffab9a"/>
+        <circle cx="78" cy="55" r="3" fill="#ffab9a"/>
+      </g>
+      <g filter="url(#ol)" transform="translate(-6 6) scale(.86)">
+        <path d="M14 94 C14 70 30 62 50 62 C70 62 86 70 86 94 Z" fill="#3f8ff0"/>
+        <g clip-path="url(#c-coat)"><ellipse cx="92" cy="86" rx="30" ry="30" fill="#2f74d6"/></g>
+        <path d="M43 62 H57 L54 94 H46 Z" fill="#ffc83a"/>
+        <circle cx="50" cy="44" r="19" fill="#ffcf9e"/>
+        <circle cx="39" cy="50" r="4" fill="#ffab9a"/>
+        <circle cx="61" cy="50" r="4" fill="#ffab9a"/>
+        <path d="M27 38 C27 14 73 14 73 38 Z" fill="#ffc83a"/>
+        <path d="M60 18 C70 22 73 30 73 38 H62 Z" fill="#f5a31e"/>
+        <rect x="22" y="34" width="56" height="9" rx="4.5" fill="#f5a31e"/>
+        <circle cx="50" cy="26" r="7" fill="#fff6c8"/>
+        <circle cx="50" cy="26" r="3.5" fill="#ffd96a"/>
+        <path d="M33 30 Q35 22 42 19" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+      </g>
+    </symbol>
   </defs>
 </svg>
   <!-- Inventory -->
@@ -244,4 +328,12 @@
   <svg class="ico" style="left:532px;top:270px"><use href="#i-gift"/></svg>
   <!-- Rebirth -->
   <svg class="ico" style="left:788px;top:270px"><use href="#i-rebirth"/></svg>
+  <!-- Power -->
+  <svg class="ico" style="left:20px;top:526px"><use href="#i-pick"/></svg>
+  <!-- Speed -->
+  <svg class="ico" style="left:276px;top:526px"><use href="#i-speed"/></svg>
+  <!-- Profile -->
+  <svg class="ico" style="left:532px;top:526px"><use href="#i-miner"/></svg>
+  <!-- Friends -->
+  <svg class="ico" style="left:788px;top:526px"><use href="#i-friends"/></svg>
 </body></html>

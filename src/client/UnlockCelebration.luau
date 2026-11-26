@@ -1,16 +1,32 @@
+-- The big moments, one after another: levels, skills, new ores, achievements, titles, jobs, upgrades and
+-- rebirths. Each is
+-- a bright tile that drops in with turning rays, a shine and confetti.
 local W = require(script.Parent.Widgets)
 local Icons = require(script.Parent.Icons)
 local Audio = require(script.Parent.HarborAudio)
+local Burst = require(script.Parent.Burst)
 local Ores = require(game.ReplicatedStorage.Shared.Ores)
 local Celebration = {}
 Celebration.__index = Celebration
+local rgb = Color3.fromRGB
+
+local kinds = {
+	discovery = { "NEW ORE DISCOVERED!", "Crystal", rgb(134, 214, 255), rgb(47, 130, 230) },
+	titleUnlocked = { "TITLE UNLOCKED!", "Titles", rgb(207, 174, 255), rgb(129, 80, 230) },
+	levelUp = { "LEVEL UP!", "Skills", rgb(166, 245, 154), rgb(52, 178, 74) },
+	achievement = { "ACHIEVEMENT!", "Achievements", rgb(255, 230, 128), rgb(243, 165, 26) },
+	job = { "JOB COMPLETE!", "Jobs", rgb(255, 208, 138), rgb(240, 138, 58) },
+	skill = { "SKILL UNLOCKED!", "Skills", rgb(166, 245, 154), rgb(52, 178, 74) },
+	rebirth = { "REBIRTH!", "Rebirth", rgb(255, 150, 150), rgb(214, 52, 78) },
+	upgrade = { "UPGRADED!", "Power", rgb(140, 240, 220), rgb(24, 160, 150) },
+}
 
 function Celebration.new(hud)
 	return setmetatable({ hud = hud, queue = {} }, Celebration)
 end
 
-function Celebration:show(kind, name)
-	table.insert(self.queue, { kind = kind, name = name })
+function Celebration:show(kind, name, detail, icon, gold)
+	table.insert(self.queue, { kind = kind, name = name, detail = detail, icon = icon, gold = gold })
 	if self.playing then
 		return
 	end
@@ -18,7 +34,7 @@ function Celebration:show(kind, name)
 	task.spawn(function()
 		while #self.queue > 0 and self.hud.root.Parent do
 			local item = table.remove(self.queue, 1)
-			self:present(item.kind, item.name)
+			self:present(item)
 		end
 		self.playing = false
 	end)
@@ -33,71 +49,68 @@ function Celebration:skillsLeft()
 	return false
 end
 
-function Celebration:present(kind, name)
-	local root = self.hud.root
-	local isTitle = kind == "titleUnlocked"
-	local isLevel = kind == "levelUp"
+function Celebration:present(item)
+	local root, kind, name = self.hud.root, item.kind, item.name
 	if kind == "aura" then
 		require(script.Parent.FirstLightCase)(self.hud, name)
 		return
 	end
+	local style = kinds[kind] or kinds.achievement
 	local ore = if kind == "discovery" then Ores.byName[name] else nil
-	local tint = if ore then ore.color:Lerp(W.white, 0.35) elseif isTitle then W.violet elseif isLevel then W.aqua else W.gold
-	local motion = self.hud.player:GetAttribute("MenuMotion") ~= false and not game:GetService("GuiService").ReducedMotionEnabled
-	local group = W.fadeGroup(root, "Unlock celebration", 368, 124)
+	local top, bottom = style[3], style[4]
+	if ore then
+		local h, s, v = ore.color:ToHSV()
+		local bright = Color3.fromHSV(h, math.min(s, 0.75), math.max(v, 0.85))
+		top, bottom = bright:Lerp(W.white, 0.35), bright:Lerp(W.navy, 0.3)
+	end
+	local motion = Burst.allowed(self.hud.player)
+	local quick = #self.queue > 0
+	local group = W.fadeGroup(root, "Unlock celebration", 470, 170)
 	group.ZIndex = 35
-	local center = UDim2.fromScale(0.5, 0.41)
+	local center = UDim2.fromScale(0.5, 0.3)
 	W.anchor(group, 0.5, 0.5, center)
 	local scale = W.scale(group)
-	local fit = math.min(1.15, (root.AbsoluteSize.X - 16) / 368)
+	local fit = math.min(1.1, (root.AbsoluteSize.X - 16) / 470, (root.AbsoluteSize.Y - 10) / 340)
 	scale.Scale = fit
-	local body = W.frame(group, "Plaque", 8, 12, 352, 98, W.panel, 16)
-	W.stroke(body, tint, 2.5)
-	W.enamel(body, if ore then ore.color:Lerp(W.panel, 0.48) elseif isTitle then W.grape elseif isLevel then Color3.fromRGB(24, 88, 104) else Color3.fromRGB(110, 69, 32), W.ink)
-	local badge = W.frame(body, "Medal", 16, 24, 50, 50, tint, 14)
-	W.stroke(badge, tint:Lerp(W.white, 0.65), 2)
-	Icons.draw(badge, if ore then "Crystal" elseif isTitle then "Titles" elseif isLevel then "Skills" else "Achievements", 5, 5, 40, tint)
-	W.text(body, if ore then "NEW ORE DISCOVERED" elseif isTitle then "TITLE UNLOCKED" elseif isLevel then "LEVEL UP!" else "ACHIEVEMENT UNLOCKED", 83, 8, 260, 18, 14, tint, true)
-	local headline = W.title(body, if isLevel then "Level " .. tostring(name) else name, 82, 27, 262, 42, 27, W.white, true)
+	local body = W.frame(group, "Plaque", 12, 22, 446, 124, W.white, 22)
+	W.enamelPanel(body, top, bottom, 22)
+	Burst.rays(body, 68, 62, 560, 9, W.white, 0.8)
+	local medal = W.frame(body, "Medal", 22, 16, 92, 92, W.white, 24)
+	W.enamelPanel(medal, W.white, top:Lerp(W.white, 0.45), 24)
+	Icons.draw(medal, item.icon or style[2], 11, 11, 70, if ore then ore.color else nil)
+	local medalScale = W.scale(medal)
+	local kindText = W.title(body, style[1], 132, 10, 300, 30, 25, rgb(255, 244, 170), true)
+	W.navyText(kindText, 2.8)
+	local headline = W.title(body, if kind == "levelUp" then "Level " .. tostring(name) else name, 132, 38, 300, 46, 37, W.white, true)
 	headline.TextScaled = true
 	local limit = Instance.new("UITextSizeConstraint")
-	limit.MinTextSize, limit.MaxTextSize, limit.Parent = 13, 27, headline
-	W.text(
-		body,
-		if ore then "Added to your Ore Index" elseif isTitle then "Equip in Inventory → Titles" elseif isLevel then (if self:skillsLeft() then "+1 skill point · spend it in Skills" else "Every skill learned · keep climbing") else "Saved to Achievements",
-		83,
-		70,
-		260,
-		18,
-		14,
-		W.muted,
-		true
-	)
-	Audio.unlock(isTitle)
+	limit.MinTextSize, limit.MaxTextSize, limit.Parent = 15, 37, headline
+	W.navyText(headline, 3.4)
+	local detail = W.title(body, item.detail
+		or (if ore then "Added to your Ore Index" elseif kind == "titleUnlocked" then "Equip it in Inventory"
+			elseif kind == "levelUp" then (if self:skillsLeft() then "+1 skill point to spend" else "Every skill learned!") else "Saved to your Awards"),
+		132, 84, 300, 28, 21, W.white, true)
+	detail.TextScaled = true
+	local small = Instance.new("UITextSizeConstraint")
+	small.MinTextSize, small.MaxTextSize, small.Parent = 12, 21, detail
+	W.navyText(detail, 2.4)
+	if item.gold then self.hud.goldFlow:hold(0.7, medal) end
+	Audio.unlock(kind == "titleUnlocked" or kind == "levelUp" or kind == "rebirth")
 	if motion then
-		group.GroupTransparency, scale.Scale = 0.7, fit * 0.78
-		group.Position = center + UDim2.fromOffset(0, 14)
-		W.tween(group, 0.18, { GroupTransparency = 0, Position = center })
-		W.tween(scale, 0.20, { Scale = fit })
-		for i = 0, if isLevel then 15 else 7 do
-			local angle = i * math.pi / (if isLevel then 8 else 4)
-			local dot = W.frame(body, "Medal spark", 40, 46, 5, 5, tint, 1)
-			dot.Rotation = 45
-			W.tween(
-				dot,
-				0.56,
-				{
-					Position = UDim2.fromOffset(40 + math.cos(angle) * 39, 46 + math.sin(angle) * 38),
-					BackgroundTransparency = 1,
-				}
-			)
-		end
+		Burst.drop(group, center)
+		task.delay(0.36, function()
+			if not group.Parent then return end
+			Burst.pop(medalScale, 1, 1.35)
+			Burst.shine(body, 22)
+			local at = group.AbsolutePosition + Vector2.new(group.AbsoluteSize.X / 2, group.AbsoluteSize.Y * 0.4) - root.AbsolutePosition
+			Burst.confetti(root, at.X, at.Y, if kind == "rebirth" then 48 elseif kind == "levelUp" then 34 else 22, if ore then { top, bottom, W.white, W.gold } else nil)
+		end)
 	end
-	task.wait(2.3)
+	task.wait(if quick then 1.7 else 2.5)
 	if group.Parent then
 		local finish = { GroupTransparency = 1 }
 		if motion then
-			finish.Position = center - UDim2.fromOffset(0, 12)
+			finish.Position = center - UDim2.fromOffset(0, 46)
 		end
 		W.tween(group, 0.28, finish).Completed:Wait()
 		group:Destroy()

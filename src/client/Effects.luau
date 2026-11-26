@@ -284,11 +284,13 @@ function Effects:labels(finds, loot, normal, distant)
 		anchor.Name, anchor.Parent = "Ore find", workspace.Terrain
 		anchor.WorldPosition = center + normal * (Config.Cell * 0.5)
 		local gui = Instance.new("BillboardGui")
-		gui.Name, gui.Size, gui.MaxDistance, gui.LightInfluence = "Ore popup", UDim2.fromScale(6.8, 1.35), 64, 0
+		gui.Name, gui.Size, gui.MaxDistance, gui.LightInfluence = "Ore popup", UDim2.fromScale(7.4, 5), 64, 0
+		-- Your own finds stay in front of the rock around them.
+		gui.AlwaysOnTop = not distant
 		gui.StudsOffsetWorldSpace = Vector3.new(0, 0.3, 0)
 		gui.Parent = anchor
 		local label = Instance.new("TextLabel")
-		label.Size, label.BackgroundTransparency, label.TextScaled = UDim2.fromScale(1, 1), 1, true
+		label.Size, label.BackgroundTransparency, label.TextScaled = UDim2.fromScale(1, 0.27), 1, true
 		label.Font, label.Text, label.TextColor3 =
 			Enum.Font.FredokaOne,
 			"+" .. loot[name] .. " " .. (if distant
@@ -306,26 +308,36 @@ function Effects:labels(finds, loot, normal, distant)
 			TweenInfo.new(1.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 			{ StudsOffsetWorldSpace = Vector3.new(0, 1.9, 0) }
 		):Play()
-		local fade = TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.58)
+		local fade = TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.95)
 		Tween:Create(label, fade, { TextTransparency = 1 }):Play()
 		Tween:Create(outline, fade, { Transparency = 1 }):Play()
-		Debris:AddItem(anchor, 1.08)
+		Debris:AddItem(anchor, 1.42)
 	end
 end
 function Effects:assay(name, grade, quantity, newBest)
 	local popup = self.oreLabels[name]
 	if not popup or not popup.Parent then return end
 	self.oreLabels[name] = nil
-	local detail = Instance.new("TextLabel")
-	detail.Name, detail.BackgroundTransparency = "Purity", 1
-	detail.Position, detail.Size = UDim2.fromScale(-0.15, 0.9), UDim2.fromScale(1.3, 0.73)
-	detail.Font, detail.TextScaled = Enum.Font.BuilderSansBold, true
-	detail.TextColor3 = if newBest then Color3.fromRGB(255, 220, 120) else Color3.fromRGB(190, 245, 255)
-	detail.TextStrokeTransparency, detail.TextStrokeColor3 = 0.12, Color3.fromRGB(26, 31, 52)
-	detail.Text = Purity.text(grade) .. " pure · " .. Purity.multiplierText(grade) .. " value" .. (if newBest then " · Personal best!" else "") .. (if quantity > 1 then " · Bonus ore!" else "")
-	detail.Parent = popup
-	Tween:Create(detail, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.58),
-		{ TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	-- One short line each, so none of them is cut off.
+	local lines = {
+		{ "Purity", Purity.text(grade) .. " pure", Color3.fromRGB(190, 245, 255) },
+		{ "Value", Purity.multiplierText(grade) .. " value", Color3.fromRGB(255, 220, 120) },
+	}
+	if newBest then table.insert(lines, { "Best", "Personal best!", Color3.fromRGB(150, 255, 140) }) end
+	if quantity > 1 then table.insert(lines, { "Bonus", "Bonus ore!", Color3.fromRGB(255, 170, 220) }) end
+	for i, line in lines do
+		local detail = Instance.new("TextLabel")
+		detail.Name, detail.BackgroundTransparency = line[1], 1
+		detail.Position, detail.Size = UDim2.fromScale(0, 0.27 + (i - 1) * 0.18), UDim2.fromScale(1, 0.175)
+		detail.Font, detail.TextScaled = Enum.Font.FredokaOne, true
+		detail.Text, detail.TextColor3 = line[2], line[3]
+		local outline = Instance.new("UIStroke")
+		outline.Color, outline.Thickness, outline.Parent = Color3.fromRGB(38, 49, 76), 2, detail
+		detail.Parent = popup
+		local fade = TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.9)
+		Tween:Create(detail, fade, { TextTransparency = 1 }):Play()
+		Tween:Create(outline, fade, { Transparency = 1 }):Play()
+	end
 end
 
 function Effects:pulse(point, radius)

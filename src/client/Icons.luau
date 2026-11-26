@@ -1,7 +1,8 @@
--- Each badge is drawn on a 32-unit canvas so its silhouette survives touch HUD scaling.
+-- Icons from the Field Kit atlas, and simple badges drawn on a 32-unit canvas for the rest.
 local W = require(script.Parent.Widgets)
 local FieldKit = require(script.Parent.FieldKit)
 local Icons = {}
+
 function Icons.draw(parent, key, x, y, size, tint)
 	local canvas = W.frame(parent, key .. " icon", x, y, 32, 32, W.ink)
 	canvas.BackgroundTransparency = 1
@@ -43,13 +44,6 @@ function Icons.draw(parent, key, x, y, size, tint)
 			shape("Gold face", cx + 2, cy, 12, 11, W.gold, 6, -12)
 			shape("Mint mark", cx + 7, cy + 2, 2, 6, light, 1, 12)
 		end
-	elseif key == "Gear" or key == "Power" then
-		shape("Handle", 13, 5, 5, 24, W.orange, 2, 38, true)
-		shape("Pick head", 8, 5, 16, 6, light, 2, 20, true)
-		shape("Pick tip", 21, 8, 7, 5, W.aqua, 1, 39, true)
-		shape("Rear pick", 4, 6, 7, 4, W.aqua, 1, -23, true)
-		shape("Leather wrap", 11, 19, 6, 2, W.grape, 1, 38)
-		shape("Leather wrap", 8, 23, 6, 2, W.grape, 1, 38)
 	elseif key == "Hook" then
 		shape("Cable", 7, 13, 4, 16, W.gold, 2, 29, true)
 		shape("Hook shank", 12, 5, 5, 17, W.aqua, 2, 29, true)
@@ -113,14 +107,6 @@ function Icons.draw(parent, key, x, y, size, tint)
 			shape("Eye", xx, 14, 3, 4, W.ink, 1)
 		end
 		shape("Smile", 14, 20, 4, 2, W.ink, 1)
-	elseif key == "Crew" then
-		shape("Head", 10, 4, 12, 12, W.gold, 6, 0, true)
-		shape("Coat", 5, 18, 22, 11, W.aqua, 5, 0, true)
-	elseif key == "Speed" then
-		for _, xx in { 8, 19 } do
-			shape("Upper chevron", xx, 5, 6, 14, W.gold, 2, -40, true)
-			shape("Lower chevron", xx, 14, 6, 14, W.gold, 2, 40, true)
-		end
 	else
 		local col = tint or W.violet
 		shape("Back shard", 4, 11, 11, 15, col:Lerp(W.ink, 0.22), 3, -27, true)

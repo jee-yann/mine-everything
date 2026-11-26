@@ -23,7 +23,7 @@ function LevelRing.new(parent, openSkills)
 	font.MinTextSize, font.MaxTextSize, font.Parent = 10, 19, value
 	W.outlineText(caption, 1.4)
 	W.outlineText(value, 2)
-	return setmetatable({ button = button, ticks = ticks, caption = caption, value = value }, LevelRing)
+	return setmetatable({ scale = button["Interaction scale"], button = button, ticks = ticks, caption = caption, value = value }, LevelRing)
 end
 
 function LevelRing:update(xp, showGain)
@@ -40,6 +40,7 @@ function LevelRing:update(xp, showGain)
 	end
 	self.caption.Text, self.value.Text = "LV", tostring(level)
 	if previous and xp > previous and showGain then
+		self.gained = (self.gained or 0) + xp - previous
 		self.caption.Text = "XP"
 		self.value.Text = "+" .. W.number(xp - previous)
 		task.delay(1.15, function()

@@ -7,6 +7,7 @@ local Profile = require(script.Parent.Profile)
 local Expeditions = require(Shared.Expeditions)
 local Skills = require(Shared.Skills)
 local Rebirth = require(Shared.Rebirth)
+local FriendBonus = require(Shared.FriendBonus)
 local Mining = {}
 
 function Mining.validPoint(v)
@@ -149,7 +150,7 @@ function Mining.start(world, net, sessions, sync)
 	local function pulse(player, profile, request, now)
 		local space = Profile.stat(profile, "Capacity") - Profile.used(profile)
 		if space <= 0 then
-			hint(player, "Pack full • sell your ore", now)
+			hint(player, "Pack full • sell your blocks", now)
 			return
 		end
 		local selected = Mining.selection(
@@ -173,7 +174,8 @@ function Mining.start(world, net, sessions, sync)
 		local ore = Ores.byName[name]
 		local discovery = not ore.host and not profile.discoveries[name]
 		local oldLevel = Expeditions.level(profile.xp)
-		local awards, purity, units, record = Profile.recordCut(profile, name, Config.depthInBlocks(Config.FloorY + world.origin.Y - center.Y))
+		local awards, purity, units, record = Profile.recordCut(profile, name, Config.depthInBlocks(Config.FloorY + world.origin.Y - center.Y), nil,
+			FriendBonus.multiplier(player:GetAttribute("FriendsHere")))
 		loot[name] = units
 		if request.speedSupply then
 			profile[request.speedSupply] = math.max(0, profile[request.speedSupply] - 1)

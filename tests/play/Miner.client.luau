@@ -477,7 +477,10 @@ local function test()
 		end
 	end
 	visit("Book", true)
-	waitFor(function() return overlay.Visible and menu.Listings:FindFirstChild("Iron Shelf") end, 5, "open the Ore Index at its stall")
+	waitFor(function()
+		local index = overlay:FindFirstChild("Ore index")
+		return overlay.Visible and index and index.Visible and index.Body.Odds:FindFirstChild("Iron Shelf")
+	end, 5, "open the Ore Index at its stall")
 	r:FireServer("closePage")
 	waitFor(function() return not overlay.Visible end, 5, "leave the Ore Index stall")
 	local roster = gui.SafeArea["Server leaderboard"]
@@ -508,7 +511,8 @@ local function test()
 	)
 	assert(safe.Mine["Mining mode"].Text == "Hold to mine" and safe.Mine["Gesture hint"].Text == "Double-tap for auto")
 	local jobButton = safe["Current job"].OpenJob
-	assert(jobButton:IsA("GuiButton") and jobButton.BackgroundTransparency == 0, "solid jobs button")
+	assert(jobButton:IsA("GuiButton") and jobButton.BackgroundTransparency == 0 and jobButton:FindFirstChild("Rim"), "solid jobs button")
+	assert(roster:FindFirstChild("Rim"), "leaderboard and job card share a look")
 	for _, b in gui:GetDescendants() do
 		if b:IsA("TextButton") and b.Text == "×" then
 			assert(b.BackgroundColor3.R > b.BackgroundColor3.G * 2, "red close button")
@@ -568,6 +572,8 @@ local function test()
 			"Gear",
 			"Jobs",
 			"Book",
+			"Daily",
+			"Playtime",
 			"Store",
 			"Supplies",
 		}
@@ -586,7 +592,6 @@ local function test()
 			Achievements = "Once Is Luck, Twice Is Skill",
 			Gear = "Speed",
 			Jobs = "First strike",
-			Book = "Stone",
 			Pack = "Stone",
 			Store = "Double Gold",
 			Supplies = "Survey flare",
@@ -596,25 +601,40 @@ local function test()
 				local map = overlay:FindFirstChild("Skill map")
 				return map and map.Visible and not menu.Visible
 			end
+			if page == "Book" or page == "Daily" or page == "Playtime" then
+				local card = overlay:FindFirstChild(if page == "Book" then "Ore index" else "Rewards")
+				return overlay.Visible and card and card.Visible and not menu.Visible
+					and (if page == "Book" then card.Body.Collection.Ores:FindFirstChild("Stone") else card.Body[page].Visible)
+			end
 			local tab = tabViewport:FindFirstChild(page)
 			if tab then
 				return tabViewport.Visible and pager.CurrentPage == tab and tab:FindFirstChild(listing)
 			end
 			return overlay.Visible and menu.Listings:FindFirstChild(listing)
 		end, 5, "open " .. page)
-		local close = if page == "Skills" then overlay["Skill map"]["Map header"].Close else menu.Marquee.Close
+		local wide = if page == "Book" then overlay["Ore index"] elseif page == "Daily" or page == "Playtime" then overlay.Rewards else nil
+		local close = if page == "Skills" then overlay["Skill map"]["Map header"].Close else (wide or menu).Marquee.Close
 		assert(close.Visible and close.Modal, page .. " must release the first-person pointer")
 		if page == "Gear" and r:GetAttribute("CheckSwing") then
 			for key, price in { Speed = 30, Power = 110, Capacity = 8 } do
 				local row = menu.Listings[key]
 				waitFor(function()
-					return row.Requirements.ContentText == "× " .. price .. " G" and row.Requirements.TextFits
+					return row.Requirements.ContentText == "0 / " .. price .. " G" and row.Requirements.TextFits
 						and row.Action.Text == "Need " .. price .. " G" and not row.Action.Interactable
 				end, 2, "gold cost of " .. key .. " for a new miner")
 			end
 			local benefit = menu.Listings.Power.Benefit
 			assert(benefit.Text:sub(1, 12) == "Mines Copper" and benefit.TextFits, benefit.Text)
-			assert(benefit.AbsolutePosition.Y + benefit.AbsoluteSize.Y <= menu.Listings.Power.Action.AbsolutePosition.Y)
+			assert(benefit.AbsolutePosition.X + benefit.AbsoluteSize.X <= menu.Listings.Power.Action.AbsolutePosition.X)
+			assert(menu.Marquee.Purse.Visible, "the workshop shows what the miner can spend")
+		end
+		if page == "Daily" then
+			assert(wide.Body.Daily["Day 1"].Claim.Interactable and not wide.Body.Daily["Day 2"].Claim.Interactable, "day 1 is ready")
+		elseif page == "Playtime" then
+			assert(p:GetAttribute("GiftClock") and not wide.Body.Playtime["Gift 1"].Claim.Interactable, "the first gift takes five minutes")
+			n.Action:FireServer("Gift", 7)
+			task.wait(0.3)
+			assert(p:GetAttribute("GiftClaims") == 0, "a gift was given early")
 		end
 		if page == "Pets" or page == "Passes" then
 			assert(pager.Animated and menu.Position == UDim2.fromScale(0.5, 0.5), "only tab content should swipe")
@@ -639,15 +659,18 @@ local function test()
 			assert(p:GetAttribute("EquippedTitle") == 1)
 		end
 		if page == "Book" then
-			assert(menu.Listings["Iron Shelf"].Depth.Text == "27–59 blocks", "index depth in blocks")
-			assert(menu.Listings:FindFirstChild("Rock hardness"), "index depth and Power guide")
+			local odds = wide.Body.Odds
+			assert(odds["Iron Shelf"].Depth.Text == "27–59 blocks", "index depth in blocks")
+			assert(odds:FindFirstChild("Rock hardness"), "index depth and Power guide")
+			assert(wide.Body.Collection.Visible and not odds.Visible, "the index opens on the collection")
 		end
 		task.wait(0.26)
-		local left, top = menu.AbsolutePosition.X, menu.AbsolutePosition.Y
+		local shown = wide or menu
+		local left, top = shown.AbsolutePosition.X, shown.AbsolutePosition.Y
 		local safe = gui.SafeArea
 		assert(left >= safe.AbsolutePosition.X - 1 and top >= safe.AbsolutePosition.Y - 1, "menu origin")
 		assert(
-			menu.AbsoluteSize.X <= safe.AbsoluteSize.X + 1 and menu.AbsoluteSize.Y <= safe.AbsoluteSize.Y + 1,
+			shown.AbsoluteSize.X <= safe.AbsoluteSize.X + 1 and shown.AbsoluteSize.Y <= safe.AbsoluteSize.Y + 1,
 			"menu bounds"
 		)
 	end
@@ -727,7 +750,7 @@ local function test()
 		waitFor(function() return roster.Miners.Visible end, 2, "reopen roster")
 		do
 			local rail = safe["Menu buttons"]
-			assert(rail.Inventory.Key.Text == "B" and rail.Settings.Key.Text == "P" and rail.Book.Key.Visible, "keycaps on the side buttons")
+			assert(rail.Inventory.Face.Key.Text == "[B]" and rail.Settings.Face.Key.Text == "[P]" and rail.Book.Face.Key.Visible, "letters on the side buttons")
 			tapKey(Enum.KeyCode.O)
 			game:GetService("RunService").Heartbeat:Wait()
 			assert(not overlay.Visible, "O is reserved for the camera")
@@ -745,7 +768,8 @@ local function test()
 					elseif page == "Inventory" then
 						return tabViewport.Visible and pager.CurrentPage.Name == page
 					end
-					local row = ({ Achievements = "Practicing My Scales", Book = "Stone", Settings = "Music volume" })[page]
+					if page == "Book" then return overlay["Ore index"].Visible end
+					local row = ({ Achievements = "Practicing My Scales", Settings = "Music volume" })[page]
 					return menu.Visible and menu.Listings:FindFirstChild(row)
 				end, 3, page .. " shortcut")
 			end
@@ -1157,6 +1181,13 @@ local function test()
 		local collected = p:GetAttribute("Used")
 		input:SendMouseButton(xy, Enum.UserInputType.MouseButton1, true)
 		task.wait(0.85)
+		do
+			-- The reason shows where the player is aiming, and grows there.
+			local reason = safe.Blocked
+			local middle = reason.AbsolutePosition + reason.AbsoluteSize / 2
+			assert(reason.Visible and reason.ContentText:find("Needs Power 2!") and not safe.Feedback.Visible, "no reason shown for a locked block")
+			assert((middle - (cursor.AbsolutePosition + cursor.AbsoluteSize / 2)).Magnitude < 190, "the reason left the cursor")
+		end
 		assert(not lamp.Enabled, "locked ore lit up while holding mine")
 		input:SendMouseButton(xy, Enum.UserInputType.MouseButton1, false)
 		assert(
@@ -1407,7 +1438,7 @@ local function test()
 		waitFor(function()
 			local gear = menu.Listings:FindFirstChild(key)
 			local affordable = saleGold >= price
-			return gear and gear.Requirements.ContentText == (if affordable then "✓ " else "× ") .. price .. " G"
+			return gear and gear.Requirements.ContentText == (if affordable then price .. " G" else saleGold .. " / " .. price .. " G")
 				and gear.Action.Interactable == affordable
 		end, 3, "correct cost of " .. key .. " after selling")
 	end
@@ -1460,14 +1491,26 @@ local function test()
 	waitFor(function()
 		return p:GetAttribute("Jobs") == 2 and p:GetAttribute("ClaimedJobs") == 3
 	end, 5, "two eligible jobs claimed back to back in reverse order")
+	do
+		local gold, reward = p:GetAttribute("Gold"), require(rep.Shared.FieldRewards).daily[1]
+		r:FireServer("openPage", "Daily")
+		waitFor(function() return overlay.Rewards.Visible end, 4, "daily rewards")
+		n.Action:FireServer("Stamp")
+		waitFor(function()
+			return p:GetAttribute("StampCount") == 1 and p:GetAttribute("Gold") == gold + reward.gold
+				and overlay.Rewards.Body.Daily["Day 1"].Collected.Visible
+		end, 4, "claim the daily reward")
+		n.Action:FireServer("Stamp")
+		task.wait(0.4)
+		assert(p:GetAttribute("StampCount") == 1 and p:GetAttribute("Gold") == gold + reward.gold, "a day was claimed twice")
+	end
 	r:FireServer("openPage", "Book")
 	waitFor(function()
-		return p:GetAttribute("SeenBookDirt") and menu.Listings.Dirt:FindFirstChildOfClass("UIStroke").Enabled
+		return p:GetAttribute("SeenBookDirt") and overlay["Ore index"].Body.Collection.Ores.Dirt.Notification.Visible
 	end, 5, "reading a discovered ore")
 	r:FireServer("openPage", "Book")
 	waitFor(function()
-		local stroke = menu.Listings.Dirt:FindFirstChildOfClass("UIStroke")
-		return stroke and not stroke.Enabled
+		return not overlay["Ore index"].Body.Collection.Ores.Dirt.Notification.Visible
 	end, 4, "seen ore stays read on return")
 	r:FireServer("openPage", "Achievements")
 	waitFor(function()
@@ -1484,7 +1527,7 @@ local function test()
 		return p:GetAttribute("SeenAchievementsPetName")
 	end, 5, "scroll reads new achievement")
 	local afterJob = p:GetAttribute("Gold")
-	assert(afterJob == saleGold - 8 + secondSale + 80 + 25)
+	assert(afterJob == saleGold - 8 + secondSale + 80 + 25 + require(rep.Shared.FieldRewards).daily[1].gold)
 	task.wait(0.25)
 	n.Action:FireServer("Job", 2)
 	task.wait(0.3)

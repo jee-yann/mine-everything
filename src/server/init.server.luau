@@ -15,6 +15,7 @@ local Passes = require(script.Passes)
 local equipKit = require(script.ProspectorKit)
 local Pickaxe = require(script.Pickaxe)
 local Rebirth = require(Rep.Shared.Rebirth)
+local FriendsHere = require(script.FriendsHere)
 local Data, Profile, Mining = require(script.DataService), require(script.Profile), require(script.MiningService)
 local PIXELII_USER_ID = 45241447
 
@@ -43,14 +44,15 @@ net.Parent = Rep
 
 local sessions, loading, closing, nextAction = {}, {}, {}, {}
 local shuttingDown = false
-local function updateShift(player, session, now)
-	Field.trackShift(session, now)
+-- GiftClock is the moment today's play time counted from. It only moves when the clock is capped or reset.
+local function updateGifts(player, session, now)
+	Field.trackGifts(session, now)
 	local p = session.profile
-	local index = p.shiftClaims + 1
-	local prize = Field.shiftRewards[index]
-	local due = if not prize then nil elseif p.shiftSeconds >= prize.seconds then 0 else now + prize.seconds - p.shiftSeconds
-	if player:GetAttribute("ShiftPrize") ~= index then player:SetAttribute("ShiftPrize", index) end
-	if player:GetAttribute("ShiftReadyAt") ~= due then player:SetAttribute("ShiftReadyAt", due) end
+	local clock, shown = now - p.giftSeconds, player:GetAttribute("GiftClock")
+	if p.giftSeconds >= Field.maxGiftTime and shown and shown <= clock then clock = shown end
+	if not shown or math.abs(shown - clock) > 1 then player:SetAttribute("GiftClock", clock) end
+	if player:GetAttribute("GiftClaims") ~= p.giftClaims then player:SetAttribute("GiftClaims", p.giftClaims) end
+	if player:GetAttribute("GiftReset") ~= p.giftStart + Field.cooldown then player:SetAttribute("GiftReset", p.giftStart + Field.cooldown) end
 end
 local function applySkills(player, p)
 	local char = player.Character
@@ -85,6 +87,7 @@ local function sync(player, p, awardName)
 	player:SetAttribute("Gold", p.gold)
 	player:SetAttribute("Gems", p.gems)
 	player:SetAttribute("StampDay", p.stampDay)
+	player:SetAttribute("StampAt", p.stampAt)
 	player:SetAttribute("StampCount", p.stampCount)
 	player:SetAttribute("HasteCuts", p.hasteCuts)
 	player:SetAttribute("StoneChips", p.stoneChips)
@@ -211,7 +214,7 @@ local function join(player)
 	end
 	board.Parent = player
 	sessions[player], loading[player] = session, nil
-	updateShift(player, session, os.time())
+	updateGifts(player, session, os.time())
 	for key, value in session.profile.preferences do
 		player:SetAttribute(key, value)
 	end
@@ -301,7 +304,7 @@ local function atCounter(player, prompt)
 end
 
 local counterFor =
-	{ Sell = "Sell", Buy = "Shop", PreviewPass = "Store", Pass = "Store", Supply = "Supplies", Deliver = "Jobs" }
+	{ Sell = "Sell", Buy = "Shop", PreviewPass = "Store", Pass = "Store", Supply = "Supplies" }
 local function action(player, key, option, value)
 	local s = sessions[player]
 	if not s or type(key) ~= "string" then
@@ -336,7 +339,7 @@ local function action(player, key, option, value)
 				moveCharacter(char, CFrame.new(landing))
 			end
 			s.climb, s.lavaUntil = nil, nil
-			updateShift(player, s, os.time())
+			updateGifts(player, s, os.time())
 			sync(player, s.profile)
 			applySkills(player, s.profile)
 		end
@@ -422,11 +425,13 @@ local function action(player, key, option, value)
 		and key ~= "Sell"
 		and key ~= "Buy"
 		and key ~= "Job"
+		and key ~= "JobAll"
+		and key ~= "JoinFriend"
 		and key ~= "Supply"
 		and key ~= "Flare"
 		and key ~= "Deliver"
 		and key ~= "Stamp"
-		and key ~= "ShiftPrize"
+		and key ~= "Gift"
 		and key ~= "Aura"
 		and key ~= "Pulse"
 		and key ~= "OwnerClear"
@@ -462,18 +467,20 @@ local function action(player, key, option, value)
 	end
 	local p = s.profile
 	if key == "Stamp" then
-		local day, gems = Field.claim(p, math.floor(os.time() / 86400))
+		local day, reward = Field.claim(p, os.time())
 		if day then
 			sync(player, p)
-			net.Feedback:FireClient(player, "hint", string.format("Day %d stamped! +%d gems", day, gems))
+			net.Feedback:FireClient(player, "reward", "Daily", day, reward.name, Field.describe(reward))
 		end
-	elseif key == "ShiftPrize" then
+	elseif key == "Gift" then
 		local at = os.time()
-		local gems = Field.claimShift(s, at, option)
-		updateShift(player, s, at)
-		if gems then
+		local given = Field.claimGift(s, at, option)
+		updateGifts(player, s, at)
+		if given then
 			sync(player, p)
-			net.Feedback:FireClient(player, "hint", string.format("Shift reward! +%d %s", gems, if gems == 1 then "gem" else "gems"))
+			local last = given[#given]
+			net.Feedback:FireClient(player, "reward", "Playtime", option,
+				if #given > 1 then #given .. " gifts" else last.name, if #given > 1 then "All collected" else Field.describe(last))
 		end
 	elseif key == "Aura" and type(option) == "boolean" and Profile.hasUpgrade(p) then
 		p.auraOff = not option
@@ -611,6 +618,16 @@ local function action(player, key, option, value)
 			sync(player, p, award)
 			net.Feedback:FireClient(player, "job", job.title, job.reward)
 		end
+	elseif key == "JobAll" then
+		local count, gold, award = Profile.claimJobs(p)
+		if count > 0 then
+			sync(player, p, award)
+			net.Feedback:FireClient(player, "job", count .. (if count == 1 then " job" else " jobs"), gold)
+		end
+	elseif key == "JoinFriend" then
+		times[actionKey] = now + 4
+		local problem = FriendsHere.join(player, option)
+		if problem then net.Feedback:FireClient(player, "friend", problem) end
 	elseif key == "PreviewPass" then
 		Passes.preview(player, option)
 	elseif key == "Pass" then
@@ -637,6 +654,7 @@ for name, prompt in site.stations do
 	end)
 end
 Mining.start(world, net, sessions, sync)
+FriendsHere.start()
 require(script.Standings).start(site.court)
 Players.PlayerAdded:Connect(join)
 Players.PlayerRemoving:Connect(leave)
@@ -691,7 +709,7 @@ task.spawn(function()
 			if s.resetting then
 				continue
 			end
-			updateShift(player, s, at)
+			updateGifts(player, s, at)
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			if not root then
 				s.climb = nil

@@ -21,10 +21,15 @@ function Profile.new()
 		gold = 0,
 		gems = 0,
 		stampDay = 0,
+		stampAt = 0,
+		giftStart = 0,
 		stampCount = 0,
 		shiftDay = 0,
 		shiftSeconds = 0,
 		shiftClaims = 0,
+		giftDay = 0,
+		giftSeconds = 0,
+		giftClaims = 0,
 		hasteCuts = 0,
 		stoneChips = 0,
 		pulses = 0,
@@ -72,7 +77,8 @@ function Profile.stat(p, key)
 end
 
 function Profile.hasUpgrade(p)
-	return p.levels.Speed > 1 or p.levels.Power > 1 or p.levels.Capacity > 1
+	-- Rebirths reset the levels. A reborn miner keeps the aura and does not repeat the first expedition.
+	return p.levels.Speed > 1 or p.levels.Power > 1 or p.levels.Capacity > 1 or (p.rebirths or 0) > 0
 end
 
 function Profile.expeditionStep(p)
@@ -159,13 +165,12 @@ function Profile.valid(p)
 		end
 	end
 	-- Legacy profiles may omit all of the field rewards.
-	for key, max in { gems = 9e15, stampDay = 9e15, stampCount = 7, hasteCuts = Field.hasteCuts,
-		stoneChips = Field.stoneChips, pulses = 9e15, shiftDay = 9e15, shiftSeconds = Field.maxShiftTime,
-		shiftClaims = #Field.shiftRewards } do
+	-- The shift fields belonged to the old timed rewards. They are kept so older servers can read the save.
+	for key, max in { gems = 9e15, stampDay = 9e15, stampCount = #Field.daily, hasteCuts = Field.hasteCuts,
+		stoneChips = Field.stoneChips, pulses = 9e15, shiftDay = 9e15, shiftSeconds = 3600, shiftClaims = 3,
+		giftDay = 9e15, giftSeconds = 86400, giftClaims = 1000, stampAt = 9e15, giftStart = 9e15 } do
 		if p[key] ~= nil and not integer(p[key], max) then return false end
 	end
-	local claimed = Field.shiftRewards[p.shiftClaims or 0]
-	if claimed and (p.shiftSeconds or 0) < claimed.seconds then return false end
 	for _, key in { "oreCompass", "auraOff" } do
 		if p[key] ~= nil and type(p[key]) ~= "boolean" then return false end
 	end
@@ -311,9 +316,12 @@ function Profile.valid(p)
 end
 
 function Profile.upgradeSave(p)
-	for _, key in { "gems", "stampDay", "stampCount", "shiftDay", "shiftSeconds", "shiftClaims", "hasteCuts", "stoneChips", "pulses" } do
+	for _, key in { "gems", "stampDay", "stampCount", "shiftDay", "shiftSeconds", "shiftClaims", "giftDay", "giftSeconds", "giftClaims", "hasteCuts", "stoneChips", "pulses" } do
 		p[key] = p[key] or 0
 	end
+	-- Saves from when rewards followed the UTC day start their wait at that day's midnight.
+	p.stampAt = p.stampAt or p.stampDay * 86400
+	p.giftStart = p.giftStart or p.giftDay * 86400
 	-- Profiles predating the opening belong to returning players.
 	if p.introSeen == nil then p.introSeen = true end
 	if p.firstTrip == nil then p.firstTrip = { skipped = true } end
@@ -431,7 +439,8 @@ function Profile.equipTitle(p, id)
 	p.title = id
 	return true
 end
-function Profile.recordCut(p, name, depth, random)
+-- `boost` multiplies the XP of this cut, for mining with a friend.
+function Profile.recordCut(p, name, depth, random, boost)
 	local ore = Ores.byName[name]
 	local units, grade, record = 1, nil, false
 	if not ore.host then
@@ -447,7 +456,7 @@ function Profile.recordCut(p, name, depth, random)
 		record = grade > (p.bestPurity[name] or 0)
 		if record then p.bestPurity[name] = grade end
 	end
-	local xp = math.floor(Skills.oreXP(ore, p.skills, not p.discoveries[name], depth or 0) * Rebirth.xpMultiplier(p.rebirths) + 0.5)
+	local xp = math.floor(Skills.oreXP(ore, p.skills, not p.discoveries[name], depth or 0) * Rebirth.xpMultiplier(p.rebirths) * (boost or 1) + 0.5)
 	if name == Rebirth.requirement.ore then p.runStarfalls += 1 end
 	p.discoveries[name] = true
 	p.bag[name] = (p.bag[name] or 0) + units
@@ -500,6 +509,20 @@ function Profile.claimJob(p, i)
 	p.jobs += 1
 	p.gold += job.reward
 	return job, if p.jobs == #Expeditions.jobs then Profile.unlock(p, "Shifts") else nil
+end
+
+-- Collects every finished job. Returns how many, their gold and an award, if any.
+function Profile.claimJobs(p)
+	local count, gold, award = 0, 0, nil
+	for i in Expeditions.jobs do
+		local job, earned = Profile.claimJob(p, i)
+		if job then
+			count += 1
+			gold += job.reward
+			award = earned or award
+		end
+	end
+	return count, gold, award
 end
 
 function Profile.value(bag, grades, broker)

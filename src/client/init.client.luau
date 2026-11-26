@@ -268,6 +268,8 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		if hud.menu.map then
 			hud.menu.map:showPurchase(a)
 		end
+		local skill = Skills.byId[a]
+		if skill then hud.unlocks:show("skill", skill.name, skill.detail, skill.icon) end
 	elseif kind == "pulse" then
 		if player:GetAttribute("MenuMotion") ~= false then fx:pulse(a, point) end
 		fx:chime(0.78)
@@ -282,6 +284,10 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			end
 		end
 		Audio.ore(a)
+		-- The XP attribute can land just after the loot.
+		task.delay(0.06, function()
+			hud:showXP(point)
+		end)
 		if owned.LightTrail and not best.host then
 			fx:oreLight(point, owned.Constellation)
 		end
@@ -315,6 +321,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		if a > 0 then
 			fx:chime(1.45)
 			receipt:show(a, point, spread, finds)
+			hud.soldAt = os.clock()
 			if hud.overlay.Visible and hud.menu.page == "Sell" then
 				hud.menu.status.Text = string.format("Sold %s %s   ·   +%s G", W.goldAmount(point), finds or (if point == 1 then "block" else "blocks"), W.goldAmount(a))
 			end
@@ -341,9 +348,15 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		hud:openPage(a)
 	elseif kind == "close" then
 		hud:setShop(false)
+	elseif kind == "reward" then
+		fx:chime(1.8)
+		if hud.overlay.Visible and hud.menu.rewards then
+			hud.menu.rewards:claimed(a, point)
+		end
+		if not hud.overlay.Visible then hud:notice(spread, finds, W.gold) end
 	elseif kind == "job" then
 		fx:chime(1.65)
-		hud:notice("+" .. W.number(point) .. " gold", a .. " completed", W.gold)
+		hud.unlocks:show("job", a, "+" .. W.number(point) .. " gold", nil, point)
 	elseif kind == "resetSoon" then
 		hud:milestone("MINE RENEWAL", "New ore in " .. a .. " seconds", W.aqua)
 		hud:notice("Mine renews in " .. a .. " seconds", "Your haul returns to the entrance with you", W.aqua)
@@ -360,26 +373,31 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			hud:notice(point, "", if a then W.green else W.gold)
 		end
 	elseif kind == "rebirth" then
-		hud.menu.rebirthPending = false
+		hud.menu.rebirthPending = nil
 		if a then
 			release()
 			fx:clearOreLights()
 			fx:chime(1.8)
-			hud.menu:close()
-			hud:milestone("REBIRTH " .. point, Rebirth.perks[1].text(point) .. "  ·  " .. Rebirth.perks[2].text(point), W.violet)
-			hud:notice("Rebirth " .. point .. "!", "A new run begins with your bonuses.", W.violet)
+			hud:setShop(false)
+			hud.unlocks:show("rebirth", "Rebirth " .. point, Rebirth.perks[1].text(point) .. "  ·  " .. Rebirth.perks[2].text(point))
+			hud:notice("A new run begins!", "Your bonuses are permanent", W.rebirth)
 		elseif hud.overlay.Visible and hud.menu.page == "Rebirth" then
-			hud.menu.status.Text = point
-			hud.menu:refresh()
+			hud.menu.rebirth:message(point)
 		else
 			hud:notice(point, "", W.gold)
 		end
+	elseif kind == "friend" then
+		if hud.overlay.Visible and hud.menu.page == "Friends" then
+			hud.menu.profile:say(a)
+		else
+			hud:notice(a, "", W.gold)
+		end
 	elseif kind == "rebirthAnnounce" then
-		hud:notice(a .. " reached Rebirth " .. point, "", W.violet)
+		hud:milestone("REBIRTH " .. point, a .. " was reborn!", W.rebirth)
 	elseif kind == "upgrade" then
 		fx:chime(1.55)
 		hud:workshop(point, spread)
-		hud:notice(a, Upgrades.describe(point, spread), W.green)
+		if hud.overlay.Visible then hud.menu.status.Text = a end
 	else
 		hud:notice(a, "", W.gold)
 	end
@@ -391,6 +409,7 @@ net.Dust.OnClientEvent:Connect(function(point, spread, ore, finds, normal, loot)
 end)
 
 require(script.Podiums).start(player, hud)
+require(script.CourtBoards).start(player, hud)
 require(script.FriendMarkers)(player, hud)
 
 Players.PlayerAdded:Connect(Swing.observe)
@@ -477,7 +496,7 @@ local function sampleAim()
 	local space = cap - (player:GetAttribute("Used") or 0)
 	if hud.touchActions.enabled and (space <= 0 or not ready) then
 		if held and space <= 0 and ready then
-			hud:bagFull()
+			hud:cantMine(true)
 		end
 		release()
 	end
@@ -495,8 +514,10 @@ local function sampleAim()
 	fx:aim(cells)
 	local valid = cells ~= nil and #cells == 1
 	hud:aimAt(screen, valid, locked ~= nil or (cells ~= nil and space <= 0))
-	if held and cells ~= nil and space <= 0 then
-		hud:bagFull()
+	local packed = cells ~= nil and space <= 0
+	local tooHard = not valid and not packed and locked ~= nil
+	if held and (packed or tooHard) then
+		hud:cantMine(packed)
 	end
 	hud.reticle.Visible = centerAim and not hud.cursor.Visible
 	if centerAim then
@@ -510,16 +531,14 @@ local function sampleAim()
 	end
 	if not ready then
 		hud:guide("Opening the mine…", "Preparing your pack and the mine", true)
+	elseif packed then
+		hud:guide("Backpack full!", if mobile then "Tap ↑ Surface, then sell your haul" else "Press R to surface, then sell your haul", true, true)
+	elseif tooHard then
+		hud:guide("Needs Power " .. required .. "!", targetName(locked, center) .. " is too hard. Upgrade at the workshop", true, true)
 	elseif objective then
 		hud:guide(objective, instruction, not expedition.spotlight.layer.Visible)
 	elseif space <= 0 then
-		hud:guide(
-			"Backpack full",
-			instruction or (if inMine then "Use ↑ Surface, then visit Sell" else "Visit the amber Sell counter"),
-			true
-		)
-	elseif not valid and locked then
-		hud:guide(targetName(locked, center) .. " needs Power " .. required, "Upgrade Power at the workshop", true)
+		hud:guide("Backpack full!", if inMine then "Use ↑ Surface, then visit Sell" else "Visit the amber Sell counter", true)
 	elseif valid then
 		local ore = Ores.byName[hit.Instance.Name]
 		local worth = if ore.secret and not player:GetAttribute("Found" .. ore.name)
@@ -543,6 +562,30 @@ UIS.TouchTapInWorld:Connect(function(screen, processed)
 	local ray = camera:ViewportPointToRay(screen.X, screen.Y)
 	local hit = workspace:Raycast(ray.Origin, ray.Direction * minerFocus.range, params)
 	if hit then minerFocus:tap(hit.Instance) end
+end)
+
+require(script.AutoRewards).start(player, hud, function(kind)
+	if joinOpeningPending or hud.inOpening then return true end
+	return kind ~= "opening" and (passage.active or held ~= nil or hud.touchActions.enabled)
+end, function()
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	return root ~= nil and Config.inMine(root.Position - origin)
+end)
+
+local function busy()
+	return joinOpeningPending or hud.inOpening or passage.active or held ~= nil or hud.touchActions.enabled
+end
+require(script.SkillGuide).start(player, hud, busy)
+require(script.InviteHint).start(player, hud, function()
+	return swinging
+end)
+game:GetService("TeleportService").TeleportInitFailed:Connect(function(who)
+	if who ~= player then return end
+	if hud.overlay.Visible and hud.menu.page == "Friends" then
+		hud.menu.profile:say("Your friend's server could not be joined.")
+	else
+		hud:notice("Your friend's server could not be joined", "It may be full", W.gold)
+	end
 end)
 
 local elapsed = 1

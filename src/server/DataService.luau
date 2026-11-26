@@ -29,8 +29,9 @@ function Data.snapshot(p)
 		introSeen = p.introSeen,
 		firstTrip = table.clone(p.firstTrip),
 		gold = p.gold,
-		gems = p.gems, stampCount = p.stampCount, stampDay = p.stampDay,
+		gems = p.gems, stampCount = p.stampCount, stampDay = p.stampDay, stampAt = p.stampAt, giftStart = p.giftStart,
 		shiftDay = p.shiftDay, shiftSeconds = p.shiftSeconds, shiftClaims = p.shiftClaims,
+		giftDay = p.giftDay, giftSeconds = p.giftSeconds, giftClaims = p.giftClaims,
 		hasteCuts = p.hasteCuts, stoneChips = p.stoneChips, pulses = p.pulses,
 		oreCompass = p.oreCompass, auraOff = p.auraOff,
 		mined = p.mined,
@@ -63,7 +64,7 @@ function Data.snapshot(p)
 end
 
 function Data.globalDepths()
-	return depthStore():GetSortedAsync(false, 5, 1):GetCurrentPage()
+	return depthStore():GetSortedAsync(false, 100, 1):GetCurrentPage()
 end
 
 -- Miner levels share the court's global board with depths, so they get their own ranking.
@@ -72,7 +73,7 @@ local function levelStore()
 end
 
 function Data.globalLevels()
-	return levelStore():GetSortedAsync(false, 5, 1):GetCurrentPage()
+	return levelStore():GetSortedAsync(false, 100, 1):GetCurrentPage()
 end
 
 local function indexLevel(session, userId, level)
@@ -217,7 +218,7 @@ function Data.save(player, session, release)
 		return
 	end
 	session.busy = true
-	Field.trackShift(session, os.time())
+	Field.trackGifts(session, os.time())
 	local snapshot = Data.snapshot(session.profile)
 	local depth = Profile.depthRecord(snapshot)
 	if not release or depth ~= session.indexedDepth then
@@ -247,7 +248,7 @@ function Data.resetProgress(player, session)
 	local ok = session.practice or (session.writable and writeSnapshot(player, session, Data.snapshot(fresh), false))
 	if ok then
 		session.profile = fresh
-		session.shiftAt = os.time()
+		session.giftAt = os.time()
 		if session.writable then
 			indexDepth(session, player.UserId, 0)
 			indexLevel(session, player.UserId, 1)

@@ -157,7 +157,7 @@ function Guide:objective(head, inMine, depth, mobile, full, step)
 	local upgrade = if key == "Speed" then "Speed" else "Backpack"
 	local gathering = step == "Sell" or (step == "Upgrade" and gold < price)
 	if full or (gathering and haul > 0 and (not inMine or (step == "Upgrade" and gold + haul >= price))) then
-		local title = if inMine and full then "Backpack full" else "Sell your rocks · " .. W.goldAmount(haul) .. " G"
+		local title = if inMine and full then "Backpack full!" else "Sell your rocks · " .. W.goldAmount(haul) .. " G"
 		return title, self:station("Sell", "Sell", W.gold, head, inMine, mobile)
 	elseif step == "Upgrade" and gold >= price then
 		return "Buy " .. upgrade .. " · " .. price .. " G", self:station("Shop", "Upgrades", W.aqua, head, inMine, mobile)

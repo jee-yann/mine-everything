@@ -149,6 +149,11 @@ function Drawn.pieces(name)
 	return content(piecesFolder, name)
 end
 
+-- A picture of ore `name` for menus: its pieces on a clear background, or the block face of dirt and stone.
+function Drawn.picture(name)
+	return Drawn.pieces(name) or content(folder, name) or content(folder, name .. "-1")
+end
+
 local glintSpots = {} -- ore name -> its glint spots
 -- Spots on ore `name`'s pieces that can catch a glint, as Vector2s in 0..1 image space
 -- (x right, y down), or an empty list.

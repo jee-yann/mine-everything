@@ -3,6 +3,7 @@ local Ores = require(Shared.Ores)
 local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Purity = require(Shared.OrePurity)
 local W, Slider = require(script.Parent.Widgets), require(script.Parent.Slider)
+local Burst = require(script.Parent.Burst)
 local SellCounter = {}
 local stride = 124
 
@@ -12,18 +13,11 @@ local function makeRow(menu, ore, slot)
 	row.Position, row.Size = UDim2.fromOffset(1, 1 + slot * stride), UDim2.fromOffset(447, 117)
 	title.Name, title.RichText = "Stock", true
 	title.Size = UDim2.fromOffset(206, 27)
-	title.TextScaled = true
-	local stockFont = Instance.new("UITextSizeConstraint")
-	stockFont.MinTextSize, stockFont.MaxTextSize, stockFont.Parent = 13, 22, title
+	W.largest(title, 22, 13)
 	detail.Name, detail.RichText = "Unit price", true
-	detail.Position, detail.Size, detail.TextSize = UDim2.fromOffset(67, 27), UDim2.fromOffset(205, 35), 18
-	detail.TextScaled = true
-	local detailFont = Instance.new("UITextSizeConstraint")
-	detailFont.MinTextSize, detailFont.MaxTextSize, detailFont.Parent = 15, 18, detail
+	detail.Position, detail.Size = UDim2.fromOffset(67, 27), UDim2.fromOffset(205, 35)
 	sell.Name, sell.Position, sell.Size = "Sell quantity", UDim2.fromOffset(277, 8), UDim2.fromOffset(158, 51)
-	sell.TextScaled = true
-	local saleFont = Instance.new("UITextSizeConstraint")
-	saleFont.MinTextSize, saleFont.MaxTextSize, saleFont.Parent = 13, 21, sell
+	W.largest(sell, 21, 13)
 	local stack = W.button(row, "Select stack", 277, 66, 158, 44, W.muted, "", "Select")
 	local less = W.button(row, "Fewer", 9, 66, 44, 44, W.muted, "−", "Select")
 	local more = W.button(row, "More", 222, 66, 44, 44, W.muted, "+", "Select")
@@ -65,7 +59,7 @@ local function makeRow(menu, ore, slot)
 		quantity = stock
 		draw()
 	end)
-	return function(count, saleMultiplier)
+	return row, function(count, saleMultiplier)
 		if count < stock then quantity = 1 end
 		stock, multiplier = count, saleMultiplier
 		grades = Purity.decode(menu.player:GetAttribute("Grades" .. ore.name))
@@ -75,22 +69,47 @@ local function makeRow(menu, ore, slot)
 end
 
 function SellCounter.build(menu)
-	local rows, slots = {}, 0
+	local rows, order = {}, {}
 	local empty = W.text(menu.list, "Your pack is empty", 0, 8, 447, 45, 18, W.muted)
 	table.insert(menu.updates, function()
 		local player = menu.player
 		local multiplier = Rebirth.saleMultiplier(player)
 		local value, blocks = (player:GetAttribute("BagValue") or 0) * multiplier, 0
+		local moving = Burst.allowed(player)
 		for _, ore in Ores.list do
 			local count = player:GetAttribute("Held" .. ore.name) or 0
-			-- Keep each stack in its slot until the menu closes, including after a sale.
-			if count > 0 and not rows[ore.name] then
-				rows[ore.name] = makeRow(menu, ore, slots)
-				slots += 1
+			local entry = rows[ore.name]
+			if count > 0 and not entry then
+				-- New stacks go at the end, so the others stay where they are.
+				local row, update = makeRow(menu, ore, #order)
+				entry = { row = row, update = update }
+				rows[ore.name] = entry
+				table.insert(order, entry)
 			end
-			if rows[ore.name] then rows[ore.name](count, multiplier) end
+			if entry then
+				entry.update(count, multiplier)
+				if count == 0 then
+					-- Sold out: it slides away and the stacks below move up.
+					rows[ore.name] = nil
+					table.remove(order, table.find(order, entry))
+					local row = entry.row
+					row.Interactable = false
+					if moving then
+						W.tween(row, 0.28, { Position = row.Position + UDim2.fromOffset(-470, 0) }).Completed:Once(function() row:Destroy() end)
+					else
+						row:Destroy()
+					end
+				end
+			end
 			blocks += count
 		end
+		for i, entry in order do
+			local goal = UDim2.fromOffset(1, 1 + (i - 1) * stride)
+			if entry.row.Position ~= goal then
+				if moving then W.tween(entry.row, 0.3, { Position = goal }) else entry.row.Position = goal end
+			end
+		end
+		local slots = #order
 		menu.sellAll.Text = string.format("Sell entire pack\n%s %s · +%s G", W.goldAmount(blocks),
 			if blocks == 1 then "block" else "blocks", W.goldAmount(value))
 		menu.sellAll.Interactable, menu.sellAll.BackgroundColor3 = value > 0, if value > 0 then W.gold else W.muted
