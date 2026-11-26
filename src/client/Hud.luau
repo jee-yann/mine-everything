@@ -206,7 +206,7 @@ function Hud.new(player, net, mobile)
 			self:openPage(key)
 		end)
 	end
-	-- Two columns when there is height for three rows, otherwise three columns.
+	-- Two columns, never more. A short screen makes the buttons smaller instead.
 	local function arrangeRail(columns)
 		if self.railColumns == columns then return end
 		self.railColumns = columns
@@ -309,6 +309,9 @@ function Hud.new(player, net, mobile)
 			self.layout()
 		end
 	end)
+	self.roster.onPick = function(miner)
+		self:openProfileOf(miner)
+	end
 	self.menu.showMiners = function()
 		self.roster.override = true
 		self.menu:close()
@@ -526,7 +529,6 @@ function Hud.new(player, net, mobile)
 				topLimit = math.max(topLimit, math.min(usual + 12, height * 0.55))
 			end
 			local room = walletTop - 12 - topLimit
-			arrangeRail(if room / (3 * tileStep + 68) >= railScale * 0.8 then 2 else 3)
 			local menuHeight = menuRail.Size.Y.Offset
 			-- Directly under the chat window, or centred when chat is out of the way.
 			menuRailScale.Scale = math.max(0.5, math.min(railScale, room / menuHeight))
@@ -660,6 +662,13 @@ end
 function Hud:openPage(key)
 	self.menu:open(key)
 	self.reticle.Visible = false
+end
+-- Another miner's profile, from their name on the board or the icon over their head.
+function Hud:openProfileOf(miner)
+	Audio.menu(true)
+	self:openPage("Profile")
+	local panel = self.menu.profile
+	if panel then panel:view(if miner == self.player then nil else miner) end
 end
 function Hud:toggleHotbarPage(key)
 	local menu = self.menu

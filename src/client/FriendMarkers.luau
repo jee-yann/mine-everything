@@ -1,7 +1,7 @@
 --!strict
 -- Friends stay findable across the mine: a small round headshot floats over each friend's
 -- character at any distance (Roblox name tags fade out past 100 studs), and hovering or tapping
--- it shows their name, title, level and the value of their current haul. Headshots stay small
+-- it shows their name, title, level and the value of their current haul. Clicking it opens their profile. Headshots stay small
 -- so a crowded shaft isn't covered in labels. In an unpublished Studio test every other miner
 -- counts as a friend so the markers can be checked.
 local Players = game:GetService("Players")
@@ -116,11 +116,8 @@ return function(player: Player, hud: any)
 			end
 			face.MouseEnter:Connect(hover)
 			face.Activated:Connect(function()
-				if shown == friend then
-					show(nil)
-				else
-					hover()
-				end
+				show(nil)
+				hud:openProfileOf(friend)
 			end)
 			face.MouseLeave:Connect(function()
 				if shown == friend then

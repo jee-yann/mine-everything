@@ -75,7 +75,7 @@ In Studio, a Starfall sits in the first layer under the front of the dig floor, 
 
 ### Profile and friends
 
-**Profile** (F) shows a miner's records, and its search box finds anyone in the server by name to show theirs: deepest block, blocks mined, most mined ore, rarest find and more. Its **Friends** tab lists friends who are online, joins those in another server of the game and invites the rest. While a friend is in the same server, both earn 25% more mining XP. Change the bonus in `src/shared/FriendBonus.luau`. Each Starfall find is announced in chat. Someone mining alone is reminded of the friend bonus up to three times a visit. Joining and inviting work only in the published game.
+**Profile** (F) shows a miner's records, and clicking a name on the Server miners board, or a friend's icon over their head, shows theirs: deepest block, blocks mined, most mined ore, rarest find and more. Its **Friends** tab lists friends who are online, joins those in another server of the game and invites the rest. While a friend is in the same server, both earn 25% more mining XP. Change the bonus in `src/shared/FriendBonus.luau`. Each Starfall find is announced in chat. Someone mining alone is reminded of the friend bonus up to three times a visit. Joining and inviting work only in the published game.
 
 ### Rebirth
 

@@ -312,7 +312,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			if point > 1 then "Their Starfall number " .. point .. ". The rarest ore in the mine." else "The rarest ore in the mine, found only in the crater.",
 			Ores.byName.Starfall.color
 		)
-		hud:announceStarfall(if spread then "You" else a)
+		hud:announceStarfall(a)
 	elseif kind == "depart" then
 		release()
 		passage:depart(a, point)

@@ -52,6 +52,11 @@ function Roster.new(root, relayout)
 		local size = Instance.new("UITextSizeConstraint")
 		size.MinTextSize, size.MaxTextSize, size.Parent = 8, 16, gold
 		level.Name, gold.Name, title.Name = "Level", "Gold", "Title"
+		local open = W.clearButton(frame, "Open profile", 0, 0, width - 15, rowHeight - 3, "Select")
+		open.ZIndex = 3
+		open.Activated:Connect(function()
+			if self.onPick then self.onPick(player) end
+		end)
 		local row = { frame = frame, player = player, name = name, level = level, title = title, gold = gold }
 		self.rows[player] = row
 		row.change = player.AttributeChanged:Connect(function(key)

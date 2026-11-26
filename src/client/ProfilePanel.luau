@@ -1,4 +1,4 @@
--- A miner's profile and records (their own, or anyone in the server found with the search box), and a
+-- A miner's profile and records (their own, or one picked on the board or over their head), and a
 -- tab of friends who are online: join one who is playing, or invite one who is not. Mining with a friend here gives more XP (Shared.FriendBonus).
 local Players = game:GetService("Players")
 local Run = game:GetService("RunService")
@@ -62,7 +62,6 @@ function Panel.new(menu)
 	card:tab("Friends", "Friends", "Friends", function() menu:open("Friends") end)
 	self:buildProfile()
 	self:buildFriends()
-	self:buildSearch()
 	menu.player:GetAttributeChangedSignal("FriendsHere"):Connect(function()
 		if card.modal.Visible then
 			self:refresh()
@@ -137,56 +136,6 @@ function Panel:buildFriends()
 	self.list = Card.scroller(page, "Online friends", 0, 96, 764, 256)
 end
 
--- A box in the header: type a miner's name and press Enter to see their profile.
-function Panel:buildSearch()
-	local header = self.card.header
-	local field = W.frame(header, "Search", self.card.size.X - 66 - 280, 16, 266, 44, W.navy, 22)
-	field.BackgroundTransparency = 0.25
-	W.stroke(field, W.white, 2).Transparency = 0.5
-	local lens = W.frame(field, "Lens", 13, 11, 16, 16, W.white, 8)
-	lens.BackgroundTransparency = 1
-	W.stroke(lens, W.white, 3)
-	local handle = W.frame(field, "Handle", 26, 26, 9, 4, W.white, 2)
-	handle.Rotation = 45
-	local box = Instance.new("TextBox")
-	box.Name, box.BackgroundTransparency, box.ClearTextOnFocus = "Name", 1, false
-	box.Position, box.Size = UDim2.fromOffset(44, 0), UDim2.fromOffset(212, 44)
-	box.Font, box.TextSize, box.TextColor3, box.Text = Enum.Font.FredokaOne, 21, W.white, ""
-	box.PlaceholderText, box.PlaceholderColor3 = "Find a miner", rgb(205, 200, 235)
-	box.TextXAlignment = Enum.TextXAlignment.Left
-	box.Parent = field
-	box.FocusLost:Connect(function(enter)
-		if enter then self:search(box.Text) end
-	end)
-	self.searchField, self.searchBox = field, box
-end
-
--- Finds a miner in this server by user name or display name: an exact match first, then the start of one.
-function Panel:search(text)
-	text = string.lower((text or ""):match("^%s*(.-)%s*$"))
-	if text == "" then
-		self:view(nil)
-		return
-	end
-	local found
-	for _, exact in { true, false } do
-		for _, other in Players:GetPlayers() do
-			for _, label in { other.Name, other.DisplayName } do
-				local lower = string.lower(label)
-				if (exact and lower == text) or (not exact and lower:sub(1, #text) == text) then
-					found = found or other
-				end
-			end
-		end
-		if found then break end
-	end
-	if found then
-		self:view(if found == self.menu.player then nil else found)
-	else
-		self:say("No miner called \"" .. text .. "\" in this server.")
-	end
-end
-
 -- Shows `miner`'s profile, or the player's own with nil.
 function Panel:view(miner)
 	self.target = miner
@@ -194,7 +143,6 @@ function Panel:view(miner)
 	self.face.Image = if shown.UserId > 0 then string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150", shown.UserId) else ""
 	self.back.Visible = miner ~= nil
 	self.said = nil
-	if not miner then self.searchBox.Text = "" end
 	self:refresh()
 end
 
@@ -320,7 +268,6 @@ function Panel:open(key)
 	if not self.card.modal.Visible and self.target then self:view(nil) end
 	self.page = key
 	self.said = nil
-	self.searchField.Visible = key == "Profile"
 	self.profilePage.Visible, self.friendsPage.Visible = key == "Profile", key == "Friends"
 	local card = self.card
 	card:select(key)
