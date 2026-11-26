@@ -43,7 +43,7 @@ function Mining.selection(world, character, point, normal, power, space)
 	if not center then
 		return {}
 	end
-	return Pattern.select(world.origin, center, world:oreAt(center), power, space)
+	return Pattern.select(world.origin, center, world:oreAt(center), power, space, world.grid:practice(world.grid:cellAt(center)))
 end
 
 function Mining.start(world, net, sessions, sync)

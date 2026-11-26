@@ -52,7 +52,7 @@ function Hint.start(player, hud, mining)
 				mined = mined, sinceLevel = os.clock() - levelAt,
 				-- A pause between two blocks still counts as mining.
 				busy = os.clock() - lastWorked > 5 or hud.overlay.Visible or hud.unlocks.playing or hud.ribbon.Visible
-					or hud.guidingSkills or os.clock() < (hud.untilTime or 0),
+					or hud.guidingSkills or hud.guidingRebirth or os.clock() < (hud.untilTime or 0),
 			}) then
 				shown += 1
 				mined = 0

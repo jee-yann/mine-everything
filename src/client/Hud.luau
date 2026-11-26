@@ -251,6 +251,7 @@ function Hud.new(player, net, mobile)
 	local countSize = Instance.new("UITextSizeConstraint")
 	countSize.MinTextSize, countSize.MaxTextSize, countSize.Parent = 9, 12, self.edgeCount
 	local menuButton = shortcut("Menu", W.aqua, "Menu")
+	self.menuShortcut = menuButton
 	self.edgeAlert = W.dot(menuButton, -13, 2)
 	self.touchActions = TouchActions.new(root)
 	self.mine = self.touchActions.hold

@@ -101,17 +101,19 @@ function Spotlight:show(button, title, help, motion, above, dim)
 		y = if bottom + 170 <= size.Y then bottom + 80 else math.max(5, top - 98)
 		align = Enum.TextXAlignment.Center
 	end
-	self.plate.Visible = above ~= nil
-	if above then
-		-- A short screen keeps only the first line, so the choices stay in view.
-		local short = size.Y < 470
-		if short then help, y = "", above - origin.Y + 4 end
-		place(self.plate, textX - 200, y - 6, 400, if short then 44 else 98)
-	end
+	-- A short screen keeps only the first line above, so the choices stay in view.
+	if above and size.Y < 470 then help, y = "", above - origin.Y + 4 end
 	self.title.TextXAlignment, self.help.TextXAlignment = align, align
 	self.title.Size, self.help.Size = UDim2.fromOffset(width, 34), UDim2.fromOffset(width, 50)
 	self.title.Position, self.help.Position = UDim2.fromOffset(textX, y), UDim2.fromOffset(textX, y + 34)
 	self.title.Text, self.help.Text, layer.Visible = title, help, true
+	-- A dark backing as wide as the words, so they read over anything.
+	local wide = math.min(width, math.max(self.title.TextBounds.X, self.help.TextBounds.X)) + 28
+	local plateX = if align == Enum.TextXAlignment.Left then textX - width / 2 - 14
+		elseif align == Enum.TextXAlignment.Right then textX + width / 2 + 14 - wide
+		else textX - wide / 2
+	place(self.plate, plateX, y - 6, wide, if help == "" then 44 else 98)
+	self.plate.Visible = title ~= ""
 end
 
 return Spotlight

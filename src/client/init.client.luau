@@ -379,8 +379,13 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			fx:clearOreLights()
 			fx:chime(1.8)
 			hud:setShop(false)
-			hud.unlocks:show("rebirth", "Rebirth " .. point, Rebirth.perks[1].text(point) .. "  ·  " .. Rebirth.perks[2].text(point))
-			hud:notice("A new run begins!", "Your bonuses are permanent", W.rebirth)
+			task.spawn(function()
+				-- The scene shows the new bonuses. Without it (motion off), the plaque does.
+				if not require(script.RebirthCutscene).play(player, hud, point) then
+					hud.unlocks:show("rebirth", "Rebirth " .. point, Rebirth.perks[1].text(point) .. "  ·  " .. Rebirth.perks[2].text(point))
+				end
+				hud:notice("A new run begins!", "Your bonuses are permanent", W.rebirth)
+			end)
 		elseif hud.overlay.Visible and hud.menu.page == "Rebirth" then
 			hud.menu.rebirth:message(point)
 		else
@@ -508,7 +513,7 @@ local function sampleAim()
 		local anchorPart = Pattern.reachablePart(head.Position, center, normal, params, reach)
 		if anchorPart and anchorPart.Parent:HasTag(Config.MineBlockTag) then
 			local ore = Ores.byName[anchorPart.Name]
-			cells, locked, required = Pattern.select(origin, center, ore, power, space)
+			cells, locked, required = Pattern.select(origin, center, ore, power, space, anchorPart:GetAttribute("Practice") == true)
 		end
 	end
 	fx:aim(cells)
@@ -576,6 +581,7 @@ local function busy()
 	return joinOpeningPending or hud.inOpening or passage.active or held ~= nil or hud.touchActions.enabled
 end
 require(script.SkillGuide).start(player, hud, busy)
+require(script.RebirthGuide).start(player, hud, busy)
 require(script.InviteHint).start(player, hud, function()
 	return swinging
 end)

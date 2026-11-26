@@ -69,6 +69,10 @@ Mineral finds also roll a purity from 50% to 100%. Grade bonuses range from base
 
 The percentages apply to solid rock beneath the dirt floor. Cave air yields no material.
 
+After a Starfall, a guide points out the Rebirth button and, once its card is open, the button that rebirths. It never presses for it: closing the card or mining on puts the guide away for three minutes, and it asks at most three times a visit. A rebirth plays a short scene (a star falls on the miner and the new bonuses come up) that Space, Enter or Skip ends early. With menu animations off, a notice shows the bonuses instead.
+
+In Studio, a Starfall sits in the first layer under the front of the dig floor, and any pick can mine it, so the find and the rebirth can be tried. Set the `StudioStarfall` attribute on `ServerScriptService.Server` to false to remove it. Tests and live servers never have it.
+
 ### Profile and friends
 
 **Profile** (F) shows a miner's records: deepest block, blocks mined, most mined ore, rarest find and more. Its **Friends** tab lists friends who are online, joins those in another server of the game and invites the rest. While a friend is in the same server, both earn 25% more mining XP. Change the bonus in `src/shared/FriendBonus.luau`. Someone mining alone is reminded of it up to three times a visit. Joining and inviting work only in the published game.

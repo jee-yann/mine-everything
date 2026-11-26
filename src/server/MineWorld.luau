@@ -63,12 +63,18 @@ function World:generate()
 	self.removed = 0
 	self.generation = (self.generation or 0) + 1
 	self.grid:reset(self.seed)
+	if self.practiceStarfall then self:plantStarfall() end
 	self.grid:openHall()
 	if self.preview then
 		self.preview:Destroy()
 		self.preview = nil
 	end
 	self.ready = true
+end
+-- Studio only: a Starfall in the first layer, under the front of the dig floor, that any pick can take.
+World.starfallCell = Vector3.new(1, -1, -3)
+function World:plantStarfall()
+	self.grid:plant(World.starfallCell, require(Shared.Ores).byName.Starfall, true)
 end
 function World:oreAt(point)
 	return self.grid:oreAt(self.grid:cellAt(point))
