@@ -138,7 +138,19 @@ function Settings:build(menu)
 	if Config.AllowProgressReset then
 		self:resetRow(menu)
 	end
-	local index = if Config.AllowProgressReset then 5 else 4
+	local index = if Config.AllowProgressReset then 6 else 5
+	-- Fewer effects from other miners: their auras, trail ribbons and all but their lead pet.
+	local _, effectsDetail, effects = menu:row(index - 1, "Reduce effects", "Pets", W.green)
+	effectsDetail.Text = "Hide other miners' auras, ribbons and extra pets"
+	table.insert(menu.updates, function()
+		effects.Text = if self.values.ReduceEffects then "On" else "Off"
+		effects.Interactable = self.player:GetAttribute("ProfileReady") == true and not self.resetPending
+	end)
+	effects.Activated:Connect(function()
+		self.values.ReduceEffects = not self.values.ReduceEffects
+		menu:refresh()
+		self.net.Action:FireServer("Preference", "ReduceEffects", self.values.ReduceEffects)
+	end)
 	local _, guideDetail, skip = menu:row(index, "First expedition", "Index", W.gold)
 	table.insert(menu.updates, function()
 		local step = self.player:GetAttribute("ExpeditionStep")

@@ -51,10 +51,6 @@ end
 
 function Celebration:present(item)
 	local root, kind, name = self.hud.root, item.kind, item.name
-	if kind == "aura" then
-		require(script.Parent.FirstLightCase)(self.hud, name)
-		return
-	end
 	local style = kinds[kind] or kinds.achievement
 	local ore = if kind == "discovery" then Ores.byName[name] else nil
 	local top, bottom = style[3], style[4]

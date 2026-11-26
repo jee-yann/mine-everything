@@ -2,6 +2,7 @@ local DSS = game:GetService("DataStoreService")
 local Http = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local Config = require(game:GetService("ReplicatedStorage").Shared.GameConfig)
+local Collection = require(script.Parent.Collection)
 local Profile = require(script.Parent.Profile)
 local Field = require(game.ReplicatedStorage.Shared.FieldRewards)
 local Expeditions = require(game.ReplicatedStorage.Shared.Expeditions)
@@ -60,7 +61,32 @@ function Data.snapshot(p)
 		jobs = p.jobs,
 		discoveries = table.clone(p.discoveries),
 		viewed = table.clone(p.viewed),
+		col = Collection.copy(p.col),
+		store = { receipts = table.clone(p.store.receipts), order = table.clone(p.store.order), starter = p.store.starter, vipAt = p.store.vipAt },
 	}
+end
+
+local function rebirthStore()
+	return DSS:GetOrderedDataStore(Config.StoreName .. "_Rebirths", if RunService:IsStudio() then "studio" else "live")
+end
+function Data.globalRebirths()
+	return rebirthStore():GetSortedAsync(false, 100, 1):GetCurrentPage()
+end
+local function indexRebirths(session, userId, count)
+	-- Miners who never reborn aren't listed; a reset (count 0 after a listing) removes the entry.
+	if count == session.indexedRebirths or (count <= 0 and not session.indexedRebirths) then
+		return
+	end
+	local ok, result = pcall(function()
+		return rebirthStore():UpdateAsync(tostring(userId), function(previous)
+			return if (previous or 0) == count then nil else count
+		end)
+	end)
+	if ok then
+		session.indexedRebirths = count
+	else
+		warn("Could not update global rebirths for", userId, result)
+	end
 end
 
 function Data.globalDepths()
@@ -205,6 +231,19 @@ local function writeSnapshot(player, session, snapshot, release)
 	return false
 end
 
+-- Saves now and says whether it worked. A purchase is only reported as granted after this.
+function Data.saveNow(player, session)
+	if session.practice then return true end
+	if not session.writable or session.closing then return false end
+	while session.busy do
+		task.wait()
+	end
+	session.busy = true
+	local ok = writeSnapshot(player, session, Data.snapshot(session.profile), false)
+	session.busy = false
+	return ok
+end
+
 function Data.save(player, session, release)
 	if release then
 		session.closing = true
@@ -226,6 +265,7 @@ function Data.save(player, session, release)
 			-- Finish the ranking updates while we still own the profile.
 			indexDepth(session, player.UserId, depth)
 			indexLevel(session, player.UserId, Expeditions.level(snapshot.xp or 0))
+			indexRebirths(session, player.UserId, snapshot.rebirths or 0)
 		end
 	end
 	if release and session.writable then
@@ -245,6 +285,8 @@ function Data.resetProgress(player, session)
 	local fresh = Profile.new()
 	fresh.introSeen = session.profile.introSeen
 	fresh.preferences = table.clone(session.profile.preferences)
+	-- Purchase records stay: they stop a retried receipt from paying out twice.
+	fresh.store = session.profile.store
 	local ok = session.practice or (session.writable and writeSnapshot(player, session, Data.snapshot(fresh), false))
 	if ok then
 		session.profile = fresh
@@ -252,6 +294,7 @@ function Data.resetProgress(player, session)
 		if session.writable then
 			indexDepth(session, player.UserId, 0)
 			indexLevel(session, player.UserId, 1)
+			indexRebirths(session, player.UserId, 0)
 		end
 	end
 	session.resetting = nil

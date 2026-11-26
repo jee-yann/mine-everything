@@ -5,7 +5,12 @@ local Http = game:GetService("HttpService")
 local Data = require(script.Parent.DataService)
 local Standings = {}
 
-function Standings.top(scores, levels)
+-- `kind` is "Level" or "Rebirths".
+local function scoreText(kind, score)
+	return if kind == "Level" then "Lv " .. score else "★" .. score .. (if score == 1 then " rebirth" else " rebirths")
+end
+
+function Standings.top(scores, kind)
 	local rows = {}
 	for id, entry in scores do
 		table.insert(rows, { id = id, name = entry.name, score = entry.score })
@@ -16,15 +21,13 @@ function Standings.top(scores, levels)
 	local lines = {}
 	for i = 1, math.min(5, #rows) do
 		local row = rows[i]
-		lines[i] = if levels
-			then string.format("%d.   %s     ·     Lv %d", i, row.name, row.score)
-			else string.format("%d.   %s     ·     %d blocks", i, row.name, row.score)
+		lines[i] = string.format("%d.   %s     ·     %s", i, row.name, scoreText(kind, row.score))
 	end
 	return lines, rows
 end
 
-local function draw(board, scores, levels, empty)
-	local lines, rows = Standings.top(scores, levels)
+local function draw(board, scores, kind, empty)
+	local lines, rows = Standings.top(scores, kind)
 	local face = board.Standings.Lettering
 	for i = 1, 5 do
 		face["Row" .. i].Text = lines[i] or (if i == 1 then empty else "")
@@ -36,23 +39,23 @@ local function draw(board, scores, levels, empty)
 	end
 	local ok, text = pcall(Http.JSONEncode, Http, full)
 	if ok then
-		board:SetAttribute(if levels then "RanksLevel" else "RanksDepth", text)
+		board:SetAttribute("Ranks" .. kind, text)
 	end
 	board:SetAttribute("Notice", empty)
 	for i = 1, 3 do
 		local podium = board["Podium " .. i]
 		local row = rows[i]
 		podium:SetAttribute("StandingName", row and row.name)
-		podium:SetAttribute("StandingLevel", if levels and row then row.score else nil)
-		podium:SetAttribute("StandingDepth", if not levels and row then row.score else nil)
+		podium:SetAttribute("StandingLevel", if kind == "Level" and row then row.score else nil)
+		podium:SetAttribute("StandingRebirths", if kind == "Rebirths" and row then row.score else nil)
 		podium:SetAttribute("StandingId", row and row.id)
 	end
 end
 
--- The court has room for two boards, so the global one alternates between the deepest miners
--- and the highest levels across servers.
-local function refreshGlobal(board, names, levels)
-	local ok, page = pcall(if levels then Data.globalLevels else Data.globalDepths)
+-- The court has room for two boards, so the global one alternates between the highest levels and the
+-- most rebirths across servers. Depth records stay in each profile.
+local function refreshGlobal(board, names, kind)
+	local ok, page = pcall(if kind == "Level" then Data.globalLevels else Data.globalRebirths)
 	if not ok then
 		board.Standings.Lettering.Title.Text = "GLOBAL RECORDS OFFLINE"
 		board:SetAttribute("Notice", "Global records are offline. Checking again shortly")
@@ -88,45 +91,46 @@ local function refreshGlobal(board, names, levels)
 		names[id] = currentNames[id]
 		row.name = names[id] or ("Miner #" .. id)
 	end
-	board.Standings.Lettering.Title.Text = if levels then "GLOBAL LEVELS" else "DEEPEST DESCENT"
-	draw(board, scores, levels, if levels then "No level records yet" else "No depth records yet")
+	board.Standings.Lettering.Title.Text = if kind == "Level" then "GLOBAL LEVELS" else "MOST REBIRTHS"
+	draw(board, scores, kind, if kind == "Level" then "No level records yet" else "No rebirths yet. Mine a Starfall!")
 end
 
 function Standings.start(court)
 	local practice = RunService:IsStudio() and game.GameId == 0
 	court.Server.Standings.Lettering.Title.Text = "HIGHEST LEVEL"
 	if practice then
-		court.Global.Standings.Lettering.Title.Text = "PRACTICE DEPTHS"
+		court.Global.Standings.Lettering.Title.Text = "PRACTICE REBIRTHS"
 	else
 		task.spawn(function()
-			local names, levels = {}, false
+			local names, kind = {}, "Rebirths"
 			while true do
 				-- 20 s per view keeps ordered-store reads well under the request budget.
-				refreshGlobal(court.Global, names, levels)
-				levels = not levels
+				refreshGlobal(court.Global, names, kind)
+				kind = if kind == "Level" then "Rebirths" else "Level"
 				task.wait(20)
 			end
 		end)
 	end
 	task.spawn(function()
 		while true do
-			local levels, depths = {}, {}
+			local levels, rebirths = {}, {}
 			for _, player in Players:GetPlayers() do
 				if player:GetAttribute("ProfileReady") then
 					levels[player.UserId] = { name = player.DisplayName, score = player:GetAttribute("Level") or 1 }
-					if practice and player.leaderstats.Depth.Value > 0 then
-						depths[player.UserId] = { name = player.DisplayName, score = player.leaderstats.Depth.Value }
+					local count = player:GetAttribute("Rebirths") or 0
+					if practice and count > 0 then
+						rebirths[player.UserId] = { name = player.DisplayName, score = count }
 					end
 				end
 			end
-			draw(court.Server, levels, true, "Waiting for miners")
+			draw(court.Server, levels, "Level", "Waiting for miners")
 			if practice then
 				local showLevels = math.floor(os.clock() / 12) % 2 == 1
-				court.Global.Standings.Lettering.Title.Text = if showLevels then "PRACTICE LEVELS" else "PRACTICE DEPTHS"
+				court.Global.Standings.Lettering.Title.Text = if showLevels then "PRACTICE LEVELS" else "PRACTICE REBIRTHS"
 				if showLevels then
-					draw(court.Global, levels, true, "Waiting for miners")
+					draw(court.Global, levels, "Level", "Waiting for miners")
 				else
-					draw(court.Global, depths, false, "Mine deeper to set a record")
+					draw(court.Global, rebirths, "Rebirths", "Mine a Starfall to rebirth")
 				end
 			end
 			task.wait(2)

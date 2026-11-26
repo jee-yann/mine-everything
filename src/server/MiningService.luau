@@ -8,7 +8,59 @@ local Expeditions = require(Shared.Expeditions)
 local Skills = require(Shared.Skills)
 local Rebirth = require(Shared.Rebirth)
 local FriendBonus = require(Shared.FriendBonus)
+local Bonuses = require(Shared.Bonuses)
+local Collectibles = require(Shared.Collectibles)
+local Collection = require(script.Parent.Collection)
 local Mining = {}
+local luckRandom = Random.new()
+
+-- Gems for progress: a level gained, a new ore found.
+Mining.levelGems, Mining.discoveryGems = 3, 5
+
+-- Free geodes for progress: every 5th level a Pebble Geode, every 25th a Crystal Geode, and every
+-- Starfall mined a Starfall Geode. Returns the geode items given, in order.
+function Mining.progressGeodes(col, oldLevel, level, ore)
+	local given = {}
+	local function give(id)
+		col.items[id] = (col.items[id] or 0) + 1
+		table.insert(given, id)
+	end
+	for reached = oldLevel + 1, level do
+		if reached % 25 == 0 then
+			give("CrystalGeode")
+		elseif reached % 5 == 0 then
+			give("PebbleGeode")
+		end
+	end
+	if ore == "Starfall" then give("StarfallGeode") end
+	return given
+end
+
+-- A region's odds in percent, Stone included, for luck.
+function Mining.regionChances(layer)
+	local chances, total = {}, 0
+	for name, percent in layer.oreChances do
+		chances[name] = percent
+		total += percent
+	end
+	chances.Stone = math.max(0, 100 - total)
+	return chances
+end
+
+-- Luck: a cut that came up common (Stone or an ore at 1% or more) may turn out to hold one of the
+-- region's rare ores instead, so each rare ore turns up exactly `luck` times as often. Returns the
+-- rare ore's name, or nil.
+function Mining.luckyFind(layer, name, luck, rng)
+	if luck <= 1 then return nil end
+	local chances = Mining.regionChances(layer)
+	if (chances[name] or 0) < Bonuses.rareBelow then return nil end
+	local roll = rng:NextNumber()
+	for _, entry in Bonuses.upgrades(chances, luck) do
+		roll -= entry[2]
+		if roll < 0 then return entry[1] end
+	end
+	return nil
+end
 
 function Mining.validPoint(v)
 	return typeof(v) == "Vector3" and v.Magnitude < 1e6
@@ -46,7 +98,50 @@ function Mining.selection(world, character, point, normal, power, space)
 	return Pattern.select(world.origin, center, world:oreAt(center), power, space, world.grid:practice(world.grid:cellAt(center)))
 end
 
-function Mining.start(world, net, sessions, sync)
+Mining.compassRadius = 40
+Mining.craterRow = -1 - Config.Layers[#Config.Layers].depthBlocks
+-- The centre of the nearest Starfall block within `radius` cells of `cell`, or nil. Yields between slices.
+function Mining.nearestStarfall(world, cell, radius)
+	local starfall = Ores.byName.Starfall
+	local best, bestDistance, checked = nil, math.huge, 0
+	-- A planted Starfall (the Studio practice one) counts wherever it is.
+	for at in world.grid.planted or {} do
+		local distance = (at - cell).Magnitude ^ 2
+		if distance <= radius * radius and distance < bestDistance and world.grid:oreAt(at) == starfall then
+			best, bestDistance = at, distance
+		end
+	end
+	local top = math.min(cell.Y + radius, Mining.craterRow)
+	local bottom = cell.Y - radius
+	for y = top, bottom, -1 do
+		local dy = y - cell.Y
+		local slice = radius * radius - dy * dy
+		if slice < 0 then continue end
+		local zLimit = math.floor(math.sqrt(slice))
+		for dz = -zLimit, zLimit do
+			local xLimit = math.floor(math.sqrt(slice - dz * dz))
+			for dx = -xLimit, xLimit do
+				local at = Vector3.new(cell.X + dx, y, cell.Z + dz)
+				if world.grid:oreAt(at) == starfall then
+					local distance = dx * dx + dy * dy + dz * dz
+					if distance < bestDistance then best, bestDistance = at, distance end
+				end
+			end
+			checked += 2 * xLimit + 1
+			if checked > 6000 then
+				checked = 0
+				task.wait()
+			end
+		end
+	end
+	return if best then world.grid:center(best) else nil
+end
+
+function Mining.start(world, net, sessions, sync, hooks)
+	hooks = hooks or {}
+	local function state(player, p)
+		return if hooks.bonuses then hooks.bonuses(player, p) else Bonuses.make({}, p.col, p.rebirths, 0, os.time())
+	end
 	local strokes, pending, nextInput, stagedSwing, nextSwing, lastHint, queue = {}, {}, {}, {}, {}, {}, {}
 	local credit = Config.BurstCells
 	local function hint(player, message, now)
@@ -76,6 +171,7 @@ function Mining.start(world, net, sessions, sync)
 			return
 		end
 		local ore = world:oreAt(point)
+		local speed = 1 + Bonuses.speed(state(player, p))
 		local duration, tempered = Skills.cutTime(
 			Profile.stat(p, "Speed") * Rebirth.cutMultiplier(p.rebirths),
 			ore,
@@ -86,6 +182,7 @@ function Mining.start(world, net, sessions, sync)
 			p.stoneChips,
 			Profile.stat(p, "Power")
 		)
+		duration /= speed
 		strokes[player] = {
 			profile = p,
 			point = point,
@@ -171,11 +268,39 @@ function Mining.start(world, net, sessions, sync)
 		end
 		local center = selected[1]
 		local spread = Config.Cell
+		local bonus = state(player, profile)
+		local luck = Bonuses.luck(bonus)
+		local depthBlocks = Config.depthInBlocks(Config.FloorY + world.origin.Y - center.Y)
+		local lucky
+		if depthBlocks >= Config.DirtLayers and not world.grid:practice(world.grid:cellAt(center)) then
+			lucky = Mining.luckyFind(Config.layer(depthBlocks * Config.Cell + Config.Cell / 2), name, luck, luckRandom)
+		end
+		if lucky then
+			-- The block opens to show a rare ore inside.
+			loot = { [lucky] = 1 }
+			finds = { [lucky] = center }
+			net.Feedback:FireClient(player, "lucky", name, lucky, luck)
+			name = lucky
+		end
 		local ore = Ores.byName[name]
 		local discovery = not ore.host and not profile.discoveries[name]
 		local oldLevel = Expeditions.level(profile.xp)
-		local awards, purity, units, record = Profile.recordCut(profile, name, Config.depthInBlocks(Config.FloorY + world.origin.Y - center.Y), nil,
-			FriendBonus.multiplier(player:GetAttribute("FriendsHere")))
+		local xpBefore = profile.xp
+		local awards, purity, units, record = Profile.recordCut(profile, name, depthBlocks, nil,
+			FriendBonus.multiplier(player:GetAttribute("FriendsHere")) * Bonuses.xp(bonus))
+		-- Equipped pets learn alongside their miner.
+		local petLevels = Collection.petXp(profile.col, math.max(1, profile.xp - xpBefore))
+		local gems = 0
+		if not ore.host and luckRandom:NextNumber() < Bonuses.gemChance(bonus) then
+			gems += 1
+			net.Feedback:FireClient(player, "gemFind", center)
+		end
+		if discovery then gems += Mining.discoveryGems end
+		if Expeditions.level(profile.xp) > oldLevel then
+			gems += Mining.levelGems * (Expeditions.level(profile.xp) - oldLevel)
+		end
+		profile.gems += gems
+		local freeGeodes = Mining.progressGeodes(profile.col, oldLevel, Expeditions.level(profile.xp), name)
 		loot[name] = units
 		if request.speedSupply then
 			profile[request.speedSupply] = math.max(0, profile[request.speedSupply] - 1)
@@ -191,6 +316,10 @@ function Mining.start(world, net, sessions, sync)
 		if level > oldLevel then
 			net.Feedback:FireClient(player, "levelUp", level)
 		end
+		for _, id in petLevels do
+			local pet = Collectibles.petById[id]
+			net.Feedback:FireClient(player, "petLevel", id, profile.col.pets[id].l, pet and pet.name)
+		end
 		for _, rank in Expeditions.ranks do
 			if oldLevel < rank.level and level >= rank.level then
 				net.Feedback:FireClient(player, "titleUnlocked", rank.name)
@@ -201,7 +330,13 @@ function Mining.start(world, net, sessions, sync)
 		if discovery then
 			net.Feedback:FireClient(player, "milestone", "ORE DISCOVERED", ore.name, ore.color)
 		end
+		if Profile.used(profile) >= Profile.stat(profile, "Capacity") and hooks.autoSell then
+			hooks.autoSell(player)
+		end
 		-- Starfall, the rarest ore in the mine, is announced to the whole server.
+		for _, id in freeGeodes do
+			net.Feedback:FireClient(player, "freeGeode", id)
+		end
 		if name == "Starfall" then
 			for _, other in Players:GetPlayers() do
 				net.Feedback:FireClient(other, "starfall", player.DisplayName, profile.counts.Starfall or 1, other == player)
@@ -259,6 +394,26 @@ function Mining.start(world, net, sessions, sync)
 			end
 			pending[player] = nil
 			table.remove(queue, 1)
+		end
+	end)
+	-- Star Compass: while it runs, the server looks for Starfall within 40 blocks of the miner, a slice
+	-- at a time, and publishes the nearest as CompassTarget. Starfall only forms in the crater, so the
+	-- search only covers crater rows.
+	task.spawn(function()
+		while true do
+			task.wait(2)
+			for player, session in sessions do
+				local p, root = session.profile, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				local on = (p.col.boosts.compass or 0) > os.time()
+				local found
+				if on and root and world.ready then
+					found = Mining.nearestStarfall(world, world.grid:cellAt(root.Position), Mining.compassRadius)
+				end
+				if sessions[player] == session then
+					player:SetAttribute("CompassTarget", found)
+					player:SetAttribute("CompassOn", on)
+				end
+			end
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)

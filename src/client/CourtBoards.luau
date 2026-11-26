@@ -8,11 +8,11 @@ local width, height, rowHeight = 980, 468, 46
 local medals = { W.gold, rgb(214, 224, 240), rgb(232, 158, 96) }
 
 local function scoreText(kind, score)
-	return if kind == "Depth" then W.goldAmount(score) .. " blocks" else "Lv " .. score
+	return if kind == "Rebirths" then "★" .. score else "Lv " .. score
 end
 
 function Boards.build(player, key)
-	local self = { rows = {}, kind = if key == "Global" then "Depth" else "Level" }
+	local self = { rows = {}, kind = if key == "Global" then "Rebirths" else "Level" }
 	local gui = Instance.new("SurfaceGui")
 	gui.Name, gui.ResetOnSpawn, gui.Face = key .. " standings", false, Enum.NormalId.Front
 	gui.SizingMode, gui.CanvasSize = Enum.SurfaceGuiSizingMode.FixedSize, Vector2.new(width, height)
@@ -27,11 +27,11 @@ function Boards.build(player, key)
 	W.navyText(title, 4)
 	local tabs = {}
 	if key == "Global" then
-		for i, kind in { "Depth", "Level" } do
+		for i, kind in { "Rebirths", "Level" } do
 			local b = W.clearButton(bar, kind, 572 + (i - 1) * 198, 12, 188, 52, "Select")
 			W.round(b, 14)
 			local paint = W.enamelPanel(b, rgb(72, 68, 124), rgb(46, 43, 86), 14)
-			local label = W.title(b, if kind == "Depth" then "Deepest" else "Level", 0, 0, 188, 50, 30, W.white)
+			local label = W.title(b, if kind == "Rebirths" then "Rebirths" else "Level", 0, 0, 188, 50, 30, W.white)
 			label.ZIndex = 3
 			W.navyText(label, 3)
 			tabs[kind] = paint

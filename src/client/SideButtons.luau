@@ -23,6 +23,8 @@ local tints = {
 	Playtime = { rgb(207, 174, 255), rgb(129, 80, 230) },
 	Rebirth = { rgb(255, 150, 150), rgb(214, 52, 78) },
 	Profile = { rgb(140, 240, 220), rgb(24, 160, 150) },
+	Shop = { rgb(255, 159, 200), rgb(227, 69, 138) },
+	Pets = { rgb(207, 174, 255), rgb(129, 80, 230) },
 }
 
 local function outline(label, thickness)

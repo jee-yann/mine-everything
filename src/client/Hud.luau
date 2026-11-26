@@ -28,6 +28,8 @@ local hotbar = {
 	{ page = "Profile", code = Enum.KeyCode.F },
 	{ page = "Daily", code = Enum.KeyCode.L },
 	{ page = "Playtime", code = Enum.KeyCode.G },
+	{ page = "Shop", code = Enum.KeyCode.N },
+	{ page = "Pets", code = Enum.KeyCode.T },
 }
 -- Shortcut letters shown on the side buttons' keycaps.
 local shortcutLetters = {}
@@ -192,7 +194,7 @@ function Hud.new(player, net, mobile)
 	end)
 	table.insert(self.sideKeys, settingsButton.key)
 	local railTiles = {}
-	for i, key in { "Inventory", "Skills", "Achievements", "Book", "Rebirth", "Profile" } do
+	for i, key in { "Shop", "Pets", "Inventory", "Skills", "Achievements", "Book", "Rebirth", "Profile" } do
 		local caption = if key == "Book" then "Index" elseif key == "Achievements" then "Awards" else key
 		local tile = SideButtons.tile(menuRail, key, caption, shortcutLetters[key])
 		railTiles[i] = tile.button
@@ -200,7 +202,7 @@ function Hud.new(player, net, mobile)
 		if key == "Skills" then self.skillsTile = tile.button end
 		if key == "Rebirth" then self.rebirthTile = tile end
 		if key ~= "Inventory" and key ~= "Profile" then
-			self.navDots[key] = SideButtons.badge(tile, if key == "Book" then "NEW" else "!")
+			self.navDots[key] = SideButtons.badge(tile, if key == "Book" then "NEW" elseif key == "Pets" then "OPEN" else "!")
 		end
 		tile.button.Activated:Connect(function()
 			self:openPage(key)
@@ -672,7 +674,9 @@ function Hud:openProfileOf(miner)
 end
 function Hud:toggleHotbarPage(key)
 	local menu = self.menu
-	local samePage = menu.page == key or (key == "Inventory" and menu.tabLists[menu.page] ~= nil)
+	local page = menu.page or ""
+	local samePage = page == key or (key == "Inventory" and menu.tabLists[page] ~= nil)
+		or (key == "Shop" and page:match("^Shop") ~= nil) or (key == "Pets" and menu.collection ~= nil and menu.wide == menu.collection)
 	if self.overlay.Visible and samePage and not menu.closing then
 		Audio.menu(false)
 		menu:close()
@@ -938,14 +942,18 @@ end
 -- A line in chat when anyone in the server finds Starfall.
 function Hud:announceStarfall(who)
 	local tint = Ores.byName.Starfall.color:Lerp(Color3.new(1, 1, 1), 0.3)
-	local line = "★ " .. who .. " unearthed Starfall! The rarest ore in the mine."
+	self:chatLine("★ " .. who .. " unearthed Starfall!", "The rarest ore in the mine.", tint)
+end
+-- One system line in chat, the same for everyone: a bold coloured lead and plain words after it.
+function Hud:chatLine(lead, rest, tint)
+	local line = lead .. " " .. rest
 	local chat = game:GetService("TextChatService")
 	if chat.ChatVersion == Enum.ChatVersion.TextChatService then
 		local channels = chat:FindFirstChild("TextChannels")
 		local general = channels and (channels:FindFirstChild("RBXGeneral") or channels:FindFirstChild("RBXSystem"))
 		if general then
 			pcall(general.DisplaySystemMessage, general,
-				string.format('<font color="#%s"><b>★ %s unearthed Starfall!</b></font> The rarest ore in the mine.', tint:ToHex(), who))
+				string.format('<font color="#%s"><b>%s</b></font> %s', tint:ToHex(), lead, rest))
 		end
 		return
 	end

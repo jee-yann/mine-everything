@@ -168,7 +168,10 @@ do
 	assert(Profile.sell(saved, 1, "Coal", "Stack") == 20)
 	local resumed = Data.claim({ profile = Data.snapshot(saved) }, "resume-pack", 31).profile
 	assert(Profile.used(resumed) == 32 and Profile.sell(resumed) == 32 and resumed.gold == 52)
-	old.bag.Dirt = 37
+	-- A save may hold up to half again its capacity (Bigger Pack), and no more.
+	old.bag.Dirt = 54
+	assert(Data.claim({ profile = old }, "big-pack", 32))
+	old.bag.Dirt = 55
 	assert(not Data.claim({ profile = old }, "oversize", 32))
 
 	for level, oldBase in { 36, 80, 170, 360, 760, 1600, 3400, 7200 } do
@@ -185,7 +188,7 @@ do
 		assert(Profile.sell(loaded, 1, "Coal", "Stack") == 5)
 		local rejoined = Data.claim({ profile = Data.snapshot(loaded) }, "again", 51).profile
 		assert(Profile.sell(rejoined) == oldSlots - 1 and Profile.used(rejoined) == 0)
-		veteran.bag.Dirt = oldSlots + 1
+		veteran.bag.Dirt = math.floor(oldSlots * 1.5) + 1
 		assert(not Data.claim({ profile = veteran }, "too-large", 52))
 	end
 end
@@ -454,7 +457,10 @@ assert(Profile.buySupply(specialist, "Temper") and specialist.temper == 45)
 	local record = Data.commit({ owner = "skills" }, "skills", specialist, 100, true)
 	local rejoined = Data.claim(record, "next", 101).profile
 	assert(rejoined.skills.Constellation and rejoined.temper == 45 and Profile.valid(rejoined))
-	rejoined.bag.Stone = 71
+	-- Up to half again for Bigger Pack, and no more.
+	rejoined.bag.Stone = 105
+	assert(Profile.valid(rejoined))
+	rejoined.bag.Stone = 106
 	assert(not Profile.valid(rejoined))
 	local legacySkills = {
 		Reach = true,
