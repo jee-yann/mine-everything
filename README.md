@@ -83,7 +83,7 @@ Buy pickaxe Power, swing Speed and backpack Capacity with gold at the Workshop. 
 
 Field Supplies crafts items from your bag. Two copper and three coal make a survey flare that lights a tunnel and points toward a natural cave within ten blocks. Four coal temper your pick for 25 successful hard cuts. Quick-cut wax doubles your speed for twelve cuts. Diamond teeth use iron and gems to break six plain stone blocks almost instantly. A cave pulse opens the nearby rock for prospecting. The pet compass lets an equipped companion point out exposed ore.
 
-**Daily** (L) holds a seven-day reward card: one claim per UTC day, and missing a day keeps your place. **Gift** (G) holds playtime gifts at 5 and 10 minutes, then every 10 minutes up to an hour. They reset at midnight UTC. The daily card opens by itself two seconds after the first sale that follows onboarding, and shortly after joining on later days. The rewards are placeholders. Change what each day and gift holds in `src/shared/FieldRewards.luau`.
+**Daily** (L) holds a seven-day reward card: one claim every 18 hours, and missing one keeps your place. **Gift** (G) holds playtime gifts at 5 and 10 minutes, then every 10 minutes up to an hour. A round of gifts starts again 18 hours after it began. The daily card opens by itself two seconds after the first sale that follows onboarding, and shortly after joining on later days. The rewards are placeholders. Change what each day and gift holds in `src/shared/FieldRewards.luau`.
 
 ![Backpack showing one coal worth five gold](map/Backpack-preview.jpg)
 

@@ -21,6 +21,8 @@ function Profile.new()
 		gold = 0,
 		gems = 0,
 		stampDay = 0,
+		stampAt = 0,
+		giftStart = 0,
 		stampCount = 0,
 		shiftDay = 0,
 		shiftSeconds = 0,
@@ -166,7 +168,7 @@ function Profile.valid(p)
 	-- The shift fields belonged to the old timed rewards. They are kept so older servers can read the save.
 	for key, max in { gems = 9e15, stampDay = 9e15, stampCount = #Field.daily, hasteCuts = Field.hasteCuts,
 		stoneChips = Field.stoneChips, pulses = 9e15, shiftDay = 9e15, shiftSeconds = 3600, shiftClaims = 3,
-		giftDay = 9e15, giftSeconds = 86400, giftClaims = 1000 } do
+		giftDay = 9e15, giftSeconds = 86400, giftClaims = 1000, stampAt = 9e15, giftStart = 9e15 } do
 		if p[key] ~= nil and not integer(p[key], max) then return false end
 	end
 	for _, key in { "oreCompass", "auraOff" } do
@@ -317,6 +319,9 @@ function Profile.upgradeSave(p)
 	for _, key in { "gems", "stampDay", "stampCount", "shiftDay", "shiftSeconds", "shiftClaims", "giftDay", "giftSeconds", "giftClaims", "hasteCuts", "stoneChips", "pulses" } do
 		p[key] = p[key] or 0
 	end
+	-- Saves from when rewards followed the UTC day start their wait at that day's midnight.
+	p.stampAt = p.stampAt or p.stampDay * 86400
+	p.giftStart = p.giftStart or p.giftDay * 86400
 	-- Profiles predating the opening belong to returning players.
 	if p.introSeen == nil then p.introSeen = true end
 	if p.firstTrip == nil then p.firstTrip = { skipped = true } end

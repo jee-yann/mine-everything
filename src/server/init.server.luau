@@ -52,6 +52,7 @@ local function updateGifts(player, session, now)
 	if p.giftSeconds >= Field.maxGiftTime and shown and shown <= clock then clock = shown end
 	if not shown or math.abs(shown - clock) > 1 then player:SetAttribute("GiftClock", clock) end
 	if player:GetAttribute("GiftClaims") ~= p.giftClaims then player:SetAttribute("GiftClaims", p.giftClaims) end
+	if player:GetAttribute("GiftReset") ~= p.giftStart + Field.cooldown then player:SetAttribute("GiftReset", p.giftStart + Field.cooldown) end
 end
 local function applySkills(player, p)
 	local char = player.Character
@@ -86,6 +87,7 @@ local function sync(player, p, awardName)
 	player:SetAttribute("Gold", p.gold)
 	player:SetAttribute("Gems", p.gems)
 	player:SetAttribute("StampDay", p.stampDay)
+	player:SetAttribute("StampAt", p.stampAt)
 	player:SetAttribute("StampCount", p.stampCount)
 	player:SetAttribute("HasteCuts", p.hasteCuts)
 	player:SetAttribute("StoneChips", p.stoneChips)
@@ -302,7 +304,7 @@ local function atCounter(player, prompt)
 end
 
 local counterFor =
-	{ Sell = "Sell", Buy = "Shop", PreviewPass = "Store", Pass = "Store", Supply = "Supplies", Deliver = "Jobs" }
+	{ Sell = "Sell", Buy = "Shop", PreviewPass = "Store", Pass = "Store", Supply = "Supplies" }
 local function action(player, key, option, value)
 	local s = sessions[player]
 	if not s or type(key) ~= "string" then
@@ -465,7 +467,7 @@ local function action(player, key, option, value)
 	end
 	local p = s.profile
 	if key == "Stamp" then
-		local day, reward = Field.claim(p, math.floor(os.time() / 86400))
+		local day, reward = Field.claim(p, os.time())
 		if day then
 			sync(player, p)
 			net.Feedback:FireClient(player, "reward", "Daily", day, reward.name, Field.describe(reward))

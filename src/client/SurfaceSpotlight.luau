@@ -90,8 +90,7 @@ function Spotlight:show(button, title, help, motion, above, dim)
 		width = math.min(390, math.max(1, size.X - 20))
 		textX = math.clamp((left + right) / 2, width / 2, size.X - width / 2)
 		y, align = above - origin.Y + 14, Enum.TextXAlignment.Center
-		self.arrow.Text = "▼"
-		self.arrow.Position = UDim2.fromOffset((left + right) / 2, top - 20 - bob)
+		self.arrow.Text = ""
 	elseif sideRoom >= 184 then
 		width = math.min(380, sideRoom - 47)
 		textX, y = side + sign * (36 + width / 2), math.max(6, midY - 42)

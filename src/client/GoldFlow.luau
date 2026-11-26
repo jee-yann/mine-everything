@@ -100,8 +100,8 @@ function Flow:coin(from, delay)
 	W.tween(coin, delay, { Position = UDim2.fromOffset(finish.X, finish.Y) }).Completed:Once(function() coin:Destroy() end)
 end
 
--- "+12" in green beside the total, for what each tick added.
-function Flow:tick(amount)
+-- "+340" in green beside the total: everything this payout adds, while it is counted in.
+function Flow:tick(amount, fresh)
 	local hud = self.hud
 	local menu = hud.menu
 	local icon = self:target()
@@ -128,12 +128,22 @@ function Flow:tick(amount)
 		label.AnchorPoint, label.TextXAlignment = Vector2.new(0, 0.5), Enum.TextXAlignment.Left
 		label.Position = UDim2.fromOffset(at.X + total.TextBounds.X + 12, at.Y + total.AbsoluteSize.Y / 2)
 	end
-	label.Text, label.Visible = "+" .. W.goldAmount(amount), true
-	label.TextTransparency, label.UIStroke.Transparency = 0, 0
-	Burst.pop(self.gainScale, 1, 1.25)
-	self.gainUntil = os.clock() + 0.55
-	task.delay(0.56, function()
-		if os.clock() < self.gainUntil then return end
+	local text = "+" .. W.goldAmount(amount)
+	if label.Text ~= text or fresh then
+		label.Text = text
+		Burst.pop(self.gainScale, 1, if fresh then 1.4 else 1.15)
+	end
+	label.Visible, label.TextTransparency, label.UIStroke.Transparency = true, 0, 0
+	self.gainUntil = os.clock() + 0.6
+end
+
+-- Lets the green total go once the count is done.
+function Flow:settle()
+	local label = self.gain
+	if not label then return end
+	self.gainUntil = os.clock() + 0.9
+	task.delay(0.92, function()
+		if os.clock() < self.gainUntil or self.running then return end
 		W.tween(label, 0.25, { TextTransparency = 1 })
 		W.tween(label.UIStroke, 0.25, { Transparency = 1 })
 	end)
@@ -158,10 +168,9 @@ function Flow:run(serial)
 		if self.serial ~= serial then return end
 		-- More can arrive while counting. It joins the climb.
 		amount = self.goal - base
-		local before = self.shown
 		self.shown = math.round(base + amount * i / ticks)
 		self:paint()
-		self:tick(self.shown - before)
+		self:tick(amount, i == 1)
 		local _, scale = self:target()
 		if scale then
 			local rest = scale:GetAttribute("Rest")
@@ -174,6 +183,8 @@ function Flow:run(serial)
 	self.running = false
 	self.shown = self.goal
 	self:paint()
+	self:tick(self.goal - base)
+	self:settle()
 	local icon, scale = self:target()
 	if scale then Burst.pop(scale, scale:GetAttribute("Rest"), 1.5) end
 	if icon and amount >= 20 then

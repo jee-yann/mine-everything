@@ -215,7 +215,7 @@ function Panel:open(key)
 	local tint = if key == "Daily" then daily else playtime
 	card.headerPaint.Color = ColorSequence.new(tint[1], tint[2])
 	card.heading.Text = if key == "Daily" then "Daily Rewards" else "Playtime Gifts"
-	card.sub.Text = if key == "Daily" then "Come back every day. Miss one and you keep your place." else "Keep playing to unlock gifts. They reset every day."
+	card.sub.Text = if key == "Daily" then "A new reward every 18 hours. Miss one and you keep your place." else "Keep playing to unlock gifts. They start again 18 hours later."
 end
 
 -- The tile that was just collected: it swells, paper flies, and what was won rises out of it.
@@ -295,11 +295,12 @@ function Panel:refresh()
 	local tabs = self.card.tabs
 	tabs.Daily.dot.Visible, tabs.Playtime.dot.Visible = self.menu:attention("Daily"), self.menu:attention("Playtime")
 	local now = workspace:GetServerTimeNow()
-	local untilMidnight = 86400 - now % 86400
-	local clock = string.format("%02d:%02d:%02d", untilMidnight // 3600, untilMidnight // 60 % 60, untilMidnight % 60)
+	local function clock(seconds)
+		seconds = math.max(0, math.ceil(seconds))
+		return string.format("%02d:%02d:%02d", seconds // 3600, seconds // 60 % 60, seconds % 60)
+	end
 	if self.page == "Daily" then
-		local today = net:GetAttribute("OrderDay")
-		local ready, done = Field.dailyState(player:GetAttribute("StampCount"), player:GetAttribute("StampDay"), today)
+		local ready, done, wait = Field.dailyState(player:GetAttribute("StampCount"), player:GetAttribute("StampAt"), now)
 		for i, entry in self.days do
 			local claim, collected = i == ready, i <= done
 			entry.done.Visible, entry.rim.Enabled = collected, claim
@@ -308,7 +309,7 @@ function Panel:refresh()
 			entry.button.Interactable, entry.live = claim, claim
 			entry.shade.Visible = ready ~= nil and not claim and not collected
 		end
-		self.dailyNext.Text = if ready then "Your day " .. ready .. " reward: " .. Field.describe(Field.daily[ready]) else "Next reward in " .. clock
+		self.dailyNext.Text = if ready then "Your day " .. ready .. " reward: " .. Field.describe(Field.daily[ready]) else "Next reward in " .. clock(wait)
 	else
 		local played, claims = Field.played(player, now), player:GetAttribute("GiftClaims") or 0
 		local waiting = Field.giftState(player, now)
@@ -329,7 +330,7 @@ function Panel:refresh()
 		end
 		self.trackFill.Size = UDim2.new((at - self.giftCenters[1]) / (self.giftCenters[n] - self.giftCenters[1]), 0, 1, 0)
 		self.playedLabel.Text = W.clock(math.floor(played)) .. (if played >= Field.maxGiftTime then "+ played" else " played")
-		self.resetLabel.Text = "Resets in " .. clock
+		self.resetLabel.Text = "Resets in " .. clock((player:GetAttribute("GiftReset") or now) - now)
 		self.allLabel.Text = "Claim all"
 		self.allPaint.Color, self.all.Interactable = if waiting > 0 then green else grey, waiting > 0
 	end

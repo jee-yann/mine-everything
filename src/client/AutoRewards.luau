@@ -25,7 +25,7 @@ function Auto.start(player, hud, busy, underground)
 	if game:GetService("ReplicatedStorage"):GetAttribute("MiningTestMode") then return end
 	local since, calm, firstVisit, doneAt
 	local shown = {}
-	local day
+	local round
 	task.spawn(function()
 		while hud.root.Parent do
 			task.wait(0.25)
@@ -46,16 +46,17 @@ function Auto.start(player, hud, busy, underground)
 				or Input:GetFocusedTextBox() ~= nil or (hud.chatInput and hud.chatInput.IsFocused)
 				or os.clock() < (hud.untilTime or 0) or hud.goldFlow.running
 			calm = if occupied then nil else calm or now
-			-- A new day offers both again.
-			if day ~= hud.net:GetAttribute("OrderDay") then
-				day = hud.net:GetAttribute("OrderDay")
-				shown = {}
+			-- A reward that comes back after its 18 hours is offered again.
+			local dailyReady = hud.menu:attention("Daily")
+			if not dailyReady then shown.Daily = nil end
+			if round ~= player:GetAttribute("GiftReset") then
+				round, shown.Playtime = player:GetAttribute("GiftReset"), nil
 			end
 			local sold = hud.soldAt
 			local page = Auto.choose({
 				firstVisit = firstVisit, sinceSale = if sold and doneAt and sold > doneAt then now - sold else nil,
 				onboarded = true, sinceReady = now - since, quietFor = if calm then now - calm else 0,
-				dailyReady = hud.menu:attention("Daily"), dailyShown = shown.Daily, giftShown = shown.Playtime,
+				dailyReady = dailyReady, dailyShown = shown.Daily, giftShown = shown.Playtime,
 				giftsReady = Field.giftState(player, workspace:GetServerTimeNow()),
 				giftsClaimed = player:GetAttribute("GiftClaims") or 0, underground = underground(),
 			})

@@ -1,4 +1,5 @@
--- Daily rewards and playtime gifts. Days are UTC days counted on the server.
+-- Daily rewards and playtime gifts. Each waits 18 hours: a daily reward after the last one was claimed,
+-- and the playtime gifts after their round began, so playing earlier the next day still counts.
 -- The rewards below are placeholders: change an entry's amounts, name or icon here and the menu,
 -- the claim and the notice all follow. An entry can hold any of gold, gems, flares and pulses.
 local Field = {}
@@ -31,6 +32,7 @@ for i, reward in prizes do
 end
 Field.maxGiftTime = Field.gifts[#Field.gifts].seconds
 Field.hasteCuts, Field.stoneChips = 12, 6
+Field.cooldown = 18 * 3600
 
 local kinds = {
 	{ key = "gold", one = "gold", many = "gold" },
@@ -56,19 +58,22 @@ function Field.grant(p, reward)
 	end
 end
 
--- Today's place on the daily card. The day that can be claimed, or nil, and how many are done.
-function Field.dailyState(count, last, today)
-	local ready = today ~= nil and (last or 0) < today
+-- The place on the daily card: the day that can be claimed, or nil, how many are done, and the seconds
+-- until the next one. `last` is when the last one was claimed.
+function Field.dailyState(count, last, now)
+	local wait = (last or 0) + Field.cooldown - (now or 0)
+	local ready = now ~= nil and wait <= 0
 	local done = count or 0
 	if ready then
 		done %= #Field.daily
 	end
-	return if ready then done + 1 else nil, done
+	return if ready then done + 1 else nil, done, math.max(0, wait)
 end
-function Field.claim(p, today)
-	local day = Field.dailyState(p.stampCount, p.stampDay, today)
+function Field.claim(p, now)
+	local day = Field.dailyState(p.stampCount, p.stampAt, now)
 	if not day then return nil end
-	p.stampCount, p.stampDay = day, today
+	-- The day number is kept for older servers that read the same save.
+	p.stampCount, p.stampAt, p.stampDay = day, now, math.floor(now / 86400)
 	Field.grant(p, Field.daily[day])
 	return day, Field.daily[day]
 end
@@ -79,13 +84,13 @@ function Field.trackGifts(session, now)
 	local p = session.profile
 	local last = session.giftAt or now
 	if now < last then return end
-	local day = math.floor(now / 86400)
 	session.giftAt = now
-	if day < p.giftDay then return end
-	if day > p.giftDay then
-		p.giftDay, p.giftSeconds, p.giftClaims = day, 0, 0
+	if now < p.giftStart then return end
+	-- A round lasts 18 hours from its first moment of play. The next begins with the next play.
+	if now - p.giftStart >= Field.cooldown then
+		p.giftStart, p.giftDay, p.giftSeconds, p.giftClaims = now, math.floor(now / 86400), 0, 0
 	end
-	local elapsed = now - math.max(last, day * 86400)
+	local elapsed = now - math.max(last, p.giftStart)
 	p.giftSeconds = math.min(Field.maxGiftTime, p.giftSeconds + elapsed)
 end
 
@@ -94,7 +99,7 @@ function Field.claimGift(session, now, requested)
 	Field.trackGifts(session, now)
 	local p = session.profile
 	local gift = type(requested) == "number" and Field.gifts[requested]
-	if p.giftDay ~= math.floor(now / 86400) or not gift or requested <= p.giftClaims or p.giftSeconds < gift.seconds then
+	if not gift or requested <= p.giftClaims or p.giftSeconds < gift.seconds then
 		return nil
 	end
 	local given = {}

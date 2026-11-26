@@ -605,7 +605,7 @@ function Menu:attention(key)
 		end
 	elseif key == "Daily" then
 		return p:GetAttribute("ProfileReady") == true
-			and Field.dailyState(p:GetAttribute("StampCount"), p:GetAttribute("StampDay"), self.net:GetAttribute("OrderDay")) ~= nil
+			and Field.dailyState(p:GetAttribute("StampCount"), p:GetAttribute("StampAt"), workspace:GetServerTimeNow()) ~= nil
 	elseif key == "Playtime" then
 		return Field.giftState(p, workspace:GetServerTimeNow()) > 0
 	elseif key == "Book" then
@@ -882,7 +882,7 @@ function Menu:open(key)
 		elseif key == "Passes" then "Visit Outfitters for game passes."
 		elseif key == "Achievements" then "Mine, explore and try new things. ??? reveals when you find the ore."
 		elseif key == "Pack" then "Take your haul to the amber Sell counter."
-		elseif key == "Jobs" then "Deliver daily orders at the Jobs board. New order at midnight UTC."
+		elseif key == "Jobs" then "Deliver today's order from here. A new one comes at midnight UTC."
 		elseif key == "Settings" then "Changes take effect immediately."
 		elseif key == "Store" then "Permanent passes for this experience."
 		else "Upgrades stay equipped between visits."

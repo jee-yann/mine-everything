@@ -29,7 +29,7 @@ function Data.snapshot(p)
 		introSeen = p.introSeen,
 		firstTrip = table.clone(p.firstTrip),
 		gold = p.gold,
-		gems = p.gems, stampCount = p.stampCount, stampDay = p.stampDay,
+		gems = p.gems, stampCount = p.stampCount, stampDay = p.stampDay, stampAt = p.stampAt, giftStart = p.giftStart,
 		shiftDay = p.shiftDay, shiftSeconds = p.shiftSeconds, shiftClaims = p.shiftClaims,
 		giftDay = p.giftDay, giftSeconds = p.giftSeconds, giftClaims = p.giftClaims,
 		hasteCuts = p.hasteCuts, stoneChips = p.stoneChips, pulses = p.pulses,

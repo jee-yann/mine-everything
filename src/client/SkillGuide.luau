@@ -53,7 +53,7 @@ function Guide.start(player, hud, busy)
 			if node and map.learn.Visible and map.learn.Interactable and not hud.unlocks.playing then
 				inside:show(map.footer, "Spend a point on " .. node.name .. "!", "Press the button, or tap another\nskill you like better.", motion,
 					map.header.AbsolutePosition.Y + map.header.AbsoluteSize.Y, 0.55)
-				ring:point(map.learn, motion, "Spotlight")
+				ring:point(map.learn, motion, "Left")
 			else
 				inside:show(nil)
 				ring:point(nil)

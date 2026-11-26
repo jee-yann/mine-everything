@@ -14,19 +14,25 @@ local p = assert(Data.claim({profile = legacy}, "new session", 1000)).profile
 assert(p.gems == 0 and p.hasteCuts == 0 and not Profile.hasUpgrade(p))
 assert(#Field.daily == 7, "a week of daily rewards")
 for day, reward in Field.daily do
-	local today = 20000 + 3 * day
+	local today = (20000 + 3 * day) * 86400
 	local before = { gold = p.gold, gems = p.gems, flares = p.flares, pulses = p.pulses }
-	local ready, done = Field.dailyState(p.stampCount, p.stampDay, today)
+	local ready, done = Field.dailyState(p.stampCount, p.stampAt, today)
 	assert(ready == day and done == day - 1)
 	local number, given = Field.claim(p, today)
 	assert(number == day and given == reward and Field.describe(reward) ~= "")
 	for key, amount in before do
 		assert(p[key] == amount + (reward[key] or 0), key .. " on day " .. day)
 	end
-	assert(not Field.claim(p, today) and not Field.claim(p, today - 1))
-	assert(not Field.dailyState(p.stampCount, p.stampDay, today))
+	assert(not Field.claim(p, today) and not Field.claim(p, today - 1) and not Field.claim(p, today + Field.cooldown - 1))
+	assert(not Field.dailyState(p.stampCount, p.stampAt, today))
 end
-assert(Field.claim(p, 20100) == 1, "the card starts again after day 7")
+assert(Field.claim(p, 20100 * 86400) == 1, "the card starts again after day 7")
+-- 18 hours after a claim, not the next UTC day: an earlier visit the next day still gets its reward.
+local evening = 20200 * 86400 + 22 * 3600
+assert(Field.claim(p, evening) == 2)
+local _, _, wait = Field.dailyState(p.stampCount, p.stampAt, evening + 3600)
+assert(wait == Field.cooldown - 3600 and not Field.claim(p, 20201 * 86400 + 3600 * 15))
+assert(Field.claim(p, evening + Field.cooldown) == 3, "the next morning")
 p.gold, p.gems, p.flares, p.pulses = 0, 37, 0, 0
 assert(not Profile.buySupply(p, "Haste") and p.gems == 37)
 p.bag = { Stone = 2, Coal = 3, Iron = 3, Copper = 5 }
@@ -45,7 +51,7 @@ p.bag = table.clone(Materials.daily(day).recipe)
 assert(Profile.deliver(p, day, day) and p.gems == 2 and not Profile.deliver(p, day, day))
 local snapshot = Data.snapshot(p)
 local restored = assert(Data.claim({ profile = snapshot }, "later", 2000)).profile
-for _, key in { "gems", "stampCount", "stampDay", "oreCompass", "pulses", "hasteCuts", "stoneChips", "auraOff" } do
+for _, key in { "gems", "stampCount", "stampDay", "stampAt", "oreCompass", "pulses", "hasteCuts", "stoneChips", "auraOff" } do
 	assert(p[key] == restored[key], key)
 end
 assert(Profile.hasUpgrade(restored))
@@ -80,11 +86,26 @@ assert(resumed.giftSeconds == Field.maxGiftTime and not Field.claimGift(returnVi
 local sameDay = { profile = assert(Data.claim({ profile = Data.snapshot(resumed) }, "third", start + 22000)).profile }
 assert(not Field.claimGift(sameDay, start + 22000, 1))
 Field.trackGifts(sameDay, start + 86400 + 9)
-assert(sameDay.profile.giftClaims == 0 and sameDay.profile.giftSeconds == 9)
+assert(sameDay.profile.giftClaims == 0 and sameDay.profile.giftSeconds == 0 and sameDay.profile.giftStart == start + 86400 + 9)
 assert(not Field.claimGift(sameDay, start + 86400 + 9, 1))
 local followingDay = { profile = sameDay.profile }
 Field.trackGifts(followingDay, start + 3 * 86400 + 16000)
 assert(sameDay.profile.giftSeconds == 0 and sameDay.profile.giftClaims == 0)
+-- A round of gifts lasts 18 hours from when it began.
+local round = { profile = sameDay.profile }
+local begun = sameDay.profile.giftStart
+Field.trackGifts(round, begun)
+Field.trackGifts(round, begun + 600)
+assert(round.profile.giftSeconds == 600 and Field.claimGift(round, begun + 600, 2))
+Field.trackGifts(round, begun + Field.cooldown - 1)
+assert(round.profile.giftClaims == 2, "a round ended early")
+Field.trackGifts(round, begun + Field.cooldown)
+assert(round.profile.giftClaims == 0 and round.profile.giftStart == begun + Field.cooldown)
+-- Saves from UTC days wait from that day's midnight.
+local dated = Data.snapshot(round.profile)
+dated.stampAt, dated.giftStart, dated.stampDay, dated.giftDay = nil, nil, 20300, 20301
+local moved = assert(Data.claim({ profile = dated }, "dated", start)).profile
+assert(moved.stampAt == 20300 * 86400 and moved.giftStart == 20301 * 86400)
 -- A save from the old timed rewards still loads.
 local older = Data.snapshot(sameDay.profile)
 older.shiftClaims, older.shiftSeconds, older.giftDay, older.giftSeconds, older.giftClaims = 3, 3600, nil, nil, nil
