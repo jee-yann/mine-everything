@@ -173,6 +173,15 @@ for p in trail.findall("Item"):
     field(p, "Color3uint8", "Color3uint8", 0xFF000000 | int(ink, 16))
 rim = group("Citrine Highlands", "Rock rim")
 keep(CORE["Rock rim"], rim, studs=False, solid=False)
+# The invisible rim wall must stop above the mine. Its second layer begins at y 18, under the whole site.
+MINE_TOP = 18.3
+for p in rim.iter("Item"):
+    if p.get("class") == "Part":
+        size, cf = prop(p, "size"), prop(p, "CFrame")
+        sy, y = float(size.find("Y").text), float(cf.find("Y").text)
+        if y - sy / 2 < MINE_TOP:
+            top = y + sy / 2
+            size.find("Y").text, cf.find("Y").text = f"{top - MINE_TOP:.4f}", f"{(top + MINE_TOP) / 2:.4f}"
 edge = [xyz(c, "CFrame") for c in CORE["Rock rim"].findall("Item")]
 
 

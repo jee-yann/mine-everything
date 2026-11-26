@@ -25066,12 +25066,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.36</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-128.10539</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-49.44539</Z>
        <R00>-0.70711</R00>
        <R01>0</R01>
@@ -25100,12 +25100,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.36</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-114.90621</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-62.90621</Z>
        <R00>-0.70711</R00>
        <R01>0</R01>
@@ -25134,12 +25134,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.36</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-101.70702</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-76.36702</Z>
        <R00>-0.70711</R00>
        <R01>0</R01>
@@ -25168,12 +25168,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.83</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-82.33</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-83.925</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -25202,12 +25202,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.83</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-63</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-84.11</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -25236,12 +25236,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.83</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-43.67</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-84.295</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -25270,12 +25270,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.83</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-24.33</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-83.925</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -25304,12 +25304,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.83</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-5</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-84.11</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -25338,12 +25338,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.83</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>14.33</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-84.295</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -25372,12 +25372,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.83</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>33.67</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-83.925</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -25406,12 +25406,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.83</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>53</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-84.11</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -25440,12 +25440,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.83</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>72.33</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-84.295</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -25474,12 +25474,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.97</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>92.08901</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-77.09096</Z>
        <R00>0.61631</R00>
        <R01>0</R01>
@@ -25508,12 +25508,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.97</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>107.53303</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-65.23665</Z>
        <R00>0.61631</R00>
        <R01>0</R01>
@@ -25542,12 +25542,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.97</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>122.97704</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-53.38233</Z>
        <R00>0.61631</R00>
        <R01>0</R01>
@@ -25576,12 +25576,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>27.19</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>132.42041</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-33.8597</Z>
        <R00>0.99883</R00>
        <R01>0</R01>
@@ -25610,12 +25610,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>27.19</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>133.6052</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-13.19864</Z>
        <R00>0.99883</R00>
        <R01>0</R01>
@@ -25644,12 +25644,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>27.19</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>134.78998</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>7.46242</Z>
        <R00>0.99883</R00>
        <R01>0</R01>
@@ -25678,12 +25678,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>27.19</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>135.42041</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>28.1403</Z>
        <R00>0.99883</R00>
        <R01>0</R01>
@@ -25712,12 +25712,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>27.19</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>136.6052</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>48.80136</Z>
        <R00>0.99883</R00>
        <R01>0</R01>
@@ -25746,12 +25746,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>27.19</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>137.78998</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>69.46242</Z>
        <R00>0.99883</R00>
        <R01>0</R01>
@@ -25780,12 +25780,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.35</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>134.14427</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>90.20771</Z>
        <R00>0.92848</R00>
        <R01>0</R01>
@@ -25814,12 +25814,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.35</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>127.31604</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>107.77642</Z>
        <R00>0.92848</R00>
        <R01>0</R01>
@@ -25848,12 +25848,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>23.75</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>116.3224</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>123.90745</Z>
        <R00>0.65714</R00>
        <R01>0</R01>
@@ -25882,12 +25882,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>23.75</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>103.07926</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>134.95856</Z>
        <R00>0.65714</R00>
        <R01>0</R01>
@@ -25916,12 +25916,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>23.75</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>90.20083</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>146.42801</Z>
        <R00>0.65714</R00>
        <R01>0</R01>
@@ -25950,12 +25950,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.38</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>71.56</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>153.295</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -25984,12 +25984,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.38</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>52.69</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>152.925</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -26018,12 +26018,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.38</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>33.81</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>153.11</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -26052,12 +26052,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.38</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>14.94</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>153.295</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -26086,12 +26086,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.38</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-3.94</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>152.925</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -26120,12 +26120,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.38</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-22.81</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>153.11</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -26154,12 +26154,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.38</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-41.69</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>153.295</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -26188,12 +26188,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.38</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-60.56</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>152.925</Z>
        <R00>0</R00>
        <R01>0</R01>
@@ -26222,12 +26222,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>21.43</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-78.48218</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>149.7633</Z>
        <R00>-0.40199</R00>
        <R01>0</R01>
@@ -26256,12 +26256,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>21.43</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-92.22655</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>143.93269</Z>
        <R00>-0.40199</R00>
        <R01>0</R01>
@@ -26290,12 +26290,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>21.43</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-105.74781</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>137.5939</Z>
        <R00>-0.40199</R00>
        <R01>0</R01>
@@ -26324,12 +26324,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>21.31</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-118.34611</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>126.79817</Z>
        <R00>-0.8555</R00>
        <R01>0</R01>
@@ -26358,12 +26358,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>21.31</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-126.17437</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>114.22396</Z>
        <R00>-0.8555</R00>
        <R01>0</R01>
@@ -26392,12 +26392,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>21.31</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-133.52784</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>101.36238</Z>
        <R00>-0.8555</R00>
        <R01>0</R01>
@@ -26426,12 +26426,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.5</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-137.96954</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>83.4382</Z>
        <R00>-0.99989</R00>
        <R01>0</R01>
@@ -26460,12 +26460,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.5</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-137.86451</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>64.43542</Z>
        <R00>-0.99989</R00>
        <R01>0</R01>
@@ -26494,12 +26494,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.5</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-137.21456</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>45.44098</Z>
        <R00>-0.99989</R00>
        <R01>0</R01>
@@ -26528,12 +26528,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.5</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-137.10954</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>26.4382</Z>
        <R00>-0.99989</R00>
        <R01>0</R01>
@@ -26562,12 +26562,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.5</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-137.00451</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>7.43542</Z>
        <R00>-0.99989</R00>
        <R01>0</R01>
@@ -26596,12 +26596,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.5</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-136.35456</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-11.55902</Z>
        <R00>-0.99989</R00>
        <R01>0</R01>
@@ -26630,12 +26630,12 @@
       <bool name="CastShadow">false</bool>
       <Vector3 name="size">
        <X>3.5</X>
-       <Y>138</Y>
+       <Y>133.7000</Y>
        <Z>25.5</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-136.24954</X>
-       <Y>83</Y>
+       <Y>85.1500</Y>
        <Z>-30.5618</Z>
        <R00>-0.99989</R00>
        <R01>0</R01>
@@ -98188,12 +98188,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>18.2226</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-136.0129</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>73.5900</Z>
        <R00>-0.9999832</R00>
        <R01>0.0000000</R01>
@@ -98223,12 +98223,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>56.9647</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-135.5301</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>35.9617</Z>
        <R00>-0.9998862</R00>
        <R01>0.0000000</R01>
@@ -98258,12 +98258,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>36.8173</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-134.7368</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-10.9415</Z>
        <R00>-0.9998053</R00>
        <R01>0.0000000</R01>
@@ -98292,13 +98292,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.6074</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-134.3577</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-30.1501</Z>
        <R00>0.0000000</R00>
        <R01>0.9998053</R01>
@@ -98327,13 +98327,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.6074</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-134.3577</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-30.1501</Z>
        <R00>0.0000000</R00>
        <R01>0.9183637</R01>
@@ -98363,12 +98363,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>18.2740</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-130.4238</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-39.2793</Z>
        <R00>-0.9183637</R00>
        <R01>0.0000000</R01>
@@ -98397,13 +98397,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.5294</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-126.5053</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-48.3727</Z>
        <R00>0.0000000</R00>
        <R01>0.9183637</R01>
@@ -98432,13 +98432,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.5294</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-126.5053</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-48.3727</Z>
        <R00>0.0000000</R00>
        <R01>0.7139688</R01>
@@ -98468,12 +98468,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>35.2953</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-113.6134</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-61.5185</Z>
        <R00>-0.7139688</R00>
        <R01>0.0000000</R01>
@@ -98502,13 +98502,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.7635</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-100.6396</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-74.7479</Z>
        <R00>0.0000000</R00>
        <R01>0.7139688</R01>
@@ -98537,13 +98537,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.7635</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-100.6396</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-74.7479</Z>
        <R00>0.0000000</R00>
        <R01>0.3630030</R01>
@@ -98573,12 +98573,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>18.4114</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-91.2402</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-78.4097</Z>
        <R00>-0.3630030</R00>
        <R01>0.0000000</R01>
@@ -98607,13 +98607,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.4992</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-81.9640</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-82.0235</Z>
        <R00>0.0000000</R00>
        <R01>0.3630030</R01>
@@ -98642,13 +98642,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.4992</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-81.9640</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-82.0235</Z>
        <R00>0.0000000</R00>
        <R01>0.0098288</R01>
@@ -98678,12 +98678,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>37.5354</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-62.4476</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-82.2153</Z>
        <R00>-0.0098288</R00>
        <R01>0.0000000</R01>
@@ -98713,12 +98713,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>114.9101</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>13.8145</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-82.4000</Z>
        <R00>0.0000000</R00>
        <R01>0.0000000</R01>
@@ -98747,13 +98747,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.4493</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>71.9942</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-82.4000</Z>
        <R00>0.0000000</R00>
        <R01>0.0000000</R01>
@@ -98782,13 +98782,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.4493</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>71.9942</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-82.4000</Z>
        <R00>0.0000000</R00>
        <R01>-0.3427735</R01>
@@ -98818,12 +98818,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>19.0525</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>81.6241</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-78.8863</Z>
        <R00>0.3427735</R00>
        <R01>0.0000000</R01>
@@ -98852,13 +98852,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.2592</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>91.1646</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-75.4051</Z>
        <R00>0.0000000</R00>
        <R01>-0.3427735</R01>
@@ -98887,13 +98887,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.2592</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>91.1646</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-75.4051</Z>
        <R00>0.0000000</R00>
        <R01>-0.6088413</R01>
@@ -98923,12 +98923,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>18.5416</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>99.0185</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-69.3774</Z>
        <R00>0.6088413</R00>
        <R01>0.0000000</R01>
@@ -98958,12 +98958,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>18.0542</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>113.5339</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-58.2359</Z>
        <R00>0.6089165</R00>
        <R01>0.0000000</R01>
@@ -98992,13 +98992,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.9445</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>121.4657</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-52.1472</Z>
        <R00>0.0000000</R00>
        <R01>-0.6089165</R01>
@@ -99027,13 +99027,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.9445</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>121.4657</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-52.1472</Z>
        <R00>0.0000000</R00>
        <R01>-0.9002526</R01>
@@ -99063,12 +99063,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>19.0659</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>126.0393</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-42.6899</Z>
        <R00>0.9002526</R00>
        <R01>0.0000000</R01>
@@ -99097,13 +99097,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.6320</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>130.5449</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-33.3732</Z>
        <R00>0.0000000</R00>
        <R01>-0.9002526</R01>
@@ -99132,13 +99132,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.6320</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>130.5449</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-33.3732</Z>
        <R00>0.0000000</R00>
        <R01>-0.9983453</R01>
@@ -99168,12 +99168,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>19.4987</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>131.1524</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-22.8254</Z>
        <R00>0.9983453</R00>
        <R01>0.0000000</R01>
@@ -99203,12 +99203,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>20.6661</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>132.3024</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>-2.7740</Z>
        <R00>0.9983729</R00>
        <R01>0.0000000</R01>
@@ -99238,12 +99238,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>61.3762</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>134.3767</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>38.2302</Z>
        <R00>0.9988314</R00>
        <R01>0.0000000</R01>
@@ -99272,13 +99272,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.9159</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>135.8820</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>69.3399</Z>
        <R00>0.0000000</R00>
        <R01>-0.9988314</R01>
@@ -99307,13 +99307,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.9159</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>135.8820</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>69.3399</Z>
        <R00>0.0000000</R00>
        <R01>-0.9848790</R01>
@@ -99343,12 +99343,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>19.8081</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>134.0868</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>79.5452</Z>
        <R00>0.9848790</R00>
        <R01>0.0000000</R01>
@@ -99377,13 +99377,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.8068</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>132.3011</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>89.6967</Z>
        <R00>0.0000000</R00>
        <R01>-0.9848790</R01>
@@ -99412,13 +99412,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.8068</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>132.3011</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>89.6967</Z>
        <R00>0.0000000</R00>
        <R01>-0.9322335</R01>
@@ -99448,12 +99448,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>17.5691</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>128.9764</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>98.2620</Z>
        <R00>0.9322335</R00>
        <R01>0.0000000</R01>
@@ -99482,13 +99482,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.9399</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>125.6276</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>106.8894</Z>
        <R00>0.0000000</R00>
        <R01>-0.9322335</R01>
@@ -99517,13 +99517,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.9399</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>125.6276</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>106.8894</Z>
        <R00>0.0000000</R00>
        <R01>-0.8261732</R01>
@@ -99553,12 +99553,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>18.0492</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>120.2782</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>114.7336</Z>
        <R00>0.8261732</R00>
        <R01>0.0000000</R01>
@@ -99587,13 +99587,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.0752</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>114.8906</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>122.6337</Z>
        <R00>0.0000000</R00>
        <R01>-0.8261732</R01>
@@ -99622,13 +99622,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.0752</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>114.8906</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>122.6337</Z>
        <R00>0.0000000</R00>
        <R01>-0.6529855</R01>
@@ -99658,12 +99658,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>32.6127</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>102.1335</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>133.6325</Z>
        <R00>0.6529855</R00>
        <R01>0.0000000</R01>
@@ -99692,13 +99692,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.4874</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>89.2203</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>144.7660</Z>
        <R00>0.0000000</R00>
        <R01>-0.6529855</R01>
@@ -99727,13 +99727,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.4874</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>89.2203</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>144.7660</Z>
        <R00>0.0000000</R00>
        <R01>-0.3453787</R01>
@@ -99763,12 +99763,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>17.7049</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>80.2147</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>148.0803</Z>
        <R00>0.3453787</R00>
        <R01>0.0000000</R01>
@@ -99797,13 +99797,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.4610</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>71.2215</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>151.3900</Z>
        <R00>0.0000000</R00>
        <R01>-0.3453787</R01>
@@ -99832,13 +99832,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.4610</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>71.2215</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>151.3900</Z>
        <R00>0.0000000</R00>
        <R01>0.0000000</R01>
@@ -99868,12 +99868,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>112.1237</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>14.4291</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>151.3900</Z>
        <R00>0.0000000</R00>
        <R01>0.0000000</R01>
@@ -99902,13 +99902,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.0782</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-41.6719</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>151.3900</Z>
        <R00>0.0000000</R00>
        <R01>0.0000000</R01>
@@ -99937,13 +99937,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.0782</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-41.6719</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>151.3900</Z>
        <R00>0.0000000</R00>
        <R01>0.0190744</R01>
@@ -99973,12 +99973,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>18.3472</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-50.8829</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>151.2143</Z>
        <R00>-0.0190744</R00>
        <R01>0.0000000</R01>
@@ -100007,13 +100007,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.6409</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-60.3753</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>151.0332</Z>
        <R00>0.0000000</R00>
        <R01>0.0190744</R01>
@@ -100042,13 +100042,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.6409</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-60.3753</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>151.0332</Z>
        <R00>0.0000000</R00>
        <R01>0.1741928</R01>
@@ -100078,12 +100078,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>17.0485</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-69.0848</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>149.4925</Z>
        <R00>-0.1741928</R00>
        <R01>0.0000000</R01>
@@ -100112,13 +100112,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.9303</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-77.9368</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>147.9266</Z>
        <R00>0.0000000</R00>
        <R01>0.1741928</R01>
@@ -100147,13 +100147,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.9303</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-77.9368</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>147.9266</Z>
        <R00>0.0000000</R00>
        <R01>0.3903607</R01>
@@ -100183,12 +100183,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>14.1418</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-84.8749</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>144.9848</Z>
        <R00>-0.3903607</R00>
        <R01>0.0000000</R01>
@@ -100217,13 +100217,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.1536</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-91.4555</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>142.1946</Z>
        <R00>0.0000000</R00>
        <R01>0.3903607</R01>
@@ -100252,13 +100252,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.1536</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-91.4555</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>142.1946</Z>
        <R00>0.0000000</R00>
        <R01>0.4245711</R01>
@@ -100288,12 +100288,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>14.0063</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-97.8657</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>139.1887</Z>
        <R00>-0.4245711</R00>
        <R01>0.0000000</R01>
@@ -100322,13 +100322,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.1124</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-104.7099</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>135.9792</Z>
        <R00>0.0000000</R00>
        <R01>0.4245711</R01>
@@ -100357,13 +100357,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.1124</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-104.7099</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>135.9792</Z>
        <R00>0.0000000</R00>
        <R01>0.6504438</R01>
@@ -100393,12 +100393,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>14.8480</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-110.7714</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>130.7885</Z>
        <R00>-0.6504438</R00>
        <R01>0.0000000</R01>
@@ -100427,13 +100427,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.2664</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-116.8913</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>125.5477</Z>
        <R00>0.0000000</R00>
        <R01>0.6504438</R01>
@@ -100462,13 +100462,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.2664</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-116.8913</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>125.5477</Z>
        <R00>0.0000000</R00>
        <R01>0.8492853</R01>
@@ -100498,12 +100498,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>13.7767</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-120.8622</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>119.1597</Z>
        <R00>-0.8492853</R00>
        <R01>0.0000000</R01>
@@ -100532,13 +100532,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.1491</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-124.5381</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>113.2463</Z>
        <R00>0.0000000</R00>
        <R01>0.8492853</R01>
@@ -100567,13 +100567,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>0.1491</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-124.5381</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>113.2463</Z>
        <R00>0.0000000</R00>
        <R01>0.8679107</R01>
@@ -100603,12 +100603,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>13.8720</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-128.0204</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>107.1618</Z>
        <R00>-0.8679107</R00>
        <R01>0.0000000</R01>
@@ -100637,13 +100637,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.1428</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-131.7494</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>100.6460</Z>
        <R00>0.0000000</R00>
        <R01>0.8679107</R01>
@@ -100672,13 +100672,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.1428</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-131.7494</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>100.6460</Z>
        <R00>0.0000000</R00>
        <R01>0.9706502</R01>
@@ -100708,12 +100708,12 @@
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
        <X>8.2000</X>
-       <Y>6.9000</Y>
+       <Y>2.6000</Y>
        <Z>16.8758</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-133.9161</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>91.9012</Z>
        <R00>-0.9706502</R00>
        <R01>0.0000000</R01>
@@ -100742,13 +100742,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.0248</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-136.0687</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>83.2135</Z>
        <R00>0.0000000</R00>
        <R01>0.9706502</R01>
@@ -100777,13 +100777,13 @@
       <bool name="CanCollide">true</bool>
       <bool name="CastShadow">true</bool>
       <Vector3 name="size">
-       <X>6.9000</X>
+       <X>2.6000</X>
        <Y>8.2000</Y>
        <Z>1.0248</Z>
       </Vector3>
       <CoordinateFrame name="CFrame">
        <X>-136.0687</X>
-       <Y>17.4500</Y>
+       <Y>19.6000</Y>
        <Z>83.2135</Z>
        <R00>0.0000000</R00>
        <R01>0.9999832</R01>

@@ -211,6 +211,16 @@ PROPS = {"Wild stone", "Bush", "Flower", "Grass tuft", "Crate", "Barrel", "Ore s
          "Planter wall", "Step newel", "Falling water", "Current", "Bank stone", "Spring stone", "Whitewater", "Cable head", "Survey trail", "Path slab", "Step cheek", "Stone step", "Compass needle", "Rail"}
 
 
+def mine_intrusions(parts):
+    """Parts that reach into the mine's second layer: below y 18.3 over the dug site."""
+    hits = []
+    for p in parts:
+        lo, hi = p.lo, p.hi
+        if lo[1] < 18.3 and hi[0] > -96 and lo[0] < 96 and hi[2] > -164 and lo[2] < 4 and "EditFace" not in p.path:
+            hits.append(p)
+    return hits
+
+
 def clipping(parts):
     cell = defaultdict(list)
     for n, p in enumerate(parts):
@@ -299,6 +309,10 @@ if __name__ == "__main__":
         for k, v in sorted(c.items(), key=lambda kv: -len(kv[1]))[:60]:
             print("  ", len(v), k, v[:3])
     if "traps" in what:
+        dug = mine_intrusions(parts)
+        print("MINE INTRUSIONS", len(dug))
+        for p in dug[:20]:
+            print("  ", p.path.split("/")[-1], p.name, round(float(p.lo[1]), 2))
         t, _, _ = traps(parts)
         print("TRAPS", len(t), "pockets")
         for p in t[:40]:

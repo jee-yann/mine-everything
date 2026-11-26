@@ -817,7 +817,7 @@ for it in [c for c in lawn.findall("Item") if name(c) == "Headland turf" and c.g
 inner = inset(outline, 15)
 ring(coast, inner, 13.0, "Coast bank", 22.2, 24.12, top_tone)
 ring(coast, inner, 13.8, "Coast bed", 19.0, 22.2, lambda x, z: "sand2" if z > 100 else "clay")
-ring(coast, inset(outline, 6), 8.2, "Coast foot", 14.0, 20.9, lambda x, z: "sand2" if z > 100 else "rust")
+ring(coast, inset(outline, 6), 8.2, "Coast foot", MINE_TOP, 20.9, lambda x, z: "sand2" if z > 100 else "rust")
 ring(coast, inset(outline, -2.2), 0.9, "Surf line", 20.1, 20.52, lambda x, z: "surf", mat=SMOOTH, solid=False, studs=False, shadow=False)
 # Bluffs on the flanks with the sea between them. A fence closes each gap.
 n = len(outline)

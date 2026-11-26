@@ -133,19 +133,29 @@ function Flow:tick(amount, fresh)
 		label.Text = text
 		Burst.pop(self.gainScale, 1, if fresh then 1.4 else 1.15)
 	end
+	for _, fade in self.fades or {} do
+		fade:Cancel()
+	end
 	label.Visible, label.TextTransparency, label.UIStroke.Transparency = true, 0, 0
 	self.gainUntil = os.clock() + 0.6
+	self:settle()
 end
 
--- Lets the green total go once the count is done.
+-- Lets the green total go once nothing is being counted in. A count can be cut short (gold spent while it
+-- climbs), so this watches instead of waiting for the count to say it is done.
 function Flow:settle()
 	local label = self.gain
 	if not label then return end
-	self.gainUntil = os.clock() + 0.9
-	task.delay(0.92, function()
-		if os.clock() < self.gainUntil or self.running then return end
-		W.tween(label, 0.25, { TextTransparency = 1 })
-		W.tween(label.UIStroke, 0.25, { Transparency = 1 })
+	self.gainUntil = math.max(self.gainUntil or 0, os.clock() + 0.9)
+	if self.watching then return end
+	self.watching = true
+	task.spawn(function()
+		while label.Parent and (self.running or os.clock() < self.gainUntil) do
+			task.wait(0.1)
+		end
+		self.watching = false
+		if not label.Parent or not label.Visible then return end
+		self.fades = { W.tween(label, 0.25, { TextTransparency = 1 }), W.tween(label.UIStroke, 0.25, { Transparency = 1 }) }
 	end)
 end
 
