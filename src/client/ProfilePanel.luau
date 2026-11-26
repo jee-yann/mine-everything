@@ -1,11 +1,11 @@
--- The miner's own profile and records, and a tab of friends who are online: join one who is playing,
--- or invite one who is not. Mining with a friend here gives more XP (Shared.FriendBonus).
+-- A miner's profile and records (their own, or anyone in the server found with the search box), and a
+-- tab of friends who are online: join one who is playing, or invite one who is not. Mining with a friend here gives more XP (Shared.FriendBonus).
 local Players = game:GetService("Players")
 local Run = game:GetService("RunService")
 local Social = game:GetService("SocialService")
 local Shared = game:GetService("ReplicatedStorage").Shared
 local Ores, Expeditions, Skills = require(Shared.Ores), require(Shared.Expeditions), require(Shared.Skills)
-local Guide, FriendBonus = require(Shared.FieldGuide), require(Shared.FriendBonus)
+local Guide, FriendBonus, Rebirth = require(Shared.FieldGuide), require(Shared.FriendBonus), require(Shared.Rebirth)
 local W, Icons, Card = require(script.Parent.Widgets), require(script.Parent.Icons), require(script.Parent.WideCard)
 local Burst = require(script.Parent.Burst)
 local Panel = {}
@@ -62,6 +62,7 @@ function Panel.new(menu)
 	card:tab("Friends", "Friends", "Friends", function() menu:open("Friends") end)
 	self:buildProfile()
 	self:buildFriends()
+	self:buildSearch()
 	menu.player:GetAttributeChangedSignal("FriendsHere"):Connect(function()
 		if card.modal.Visible then
 			self:refresh()
@@ -78,9 +79,17 @@ function Panel:buildProfile()
 	local player = self.menu.player
 	local hero = box(page, "Miner", 0, 0, 236, 352, aqua)
 	Card.rays(hero, 118, 92, 230, 8)
-	headshot(hero, player.UserId, 53, 16, 130)
+	self.face = headshot(hero, player.UserId, 53, 16, 130)
 	local name = words(hero, player.DisplayName, 8, 152, 220, 36, 30)
+	name.RichText = true
 	W.largest(name, 30, 16)
+	self.nameLabel = name
+	-- Back to their own profile after looking at someone else's.
+	local back, backPaint, backLabel = press(hero, "Back to you", 8, 8, 104, 32, 17)
+	backPaint.Color, backLabel.Text, back.Visible = ColorSequence.new(rgb(255, 226, 120), rgb(240, 150, 30)), "◀ You", false
+	back.ZIndex = 6
+	back.Activated:Connect(function() self:view(nil) end)
+	self.back = back
 	self.title = words(hero, "", 8, 188, 220, 26, 19, rgb(255, 244, 170))
 	self.level = words(hero, "", 8, 222, 220, 40, 34)
 	local track = W.frame(hero, "XP", 20, 268, 196, 24, W.navy, 12)
@@ -126,6 +135,67 @@ function Panel:buildFriends()
 	self.status = words(page, "", 0, 150, 764, 60, 22)
 	self.status.TextWrapped = true
 	self.list = Card.scroller(page, "Online friends", 0, 96, 764, 256)
+end
+
+-- A box in the header: type a miner's name and press Enter to see their profile.
+function Panel:buildSearch()
+	local header = self.card.header
+	local field = W.frame(header, "Search", self.card.size.X - 66 - 280, 16, 266, 44, W.navy, 22)
+	field.BackgroundTransparency = 0.25
+	W.stroke(field, W.white, 2).Transparency = 0.5
+	local lens = W.frame(field, "Lens", 13, 11, 16, 16, W.white, 8)
+	lens.BackgroundTransparency = 1
+	W.stroke(lens, W.white, 3)
+	local handle = W.frame(field, "Handle", 26, 26, 9, 4, W.white, 2)
+	handle.Rotation = 45
+	local box = Instance.new("TextBox")
+	box.Name, box.BackgroundTransparency, box.ClearTextOnFocus = "Name", 1, false
+	box.Position, box.Size = UDim2.fromOffset(44, 0), UDim2.fromOffset(212, 44)
+	box.Font, box.TextSize, box.TextColor3, box.Text = Enum.Font.FredokaOne, 21, W.white, ""
+	box.PlaceholderText, box.PlaceholderColor3 = "Find a miner", rgb(205, 200, 235)
+	box.TextXAlignment = Enum.TextXAlignment.Left
+	box.Parent = field
+	box.FocusLost:Connect(function(enter)
+		if enter then self:search(box.Text) end
+	end)
+	self.searchField, self.searchBox = field, box
+end
+
+-- Finds a miner in this server by user name or display name: an exact match first, then the start of one.
+function Panel:search(text)
+	text = string.lower((text or ""):match("^%s*(.-)%s*$"))
+	if text == "" then
+		self:view(nil)
+		return
+	end
+	local found
+	for _, exact in { true, false } do
+		for _, other in Players:GetPlayers() do
+			for _, label in { other.Name, other.DisplayName } do
+				local lower = string.lower(label)
+				if (exact and lower == text) or (not exact and lower:sub(1, #text) == text) then
+					found = found or other
+				end
+			end
+		end
+		if found then break end
+	end
+	if found then
+		self:view(if found == self.menu.player then nil else found)
+	else
+		self:say("No miner called \"" .. text .. "\" in this server.")
+	end
+end
+
+-- Shows `miner`'s profile, or the player's own with nil.
+function Panel:view(miner)
+	self.target = miner
+	local shown = miner or self.menu.player
+	self.face.Image = if shown.UserId > 0 then string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150", shown.UserId) else ""
+	self.back.Visible = miner ~= nil
+	self.said = nil
+	if not miner then self.searchBox.Text = "" end
+	self:refresh()
 end
 
 -- Opens Roblox's own invite window, for everyone or for one friend.
@@ -247,8 +317,10 @@ function Panel:drawFriends()
 end
 
 function Panel:open(key)
+	if not self.card.modal.Visible and self.target then self:view(nil) end
 	self.page = key
 	self.said = nil
+	self.searchField.Visible = key == "Profile"
 	self.profilePage.Visible, self.friendsPage.Visible = key == "Profile", key == "Friends"
 	local card = self.card
 	card:select(key)
@@ -261,11 +333,21 @@ function Panel:open(key)
 end
 
 function Panel:refresh()
-	local player = self.menu.player
-	local here = player:GetAttribute("FriendsHere") or 0
-	if not self.said then
-		self.card.sub.Text = if self.page == "Friends" then "Mine together for " .. FriendBonus.text .. "." else "Your records in the Citrine Mine."
+	if self.target and not self.target.Parent then
+		-- They left the server.
+		self.target = nil
+		self.back.Visible = false
+		self.face.Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150", math.max(1, self.menu.player.UserId))
 	end
+	local me = self.menu.player
+	local player = self.target or me
+	local here = me:GetAttribute("FriendsHere") or 0
+	if not self.said then
+		self.card.sub.Text = if self.page == "Friends" then "Mine together for " .. FriendBonus.text .. "."
+			elseif self.target then player.DisplayName .. "'s records in the Citrine Mine."
+			else "Your records in the Citrine Mine."
+	end
+	self.nameLabel.Text = player.DisplayName .. Rebirth.richBadge(player:GetAttribute("Rebirths") or 0)
 	if self.page == "Friends" then
 		self.bannerTitle.Text = if here > 0 then FriendBonus.text .. " is active!" else "Play with friends for " .. FriendBonus.text
 		self.bannerText.Text = if here > 0 then (if here == 1 then "A friend is" else here .. " friends are") .. " in your server."
@@ -282,7 +364,7 @@ function Panel:refresh()
 	self.xpFill.Size = UDim2.fromScale(math.clamp((xp - start) / need, 0, 1), 1)
 	self.xpFill.Visible = xp > start
 	self.xp.Text = W.number(xp - start) .. " / " .. W.number(need) .. " XP"
-	self.bonus.Text = if here > 0 then "Friend bonus: " .. FriendBonus.text else ""
+	self.bonus.Text = if here > 0 and not self.target then "Friend bonus: " .. FriendBonus.text else ""
 	local favorite, most, rarest, found = nil, 0, nil, 0
 	for _, ore in Ores.list do
 		if player:GetAttribute("Found" .. ore.name) then

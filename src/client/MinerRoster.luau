@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local E = require(game:GetService("ReplicatedStorage").Shared.Expeditions)
 local W = require(script.Parent.Widgets)
+local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Roster = {}
 Roster.__index = Roster
 
@@ -54,7 +55,7 @@ function Roster.new(root, relayout)
 		local row = { frame = frame, player = player, name = name, level = level, title = title, gold = gold }
 		self.rows[player] = row
 		row.change = player.AttributeChanged:Connect(function(key)
-			if key == "Level" or key == "EquippedTitle" or key == "Gold" or key == "LifetimeStarfall" or key == "Rebirths" then
+			if key == "Level" or key == "EquippedTitle" or key == "Gold" or key == "Rebirths" then
 				self:refresh()
 			end
 		end)
@@ -88,13 +89,9 @@ function Roster:refresh()
 	for i, row in ordered do
 		local player = row.player
 		row.frame.Position = UDim2.fromOffset(0, (i - 1) * rowHeight)
-		-- A star marks anyone who has ever mined Starfall.
-		local star = if (player:GetAttribute("LifetimeStarfall") or 0) > 0 then "★ " else ""
-		-- Rebirth milestone 1: the rebirth count follows the name.
-		local rebirths = player:GetAttribute("Rebirths") or 0
-		local reborn = if rebirths > 0 then W.colored(" R" .. rebirths, W.rebirth) else ""
+		-- Rebirth milestone 1: the rebirth badge follows the name.
 		row.name.RichText = true
-		row.name.Text = i .. ". " .. star .. player.DisplayName .. reborn
+		row.name.Text = i .. ". " .. player.DisplayName .. Rebirth.richBadge(player:GetAttribute("Rebirths") or 0)
 		row.title.Text = (E.ranks[player:GetAttribute("EquippedTitle") or 1] or E.ranks[1]).name
 		row.level.Text = tostring(player:GetAttribute("Level") or 1)
 		row.gold.Text = W.goldAmount(player:GetAttribute("Gold") or 0)

@@ -11,26 +11,28 @@ local Expeditions = require(Shared.Expeditions)
 local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local W = require(script.Parent.Widgets)
 
-local MARKER, CARD = 30, Vector2.new(196, 74)
+local MARKER, CARD = 30, Vector2.new(214, 78)
 
 return function(player: Player, hud: any)
 	local practice = RunService:IsStudio() and game.GameId == 0
 	local markers: { [Player]: BillboardGui } = {}
-	local card = W.frame(hud.root, "Friend card", 0, 0, CARD.X, CARD.Y, W.panel, 10)
+	local card = W.frame(hud.root, "Friend card", 0, 0, CARD.X, CARD.Y, W.white, 14)
 	card.Visible, card.ZIndex = false, 30
-	W.stroke(card, W.aqua, 2)
-	local name = W.title(card, "", 10, 4, CARD.X - 20, 24, 18, W.white, true)
-	local title = W.text(card, "", 10, 27, CARD.X - 20, 18, 14, W.violet, true)
-	local haul = W.text(card, "", 10, 46, CARD.X - 20, 20, 14, W.gold, true)
+	W.enamelPanel(card, Color3.fromRGB(94, 88, 160), Color3.fromRGB(62, 57, 112), 14)
+	local name = W.title(card, "", 12, 5, CARD.X - 24, 26, 20, W.white, true)
+	name.RichText = true
+	local title = W.title(card, "", 12, 30, CARD.X - 24, 20, 15, Color3.fromRGB(255, 244, 170), true)
+	local haul = W.title(card, "", 12, 51, CARD.X - 24, 20, 15, W.gold, true)
 	for _, label in { name, title, haul } do
 		label.ZIndex = 31
+		W.navyText(label, 2.2)
 	end
 	local shown: Player?
 
 	local function describe(friend: Player)
 		local level = friend:GetAttribute("Level") or 1
 		local rank = Expeditions.ranks[friend:GetAttribute("EquippedTitle") or 1]
-		name.Text = friend.DisplayName
+		name.Text = friend.DisplayName .. Rebirth.richBadge(friend:GetAttribute("Rebirths") or 0)
 		title.Text = string.format("%s  ·  Lv %d", if rank then rank.name else "Miner", level)
 		local value = (friend:GetAttribute("BagValue") or 0) * Rebirth.saleMultiplier(friend)
 		haul.Text = string.format("Haul %s / %s  ·  %s G", W.number(friend:GetAttribute("Used") or 0),
@@ -66,16 +68,30 @@ return function(player: Player, hud: any)
 		return Vector2.new(at.X, at.Y) - inset
 	end
 
-	local function attach(friend: Player)
+	local waiting: { [any]: RBXScriptConnection } = {}
+	local function attach(friend: any)
 		local character = friend.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if not character then
+			return
+		end
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if waiting[friend] then
+			waiting[friend]:Disconnect()
+			waiting[friend] = nil
+		end
+		-- A character that just spawned, or is streamed out, has no root yet. Mark it when it arrives.
+		waiting[friend] = character.ChildAdded:Connect(function(child)
+			if child.Name == "HumanoidRootPart" and friend.Character == character then
+				attach(friend)
+			end
+		end)
 		if not root then
 			return
 		end
 		local gui = markers[friend] or Instance.new("BillboardGui")
 		gui.Name = "Friend marker"
 		gui.Size = UDim2.fromOffset(MARKER, MARKER)
-		gui.StudsOffsetWorldSpace = Vector3.new(0, 4.2, 0)
+		gui.StudsOffsetWorldSpace = Vector3.new(0, 5, 0)
 		gui.AlwaysOnTop, gui.Active, gui.LightInfluence = true, true, 0
 		gui.MaxDistance = 4000
 		gui.ResetOnSpawn = false
@@ -142,6 +158,10 @@ return function(player: Player, hud: any)
 	end
 	Players.PlayerAdded:Connect(track)
 	Players.PlayerRemoving:Connect(function(other)
+		if waiting[other] then
+			waiting[other]:Disconnect()
+			waiting[other] = nil
+		end
 		if markers[other] then
 			markers[other]:Destroy()
 			markers[other] = nil
@@ -156,4 +176,5 @@ return function(player: Player, hud: any)
 			show(friend, screenPoint(markers[friend]))
 		end
 	end)
+	return { attach = attach, show = show, screenPoint = screenPoint, markers = markers }
 end

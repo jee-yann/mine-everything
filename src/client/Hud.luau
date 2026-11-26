@@ -926,6 +926,30 @@ function Hud:workshop(key, level)
 	self.menu:upgraded(key)
 	self.unlocks:show("upgrade", headline, detail, key)
 end
+-- A line in chat when anyone in the server finds Starfall.
+function Hud:announceStarfall(who)
+	local tint = Ores.byName.Starfall.color:Lerp(Color3.new(1, 1, 1), 0.3)
+	local line = "★ " .. who .. " unearthed Starfall! The rarest ore in the mine."
+	local chat = game:GetService("TextChatService")
+	if chat.ChatVersion == Enum.ChatVersion.TextChatService then
+		local channels = chat:FindFirstChild("TextChannels")
+		local general = channels and (channels:FindFirstChild("RBXGeneral") or channels:FindFirstChild("RBXSystem"))
+		if general then
+			pcall(general.DisplaySystemMessage, general,
+				string.format('<font color="#%s"><b>★ %s unearthed Starfall!</b></font> The rarest ore in the mine.', tint:ToHex(), who))
+		end
+		return
+	end
+	-- The older chat takes its system lines through SetCore, once it has started.
+	task.spawn(function()
+		for _ = 1, 10 do
+			local sent = pcall(StarterGui.SetCore, StarterGui, "ChatMakeSystemMessage",
+				{ Text = line, Color = tint, Font = Enum.Font.FredokaOne, TextSize = 18 })
+			if sent then return end
+			task.wait(0.5)
+		end
+	end)
+end
 function Hud:notice(title, detail, color)
 	self.untilTime = os.clock() + 2.1
 	-- Notices can carry any text. Only the guide's own lines use colour tags.

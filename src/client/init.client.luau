@@ -312,6 +312,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			if point > 1 then "Their Starfall number " .. point .. ". The rarest ore in the mine." else "The rarest ore in the mine, found only in the crater.",
 			Ores.byName.Starfall.color
 		)
+		hud:announceStarfall(if spread then "You" else a)
 	elseif kind == "depart" then
 		release()
 		passage:depart(a, point)
@@ -415,7 +416,7 @@ end)
 
 require(script.Podiums).start(player, hud)
 require(script.CourtBoards).start(player, hud)
-require(script.FriendMarkers)(player, hud)
+hud.friendMarkers = require(script.FriendMarkers)(player, hud)
 
 Players.PlayerAdded:Connect(Swing.observe)
 for _, other in Players:GetPlayers() do
