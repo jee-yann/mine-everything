@@ -16,7 +16,7 @@ local Profile = {}
 function Profile.new()
 	return {
 		version = 1,
-		progression = 2,
+		progression = 3,
 		introSeen = false,
 		firstTrip = {},
 		gold = 0,
@@ -205,7 +205,9 @@ function Profile.valid(p)
 		return false
 	end
 	for _, k in Upgrades.order do
-		if not integer(p.levels[k], #Upgrades.items[k].values) or p.levels[k] < 1 then
+		-- Saves from before the 30-level Speed curve (progression 3) may hold up to the old 100.
+		local most = if k == "Speed" and (p.progression or 1) < 3 then 100 else #Upgrades.items[k].values
+		if not integer(p.levels[k], most) or p.levels[k] < 1 then
 			return false
 		end
 	end
@@ -370,6 +372,11 @@ function Profile.upgradeSave(p)
 			p.levels[key] = Upgrades.migrateLevel(key, p.levels[key])
 		end
 		p.progression = 2
+	end
+	-- The 30-level Speed curve: keep at least the speed they had.
+	if p.progression < 3 then
+		p.levels.Speed = Upgrades.migrateSpeed(p.levels.Speed)
+		p.progression = 3
 	end
 	if p.xp == nil then
 		p.xp = 0

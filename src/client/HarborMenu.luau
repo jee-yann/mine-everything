@@ -295,9 +295,8 @@ function Menu:gear()
 		if key == "Capacity" then
 			return W.number(Skills.capacity(Upgrades.items.Capacity.values[level], owned)) .. " block"
 		elseif key == "Speed" then
-			local base = Upgrades.items.Speed.values[level] * Rebirth.cutMultiplier(self.player:GetAttribute("Rebirths") or 0)
-			local seconds = Skills.cutTime(base, Ores.byName.Stone, 1, 0, owned)
-			return string.format("%.2fs / stone", seconds)
+			-- The pick's own speed, the same for everyone (passes, skills and rebirths come on top).
+			return Upgrades.describe("Speed", level)
 		end
 		return Upgrades.describe(key, level)
 	end
@@ -341,9 +340,19 @@ function Menu:gear()
 			if key == "Power" then
 				W.fitText(benefit, Upgrades.unlockTexts(nextLevel), "Mines ")
 			else
-				benefit.Text = if key == "Capacity" then describe(key, nextLevel) .. " limit"
-					elseif price then describe(key, level) .. " → " .. describe(key, nextLevel)
-					else describe(key, nextLevel)
+				-- What the next level adds: Speed as how much faster, the Backpack as how many more slots.
+				benefit.RichText = true
+				if key == "Capacity" then
+					local now, after = Skills.capacity(Upgrades.items.Capacity.values[level], owned), Skills.capacity(Upgrades.items.Capacity.values[nextLevel], owned)
+					benefit.Text = if price then W.number(now) .. " → " .. W.number(after) .. " blocks  " .. W.colored("+" .. W.number(after - now), W.green)
+						else W.number(after) .. " blocks"
+				elseif key == "Speed" and price then
+					local values = Upgrades.items.Speed.values
+					benefit.Text = string.format("%.2fs → %.2fs / stone  ", values[level], values[nextLevel])
+						.. W.colored("+" .. Upgrades.speedGain(nextLevel) .. "% faster", W.green)
+				else
+					benefit.Text = describe(key, nextLevel)
+				end
 			end
 			if not price then
 				detail.Text = ""

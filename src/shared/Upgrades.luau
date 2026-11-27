@@ -7,10 +7,13 @@ local Config = require(script.Parent.GameConfig)
 -- Speed and Capacity have long curves so the workshop keeps paying out for months: early levels
 -- are cheap and frequent, mid levels slow down, and the last levels are a long grind. Prices grow
 -- geometrically from `base` by `growth`.
--- Speed: seconds per plain stone, 0.8 * level^-0.301 (0.80 at level 1, 0.40 at 10, 0.20 at 100).
+-- Speed: 30 levels, each one you can feel: every level cuts about 5% faster than the last, from 0.90 s
+-- per plain stone at level 1 to 0.20 s at level 30 (4.5x in all). The start is slower than it was
+-- (the old level 1 was 0.80 s) so the first upgrades matter.
 local speedValues = {}
-for level = 1, 100 do
-	speedValues[level] = math.round(800 * level ^ (-math.log(4) / math.log(100))) / 1000
+local speedLevels, slowest, fastest = 30, 0.9, 0.2
+for level = 1, speedLevels do
+	speedValues[level] = math.round(1000 * slowest * (fastest / slowest) ^ ((level - 1) / (speedLevels - 1))) / 1000
 end
 -- Capacity: quadratic growth, 8 + 6(L-1) + 2(L-1)^2 slots (8, 16, 28, 44, 64 ... 3,284 at 40).
 local capacityValues = {}
@@ -21,7 +24,7 @@ local upgrades = {
 	Speed = {
 		values = speedValues,
 		base = 30,
-		growth = 1.18,
+		growth = 1.55,
 		icon = "»",
 		color = rgb(255, 200, 80),
 	},
@@ -72,12 +75,29 @@ assert(
 )
 assert(#upgrades.Power.prices == #upgrades.Power.values - 1, "one price per Power upgrade")
 
+-- Saves from before the 30-level Speed curve (progression 2) held a level on the old 100-level one,
+-- 0.8 * level^-0.301 seconds. They move to the first new level at least as fast.
+function api.migrateSpeed(level)
+	local old = 0.8 * math.clamp(level, 1, 100) ^ (-math.log(4) / math.log(100))
+	for newLevel, value in speedValues do
+		if value <= old + 1e-9 then return newLevel end
+	end
+	return #speedValues
+end
+
+-- The 100-level Speed curve that progression 2 saves were on.
+local oldSpeed = {}
+for level = 1, 100 do
+	oldSpeed[level] = 0.8 * level ^ (-math.log(4) / math.log(100))
+end
+
 function api.migrateLevel(key, level)
 	local old = legacy[key] and legacy[key][level]
 	if not old then
 		return level
 	end
-	local values = upgrades[key].values
+	-- Speed moved onto the 100-level curve then (migrateSpeed takes it on to today's).
+	local values = if key == "Speed" then oldSpeed else upgrades[key].values
 	for newLevel, value in values do
 		if (key == "Speed" and value <= old) or (key == "Capacity" and value >= old) then
 			return newLevel
@@ -141,10 +161,16 @@ function api.unlockTexts(level)
 	return texts
 end
 
+-- How much faster Speed level `level` cuts than the level before it, in percent (0 at level 1).
+function api.speedGain(level)
+	if level <= 1 then return 0 end
+	return math.round((speedValues[level - 1] / speedValues[level] - 1) * 100)
+end
+
 function api.describe(key, level)
 	local v = upgrades[key].values[level]
 	if key == "Speed" then
-		return string.format(if v >= 0.3 then "%.2fs / stone" else "%.3fs / stone", v)
+		return string.format("%.2fs / stone", v)
 	end
 	if key == "Capacity" then
 		return v .. " block limit"

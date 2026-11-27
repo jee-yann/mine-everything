@@ -799,10 +799,25 @@ do
 	local reloaded = Data.claim({ profile = oldSave }, "oldSave-expansion", 60).profile
 	assert(reloaded.levels.Power == 6 and Profile.stat(reloaded, "Power") == 6 and Upgrades.pickNames[6] == "Prismheart Pick", "old pick kept")
 	-- Old Speed 7 (0.20 s) and Capacity 8 (64 slots) move to the first long-curve level as good.
-	assert(reloaded.progression == 2 and reloaded.levels.Speed == 100 and reloaded.levels.Capacity == 5, "old gear migrated")
+	assert(reloaded.progression == 3 and reloaded.levels.Speed == 30 and reloaded.levels.Capacity == 5, "old gear migrated")
 	assert(Profile.stat(reloaded, "Speed") == 0.2 and Profile.stat(reloaded, "Capacity") == 64, "old gear kept")
 	assert(Upgrades.migrateLevel("Speed", 1) == 1 and Upgrades.migrateLevel("Capacity", 2) == 2, "starter levels unchanged")
-	assert(Upgrades.price("Power", 6) and not Upgrades.price("Speed", 100) and Upgrades.price("Capacity", 5), "migrated gear upgrades further")
+	assert(Upgrades.price("Power", 6) and not Upgrades.price("Speed", 30) and Upgrades.price("Capacity", 5), "migrated gear upgrades further")
+	-- The 30-level Speed curve: every level about 5% faster (none too small to feel), 0.90 s to 0.20 s,
+	-- and a save on the old 100-level curve keeps at least its speed.
+	local speeds = Upgrades.items.Speed.values
+	assert(#speeds == 30 and speeds[1] == 0.9 and speeds[30] == 0.2)
+	for level = 2, #speeds do
+		local gain = Upgrades.speedGain(level)
+		assert(gain >= 4 and gain <= 7, "Speed level " .. level .. " is " .. gain .. "% faster")
+	end
+	local midway = Profile.new()
+	midway.progression, midway.levels.Speed = 2, 50
+	assert(Profile.valid(midway), "a save on the old Speed curve still loads")
+	local moved = Data.claim({ profile = midway }, "speed-curve", 60).profile
+	local oldSeconds = 0.8 * 50 ^ (-math.log(4) / math.log(100))
+	assert(moved.progression == 3 and Profile.stat(moved, "Speed") <= oldSeconds and speeds[moved.levels.Speed - 1] > oldSeconds, "old Speed 50 keeps its speed")
+	assert(speeds[Upgrades.migrateSpeed(1)] <= 0.8 and speeds[Upgrades.migrateSpeed(1) - 1] > 0.8, "an old first level keeps its 0.80 s")
 	Profile.recordCut(reloaded, "Sunstone", 5)
 	Profile.recordCut(reloaded, "Voidshard", 600)
 	assert(reloaded.discoveries.Sunstone and reloaded.bag.Voidshard == 1 and Profile.valid(reloaded), "new ores save")

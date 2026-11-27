@@ -638,6 +638,12 @@ local function test()
 			assert(benefit.Text:sub(1, 12) == "Mines Copper" and benefit.TextFits, benefit.Text)
 			assert(benefit.AbsolutePosition.X + benefit.AbsoluteSize.X <= menu.Listings.Power.Action.AbsolutePosition.X)
 			assert(menu.Marquee.Purse.Visible, "the workshop shows what the miner can spend")
+			-- Speed says how much faster the next level is; the Backpack, how many slots it adds.
+			local speedText, packText = menu.Listings.Speed.Benefit, menu.Listings.Capacity.Benefit
+			assert(speedText.ContentText:find("0.90s → ", 1, true) and speedText.ContentText:find("% faster", 1, true)
+				and speedText.TextFits, speedText.ContentText)
+			assert(packText.ContentText:find("8 → 16 blocks", 1, true) and packText.ContentText:find("+8", 1, true)
+				and packText.TextFits, packText.ContentText)
 		end
 		if page == "Daily" then
 			assert(wide.Body.Daily["Day 1"].Claim.Interactable and not wide.Body.Daily["Day 2"].Claim.Interactable, "day 1 is ready")
