@@ -29,14 +29,15 @@ local Config = {
 	SurfaceName = "Citrine Cove",
 	Reach = 34,
 	StoreName = "EndlessMining_v1",
-	AllowProgressReset = true, -- Prototype Settings option. Set false to retire it for release.
+	AllowProgressReset = false, -- Prototype Settings option: a Reset progress button. Off for release.
 	-- Playtesting: every miner can wear every Mining FX and Player FX, even in the published game.
-	-- Crates still roll and grant as normal. Set false for release.
-	AllFxForTesting = true,
+	-- Crates still roll and grant as normal. Off for release; turn on only for a playtest.
+	AllFxForTesting = false,
 	-- Playtesting: anything in the Shop without a Robux ID yet (StoreConfig id = 0) is given free when
 	-- bought, even in the published game, so crates, boosts and passes can be tried. Items with an ID
-	-- always go through Roblox's checkout. Set false for release.
-	FreeUnconfiguredItems = true,
+	-- always go through Roblox's checkout. Off for release (an unpublished Studio test still gives them
+	-- free, so the Shop can be tried there).
+	FreeUnconfiguredItems = false,
 	LeaseSeconds = 180,
 	AutosaveSeconds = 45,
 	-- Maximum pattern faces checked per second across all players.
@@ -302,5 +303,10 @@ function Config.inHall(p)
 end
 function Config.inMine(p)
 	return p.Y < Config.FloorY - Config.Cell * Config.DirtLayers or (Config.inHall(p) and p.Y < Config.FloorY + 12)
+end
+-- The automated play tests (tests/run_play.py marks their place with MiningTestMode) run with the
+-- playtest switches on, so they still cover the progress reset and wearing every effect.
+if game:GetService("ReplicatedStorage"):GetAttribute("MiningTestMode") then
+	Config.AllowProgressReset, Config.AllFxForTesting = true, true
 end
 return Config

@@ -8,12 +8,13 @@ only asks.
 **Playtesting:** while `AllFxForTesting` is true in `src/shared/GameConfig.luau`, every miner can wear
 every Mining FX and Player FX, even in the published game (the Inventory says "Unlocked for
 playtesting"). Crates still roll and grant normally, and duplicates still count against what you
-really own. Set it to false for release.
+really own. It is off for release; turn it on only for a playtest.
 
 **Free purchases while playtesting:** while `FreeUnconfiguredItems` is true (same file), anything in
 the Shop without a Robux ID yet is given free when bought, even in the published game, so crates,
-boosts and passes can be tried. Items with an ID always go through Roblox's checkout. Set it to false
-for release.
+boosts and passes can be tried. Items with an ID always go through Roblox's checkout. It is off for
+release (an unpublished Studio test still gives them free). Images and descriptions for the Creator
+Dashboard are in [Store-listings.md](Store-listings.md).
 
 ## Where things live
 

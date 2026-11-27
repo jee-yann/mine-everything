@@ -833,6 +833,8 @@ function Menu:open(key)
 	elseif key:match("^Shop") then
 		self.shop = self.shop or ShopPanel.new(self)
 		wide = self.shop
+		-- For the Shop funnel (server/Analytics): a visit starts when the Shop opens, not on a tab change.
+		if not (self.overlay.Visible and not self.closing and type(self.page) == "string" and self.page:match("^Shop")) then self.net.Action:FireServer("ShopOpened") end
 	elseif key == "Inventory" or key == "Items" or key == "MiningTrails" or key == "PlayerFX" or key == "Titles" then
 		self.inventory = self.inventory or InventoryPanel.new(self)
 		wide = self.inventory

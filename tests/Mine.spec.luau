@@ -499,6 +499,40 @@ assert(Profile.buySupply(specialist, "Temper") and specialist.temper == 55)
 	assert(not reshuffled.skills.OldSkill and #reshuffled.refunded == 4, "orphans and what hung off them are refunded")
 	assert(Guide.points(reshuffled.xp, reshuffled.skills) == before + 4)
 	assert(#Skills.prune(reshuffled.skills) == 0, "a connected tree keeps everything")
+	-- Analytics: onboarding steps count only in order and go once; the road follows the pick upgrades;
+	-- saves from before analytics send nothing; the record survives a save.
+	local Analytics = require(Server.Analytics)
+	local newcomer, who = Profile.new(), {}
+	table.clear(Analytics.sent)
+	Analytics.progress(who, newcomer, Profile.facts(newcomer))
+	assert(#Analytics.sent == 1 and Analytics.sent[1][1] == "LogOnboardingFunnelStepEvent" and Analytics.sent[1][3] == 1)
+	newcomer.mined, newcomer.firstTrip.sold = 5, true
+	Analytics.progress(who, newcomer, Profile.facts(newcomer))
+	assert(newcomer.analytics.onboarding == 1, "no skipping past the opening")
+	newcomer.introSeen = true
+	Analytics.progress(who, newcomer, Profile.facts(newcomer))
+	assert(newcomer.analytics.onboarding == 4, "joined, opening, mined, sold")
+	local logged = #Analytics.sent
+	Analytics.progress(who, newcomer, Profile.facts(newcomer))
+	assert(#Analytics.sent == logged, "each step once")
+	newcomer.levels.Power = 3
+	Analytics.progress(who, newcomer, Profile.facts(newcomer))
+	assert(newcomer.analytics.onboarding == 5 and newcomer.analytics.road == 2, "upgrade step and Power 2, 3 on the road")
+	Analytics.milestone(who, newcomer, "Opened a crate")
+	Analytics.milestone(who, newcomer, "Opened a crate")
+	local crates = 0
+	for _, event in Analytics.sent do
+		if event[1] == "LogCustomEvent" and event[3] == "Opened a crate" then crates += 1 end
+	end
+	assert(crates == 1, "a milestone goes once")
+	local saved = Data.snapshot(newcomer)
+	assert(saved.analytics.onboarding == 5 and saved.analytics.done["Opened a crate"] and Profile.valid(saved))
+	local tester = Profile.new()
+	tester.analytics, tester.mined, tester.introSeen, tester.xp = nil, 40, true, 30
+	tester = Data.claim({ profile = tester }, "tester", 103).profile
+	table.clear(Analytics.sent)
+	Analytics.progress(who, tester, Profile.facts(tester))
+	assert(#Analytics.sent == 0, "saves from before analytics stay out of the funnels")
 	local farCave = {
 		isCave = function(_, cell)
 			return cell == Vector3.new(13, 0, 0)

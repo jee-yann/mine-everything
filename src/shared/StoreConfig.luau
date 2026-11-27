@@ -26,7 +26,7 @@ S.passes = {
 	-- cells; every 3 minutes that is about 1,600 cells an hour against the ~900 a miner digs, so
 	-- Starfall turns up a bit under three times as often. (Radius 3 every 2 minutes was ~3,700 cells
 	-- an hour, 3-5x: too strong.)
-	{ key = "StarfallCompass", id = 0, price = 449, name = "Starfall Compass", detail = "Every 3 minutes underground it points to any Starfall within 2 blocks, even buried", grants = { "StarfallCompass" }, icon = "Crystal", tag = "NEW" },
+	{ key = "StarfallCompass", id = 0, price = 449, name = "Starfall Compass", detail = "Every 3 minutes underground it points to any Starfall within 2 blocks, even buried", grants = { "StarfallCompass" }, icon = "Compass", tag = "NEW" },
 }
 S.compassRadius, S.compassEvery = 2, 180
 local everything = { "Everything" }

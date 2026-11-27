@@ -29,6 +29,7 @@ function Data.snapshot(p)
 		version = p.version,
 		introSeen = p.introSeen,
 		firstTrip = table.clone(p.firstTrip),
+		analytics = p.analytics and { onboarding = p.analytics.onboarding, road = p.analytics.road, done = table.clone(p.analytics.done) },
 		gold = p.gold,
 		gems = p.gems, stampCount = p.stampCount, stampDay = p.stampDay, stampAt = p.stampAt, giftStart = p.giftStart,
 		shiftDay = p.shiftDay, shiftSeconds = p.shiftSeconds, shiftClaims = p.shiftClaims,

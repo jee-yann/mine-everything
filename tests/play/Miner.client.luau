@@ -1481,9 +1481,11 @@ local function test()
 	for i = 1, 100 do
 		if p:GetAttribute("Mined") == 40 then break end
 		if p:GetAttribute("Used") == upgradeSlots then
-			secondSale = p:GetAttribute("BagValue")
+			-- What the sale actually paid (the pack's shown value can lag its last block by a moment).
+			local before = p:GetAttribute("Gold")
 			visit("Sell", true)
-			waitFor(function() return p:GetAttribute("Used") == 0 end, 5, "sell the full upgraded pack")
+			waitFor(function() return p:GetAttribute("Used") == 0 and p:GetAttribute("Gold") > before end, 5, "sell the full upgraded pack")
+			secondSale = p:GetAttribute("Gold") - before
 			r:FireServer("position")
 			waitFor(function() return (p.Character.Head.Position - origin).Z < 0 and not overlay.Visible end, 5, "back to mine")
 		end
@@ -1565,7 +1567,8 @@ local function test()
 		return p:GetAttribute("SeenAchievementsFirstCrate")
 	end, 5, "scroll reads new achievement")
 	local afterJob = p:GetAttribute("Gold")
-	assert(afterJob == saleGold - 8 + secondSale + 80 + 25)
+	assert(afterJob == saleGold - 8 + secondSale + 80 + 25,
+		string.format("gold after jobs %d, expected %d (sales %d and %d)", afterJob, saleGold - 8 + secondSale + 105, saleGold, secondSale))
 	task.wait(0.25)
 	n.Action:FireServer("Job", 2)
 	task.wait(0.3)

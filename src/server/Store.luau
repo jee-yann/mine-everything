@@ -14,6 +14,7 @@ local Rep = game:GetService("ReplicatedStorage")
 local Shared = Rep.Shared
 local S, C = require(Shared.StoreConfig), require(Shared.Collectibles)
 local Collection = require(script.Parent.Collection)
+local Analytics = require(script.Parent.Analytics)
 local Earnings, Geodes = require(Shared.Earnings), require(Shared.Geodes)
 local Config = require(Shared.GameConfig)
 local DSS = game:GetService("DataStoreService")
@@ -180,6 +181,7 @@ local function deliver(player, session, product, context)
 	elseif product.group == "Gold" then
 		local gold = Earnings.minutes(p, product.minutes)
 		p.gold += gold
+		Analytics.gold(player, p, "Source", gold, "IAP", product.key)
 		context.feedback(player, "goldPack", gold, product.name)
 	elseif product.key == "ResetSkills" then
 		p.skills = {}
@@ -215,6 +217,7 @@ function Store.receipt(info, sessions, context, save)
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		deliver(player, session, product, context)
+		Analytics.shopStep(player, 3, product.key)
 		if context.feedback then context.feedback(player, "purchase", product.name, "product", product.key) end
 		done[info.PurchaseId] = true
 		table.insert(p.store.order, info.PurchaseId)
@@ -263,6 +266,7 @@ function Store.prompt(player, session, kind, key, context)
 		else
 			deliver(player, session, item, context)
 		end
+		Analytics.shopStep(player, 3, key)
 		context.feedback(player, "purchase", item.name, kind, key)
 	else
 		context.feedback(player, "hint", item.name .. " isn't on sale yet")
@@ -296,6 +300,7 @@ function Store.start(context)
 		for _, pass in S.passes do
 			if pass.id > 0 and pass.id == id then
 				own(player, pass.key)
+				Analytics.shopStep(player, 3, pass.key)
 				context.feedback(player, "purchase", pass.name, "pass", pass.key)
 			end
 		end
