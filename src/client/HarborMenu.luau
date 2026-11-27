@@ -1,6 +1,4 @@
 local Shared = game:GetService("ReplicatedStorage").Shared
-local Market = game:GetService("MarketplaceService")
-local RunService = game:GetService("RunService")
 local Gui = game:GetService("GuiService")
 local Input = game:GetService("UserInputService")
 local Upgrades, Expeditions, Ores = require(Shared.Upgrades), require(Shared.Expeditions), require(Shared.Ores)
@@ -8,13 +6,14 @@ local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Settings = require(script.Parent.Settings)
 local SellCounter = require(script.Parent.SellCounter)
 local GuideButton = require(script.Parent.GuideButton)
-local Catalog = require(Shared.PassCatalog)
 local Materials = require(Shared.Materials)
+local StoreConfig, Bonuses = require(Shared.StoreConfig), require(Shared.Bonuses)
 local W, Icons = require(script.Parent.Widgets), require(script.Parent.Icons)
 local FieldPages = require(script.Parent.FieldPages)
 local Field = require(Shared.FieldRewards)
 local RewardsPanel, IndexPanel = require(script.Parent.RewardsPanel), require(script.Parent.IndexPanel)
 local RebirthPanel, ProfilePanel = require(script.Parent.RebirthPanel), require(script.Parent.ProfilePanel)
+local ShopPanel, InventoryPanel, PetsPanel = require(script.Parent.ShopPanel), require(script.Parent.InventoryPanel), require(script.Parent.PetsPanel)
 local Guide = require(Shared.FieldGuide)
 local Purity = require(Shared.OrePurity)
 local Skills = require(Shared.Skills)
@@ -32,14 +31,24 @@ local themes = {
 	[W.pink] = ColorSequence.new(rgb(255, 159, 200), rgb(227, 69, 138)),
 }
 local jobTabs = { "All", "Daily", "Quests", "Collected" }
-local inventoryTabs = { "Inventory", "Pets", "Kit", "Passes" }
+local inventoryTabs = {}
 Menu.pages = {
 	Menu = { name = "Menu", color = W.aqua },
 	Inventory = { name = "Inventory", color = W.gold },
 	Pets = { name = "Pets", color = W.violet },
+	PetStyles = { name = "Pet Styles", color = W.violet },
+	Items = { name = "Inventory", color = W.orange },
+	MiningTrails = { name = "Mining Trails", color = W.orange },
+	PlayerFX = { name = "Player Effects", color = W.orange },
+	Forge = { name = "Forge", color = W.orange },
+	Shop = { name = "Shop", color = W.pink },
+	ShopGeodes = { name = "Crates", color = W.orange },
+	ShopCrates = { name = "Crates", color = W.orange },
+	ShopPasses = { name = "Game passes", color = W.gold },
+	ShopBoosts = { name = "Boosts", color = W.green },
+	ShopGems = { name = "Gems", color = W.aqua },
 	Kit = { name = "Supplies", color = W.aqua },
 	Supplies = { name = "Field Supplies", color = W.gold },
-	Passes = { name = "Game passes", color = W.violet },
 	Skills = { name = "Skill tree", color = W.green },
 	Achievements = { name = "Achievements", color = W.orange },
 	Titles = { name = "Miner titles", color = W.gold },
@@ -50,7 +59,6 @@ Menu.pages = {
 	Book = { name = "Ore index", color = W.green },
 	Daily = { name = "Daily rewards", color = W.pink },
 	Playtime = { name = "Playtime gifts", color = W.violet },
-	Store = { name = "Outfitters", color = W.pink },
 	Pack = { name = "My backpack", color = W.gold },
 	Rebirth = { name = "Rebirth", color = W.rebirth },
 	Profile = { name = "Profile", color = W.aqua },
@@ -197,7 +205,7 @@ function Menu:layout(width, height, touch)
 	-- Give landscape phones larger type and touch targets by scrolling the rows
 	-- inside the card. Keep the header, footer and close button within safe bounds.
 	self.touchLayout = touch
-	for _, panel in { self.rewards, self.index, self.rebirth, self.profile } do
+	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory, self.pets } do
 		panel.card:layout(Vector2.new(width, height), touch)
 	end
 	local shortLandscape = width > height and (touch or height < 470)
@@ -546,37 +554,6 @@ function Menu:pack()
 	end)
 	return 0
 end
-function Menu:passes()
-	for i, item in Catalog do
-		local _, detail, b = self:row(i, item.name, item.icon, item.color)
-		if item.key == "PrismTrail" then
-			b.Activated:Connect(function()
-				self.net.Action:FireServer(
-					"Preference",
-					"TrailEnabled",
-					self.player:GetAttribute("TrailEnabled") ~= true
-				)
-			end)
-		end
-		table.insert(self.updates, function()
-			local owned = self.player:GetAttribute(item.key) == true
-			local toggle = owned and item.key == "PrismTrail"
-			local enabled = self.player:GetAttribute("TrailEnabled") ~= false
-			detail.Text = if not owned
-				then "Available at Outfitters"
-				elseif toggle then (if enabled then "Rainbow trail equipped" else "Rainbow trail hidden")
-				else item.detail
-			setButton(
-				b,
-				if toggle then (if enabled then "Disable" else "Enable") elseif owned then "Active" else "Unowned",
-				if owned then item.color else W.muted,
-				toggle
-			)
-		end)
-	end
-	return #Catalog
-end
-
 function Menu:attention(key)
 	local p = self.player
 	if key == "Skills" then
@@ -616,6 +593,17 @@ function Menu:attention(key)
 		end
 	elseif key == "Rebirth" then
 		return Rebirth.ready(p:GetAttribute("RunStarfalls") or 0)
+	elseif key == "Shop" then
+		-- VIP's chest is ready.
+		local benefits = "," .. (p:GetAttribute("Passes") or "") .. ","
+		return benefits:find(",VIP,", 1, true) ~= nil
+			and (p:GetAttribute("VipChestAt") or 0) + StoreConfig.vipChest.cooldown <= workspace:GetServerTimeNow()
+	elseif key == "Inventory" then
+		-- A crate waiting to be opened.
+		local col = Bonuses.decode(p:GetAttribute("Collection")) or {}
+		for id, n in col.items or {} do
+			if id:match("Geode$") and n > 0 then return true end
+		end
 	elseif key == "Achievements" then
 		for _, award in Guide.achievements do
 			if
@@ -654,55 +642,8 @@ function Menu:observeRows(now)
 	end
 end
 
-function Menu:store()
-	for i, item in Catalog do
-		local _, detail, b = self:row(i, item.name, item.icon, item.color)
-		detail.Text = item.detail
-		local trial = item.id == 0 and RunService:IsStudio() and (game.GameId == 0 or self.player.UserId <= 0)
-		b.Activated:Connect(function()
-			if self.player:GetAttribute(item.key) then
-				return
-			end
-			if trial then
-				self.net.Action:FireServer("PreviewPass", item.key)
-			elseif type(self.prices[item.key]) == "number" then
-				self.net.Action:FireServer("Pass", item.key)
-			end
-		end)
-		table.insert(self.updates, function()
-			local owned, price = self.player:GetAttribute(item.key), self.prices[item.key]
-			local sale = type(price) == "number"
-			setButton(
-				b,
-				if owned
-					then (if trial then "Trying now" else "Owned")
-					elseif trial then "Try in Studio"
-					elseif sale then "R$ " .. price
-					elseif price == "loading" then "Loading…"
-					else "Off sale",
-				if owned then W.green elseif trial or sale then item.color else W.muted,
-				not owned and (trial or sale)
-			)
-		end)
-		if item.id > 0 and type(self.prices[item.key]) ~= "number" and self.prices[item.key] ~= "loading" then
-			self.prices[item.key] = "loading"
-			task.spawn(function()
-				local ok, info = pcall(Market.GetProductInfoAsync, Market, item.id, Enum.InfoType.GamePass)
-				self.prices[item.key] = if ok
-						and info.IsForSale
-						and type(info.PriceInRobux) == "number"
-					then info.PriceInRobux
-					else false
-				if self.page == "Store" then
-					self:refresh()
-				end
-			end)
-		end
-	end
-	return #Catalog
-end
 local function shortcuts(self)
-	local destinations = { "Daily", "Playtime", "Inventory", "Skills", "Achievements", "Book", "Jobs", "Rebirth", "Profile", "Friends", "Settings", "Pets", "Miners" }
+	local destinations = { "Shop", "Pets", "Daily", "Playtime", "Inventory", "Skills", "Achievements", "Book", "Jobs", "Rebirth", "Profile", "Friends", "Settings", "Miners" }
 	for i, key in destinations do
 		local page = Menu.pages[key]
 		local color = if page then page.color else W.aqua
@@ -757,17 +698,14 @@ local builders = {
 	Gear = Menu.gear,
 	Sell = SellCounter.build,
 	Inventory = FieldPages.titles,
-	Pets = FieldPages.pets,
 	Kit = Menu.kit,
 	Supplies = Menu.supplies,
-	Passes = Menu.passes,
 	Achievements = FieldPages.achievements,
 	Settings = function(self)
 		return self.preferences:build(self)
 	end,
 	Jobs = Menu.jobs,
 	Pack = Menu.pack,
-	Store = Menu.store,
 }
 function Menu:showInventoryTab(key, animate)
 	if not self.tabUpdates then
@@ -787,8 +725,17 @@ function Menu:showInventoryTab(key, animate)
 	self.pager:JumpTo(self.list)
 end
 function Menu:open(key)
-	if key == "Titles" then
-		key = "Inventory"
+	-- Older names for the pages the Shop and the Collection replaced.
+	if key == "Kit" then
+		key = "Items"
+	elseif key == "Store" then
+		key = "Shop"
+	elseif key == "Passes" then
+		key = "ShopPasses"
+	elseif key == "Collection" then
+		key = "Pets"
+	elseif key == "Trails" then
+		key = "MiningTrails"
 	end
 	local page = Menu.pages[key]
 	if not page then
@@ -828,8 +775,17 @@ function Menu:open(key)
 	elseif key == "Profile" or key == "Friends" then
 		self.profile = self.profile or ProfilePanel.new(self)
 		wide = self.profile
+	elseif key:match("^Shop") then
+		self.shop = self.shop or ShopPanel.new(self)
+		wide = self.shop
+	elseif key == "Inventory" or key == "Items" or key == "MiningTrails" or key == "PlayerFX" or key == "Forge" or key == "Titles" then
+		self.inventory = self.inventory or InventoryPanel.new(self)
+		wide = self.inventory
+	elseif key == "Pets" or key == "PetStyles" then
+		self.pets = self.pets or PetsPanel.new(self)
+		wide = self.pets
 	end
-	for _, panel in { self.rewards, self.index, self.rebirth, self.profile } do
+	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory, self.pets } do
 		if panel ~= wide then panel.card.modal.Visible = false end
 	end
 	self.modal.Visible = key ~= "Skills" and not wide
@@ -868,23 +824,16 @@ function Menu:open(key)
 	self:sizeListings()
 	self.icon =
 		Icons.draw(self.iconWell, if key == "Kit" or key == "Supplies" then "Pack" else key, 5, 5, 40, page.color)
-	self.status.Text = if key == "Store"
-			and RunService:IsStudio()
-			and game.GameId == 0
-		then "Studio trials last for this session."
-		elseif key == "Menu" then ""
+	self.status.Text = if key == "Menu" then ""
 		elseif key == "Inventory" then "Select an unlocked title to wear it."
-		elseif key == "Pets" then "Equip one companion at a time."
 		elseif key == "Kit" then "Restock at Field Supplies beside the market."
 		elseif key == "Supplies" then "Bring mined materials to craft your supplies."
 		elseif key == "Gear" then "Spend gold to upgrade your equipment."
 		elseif key == "Sell" then "Sell one ore, or everything."
-		elseif key == "Passes" then "Visit Outfitters for game passes."
 		elseif key == "Achievements" then "Mine, explore and try new things. ??? reveals when you find the ore."
 		elseif key == "Pack" then "Take your haul to the amber Sell counter."
 		elseif key == "Jobs" then "Deliver today's order from here. A new one comes at midnight UTC."
 		elseif key == "Settings" then "Changes take effect immediately."
-		elseif key == "Store" then "Permanent passes for this experience."
 		else "Upgrades stay equipped between visits."
 	if isTab then
 		self:showInventoryTab(key, switchingTabs and self.preferences.values.MenuMotion)
@@ -1006,7 +955,7 @@ function Menu:refresh()
 	self.heading.Position = UDim2.fromOffset(74, if self.page == "Gear" then 15 else 2)
 	if self.page == "Menu" then
 		self.sub.Text = ""
-	elseif self.page == "Inventory" then
+	elseif self.page == "Inventory" and not self.wide then
 		local xp = p:GetAttribute("MiningXP") or 0
 		local level = Expeditions.level(xp)
 		self.sub.Text = string.format(
@@ -1022,10 +971,6 @@ function Menu:refresh()
 	elseif self.wide then
 		self.wide:refresh()
 		return
-	elseif self.page == "Pets" then
-		self.sub.Text = if p:GetAttribute("Pet") == "Rock" or p:GetAttribute("Pet") == "Drake"
-			then "Equipped   ·   " .. (p:GetAttribute("PetName") or "Pebble")
-			else "Your companions"
 	elseif self.page == "Kit" or self.page == "Supplies" then
 		self.sub.Text = string.format(
 			"%d gems  ·  %d flares  ·  %d temper charges",

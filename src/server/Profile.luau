@@ -10,6 +10,7 @@ local Preferences = require(Shared.Preferences)
 local Guide = require(Shared.FieldGuide)
 local Skills = require(Shared.Skills)
 local Rebirth = require(Shared.Rebirth)
+local Collection = require(script.Parent.Collection)
 local Profile = {}
 
 function Profile.new()
@@ -56,7 +57,32 @@ function Profile.new()
 		discoveries = {},
 		viewed = {},
 		preferences = table.clone(Preferences.defaults),
+		col = Collection.new(),
+		store = { receipts = {}, order = {} },
 	}
+end
+
+-- What the store remembers: granted receipt IDs (so a retried receipt is never paid twice), whether
+-- the one-time Starter Pack was claimed, and when VIP's chest was last opened.
+local function validStore(store)
+	if store == nil then return true end
+	if type(store) ~= "table" or type(store.receipts) ~= "table" or type(store.order) ~= "table" then return false end
+	for id, done in store.receipts do
+		if type(id) ~= "string" or done ~= true then return false end
+	end
+	for _, id in store.order do
+		if type(id) ~= "string" then return false end
+	end
+	if store.starter ~= nil and type(store.starter) ~= "boolean" then return false end
+	if store.vipAt ~= nil and (type(store.vipAt) ~= "number" or store.vipAt < 0) then return false end
+	if store.testGems ~= nil and type(store.testGems) ~= "boolean" then return false end
+	if store.limited ~= nil then
+		if type(store.limited) ~= "table" then return false end
+		for key, done in store.limited do
+			if type(key) ~= "string" or done ~= true then return false end
+		end
+	end
+	return true
 end
 
 local function integer(n, max)
@@ -73,7 +99,8 @@ end
 
 function Profile.stat(p, key)
 	local base = Upgrades.items[key].values[p.levels[key]]
-	return if key == "Capacity" then Skills.capacity(base, p.skills) else base
+	-- `bigPack` is set while the miner owns the Bigger Pack pass. It is never saved.
+	return if key == "Capacity" then math.floor(Skills.capacity(base, p.skills) * (if p.bigPack then 1.5 else 1)) else base
 end
 
 function Profile.hasUpgrade(p)
@@ -219,6 +246,9 @@ function Profile.valid(p)
 	if p.title ~= nil and not (integer(p.title, #Expeditions.ranks) and p.title >= 1) then
 		return false
 	end
+	if not Collection.valid(p.col) or not validStore(p.store) then
+		return false
+	end
 	if p.drake ~= nil and type(p.drake) ~= "boolean" then
 		return false
 	end
@@ -312,7 +342,8 @@ function Profile.valid(p)
 	local level = p.levels.Capacity
 	local storedCapacity = Skills.capacity(math.max(oldBackpackSlots[level] or 0, Upgrades.items.Capacity.values[level]), p.skills)
 	return (p.temper == nil or integer(p.temper, Materials.temperCharges + Skills.bonus(p.skills, "charges")))
-		and Profile.used(p) <= storedCapacity
+		-- Bigger Pack adds half again, and the save may hold a full one.
+		and Profile.used(p) <= math.floor(storedCapacity * 1.5)
 end
 
 function Profile.upgradeSave(p)
@@ -354,6 +385,8 @@ function Profile.upgradeSave(p)
 		p.counts = table.clone(p.bag)
 	end
 	p.pet, p.petName = p.pet or "", p.petName or "Pebble"
+	Collection.upgrade(p)
+	p.store = p.store or { receipts = {}, order = {} }
 	-- Saves from before rebirths: every Starfall so far belongs to the current run.
 	p.rebirths = p.rebirths or 0
 	if p.runStarfalls == nil then p.runStarfalls = p.counts.Starfall or 0 end
@@ -559,7 +592,8 @@ function Profile.sell(p, multiplier, selectedOre, portion)
 			end
 		end
 	end
-	local amount = value * (multiplier or 1)
+	-- Gold is always whole: passes and boosts can make fractions.
+	local amount = math.floor(value * (multiplier or 1) + 0.5)
 	if quantity > 0 then p.firstTrip.sold = true end
 	p.gold += amount
 	local award = if quantity > 0 and oreOnly and Profile.used(p) == 0 then Profile.unlock(p, "CleanSale") else nil

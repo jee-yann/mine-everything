@@ -8,7 +8,57 @@ local Expeditions = require(Shared.Expeditions)
 local Skills = require(Shared.Skills)
 local Rebirth = require(Shared.Rebirth)
 local FriendBonus = require(Shared.FriendBonus)
+local Bonuses = require(Shared.Bonuses)
 local Mining = {}
+local luckRandom = Random.new()
+
+-- Gems for progress: a level gained, a new ore found.
+Mining.levelGems, Mining.discoveryGems = 3, 5
+
+-- Free geodes for progress: every 5th level a Pebble Geode, every 25th a Crystal Geode, and every
+-- Starfall mined a Starfall Geode. Returns the geode items given, in order.
+function Mining.progressGeodes(col, oldLevel, level, ore)
+	local given = {}
+	local function give(id)
+		col.items[id] = (col.items[id] or 0) + 1
+		table.insert(given, id)
+	end
+	for reached = oldLevel + 1, level do
+		if reached % 25 == 0 then
+			give("CrystalGeode")
+		elseif reached % 5 == 0 then
+			give("PebbleGeode")
+		end
+	end
+	if ore == "Starfall" then give("StarfallGeode") end
+	return given
+end
+
+-- A region's odds in percent, Stone included, for luck.
+function Mining.regionChances(layer)
+	local chances, total = {}, 0
+	for name, percent in layer.oreChances do
+		chances[name] = percent
+		total += percent
+	end
+	chances.Stone = math.max(0, 100 - total)
+	return chances
+end
+
+-- Luck: a cut that came up common (Stone or an ore at 1% or more) may turn out to hold one of the
+-- region's rare ores instead, so each rare ore turns up exactly `luck` times as often. Returns the
+-- rare ore's name, or nil.
+function Mining.luckyFind(layer, name, luck, rng)
+	if luck <= 1 then return nil end
+	local chances = Mining.regionChances(layer)
+	if (chances[name] or 0) < Bonuses.rareBelow then return nil end
+	local roll = rng:NextNumber()
+	for _, entry in Bonuses.upgrades(chances, luck) do
+		roll -= entry[2]
+		if roll < 0 then return entry[1] end
+	end
+	return nil
+end
 
 function Mining.validPoint(v)
 	return typeof(v) == "Vector3" and v.Magnitude < 1e6
@@ -46,7 +96,11 @@ function Mining.selection(world, character, point, normal, power, space)
 	return Pattern.select(world.origin, center, world:oreAt(center), power, space, world.grid:practice(world.grid:cellAt(center)))
 end
 
-function Mining.start(world, net, sessions, sync)
+function Mining.start(world, net, sessions, sync, hooks)
+	hooks = hooks or {}
+	local function state(player, p)
+		return if hooks.bonuses then hooks.bonuses(player, p) else Bonuses.make({}, p.col, p.rebirths, 0, os.time())
+	end
 	local strokes, pending, nextInput, stagedSwing, nextSwing, lastHint, queue = {}, {}, {}, {}, {}, {}, {}
 	local credit = Config.BurstCells
 	local function hint(player, message, now)
@@ -76,6 +130,7 @@ function Mining.start(world, net, sessions, sync)
 			return
 		end
 		local ore = world:oreAt(point)
+		local speed = 1 + Bonuses.speed(state(player, p))
 		local duration, tempered = Skills.cutTime(
 			Profile.stat(p, "Speed") * Rebirth.cutMultiplier(p.rebirths),
 			ore,
@@ -86,6 +141,7 @@ function Mining.start(world, net, sessions, sync)
 			p.stoneChips,
 			Profile.stat(p, "Power")
 		)
+		duration /= speed
 		strokes[player] = {
 			profile = p,
 			point = point,
@@ -171,11 +227,36 @@ function Mining.start(world, net, sessions, sync)
 		end
 		local center = selected[1]
 		local spread = Config.Cell
+		local bonus = state(player, profile)
+		local luck = Bonuses.luck(bonus)
+		local depthBlocks = Config.depthInBlocks(Config.FloorY + world.origin.Y - center.Y)
+		local lucky
+		if depthBlocks >= Config.DirtLayers and not world.grid:practice(world.grid:cellAt(center)) then
+			lucky = Mining.luckyFind(Config.layer(depthBlocks * Config.Cell + Config.Cell / 2), name, luck, luckRandom)
+		end
+		if lucky then
+			-- The block opens to show a rare ore inside.
+			loot = { [lucky] = 1 }
+			finds = { [lucky] = center }
+			net.Feedback:FireClient(player, "lucky", name, lucky, luck)
+			name = lucky
+		end
 		local ore = Ores.byName[name]
 		local discovery = not ore.host and not profile.discoveries[name]
 		local oldLevel = Expeditions.level(profile.xp)
-		local awards, purity, units, record = Profile.recordCut(profile, name, Config.depthInBlocks(Config.FloorY + world.origin.Y - center.Y), nil,
-			FriendBonus.multiplier(player:GetAttribute("FriendsHere")))
+		local awards, purity, units, record = Profile.recordCut(profile, name, depthBlocks, nil,
+			FriendBonus.multiplier(player:GetAttribute("FriendsHere")) * Bonuses.xp(bonus))
+		local gems = 0
+		if not ore.host and luckRandom:NextNumber() < Bonuses.gemChance(bonus) then
+			gems += 1
+			net.Feedback:FireClient(player, "gemFind", center)
+		end
+		if discovery then gems += Mining.discoveryGems end
+		if Expeditions.level(profile.xp) > oldLevel then
+			gems += Mining.levelGems * (Expeditions.level(profile.xp) - oldLevel)
+		end
+		profile.gems += gems
+		local freeGeodes = Mining.progressGeodes(profile.col, oldLevel, Expeditions.level(profile.xp), name)
 		loot[name] = units
 		if request.speedSupply then
 			profile[request.speedSupply] = math.max(0, profile[request.speedSupply] - 1)
@@ -201,7 +282,13 @@ function Mining.start(world, net, sessions, sync)
 		if discovery then
 			net.Feedback:FireClient(player, "milestone", "ORE DISCOVERED", ore.name, ore.color)
 		end
+		if Profile.used(profile) >= Profile.stat(profile, "Capacity") and hooks.autoSell then
+			hooks.autoSell(player)
+		end
 		-- Starfall, the rarest ore in the mine, is announced to the whole server.
+		for _, id in freeGeodes do
+			net.Feedback:FireClient(player, "freeGeode", id)
+		end
 		if name == "Starfall" then
 			for _, other in Players:GetPlayers() do
 				net.Feedback:FireClient(other, "starfall", player.DisplayName, profile.counts.Starfall or 1, other == player)

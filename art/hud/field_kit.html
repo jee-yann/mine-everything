@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 768, 256 px tiles, on a clear
+<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 1280, 256 px tiles, on a clear
      background. Tile order must match the tiles table in src/client/FieldKit/init.luau.
      Render with render_field_kit.py, then bake with bake_field_kit.py.
      Style: one navy outline around each icon's silhouette (the #ol filter), nothing dark
      inside, flat colours with soft shade shapes, white glints and a soft cast shadow. -->
 <html><head><meta charset="utf-8"><style>
-  html, body { margin: 0; width: 1024px; height: 768px; background: transparent; overflow: hidden; }
+  html, body { margin: 0; width: 1024px; height: 1280px; background: transparent; overflow: hidden; }
   .ico { position: absolute; width: 208px; height: 208px; overflow: visible; filter: drop-shadow(7px 11px 0 #29264a38); }
 </style></head><body>
 <svg width="0" height="0" style="position:absolute">
@@ -310,6 +310,159 @@
         <path d="M33 30 Q35 22 42 19" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
       </g>
     </symbol>
+
+    <!-- Shop: a market stall with a striped awning and a gem on the counter -->
+    <clipPath id="c-stall"><rect x="16" y="44" width="68" height="46" rx="8"/></clipPath>
+    <symbol id="i-shop" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <rect x="16" y="44" width="68" height="46" rx="8" fill="#ffd9a8"/>
+        <g clip-path="url(#c-stall)"><ellipse cx="96" cy="74" rx="26" ry="40" fill="#f0bb7c"/></g>
+        <rect x="24" y="58" width="24" height="32" rx="5" fill="#b4633a"/>
+        <rect x="24" y="84" width="24" height="6" fill="#8f4b29"/>
+        <rect x="54" y="58" width="22" height="16" rx="4" fill="#8fe8ff"/>
+        <path d="M60 60 L70 72" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M10 26 Q50 14 90 26 L94 46 H6 Z" fill="#ff5f8f"/>
+        <path d="M24 22.5 L22 46 H36 L37 19.6 Z" fill="#fff4f8"/>
+        <path d="M50 18 L50 46 H64 L63 18.6 Z" fill="#fff4f8"/>
+        <path d="M76 21.6 L78 46 H92 L88 25 Z" fill="#fff4f8"/>
+        <path d="M6 46 Q13 54 20 46 Q27 54 34 46 Q41 54 48 46 Q55 54 62 46 Q69 54 76 46 Q83 54 90 46 Q94 50 94 46 Z" fill="#e2416f"/>
+        <path d="M44 8 L54 14 L44 24 L34 14 Z" fill="#5fe6ff"/>
+        <path d="M44 8 L54 14 L44 24 Z" fill="#22b3dd"/>
+        <path d="M14 30 Q30 24 42 23" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none" opacity=".85"/>
+        <use href="#spark" transform="translate(84 10) scale(.75)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Pets: a round pocket rock with big eyes and a sprout -->
+    <clipPath id="c-rockpet"><path d="M14 66 C10 40 28 26 50 26 C74 26 90 40 86 66 C84 84 70 90 50 90 C30 90 16 84 14 66 Z"/></clipPath>
+    <symbol id="i-pet" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M50 28 C48 18 52 12 58 8 C60 16 58 22 50 28 Z" fill="#6fdc6a"/>
+        <path d="M50 28 C46 20 40 18 34 19 C36 26 42 29 50 28 Z" fill="#4fbf55"/>
+        <path d="M14 66 C10 40 28 26 50 26 C74 26 90 40 86 66 C84 84 70 90 50 90 C30 90 16 84 14 66 Z" fill="#a9b6cc"/>
+        <g clip-path="url(#c-rockpet)">
+          <ellipse cx="96" cy="72" rx="34" ry="46" fill="#8796b2"/>
+          <rect x="8" y="82" width="90" height="12" fill="#7a88a4"/>
+        </g>
+        <ellipse cx="37" cy="58" rx="8" ry="10" fill="#fff"/>
+        <ellipse cx="63" cy="58" rx="8" ry="10" fill="#fff"/>
+        <circle cx="38" cy="60" r="5" fill="#2f3550"/>
+        <circle cx="64" cy="60" r="5" fill="#2f3550"/>
+        <circle cx="36" cy="57" r="1.8" fill="#fff"/>
+        <circle cx="62" cy="57" r="1.8" fill="#fff"/>
+        <ellipse cx="27" cy="71" rx="5" ry="3.2" fill="#ff9fb0"/>
+        <ellipse cx="73" cy="71" rx="5" ry="3.2" fill="#ff9fb0"/>
+        <path d="M44 72 Q50 78 56 72" stroke="#2f3550" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <path d="M24 46 C27 38 33 34 40 32" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none" opacity=".9"/>
+        <use href="#spark" transform="translate(86 20) scale(.75)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Crate: a banded wooden loot crate with light spilling from under its lid -->
+    <clipPath id="c-crate"><rect x="12" y="40" width="76" height="50" rx="8"/></clipPath>
+    <symbol id="i-geode" viewBox="0 0 100 100">
+      <path d="M22 38 L30 2 L46 38 Z" fill="#fff3a0" opacity=".55"/>
+      <path d="M42 38 L54 -2 L66 38 Z" fill="#ffe27a" opacity=".6"/>
+      <path d="M60 38 L78 6 L82 38 Z" fill="#fff3a0" opacity=".55"/>
+      <g filter="url(#ol)">
+        <rect x="12" y="40" width="76" height="50" rx="8" fill="#c9824a"/>
+        <g clip-path="url(#c-crate)">
+          <ellipse cx="96" cy="70" rx="24" ry="40" fill="#a8652f"/>
+          <rect x="12" y="82" width="76" height="10" fill="#9a5a2a"/>
+          <path d="M12 58 H88 M12 72 H88" stroke="#a8652f" stroke-width="3"/>
+        </g>
+        <rect x="8" y="30" width="84" height="18" rx="6" fill="#e09a5a"/>
+        <rect x="8" y="42" width="84" height="6" rx="3" fill="#b86e36"/>
+        <rect x="20" y="30" width="10" height="60" rx="3" fill="#ffc83a"/>
+        <rect x="70" y="30" width="10" height="60" rx="3" fill="#f5a31e"/>
+        <rect x="40" y="50" width="20" height="22" rx="5" fill="#ffd23f"/>
+        <path d="M50 54 L56 61 L50 68 L44 61 Z" fill="#5fe6ff"/>
+        <path d="M50 54 L56 61 L50 68 Z" fill="#22b3dd"/>
+        <path d="M14 36 H40" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".85"/>
+        <use href="#spark" transform="translate(86 14) scale(.8)" fill="#fff"/>
+        <use href="#spark" transform="translate(14 18) scale(.55)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Gems: a big cyan cut gem with a small pink one -->
+    <symbol id="i-gems" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M30 14 H70 L88 36 L50 88 L12 36 Z" fill="#5fe6ff"/>
+        <path d="M12 36 H88 L50 88 Z" fill="#22b3dd"/>
+        <path d="M30 14 L40 36 H12 Z" fill="#a8f3ff"/>
+        <path d="M70 14 L60 36 H88 Z" fill="#3fcdf0"/>
+        <path d="M40 36 L50 14 L60 36 Z" fill="#8eeeff"/>
+        <path d="M40 36 L50 88 L60 36 Z" fill="#3fcdf0"/>
+        <path d="M72 64 L82 58 L92 64 L82 80 Z" fill="#ff6fa0"/>
+        <path d="M72 64 H92 L82 80 Z" fill="#e2416f"/>
+        <path d="M24 30 L32 20" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+        <use href="#spark" transform="translate(84 14) scale(.8)" fill="#fff"/>
+        <use href="#spark" transform="translate(18 66) scale(.55)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Forge: an anvil with a glowing bar and sparks -->
+    <symbol id="i-forge" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M8 34 H76 C88 34 94 40 94 46 C84 46 78 50 74 56 H34 C24 56 14 48 8 34 Z" fill="#b9c6da"/>
+        <path d="M34 56 H74 C76 52 80 49 86 47 C80 56 76 60 70 60 H38 Z" fill="#8796b2"/>
+        <path d="M40 56 H66 L70 74 H36 Z" fill="#8796b2"/>
+        <path d="M26 74 H80 C84 74 86 78 86 84 H20 C20 78 22 74 26 74 Z" fill="#6b7896"/>
+        <rect x="30" y="22" width="40" height="12" rx="5" fill="#ff8a3a"/>
+        <rect x="30" y="22" width="40" height="5" rx="2.5" fill="#ffd060"/>
+        <path d="M16 38 H44" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+        <use href="#spark" transform="translate(80 14) scale(.9)" fill="#ffd23f"/>
+        <use href="#spark" transform="translate(22 12) scale(.6)" fill="#ffd23f"/>
+        <use href="#spark" transform="translate(52 10) scale(.5)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Boosts: a round flask of green tonic with a cork and bubbles -->
+    <clipPath id="c-flask"><circle cx="50" cy="62" r="30"/></clipPath>
+    <symbol id="i-potion" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <rect x="40" y="16" width="20" height="24" rx="4" fill="#dce8f5"/>
+        <rect x="37" y="8" width="26" height="12" rx="5" fill="#c27a44"/>
+        <rect x="37" y="15" width="26" height="5" rx="2.5" fill="#9a5a2c"/>
+        <circle cx="50" cy="62" r="30" fill="#dce8f5"/>
+        <g clip-path="url(#c-flask)">
+          <path d="M14 58 Q32 50 50 58 Q68 66 86 58 V96 H14 Z" fill="#6fe86a"/>
+          <ellipse cx="80" cy="80" rx="20" ry="30" fill="#3fbf55"/>
+        </g>
+        <circle cx="40" cy="72" r="4" fill="#d6ffcf"/>
+        <circle cx="56" cy="80" r="3" fill="#d6ffcf"/>
+        <circle cx="50" cy="66" r="2.4" fill="#d6ffcf"/>
+        <path d="M30 50 C32 42 38 38 44 37" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+        <use href="#spark" transform="translate(84 22) scale(.8)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Passes: a golden ticket with a star -->
+    <symbol id="i-ticket" viewBox="0 0 100 100">
+      <g filter="url(#ol)" transform="rotate(-12 50 50)">
+        <path d="M10 28 H90 V42 A8 8 0 0 0 90 58 V72 H10 V58 A8 8 0 0 0 10 42 Z" fill="#ffc83a"/>
+        <path d="M10 58 A8 8 0 0 0 10 42 V28 H30 V72 H10 Z" fill="#f5a31e"/>
+        <path d="M32 32 V68" stroke="#d98a1a" stroke-width="3" stroke-dasharray="5 5"/>
+        <use href="#star5" transform="translate(62 50) scale(1.25)" fill="#fff6c8"/>
+        <use href="#star5r" transform="translate(62 50) scale(1.25)" fill="#ffe27a"/>
+        <path d="M40 34 H80" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".85"/>
+      </g>
+      <use href="#spark" transform="translate(86 14) scale(.8)" fill="#fff"/>
+    </symbol>
+
+    <!-- Trail: a shooting star with a gold-to-pink tail -->
+    <symbol id="i-trail" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M8 88 Q34 54 64 34 L72 46 Q42 64 8 88 Z" fill="#ff8fc0"/>
+        <path d="M18 92 Q40 66 70 46 L74 54 Q48 70 18 92 Z" fill="#b088ff"/>
+        <path d="M4 74 Q30 50 58 30 L64 38 Q36 56 4 74 Z" fill="#ffd96a"/>
+        <use href="#star5" transform="translate(70 32) scale(1.75)" fill="#ffd23f"/>
+        <use href="#star5r" transform="translate(70 32) scale(1.75)" fill="#f5a31e"/>
+        <circle cx="64" cy="26" r="2.6" fill="#fff"/>
+        <use href="#spark" transform="translate(30 30) scale(.65)" fill="#fff"/>
+        <use href="#spark" transform="translate(90 70) scale(.55)" fill="#fff"/>
+      </g>
+    </symbol>
   </defs>
 </svg>
   <!-- Inventory -->
@@ -336,4 +489,20 @@
   <svg class="ico" style="left:532px;top:526px"><use href="#i-miner"/></svg>
   <!-- Friends -->
   <svg class="ico" style="left:788px;top:526px"><use href="#i-friends"/></svg>
+  <!-- Shop -->
+  <svg class="ico" style="left:20px;top:782px"><use href="#i-shop"/></svg>
+  <!-- Pets -->
+  <svg class="ico" style="left:276px;top:782px"><use href="#i-pet"/></svg>
+  <!-- Crate (tile key Geode) -->
+  <svg class="ico" style="left:532px;top:782px"><use href="#i-geode"/></svg>
+  <!-- Gems -->
+  <svg class="ico" style="left:788px;top:782px"><use href="#i-gems"/></svg>
+  <!-- Forge -->
+  <svg class="ico" style="left:20px;top:1038px"><use href="#i-forge"/></svg>
+  <!-- Boosts -->
+  <svg class="ico" style="left:276px;top:1038px"><use href="#i-potion"/></svg>
+  <!-- Passes -->
+  <svg class="ico" style="left:532px;top:1038px"><use href="#i-ticket"/></svg>
+  <!-- Trail -->
+  <svg class="ico" style="left:788px;top:1038px"><use href="#i-trail"/></svg>
 </body></html>

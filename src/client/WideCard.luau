@@ -61,6 +61,34 @@ function Card:tab(key, caption, icon, onPress)
 		self.tabs[name].button.Position = UDim2.fromOffset(self.size.X / 2 - #self.order * 95 + (i - 1) * 190 + 5, 88)
 	end
 end
+-- A row of tabs that share the card's width: `tabs` is a list of { key, caption, icon }. Returns the
+-- paint of each tab by key, for Card.paintTabs.
+function Card:tabRow(tabs, onPress)
+	self:useTabs()
+	local paints = {}
+	local width = math.min(190, math.floor((self.size.X - 28) / #tabs) - 6)
+	for i, tab in tabs do
+		local key = tab[1]
+		local b = W.clearButton(self.modal, key .. " tab", 14 + (i - 1) * (width + 6), 88, width, 46, "Select")
+		W.round(b, 14)
+		local paint = W.enamelPanel(b, Card.slate[1], Card.slate[2], 14)
+		Icons.draw(b, tab[3], 8, 7, 32)
+		local label = W.title(b, tab[2], 42, 0, width - 48, 44, 21, W.white, true)
+		W.navyText(label, 2.4)
+		W.largest(label, 21, 12)
+		b.Activated:Connect(function() onPress(key) end)
+		paints[key] = paint
+		self.tabs[key] = { button = b, paint = paint, dot = W.dot(b, -12, -3) }
+	end
+	return paints
+end
+function Card.paintTabs(paints, selected)
+	for key, paint in paints do
+		paint.Color = if key == selected then ColorSequence.new(rgb(166, 245, 110), rgb(62, 178, 52))
+			else ColorSequence.new(Card.slate[1], Card.slate[2])
+	end
+end
+
 function Card:useTabs()
 	self.order = {}
 	self.body.Position, self.body.Size = UDim2.fromOffset(11, 139), UDim2.fromOffset(self.size.X - 22, self.size.Y - 150)

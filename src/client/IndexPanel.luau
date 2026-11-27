@@ -4,6 +4,7 @@ local Shared = game:GetService("ReplicatedStorage").Shared
 local Ores, Config, Purity = require(Shared.Ores), require(Shared.GameConfig), require(Shared.OrePurity)
 local W, Icons, Card = require(script.Parent.Widgets), require(script.Parent.Icons), require(script.Parent.WideCard)
 local Drawn = require(script.Parent.DrawnFaces)
+local Bonuses = require(Shared.Bonuses)
 local Panel = {}
 Panel.__index = Panel
 local rgb = Color3.fromRGB
@@ -172,9 +173,13 @@ function Panel:buildOdds()
 			local name = fit(W.title(chip, "", 36, 1, 98, 20, 16, W.white, true), 16)
 			local odds = W.title(chip, string.format("%g%%", entry.chance), 36, 19, 98, 19, 16, W.gold, true)
 			odds.Name = "Chance"
-			table.insert(chips, { ore = entry.ore, name = name, swatch = swatch })
+			table.insert(chips, { ore = entry.ore, name = name, swatch = swatch, odds = odds, chance = entry.chance })
 		end
+		local chances = { Stone = math.max(0, 100 - total) }
+		for name, chance in layer.oreChances do chances[name] = chance end
+		self.layerChances = self.layerChances or {}
 		table.insert(self.layerCards, chips)
+		self.layerChances[#self.layerCards] = chances
 		y += height + 10
 	end
 	local grades = W.frame(list, "Rock hardness", 3, y, 744, 60 + math.ceil(#Config.StoneGrades / 3) * 40, W.white, 15)
@@ -286,8 +291,18 @@ function Panel:refresh()
 	end
 	self.card.sub.Text = player.DisplayName .. "'s collection  ·  " .. found .. " / " .. total .. " found"
 	if self.tab == "Odds" then
-		for _, chips in self.layerCards do
+		-- Odds with this miner's luck: ores rarer than 1% are multiplied, the rest share what's left.
+		local luck = Bonuses.luck(Bonuses.state(player))
+		if luck > 1 then
+			self.card.sub.Text = string.format("Your luck: %g×  ·  ores rarer than 1%% are shown with it", math.floor(luck * 100 + 0.5) / 100)
+		end
+		for i, chips in self.layerCards do
+			local shown = Bonuses.lucky(self.layerChances[i], luck)
 			for _, chip in chips do
+				local value = shown[chip.ore.name] or chip.chance
+				local boosted = luck > 1 and chip.chance < Bonuses.rareBelow
+				chip.odds.Text = if luck > 1 then string.format("%.3g%%", value) else string.format("%g%%", chip.chance)
+				chip.odds.TextColor3 = if boosted then W.green else W.gold
 				local hidden = chip.ore.secret and not player:GetAttribute("Found" .. chip.ore.name)
 				chip.name.Text = if hidden then "???" else chip.ore.name
 				chip.name.TextColor3 = if hidden then W.white else readable(chip.ore.color)

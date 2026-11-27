@@ -260,6 +260,7 @@ function W.goldAmount(n)
 	local grouped = string.format("%.0f", n):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
 	return grouped
 end
+-- A short whole number: 950, 12.4k, 1.2M. Gold never shows decimals.
 function W.number(n)
 	if n >= 1e6 then
 		return string.format("%.1fM", n / 1e6)
@@ -267,7 +268,7 @@ function W.number(n)
 	if n >= 10000 then
 		return string.format("%.1fk", n / 1000)
 	end
-	return tostring(n)
+	return tostring(math.floor(n + 0.5))
 end
 -- A countdown: 4:05, or 1:02:09 from an hour.
 function W.clock(seconds)

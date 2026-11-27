@@ -19,7 +19,10 @@ for _, name in
 		"Expeditions",
 		"OrePurity",
 		"FieldRewards",
-		"PassCatalog",
+		"StoreConfig",
+		"Collectibles",
+		"Geodes",
+		"Bonuses",
 		"Skills",
 		"FieldGuide",
 	}
@@ -260,8 +263,12 @@ UIS:GetPropertyChangedSignal("PreferredInput"):Connect(function()
 	held = trigger
 end)
 
+local reveal = require(script.GeodeReveal).new(hud, net)
+hud.reveal = reveal
+local Collectibles = require(shared.Collectibles)
+local function chime(pitch) fx:chime(pitch) end
 net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, normal)
-	if kind == "achievement" or kind == "titleUnlocked" or kind == "aura" or kind == "levelUp" then
+	if kind == "achievement" or kind == "titleUnlocked" or kind == "levelUp" then
 		hud.unlocks:show(kind, a)
 	elseif kind == "skillLearned" then
 		fx:chime(1.32)
@@ -400,6 +407,45 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		end
 	elseif kind == "rebirthAnnounce" then
 		hud:milestone("REBIRTH " .. point, a .. " was reborn!", W.rebirth)
+	elseif kind == "geode" then
+		-- a = geode, point = reward kind, spread = reward id, finds = count, normal = what happened
+		reveal:play(a, point, spread, finds, normal, chime)
+		hud.menu:refresh()
+	elseif kind == "welcomeGeode" then
+		-- The onboarding gift opens on its own once the upgrade has been celebrated.
+		task.delay(3, function()
+			if not reveal:busy() then net.Action:FireServer("OpenGeode", "Welcome", false) end
+		end)
+	elseif kind == "crafted" then
+		fx:chime(1.6)
+		local entry = Collectibles.find(a, point)
+		hud.unlocks:show("upgrade", "Forged: " .. entry.name, require(script.GeodeReveal).outcome(a, point, spread, finds))
+	elseif kind == "itemUsed" then
+		fx:chime(1.4)
+		local item = Collectibles.itemById[a]
+		if item then hud:notice(item.name .. " used", item.detail, W.green) end
+	elseif kind == "purchase" then
+		fx:chime(1.8)
+		hud.unlocks:show("upgrade", "Thank you!", a .. (if point == "pass" then " is yours for good" else " delivered"))
+	elseif kind == "lucky" then
+		-- a = what the block looked like, point = the rare ore inside, spread = luck
+		fx:chime(1.85)
+		local ore = Ores.byName[point]
+		hud:notice("Lucky find! " .. point .. " inside the " .. a, string.format("%g× luck", math.floor(spread * 100 + 0.5) / 100), ore and ore.color or W.green)
+	elseif kind == "freeGeode" then
+		local item = Collectibles.itemById[a]
+		fx:chime(1.75)
+		hud:notice("Free " .. (if item then item.name else "crate") .. "!", "Open it from your Inventory", W.violet)
+	elseif kind == "gemFind" then
+		fx:chime(1.7)
+		hud:notice("+1 gem", "Found in the rock", W.aqua)
+	elseif kind == "serverLuck" then
+		fx:chime(1.9)
+		hud:milestone("SERVER LUCK", a .. " gave everyone 2× luck!", W.green)
+		hud:chatLine("🍀 " .. a .. " turned on Server Luck!", "Everyone here has 2× luck for " .. point .. " minutes.", W.green)
+	elseif kind == "geodeAnnounce" then
+		local rarity = Collectibles.rarities[spread]
+		hud:chatLine("◆ " .. a .. " opened a " .. spread .. " " .. point .. "!", "", rarity and rarity.color or W.gold)
 	elseif kind == "upgrade" then
 		fx:chime(1.55)
 		hud:workshop(point, spread)
@@ -425,7 +471,8 @@ for _, other in Players:GetPlayers() do
 	end
 end
 
-require(script.RockCompanions)(hud, origin)
+require(script.PetFollowers)(hud, origin)
+require(script.BoostChips)(hud)
 local lastDepth, lastRegion
 local function targetName(ore, center)
 	if ore.secret and not player:GetAttribute("Found" .. ore.name) then
@@ -653,6 +700,8 @@ RunService.RenderStepped:Connect(function(dt)
 		player:GetAttribute("StoneChips"),
 		Upgrades.items.Power.values[player:GetAttribute("Power") or 1]
 	)
+	-- Pets, Fast Pick and Haste Tonic: the same speed the server uses.
+	duration /= 1 + require(shared.Bonuses).speed(require(shared.Bonuses).state(player))
 	if rig and not rig.shoulder:IsDescendantOf(workspace) then
 		rig:destroy()
 		rig = nil

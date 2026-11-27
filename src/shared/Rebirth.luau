@@ -86,10 +86,10 @@ function Rebirth.richBadge(n: number): string
 	return string.format(' <font color="#%s">%s</font>', Rebirth.tierColor(n):ToHex(), Rebirth.badge(n))
 end
 
--- Sale price multiplier for a player: the Double Gold pass and rebirths stack.
+-- Sale price multiplier for a player: passes, rebirths, pets and boosts (see Shared.Bonuses).
 function Rebirth.saleMultiplier(player: Player): number
-	local pass = if player:GetAttribute("DoubleGold") then 2 else 1
-	return pass * Rebirth.goldMultiplier(player:GetAttribute("Rebirths") or 0)
+	local Bonuses = require(script.Parent.Bonuses) :: any
+	return Bonuses.gold(Bonuses.state(player))
 end
 
 return Rebirth
