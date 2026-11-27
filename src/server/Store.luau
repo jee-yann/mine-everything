@@ -109,7 +109,7 @@ end
 -- Limited stock is counted across every server in one DataStore entry per item. An unpublished Studio
 -- test counts in memory instead.
 local function limitedStore()
-	return DSS:GetDataStore("EndlessMining_v1_Limited", if Run:IsStudio() then "studio" else "live")
+	return DSS:GetDataStore(Config.StoreName .. "_Limited", if Run:IsStudio() then "studio" else "live")
 end
 local function unpublished()
 	return Run:IsStudio() and game.GameId == 0

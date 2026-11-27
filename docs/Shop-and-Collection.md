@@ -319,7 +319,7 @@ Power and skills at a relaxed pace (half the time cutting, a 30-second trip per 
 rebirth bonus. The minimum is 250 an hour. Passes and boosts are left out, so it can't be inflated.
 The Shop shows the exact amount each pack pays right now.
 
-**Limited stock** is counted in the DataStore `EndlessMining_v1_Limited`, one entry per item, and
+**Limited stock** is counted in the DataStore `EndlessMining_v2_Limited`, one entry per item, and
 published to every server as `Limited<key>` on ReplicatedStorage (re-read every minute). A purchase
 that lands after the last one sold is still given, because it was paid for, so the wording is "on
 sale until 100 are sold", never "only 100 will ever exist".
@@ -353,4 +353,4 @@ an unpublished Studio test, pressing a price grants the item without Robux.
 ## Leaderboards
 
 The physical boards show **Level** (this server, and global) and **Most Rebirths** (global, from
-`EndlessMining_v1_Rebirths`). The depth record is still saved and shows in the profile.
+`EndlessMining_v2_Rebirths`). The depth record is still saved and shows in the profile.

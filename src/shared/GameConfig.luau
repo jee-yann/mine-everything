@@ -28,7 +28,10 @@ local Config = {
 	Origin = Vector3.new(0, 24, 4),
 	SurfaceName = "Citrine Cove",
 	Reach = 34,
-	StoreName = "EndlessMining_v1",
+	-- Every save, leaderboard and limited-stock count lives under this name. v2 is the launch: the
+	-- playtest data stays in v1, untouched but no longer read, so everyone starts fresh. Changing it
+	-- again resets everyone again; changing it back brings the old data back.
+	StoreName = "EndlessMining_v2",
 	AllowProgressReset = false, -- Prototype Settings option: a Reset progress button. Off for release.
 	-- Playtesting: every miner can wear every Mining FX and Player FX, even in the published game.
 	-- Crates still roll and grant as normal. Off for release; turn on only for a playtest.
