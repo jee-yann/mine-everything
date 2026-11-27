@@ -228,7 +228,7 @@ function Panel:observe(now)
 end
 function Panel:open()
 	for _, entry in self.cards do
-		entry.sent, entry.since = nil, nil
+		entry.sent, entry.since, entry.clicked = nil, nil, nil
 	end
 	if not self.chosen then
 		-- Start on the rarest ore this miner has found.
@@ -267,11 +267,22 @@ function Panel:paintCard(entry)
 	elseif entry.picture then
 		entry.picture.Visible = found
 	end
-	entry.fresh.Visible = found and (entry.sent or not self.menu.player:GetAttribute("SeenBook" .. entry.ore.name)) == true
+	entry.fresh.Visible = found and not entry.clicked
+		and (entry.sent or not self.menu.player:GetAttribute("SeenBook" .. entry.ore.name)) == true
 end
 
 function Panel:choose(ore)
 	self.chosen = ore
+	-- Opening an ore's card reads it: its red dot goes at once.
+	local picked = self.cards[ore.name]
+	if picked then
+		picked.clicked = true
+		picked.fresh.Visible = false
+		if not picked.sent and self.menu.player:GetAttribute("Found" .. ore.name) and not self.menu.player:GetAttribute("SeenBook" .. ore.name) then
+			picked.sent = true
+			self.menu.net.Action:FireServer("Viewed", "Book", ore.name)
+		end
+	end
 	for name, entry in self.cards do
 		entry.chosen.Visible = name == ore.name
 	end

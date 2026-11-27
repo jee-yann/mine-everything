@@ -75,8 +75,9 @@ function Panel.new(menu)
 	self.paints = card:tabRow(tabs, function(key) self:jump(key, true) end)
 	-- The page scrolls on its own; the card's body stays put (also on phones).
 	local layout = card.layout
-	card.layout = function(c, area, touch)
-		layout(c, area, touch)
+	card.scrolls = true
+	card.layout = function(c, area, touch, room)
+		layout(c, area, touch, room)
 		c.body.ScrollingEnabled, c.body.CanvasSize, c.body.CanvasPosition = false, UDim2.new(), Vector2.zero
 	end
 	local scroller = Card.scroller(card.body, "Shop page", 0, 4, 778, 358)
@@ -278,15 +279,16 @@ function Panel:buildFeatured(y)
 	local pack = box(page, "Starter Pack", 384, y + 12, 380, 112, pink)
 	self:shimmer(pack, 50, 56, 140)
 	table.insert(self.tags, tag(pack, "ONE TIME", "right", rgb(255, 70, 90)))
-	self:art(pack, "Geode", 10, 16, 80)
+	self:art(pack, "Geode", 14, 10, 72)
 	words(pack, "Starter Pack", 96, 8, 180, 30, 24, nil, true)
 	local contents = words(pack, W.rich("2 Starfall Crates\n30 min of 2× Gold\nA Haste Tonic"), 98, 38, 128, 66, 15, rgb(255, 250, 215), true)
 	contents.TextWrapped, contents.TextYAlignment = true, Enum.TextYAlignment.Top
 	W.largest(contents, 15, 9)
 	self:buyButton(pack, "product", starter, 230, 64, 140, 40)
-	-- It holds crates, so its odds are one tap away before buying.
-	local odds = W.clearButton(pack, "Crate odds", 230, 38, 140, 24, "Select")
-	local oddsText = words(odds, "Crate odds ▸", 0, 0, 140, 24, 15, rgb(255, 244, 170))
+	-- It holds crates, so its odds are one tap away before buying: a small link under the art, clear
+	-- of the price and its "Worth" line.
+	local odds = W.clearButton(pack, "Crate odds", 4, 88, 92, 22, "Select")
+	local oddsText = words(odds, "Odds ▸", 0, 0, 92, 22, 16, rgb(255, 244, 170))
 	oddsText.ZIndex = 3
 	odds.Activated:Connect(function() self:showOdds(Geodes.main) end)
 	-- In the Starter Pack's place once it's bought: Instamine.

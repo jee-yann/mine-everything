@@ -518,13 +518,20 @@ local function test()
 		waitFor(function()
 			return safe.AbsoluteSize == size and safe["Edge shortcuts"].Visible
 		end, 3, "compact HUD")
-		assert(not safe.Haul.Visible and not safe["Current job"].Visible and not safe["Menu buttons"].Visible and not safe["Reward buttons"].Visible)
+		-- Touch screens keep the side buttons as compact rails (no Menu button); small keyboard
+		-- windows fold them into Menu.
+		local rails = game.UserInputService.TouchEnabled
+		assert(not safe.Haul.Visible and not safe["Current job"].Visible, "compact HUD hides the cards")
+		assert(safe["Menu buttons"].Visible == rails and safe["Reward buttons"].Visible == rails, "side buttons on touch only")
 		local pack = safe["Edge shortcuts"].Pack
 		local menuButton = safe["Edge shortcuts"].Menu
-		assert(pack.AbsoluteSize.Y >= 44 and menuButton.AbsoluteSize.Y >= 44, "edge tap targets")
-		local right = menuButton.AbsolutePosition.X + menuButton.AbsoluteSize.X
+		assert(menuButton.Visible ~= rails, "Menu replaces the rails on small keyboard windows")
 		local equipment = controls.Equipment
-		assert(math.abs(equipment.AbsolutePosition.X + equipment.AbsoluteSize.X - right) <= 1, "stats align with Menu")
+		if not rails then
+			assert(pack.AbsoluteSize.Y >= 44 and menuButton.AbsoluteSize.Y >= 44, "edge tap targets")
+			local right = menuButton.AbsolutePosition.X + menuButton.AbsoluteSize.X
+			assert(math.abs(equipment.AbsolutePosition.X + equipment.AbsoluteSize.X - right) <= 1, "stats align with Menu")
+		end
 		assert(ring.AbsolutePosition.Y >= equipment.AbsolutePosition.Y + equipment.AbsoluteSize.Y, "separate level row")
 		waitFor(function()
 			local a, b = wallet.AbsolutePosition, safe.Location.AbsolutePosition
@@ -658,9 +665,15 @@ local function test()
 		local shown = wide or menu
 		local left, top = shown.AbsolutePosition.X, shown.AbsolutePosition.Y
 		local safe = gui.SafeArea
-		assert(left >= safe.AbsolutePosition.X - 1 and top >= safe.AbsolutePosition.Y - 1, "menu origin")
+		-- On a phone held sideways the big cards may reach up into Roblox's top bar (beside its
+		-- buttons); they still stay on screen.
+		local Gui = game:GetService("GuiService")
+		local raise = if wide and game.UserInputService.TouchEnabled
+			then math.max(0, Gui:GetInsetArea(Enum.ScreenInsets.CoreUISafeInsets).Min.Y - Gui:GetInsetArea(Enum.ScreenInsets.None).Min.Y)
+			else 0
+		assert(left >= safe.AbsolutePosition.X - 1 and top >= safe.AbsolutePosition.Y - raise - 1, "menu origin")
 		assert(
-			shown.AbsoluteSize.X <= safe.AbsoluteSize.X + 1 and shown.AbsoluteSize.Y <= safe.AbsoluteSize.Y + 1,
+			shown.AbsoluteSize.X <= safe.AbsoluteSize.X + 1 and shown.AbsoluteSize.Y <= safe.AbsoluteSize.Y + raise + 1,
 			"menu bounds"
 		)
 	end
@@ -1224,7 +1237,7 @@ local function test()
 			waitFor(function()
 				return p:GetAttribute("HeldDirt") == 2 and p:GetAttribute("Gold") == gold + 2 and row["Sell quantity"].Text == "Sell 1 Dirt\n+1 gold"
 			end, 3, "sell two and reset quantity")
-			assert(menu.Status["Sell all"].Text == string.format("Sell entire pack\n%d blocks · +%d G", p:GetAttribute("Used"), worth - 2))
+			assert(menu.Status["Sell all"].ContentText == string.format("Sell all · +%d G", worth - 2))
 			task.wait(0.25)
 			clickButton(menu.Status["Sell all"])
 			waitFor(function()

@@ -1,15 +1,9 @@
 local cell = 6
 local Config = {
 	LandscapeSeed = 73129,
-	-- Blocks removed server-wide before the mine renews: 2,600 for one miner (about 2,000 blocks of
-	-- mining after a shaft to the crater, row 550) and 1,500 more for each other miner here, up to
-	-- 9,000. It never renews sooner than ResetSoonest after the last time, however fast anyone cuts,
-	-- and always after ResetSeconds. Miners at least ReturnDepth blocks down go back to their spot in
-	-- the new mine, so a reset never costs anyone their climb down.
-	ResetAfter = 2600,
-	ResetPerMiner = 1500,
-	ResetMost = 9000,
-	ResetSoonest = 1200,
+	-- The mine renews once an hour, on the clock: no cut budget, so nobody can bring it on sooner by
+	-- mining fast. Miners at least ReturnDepth blocks down go back to their spot in the new mine, so a
+	-- reset never costs anyone their climb down.
 	ResetSeconds = 3600,
 	ResetWarning = 20,
 	ReturnDepth = 12,

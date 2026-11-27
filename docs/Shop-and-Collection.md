@@ -65,7 +65,7 @@ for release.
   under the pointer lifts and glows gold.
 - **Keys**: Inventory B, Skills Q, Index C, Awards H, Rebirth U, Profile F, Settings P, Shop N, Daily L,
   Gift G.
-- **Outfitters stall** (`src/client/ShopSign.luau`): a FEATURED sign floats over it with the featured
+- **Outfitters stall** (`src/client/ShopSign.luau`): a painted FEATURED signboard stands on its roof with the featured
   offers (the Founder's Halo with a live aura and how many are left, the Starter Pack and its
   discount); tap one to open it. Once both are gone it points to the Shop.
 - **Featured slot**: once the Starter Pack is bought, Instamine takes its place in the Shop.

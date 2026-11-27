@@ -112,10 +112,7 @@ function Pickaxe.equip(player, char)
 	local tipA, tipB = Instance.new("Attachment"), Instance.new("Attachment")
 	tipA.Position, tipB.Position = Vector3.new(-0.91, 0.76, 0), Vector3.new(0.91, 0.76, 0)
 	tipA.Parent, tipB.Parent = handle, handle
-	local trail = Instance.new("Trail")
-	trail.Name, trail.Attachment0, trail.Attachment1 = "Pick arc", tipA, tipB
-	trail.Lifetime, trail.LightEmission, trail.Transparency = 0.12, 0.65, NumberSequence.new(0.48, 1)
-	trail.Parent = handle
+	-- No pick has a swing trail of its own: trails are Mining FX, worn from the Inventory.
 	local sparks = Instance.new("ParticleEmitter")
 	sparks.Name, sparks.Texture = "Trail sparks", "rbxassetid://4963436775" -- the VFX pack's four-point star
 	sparks.Color = ColorSequence.new(Color3.fromRGB(255, 225, 140), Color3.fromRGB(147, 222, 255))
@@ -153,9 +150,7 @@ function Pickaxe.equip(player, char)
 				blade.Material = if level >= 5 then Enum.Material.Neon else Enum.Material.Metal
 			end
 		end
-		trail.Color = ColorSequence.new(tint, tint:Lerp(Color3.new(1, 1, 1), 0.75))
-		trail.Lifetime = 0.09 + level * 0.017
-		-- An equipped mining trail replaces the plain arc with its own streak: the full palette, and for
+		-- An equipped mining trail draws its own streak: the full palette, and for
 		-- rarer trails sparks, a themed layer, a bright core, a glow and a vortex (CosmeticLooks).
 		local look = Collectibles.trailById[player:GetAttribute("Trail") or ""]
 		local swinging = char:GetAttribute("MiningSwing") ~= nil
@@ -169,7 +164,6 @@ function Pickaxe.equip(player, char)
 		end
 		for _, item in streak do item.Enabled = swinging end
 		sparks.Enabled = false
-		trail.Enabled = look == nil and level >= 3 and swinging
 	end
 	update()
 	model.Parent = char

@@ -805,12 +805,7 @@ do
 	reloaded.bag.Fakeite = 1
 	assert(not Profile.valid(reloaded), "unknown ores are still rejected")
 end
-assert(
-	Config.ResetAfter - Config.Layers[#Config.Layers].depthBlocks >= 2000,
-	"A renewal cycle should leave room to mine after a shaft to the crater"
-)
-assert(Config.ResetPerMiner > Config.Layers[#Config.Layers].depthBlocks and Config.ResetMost >= Config.ResetAfter
-	and Config.ResetSoonest >= 600 and Config.ResetSoonest < Config.ResetSeconds, "the budget grows with each miner and can't be rushed")
+assert(Config.ResetSeconds == 3600 and Config.ResetAfter == nil and Config.ReturnDepth > 0, "the mine renews hourly, on the clock only")
 print("PASS expansion regions, grade boundaries, ore reach, Starfall rarity, 32-bit precision, rare sampling and old saves")
 local surface = workspace.CitrineCove
 do

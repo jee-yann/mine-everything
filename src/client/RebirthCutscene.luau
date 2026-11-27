@@ -134,7 +134,8 @@ function Scene.play(player, hud, count)
 	end)
 	camera.CameraType = Enum.CameraType.Scriptable
 	for _, bar in bars do
-		tween(bar, 0.45, { Size = UDim2.fromScale(1, 0.1) })
+		-- Thin on a phone held sideways, where every pixel of height counts.
+		tween(bar, 0.45, { Size = UDim2.fromScale(1, if gui.AbsoluteSize.Y < 500 then 0.045 else 0.1) })
 	end
 	tween(skip, 0.4, { TextTransparency = 0.15 })
 	tween(skip.UIStroke, 0.4, { Transparency = 0.15 })

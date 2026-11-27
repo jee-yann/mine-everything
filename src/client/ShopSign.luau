@@ -1,8 +1,8 @@
--- A sign floating over the Outfitters stall that advertises the featured offers (the same ones as the
--- HUD tiles, FeaturedOffers): a card for each, with a live preview or its art, its name and a pill
--- (how many are left, or the discount). Tapping a card opens that offer; with every offer bought it
--- points to the Shop instead. It shrinks with distance so it reads from across the plaza without
--- filling the screen up close.
+-- A painted signboard standing on the Outfitters roof that advertises the featured offers (the same
+-- ones as the HUD tiles, FeaturedOffers): a card for each, with a live preview or its art, its name and
+-- a pill (how many are left, or the discount). Tapping a card opens that offer; with every offer bought
+-- it points to the Shop instead. It's a real board in a wooden frame (it takes the hat emblem's place)
+-- and it's put away while a film plays.
 local Players = game:GetService("Players")
 local Rep = game:GetService("ReplicatedStorage")
 local Run = game:GetService("RunService")
@@ -30,17 +30,44 @@ return function(hud)
 		local island = workspace:FindFirstChild("CitrineCove")
 		local plaza = island and island:FindFirstChild("Harbor Plaza")
 		local store = plaza and plaza:FindFirstChild("Store")
-		local counter = store and (store:FindFirstChild("Counter", true) or store:FindFirstChildWhichIsA("BasePart", true))
-		if not counter or not hud.offers then return end
-		local sign = Instance.new("BillboardGui")
-		sign.Name, sign.Adornee, sign.ResetOnSpawn = "Outfitters featured", counter, false
-		sign.Size, sign.StudsOffsetWorldSpace = UDim2.fromOffset(420, 200), Vector3.new(0, 19, 0)
-		sign.MaxDistance, sign.LightInfluence, sign.Active = 170, 0, true
-		sign.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		local ridge = store and store:FindFirstChild("Roof ridge", true)
+		local name = store and store:FindFirstChild("Shop sign", true)
+		if not ridge or not name or not hud.offers then return end
+		-- The board faces the way the stall's name board does, out over the counter.
+		local out = (name.Position - ridge.Position) * Vector3.new(1, 0, 1)
+		out = if out.Magnitude > 0.01 then out.Unit else Vector3.zAxis
+		local up = ridge.Position + Vector3.yAxis * (ridge.Size.Y / 2)
+		local board = Instance.new("Model")
+		board.Name = "Outfitters featured board"
+		local function plank(label, size, at, color)
+			local p = Instance.new("Part")
+			p.Name, p.Size, p.Color, p.Material = label, size, color, Enum.Material.SmoothPlastic
+			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+			p.CFrame = CFrame.lookAt(at, at + out)
+			p.Parent = board
+			return p
+		end
+		local center = up + Vector3.yAxis * 3.3 + out * 1.2
+		plank("Board frame", Vector3.new(12.8, 6.8, 0.5), center - out * 0.12, rgb(120, 78, 46))
+		local face = plank("Board face", Vector3.new(12, 6, 0.3), center + out * 0.06, rgb(46, 40, 82))
+		for _, side in { -1, 1 } do
+			local right = CFrame.lookAt(center, center + out).RightVector
+			plank("Board post", Vector3.new(0.6, 3.6, 0.6), up + Vector3.yAxis * 1.2 + right * side * 5 + out * 0.9, rgb(120, 78, 46))
+		end
+		-- The hat emblem sat where the board stands now.
+		for _, part in store:GetDescendants() do
+			if part:IsA("BasePart") and (part.Name == "Hat emblem" or part.Name == "Hat band") then part.LocalTransparencyModifier = 1 end
+		end
+		local sign = Instance.new("SurfaceGui")
+		sign.Name, sign.Adornee, sign.ResetOnSpawn, sign.Face = "Outfitters featured", face, false, Enum.NormalId.Front
+		sign.CanvasSize, sign.LightInfluence, sign.Brightness, sign.Active = Vector2.new(600, 300), 0, 1.4, true
+		sign.MaxDistance, sign.ZIndexBehavior = 220, Enum.ZIndexBehavior.Sibling
 		sign.Parent = player:WaitForChild("PlayerGui")
-		local root = W.frame(sign, "Sign", 0, 0, 420, 200, W.ink)
+		board.Parent = workspace
+		sign.Destroying:Once(function() board:Destroy() end)
+		local root = W.frame(sign, "Sign", 6, 12, 420, 200, W.ink)
 		root.BackgroundTransparency = 1
-		local fit = W.scale(root)
+		W.scale(root).Scale = 1.4
 		local header = W.frame(root, "Header", 120, 0, 180, 38, W.white, 19)
 		W.enamelPanel(header, rgb(255, 159, 200), rgb(227, 69, 138), 19)
 		local title = W.title(header, "FEATURED", 0, 0, 180, 36, 24, W.white)
@@ -88,14 +115,13 @@ return function(hud)
 		sign.Destroying:Once(function()
 			for _, link in links do link:Disconnect() end
 		end)
-		-- Smaller far away, a gentle bob.
-		table.insert(links, Run.RenderStepped:Connect(function()
-			local camera = workspace.CurrentCamera
-			local distance = (camera.CFrame.Position - counter.Position).Magnitude
-			local screen = math.min(1, camera.ViewportSize.Y / 720) ^ 1.6
-			local s = math.clamp(60 / math.max(distance, 1), 0.3, 1) * screen
-			fit.Scale, sign.Size = s, UDim2.fromOffset(420 * s, 200 * s)
-			sign.StudsOffsetWorldSpace = Vector3.new(0, 19 + 0.3 * math.sin(os.clock() * 1.6), 0)
+		-- Off the island while a film (the opening or a rebirth) is playing.
+		table.insert(links, Run.Heartbeat:Connect(function()
+			local away = hud.inOpening == true
+			if (board.Parent == nil) ~= away then
+				board.Parent = if away then nil else workspace
+				sign.Enabled = not away
+			end
 		end))
 		return sign
 	end
@@ -104,7 +130,7 @@ return function(hud)
 	task.spawn(function()
 		local sign
 		while true do
-			if not (sign and sign.Parent and sign.Adornee and sign.Adornee:IsDescendantOf(workspace)) then
+			if not (sign and sign.Parent and sign.Adornee and (sign.Adornee:IsDescendantOf(workspace) or hud.inOpening)) then
 				if sign then sign:Destroy() end
 				sign = build()
 			end

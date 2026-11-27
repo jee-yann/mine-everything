@@ -801,10 +801,6 @@ for _, player in Players:GetPlayers() do
 	task.spawn(join, player)
 end
 
--- The mine's budget of removed blocks before it renews (Config.ResetAfter), for the miners here now.
-local function resetBudget()
-	return math.min(Config.ResetMost, Config.ResetAfter + Config.ResetPerMiner * math.max(0, #Players:GetPlayers() - 1))
-end
 -- Miners who were deep when the mine renewed, and the cell each one stood in.
 local returns = {}
 local function sendBack()
@@ -826,7 +822,6 @@ task.spawn(function()
 		world:generate()
 		sendBack()
 		local renewAt = os.clock() + Config.ResetSeconds
-		local soonest = os.clock() + Config.ResetSoonest
 		net:SetAttribute("Ready", true)
 		repeat
 			task.wait(1)
@@ -840,7 +835,7 @@ task.spawn(function()
 				end
 				world.grid:refreshStarter(os.clock(), miners)
 			end
-		until (world.removed >= resetBudget() and os.clock() >= soonest) or os.clock() >= renewAt
+		until os.clock() >= renewAt
 		net.Feedback:FireAllClients("resetSoon", Config.ResetWarning)
 		task.wait(Config.ResetWarning)
 		world.ready = false

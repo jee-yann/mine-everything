@@ -318,11 +318,36 @@ function W.highlight(text)
 	return (string.gsub(text, "\1(%d+)\1", function(i) return saved[tonumber(i)] end))
 end
 
--- Rich text with every rarity name and keywords like Starfall in their own colours. The label needs
--- RichText on.
+-- What a purchase or perk gives, in its colour wherever it's written: gold (2× Gold, +20% gold, Gold
+-- Tonics, amounts of G) in gold, XP in aqua, mining speed, Instamine and Haste Tonics in orange,
+-- movement speed and Auto Sell in green, luck in mint. Text already coloured is left alone.
+local orange, green, mint = Color3.fromRGB(255, 180, 90), Color3.fromRGB(150, 255, 120), Color3.fromRGB(120, 255, 200)
+local perks = {
+	{ "%d+× Gold", W.gold }, { "%+%d+%% gold", W.gold }, { "%+[%d,]+ gold", W.gold }, { "Gold Tonics?", W.gold },
+	{ "[%d,]+ G%f[%A]", W.gold }, { "%+%d+%% XP", W.aqua }, { "%+%d+%% mining speed", orange },
+	{ "Haste Tonics?", orange }, { "Instamine", orange }, { "%+%d+%% movement speed", green }, { "Auto Sell", green },
+	{ "%d+× Server Luck", mint }, { "%d+× Lucky", mint }, { "rare ore", mint }, { "Lucky Brews?", mint },
+	{ "%+%d+%% backpack capacity", W.aqua },
+}
+function W.perks(text)
+	local saved = {}
+	local function keep(piece)
+		table.insert(saved, piece)
+		return "\2" .. #saved .. "\2"
+	end
+	text = string.gsub(text, "<font[^>]*>.-</font>", keep)
+	for _, perk in perks do
+		text = string.gsub(text, perk[1], function(piece) return keep(W.colored(piece, perk[2])) end)
+	end
+	return (string.gsub(text, "\2(%d+)\2", function(i) return saved[tonumber(i)] end))
+end
+
+-- Rich text with every rarity name and keywords like Starfall in their own colours, and perks in
+-- theirs (W.perks). The label needs RichText on.
 local keywords
 function W.rich(text)
 	keywords = keywords or require(game:GetService("ReplicatedStorage").Shared.Collectibles).keywords
+	text = W.perks(text)
 	return (string.gsub(text, "%a+", function(word)
 		local color = keywords[word]
 		return if color then W.colored(word, color) else word

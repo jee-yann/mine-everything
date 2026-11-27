@@ -494,7 +494,10 @@ function Hud.new(player, net, mobile)
 			loc.Position = UDim2.fromOffset(titleX, locationY)
 			local depthY = belowChat(titleX - 58, locationY + 37, 116, 21)
 			self.depth.Position = UDim2.fromOffset(0, depthY - locationY)
-			local surfaceY = belowChat(titleX - 66, depthY + 24, 132, 46)
+			-- Phones skip the region name and depth up top (the screen is short), and the Surface
+			-- button takes their place at the top.
+			self.layer.Visible, self.depth.Visible = not railsOnEdge, not railsOnEdge
+			local surfaceY = belowChat(titleX - 66, if railsOnEdge then locationY else depthY + 24, 132, 46)
 			self.surface.Position = UDim2.new(0.5, 0, 0, surfaceY - locationY)
 			local right = if topActions then freeRight else width - margin
 			local rowY = if topActions then top elseif inTopbar then 4 else math.max(73, depthY + 26)
@@ -552,7 +555,8 @@ function Hud.new(player, net, mobile)
 				W.anchor(rewardRail, 0, 0, UDim2.fromOffset(right - pairWidth, rowY + 1))
 				-- The menu buttons: a small two-column rail at the top left, under Roblox's own buttons
 				-- and above where the thumbstick sits. The gold sits beside it.
-				local railTop = belowChat(leftEdge, top + 38, 2 * tileStep * 0.4, 40)
+				-- A clear gap under Roblox's own buttons (and its chat), so the rail never touches them.
+				local railTop = belowChat(leftEdge, top + 50, 2 * tileStep * 0.4, 40)
 				local menuHeight = menuRail.Size.Y.Offset
 				local railScale = math.clamp((height * 0.62 - railTop) / menuHeight, 0.3, 0.55)
 				menuRailScale.Scale = railScale
@@ -570,6 +574,7 @@ function Hud.new(player, net, mobile)
 			end
 		else
 			tools.Size = UDim2.fromOffset(200, 46)
+			self.layer.Visible, self.depth.Visible = true, true
 			self.levelRing.button.Position = UDim2.fromOffset(154, 0)
 			self.depth.Position = UDim2.fromOffset(0, 37)
 			self.surface.Position = UDim2.new(0.5, 0, 1, 3)

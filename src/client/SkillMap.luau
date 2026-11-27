@@ -104,10 +104,17 @@ function Map.new(parent, player, net, close)
 		W.gradient(item.face, W.white, Color3.fromRGB(158, 153, 192), 66)
 		Icons.draw(b, node.icon, 25, 23, 34, colors[node.branch])
 		item.shade = diamond(b, "Unlearned enamel", 42, 41, 46, W.ink)
-		local selection = diamond(b, "Selection", 42, 41, 63, W.white)
+		-- Selected: a thick aqua frame that breathes, and an arrow over the gem, so the skill the footer
+		-- describes is obvious at a glance (hover is the gold glow).
+		local selection = diamond(b, "Selection", 42, 41, 76, W.aqua)
 		selection.BackgroundTransparency, selection.Visible = 1, false
-		W.stroke(selection, W.white, 2)
-		item.selection = selection
+		local ring = W.stroke(selection, W.aqua, 5)
+		game:GetService("TweenService"):Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ Transparency = 0.55 }):Play()
+		local arrow = W.title(b, "▼", 0, 0, 40, 30, 30, W.aqua)
+		arrow.Name, arrow.AnchorPoint, arrow.Position, arrow.Visible = "Selected arrow", Vector2.new(0.5, 1), UDim2.fromOffset(42, -2), false
+		W.outlineText(arrow, 2.4)
+		item.selection, item.arrow = selection, arrow
 		item.title = W.title(b, node.name, -38, 79, 160, 26, 20, W.white)
 		W.outlineText(item.title, 2.2)
 		-- Hover: a gold glow round the gem, the gem lifts a little and its name turns gold.
@@ -337,6 +344,16 @@ function Map.new(parent, player, net, close)
 	return self
 end
 
+-- On a phone held sideways (`room` from the menu): the map fills the whole screen, reaching up into
+-- Roblox's top bar, with one slim row of controls there beside Roblox's buttons and a slim footer.
+function Map:fit(room)
+	self.room = room
+	local raise = if room then room.raise else 0
+	self.screen.Position, self.screen.Size = UDim2.fromOffset(0, -raise), UDim2.new(1, 0, 1, raise)
+	self.layoutSize = nil
+	if self.screen.Visible then self:position() end
+end
+
 function Map:position()
 	local size = self.view.AbsoluteSize
 	if size.X <= 0 or size.Y <= 0 then
@@ -351,6 +368,14 @@ function Map:position()
 		return
 	end
 	self.layoutSize = size
+	if self.room then
+		self:compact(size)
+		return
+	end
+	self.header.Position = UDim2.fromOffset(0, 0)
+	self.path.Visible, self.summary.Visible, self.summary.TextWrapped = true, true, true
+	self.learn.Size, self.learn.Position, self.learn.TextSize = UDim2.fromOffset(144, 56), UDim2.new(1, -156, 0, 12), 20
+	self.title.Position, self.title.TextSize, self.detail.Position, self.detail.TextSize = UDim2.fromOffset(16, 6), 26, UDim2.fromOffset(16, 38), 18
 	self.footerScale.Scale = math.clamp(size.X / 1080, 1, 1.24)
 	local width = math.clamp((size.X - 12) / self.footerScale.Scale, 190, 640)
 	self.footer.Size = UDim2.fromOffset(width, 112)
@@ -393,6 +418,39 @@ function Map:position()
 			UDim2.fromOffset(x, if narrow then 85 else 57), UDim2.new(1, -x - 12, 0, if narrow then 20 else 26)
 	end
 end
+-- The phone layout (see Map:fit): one 50-pixel row of controls in the top bar beside Roblox's
+-- buttons, and a 76-pixel footer, so the tree gets nearly the whole screen.
+function Map:compact(size)
+	local left = self.room.left
+	local rowW = size.X - left
+	self.header.Position, self.header.Size = UDim2.fromOffset(left, 0), UDim2.new(1, -left, 0, 50)
+	self.view.Position, self.view.Size = UDim2.fromOffset(0, 50), UDim2.new(1, 0, 1, -50)
+	local control, right = 40, -6
+	for i, button in self.controls do
+		local w = if i == 2 or i == 3 then control * 1.62 else control
+		button.Size, button.TextSize = UDim2.fromOffset(w, control), if i == 3 then 17 elseif i == 2 then 1 else 34
+		right -= w
+		button.Position = UDim2.new(1, right, 0, 5)
+		right -= 6
+	end
+	self.heading.Visible, self.legend.Visible = false, false
+	local cardWidth = 104
+	self.balance.Size, self.balance.Position = UDim2.fromOffset(cardWidth, 40), UDim2.fromOffset(4, 5)
+	self.points.Size = UDim2.fromOffset(38, 38)
+	self.pointsLabel.Position, self.pointsLabel.Size, self.pointsLabel.TextSize = UDim2.fromOffset(40, 0), UDim2.fromOffset(62, 40), 11
+	local summaryX = cardWidth + 12
+	self.summary.Position, self.summary.Size = UDim2.fromOffset(summaryX, 5), UDim2.fromOffset(math.max(0, rowW + right - summaryX - 4), 40)
+	self.summary.Visible = rowW + right - summaryX > 80
+	self.summary.TextWrapped = false
+	self.footerScale.Scale = 1
+	local width = math.clamp(size.X - 16, 190, 600)
+	self.footer.Size = UDim2.fromOffset(width, 76)
+	self.title.Position, self.title.Size, self.title.TextSize = UDim2.fromOffset(14, 4), UDim2.fromOffset(width - 150, 28), 22
+	self.detail.Position, self.detail.Size, self.detail.TextSize = UDim2.fromOffset(14, 32), UDim2.fromOffset(width - 150, 40), 15
+	self.path.Visible = false
+	self.learn.Size, self.learn.Position, self.learn.TextSize = UDim2.fromOffset(124, 48), UDim2.new(1, -134, 0, 14), 18
+end
+
 function Map:zoomBy(factor)
 	local before = self.zoom
 	self.zoom = math.clamp(before * factor, 0.5, 1.8)
@@ -491,6 +549,7 @@ function Map:refresh()
 			item.rim.Thickness = if learned or state == states.available then 4 else 2
 		end
 		item.selection.Visible = self.selected == id
+		item.arrow.Visible = self.selected == id
 		for parentId, line in item.lines do
 			local connected = parentId == "Origin" or owned[parentId]
 			line.BackgroundColor3 = if learned

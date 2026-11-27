@@ -204,9 +204,21 @@ function Menu:layout(width, height, touch)
 	-- Give landscape phones larger type and touch targets by scrolling the rows
 	-- inside the card. Keep the header, footer and close button within safe bounds.
 	self.touchLayout = touch
-	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory } do
-		panel.card:layout(Vector2.new(width, height), touch)
+	-- A phone held sideways: the big cards and the skill tree may use Roblox's top bar beside its
+	-- buttons, which is empty space there.
+	local room = nil
+	if touch and width > height and height < 470 then
+		local Gui = game:GetService("GuiService")
+		local full = Gui:GetInsetArea(Enum.ScreenInsets.None)
+		local core = Gui:GetInsetArea(Enum.ScreenInsets.CoreUISafeInsets)
+		local bar = Gui:GetInsetArea(Enum.ScreenInsets.TopbarSafeInsets)
+		room = { raise = math.max(0, core.Min.Y - full.Min.Y), left = math.max(0, bar.Min.X - core.Min.X) + 6 }
 	end
+	self.room = room
+	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory } do
+		panel.card:layout(Vector2.new(width, height), touch, room)
+	end
+	if self.map then self.map:fit(room) end
 	local shortLandscape = width > height and (touch or height < 470)
 	local maxScale = if shortLandscape then 1.1 else 1.76
 	local minHeight = if shortLandscape then 340 else 408
@@ -404,8 +416,9 @@ function Menu:jobs()
 			entry.wasReady = entry.ready
 		end
 		local button = self.claimJobs
-		button.Text = if count > 0 then string.format("Claim all (%d) · +%s G", count, W.goldAmount(total)) else "Claim all"
-		button.TextSize = if count > 0 then 15 else 19
+		button.RichText = true
+		button.Text = if count > 0 then "Claim all · " .. W.colored("+" .. W.goldAmount(total) .. " G", W.gold) else "Claim all"
+		button.TextSize = 19
 		button.Interactable, button.BackgroundColor3 = count > 0, if count > 0 then W.green else W.muted
 		self:arrangeJobs(changed)
 	end)
@@ -617,10 +630,31 @@ function Menu:attention(key)
 	end
 	return false
 end
+-- A new unlock gets a red dot, like the Index. It counts as read once on screen for a moment, and
+-- its dot stays until the page is opened again.
 function Menu:watchRow(frame, id, unlocked)
-	local border = W.stroke(frame, W.gold, 2)
-	border.Enabled = false
-	table.insert(self.seenRows, { frame = frame, id = id, unlocked = unlocked, border = border })
+	local dot = W.dot(frame, -16, 4)
+	dot.Size, dot.Position = UDim2.fromOffset(14, 14), UDim2.new(1, -18, 0, 4)
+	table.insert(self.seenRows, { frame = frame, id = id, unlocked = unlocked, dot = dot })
+end
+-- Opens a page scrolled to its first new unlock, if it has one.
+function Menu:scrollToNew()
+	for _, entry in self.seenRows do
+		if entry.unlocked() and not self.player:GetAttribute("Seen" .. self.page .. entry.id) then
+			local list = self.list
+			-- Absolute sizes are on screen (scaled); the canvas position is in the list's own units.
+			local scale = math.max(self.scale.Scale, 0.01)
+			local y = (entry.frame.AbsolutePosition.Y - list.AbsolutePosition.Y) / scale + list.CanvasPosition.Y
+			local most = math.max(0, (list.AbsoluteCanvasSize.Y - list.AbsoluteWindowSize.Y) / scale)
+			local goal = Vector2.new(0, math.clamp(y - 8, 0, most))
+			if self.preferences.values.MenuMotion then
+				W.tween(list, 0.35, { CanvasPosition = goal })
+			else
+				list.CanvasPosition = goal
+			end
+			return
+		end
+	end
 end
 function Menu:observeRows(now)
 	local top = self.list.AbsolutePosition.Y
@@ -629,7 +663,7 @@ function Menu:observeRows(now)
 		if entry.sent or self.player:GetAttribute("Seen" .. self.page .. entry.id) or not entry.unlocked() then
 			continue
 		end
-		entry.border.Enabled = true
+		entry.dot.Visible = true
 		local mid = entry.frame.AbsolutePosition.Y + entry.frame.AbsoluteSize.Y / 2
 		if mid >= top and mid <= bottom then
 			entry.since = entry.since or now
@@ -756,6 +790,7 @@ function Menu:open(key)
 	self.closing = false
 	if key == "Skills" and not self.map then
 		self.map = SkillMap.new(self.overlay, self.player, self.net, self.closeMap)
+		self.map:fit(self.room)
 		self.map.screen:GetPropertyChangedSignal("Visible"):Connect(function()
 			self.mapVisibilityChanged(self.map.screen.Visible)
 		end)
@@ -801,7 +836,7 @@ function Menu:open(key)
 		local fresh = self.wide ~= wide
 		self.page, self.wide = key, wide
 		wide:open(key)
-		wide.card:layout(self.overlay.AbsoluteSize, self.touchLayout)
+		wide.card:layout(self.overlay.AbsoluteSize, self.touchLayout, self.room)
 		wide.card:enter(fresh and self.preferences.values.MenuMotion, self.arrival)
 		if self.arrival and wide.welcome then wide:welcome() end
 		self.arrival = nil
@@ -840,6 +875,11 @@ function Menu:open(key)
 		local rows = builders[key](self)
 		self.list.CanvasSize, self.list.CanvasPosition =
 			UDim2.fromOffset(0, rows * (if key == "Menu" then 77 elseif key == "Gear" then 91 else 69)), Vector2.zero
+		if #self.seenRows > 0 then
+			task.delay(0.05, function()
+				if self.page == key and self.overlay.Visible then self:scrollToNew() end
+			end)
+		end
 	end
 	self.footer.Visible = key ~= "Menu"
 	local center = UDim2.fromScale(0.5, 0.5)
