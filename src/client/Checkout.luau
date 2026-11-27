@@ -171,7 +171,9 @@ function Checkout:buy(kind, item)
 	if self.pending and self.wait.Visible and self.gui.Enabled then return end
 	local pending = { kind = kind, item = item, at = os.clock() }
 	self.pending = pending
-	local free = item.id <= 0 and (practice or Config.FreeUnconfiguredItems)
+	-- An unpublished Studio test gives everything free (Store.prompt), as does an item with no ID yet
+	-- while FreeUnconfiguredItems is on.
+	local free = practice or (item.id <= 0 and Config.FreeUnconfiguredItems)
 	self.waitTitle.Text = if free then "Getting it ready…" else "Waiting for checkout…"
 	self.waitText.Text = if free then item.name .. " (free while playtesting)"
 		else "Finish buying " .. item.name .. " in the Roblox window."

@@ -84,8 +84,10 @@ function Store.join(player)
 		if practice(player) then restricted = Rep:GetAttribute("TestPaidRandomRestricted") == true end
 		player:SetAttribute("PaidRandomRestricted", restricted)
 	end)
+	-- An unpublished Studio test plays as a fresh miner: Roblox counts the experience's creator as owning
+	-- every pass, so asking would hand the tester all of them. Passes there are tried by "buying" them.
 	for _, pass in S.passes do
-		if pass.id <= 0 then continue end
+		if pass.id <= 0 or practice(player) then continue end
 		task.spawn(function()
 			for attempt = 1, 3 do
 				if player.Parent ~= Players then return end
@@ -231,8 +233,9 @@ function Store.receipt(info, sessions, context, save)
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
--- A client asks to buy a pass or product. An item without an ID is given for free in an unpublished
--- Studio test, and anywhere while GameConfig.FreeUnconfiguredItems is on (playtesting).
+-- A client asks to buy a pass or product. In an unpublished Studio test (where Roblox's checkout can't
+-- run) everything is given free; so is an item without an ID while GameConfig.FreeUnconfiguredItems is
+-- on. Everywhere else an item with an ID goes through Roblox's checkout.
 function Store.prompt(player, session, kind, key, context)
 	local item = if kind == "pass" then S.passByKey[key] else S.productByKey[key]
 	if not item then return end
@@ -257,7 +260,7 @@ function Store.prompt(player, session, kind, key, context)
 		context.feedback(player, "hint", item.name .. " has sold out")
 		return
 	end
-	if item.id > 0 then
+	if item.id > 0 and not practice(player) then
 		local sent = pcall(if kind == "pass" then Market.PromptGamePassPurchase else Market.PromptProductPurchase, Market, player, item.id)
 		if not sent then context.feedback(player, "hint", "Checkout is unavailable") end
 	elseif practice(player) or Config.FreeUnconfiguredItems then
