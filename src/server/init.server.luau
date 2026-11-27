@@ -479,7 +479,7 @@ local function action(player, key, option, value)
 		if s.resetting or shuttingDown or s.travel or option ~= s.profile.rebirths then
 			return
 		end
-		local count = Profile.rebirth(s.profile)
+		local count, kept, crates = Profile.rebirth(s.profile)
 		if not count then
 			net.Feedback:FireClient(player, "rebirth", false, "Find this rebirth's Starfalls first. The Rebirth card shows where.")
 			return
@@ -494,6 +494,12 @@ local function action(player, key, option, value)
 		s.climb, s.lavaUntil = nil, nil
 		sync(player, s.profile)
 		applySkills(player, s.profile)
+		task.delay(6, function()
+			if player.Parent then
+				net.Feedback:FireClient(player, "hint", string.format("You kept %s G and got %d Starfall Crate%s",
+					tostring(kept):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""), crates, if crates == 1 then "" else "s"))
+			end
+		end)
 		task.spawn(Data.save, player, s)
 		net.Feedback:FireClient(player, "rebirth", true, count)
 		for _, other in Players:GetPlayers() do

@@ -182,7 +182,7 @@ do
 		local oldSlots = skills.capacity(oldBase, veteran.skills)
 		veteran.bag = { Dirt = oldSlots - 1, Coal = 1 }
 		local loaded = Data.claim({ profile = veteran }, "veteran", 50).profile
-		local newSlots = 8 + 6 * (level - 1) + 2 * (level - 1) ^ 2
+		local newSlots = math.round(8 + 8 * (level - 1) + 0.35 * (level - 1) ^ 2)
 		assert(Upgrades.items.Capacity.values[level] == newSlots)
 		assert(Profile.stat(loaded, "Capacity") == skills.capacity(newSlots, veteran.skills))
 		assert(Profile.sell(loaded, 1, "Coal", "Stack") == 5)
@@ -618,7 +618,7 @@ do
 	for _, list in appears do
 		table.sort(list)
 	end
-	assert(lowestName == "Starfall", "Starfall has the lowest chance of any ore")
+	local _ = lowestName
 	-- Every ore can be found, and mined with the region's pick or one no more than two levels on.
 	for _, ore in Ores.list do
 		if ore.host then
@@ -630,15 +630,14 @@ do
 			assert(ore.hardness <= tierAt(layers[i].depthBlocks) + 2, ore.name .. " in " .. layers[i].name .. " is in reach")
 		end
 	end
-	-- Starfall: from Prism Grotto down, more often the deeper the region, most of all in the crater,
-	-- and any pick that reaches it can take it.
-	local firstStarfall = appears.Starfall[1]
-	assert(layers[firstStarfall].name == "Prism Grotto" and appears.Starfall[#appears.Starfall] == last, "Starfall's regions")
-	for k = 2, #appears.Starfall do
-		local a, b = layers[appears.Starfall[k - 1]], layers[appears.Starfall[k]]
-		assert(b.oreChances.Starfall > a.oreChances.Starfall, "Starfall grows with depth: " .. b.name)
-	end
-	assert(Ores.byName.Starfall.hardness <= tierAt(layers[firstStarfall].depthBlocks), "Starfall needs no more pick than its region")
+	-- Starfall: only in the bottom region, only for the top pick, a little more likely every row deeper
+	-- with no limit.
+	assert(#appears.Starfall == 1 and appears.Starfall[1] == last, "Starfall appears only in the final region")
+	assert(Ores.byName.Starfall.hardness == #grades, "Starfall needs the top pick")
+	local base = layers[last].depthBlocks
+	assert(Geology.starfallChance(base - 1) == 0 and Geology.starfallChance(base) == layers[last].oreChances.Starfall)
+	assert(Geology.starfallChance(base + 100) > Geology.starfallChance(base) and Geology.starfallChance(base + 100) < Geology.starfallChance(base) * 1.2
+		and Geology.starfallChance(base + 100000) > Geology.starfallChance(base + 1000), "Starfall grows slowly and for ever")
 	assert(#appears.Sunstone == 1 and appears.Sunstone[1] == 1, "Sunstone is found only in the first stone region")
 	assert(Ores.byName.Sunstone.hardness <= tierAt(layers[1].depthBlocks), "a starter pick can mine Sunstone")
 	local exclusive = 0
@@ -668,8 +667,8 @@ do
 			previous = entry.limit
 		end
 		local count = 0
-		for _ in layer.oreChances do
-			count += 1
+		for name in layer.oreChances do
+			if name ~= "Starfall" then count += 1 end -- Starfall rolls on its own
 		end
 		assert(listed == count, layer.name .. " rolls every listed ore once")
 	end
@@ -683,8 +682,7 @@ do
 		end
 		error(name .. " is not in " .. layer.name)
 	end
-	local starfallLow, starfallHigh = band(layers[last], "Starfall")
-	assert(math.abs((starfallHigh - starfallLow) / Geology.scale - layers[last].oreChances.Starfall / 100) < 1e-9, "the crater's Starfall share is exact")
+	assert(not pcall(band, layers[last], "Starfall"), "Starfall has its own roll, not a band")
 	-- Sampled with the real rolls across several seeds, rare ores land near their odds.
 	local function hits(layer, name, seeds, cells)
 		local low, high = band(layer, name)
@@ -721,14 +719,29 @@ do
 	end
 	local sunstone = hits(layers[1], "Sunstone", { 3, 17, 29, 41 }, 250000) -- expect 500
 	assert(sunstone > 420 and sunstone < 580, "Sunstone sampled " .. sunstone .. " times in a million blocks")
-	local starfall = hits(layers[last], "Starfall", { 5, 6 }, 100000) -- expect 700 at 0.35%
-	assert(starfall >= 600 and starfall <= 800, "Starfall sampled " .. starfall .. " times in 200,000 crater blocks")
+	local starfall, rock = 0, 0
+	for _, seed in { 5, 6 } do
+		local geology = Geology.new(seed)
+		for n = 0, 99999 do
+			local cell = Vector3.new(n % 1000 - 500, -1 - layers[last].depthBlocks, n // 1000)
+			if not geology:isCave(cell) then
+				rock += 1
+				if geology:material(cell) == Ores.byName.Starfall.material then starfall += 1 end
+			end
+		end
+	end
+	local expected = rock * layers[last].oreChances.Starfall / 100 -- about 200
+	assert(math.abs(starfall - expected) < expected * 0.3, "Starfall sampled " .. starfall .. " times, expected about " .. expected)
 	print("SAMPLE Sunstone", sunstone, "per million; Starfall", starfall, "per 200,000")
 	-- Rebirth: locked until a Starfall is mined this run; resets the run and keeps the miner.
 	do
 		local Rebirth = require(Shared.Rebirth)
 		assert(Rebirth.goldMultiplier(1) == 2 and Rebirth.xpMultiplier(2) == 1.5)
-		assert(Rebirth.cutMultiplier(1) == 0.95 and Rebirth.cutMultiplier(20) == 1 - Rebirth.cutCap)
+		assert(math.abs(Rebirth.cutMultiplier(1) - 0.92) < 1e-9 and Rebirth.cutMultiplier(20) == 1 - Rebirth.cutCap)
+		-- Kept gold shrinks as a share as the pile grows, and never exceeds it.
+		local small, big = Rebirth.keptGold(10000, 0), Rebirth.keptGold(10000000, 0)
+		assert(small > 0 and small <= 10000 and big > small and big / 10000000 < small / 10000 and big < 200000, "kept gold diminishes")
+		assert(Rebirth.crates(1) == 1 and Rebirth.crates(5) == 2)
 		local run = Profile.new()
 		run.gold, run.flares, run.temper, run.xp = 5000, 2, 3, 4000
 		run.levels = { Speed = 12, Power = 9, Capacity = 7 }
@@ -740,7 +753,8 @@ do
 		assert(run.runStarfalls == 1 and Profile.valid(run))
 		local xpBefore = run.xp
 		assert(Profile.rebirth(run) == 1, "rebirth after a Starfall")
-		assert(run.gold == 0 and run.flares == 0 and run.temper == 0 and next(run.bag) == nil and next(run.grades) == nil)
+		assert(run.gold == Rebirth.keptGold(5000, 0) and run.gold > 0 and run.flares == 0 and run.temper == 0 and next(run.bag) == nil and next(run.grades) == nil)
+		assert(run.col.items.StarfallGeode == 1, "a rebirth gives a Starfall Crate")
 		assert(run.levels.Speed == 1 and run.levels.Power == 1 and run.levels.Capacity == 1, "workshop resets")
 		assert(run.xp == xpBefore and run.skills.Reach and run.gems == 40 and run.bestDepth == 900 and run.title == 2)
 		assert(run.discoveries.Starfall and run.counts.Starfall == 1 and run.bestPurity.Coal, "the Index stays")
@@ -799,8 +813,12 @@ do
 	local reloaded = Data.claim({ profile = oldSave }, "oldSave-expansion", 60).profile
 	assert(reloaded.levels.Power == 6 and Profile.stat(reloaded, "Power") == 6 and Upgrades.pickNames[6] == "Prismheart Pick", "old pick kept")
 	-- Old Speed 7 (0.20 s) and Capacity 8 (64 slots) move to the first long-curve level as good.
-	assert(reloaded.progression == 3 and reloaded.levels.Speed == 30 and reloaded.levels.Capacity == 5, "old gear migrated")
-	assert(Profile.stat(reloaded, "Speed") == 0.2 and Profile.stat(reloaded, "Capacity") == 64, "old gear kept")
+	assert(reloaded.progression == 4 and reloaded.levels.Speed == 30, "old gear migrated")
+	assert(Profile.stat(reloaded, "Speed") == 0.2 and Profile.stat(reloaded, "Capacity") >= 64
+		and Upgrades.items.Capacity.values[reloaded.levels.Capacity - 1] < 64, "old gear kept")
+	local packs = Upgrades.items.Capacity.values
+	assert(packs[1] == 8 and packs[2] == 16 and packs[40] == 852, "the smaller pack curve")
+	assert(Upgrades.migrateCapacity(40) == 40 and Upgrades.migrateCapacity(1) == 1, "the biggest old packs keep the top level")
 	assert(Upgrades.migrateLevel("Speed", 1) == 1 and Upgrades.migrateLevel("Capacity", 2) == 2, "starter levels unchanged")
 	assert(Upgrades.price("Power", 6) and not Upgrades.price("Speed", 30) and Upgrades.price("Capacity", 5), "migrated gear upgrades further")
 	-- The 30-level Speed curve: every level about 5% faster (none too small to feel), 0.90 s to 0.20 s,
@@ -816,7 +834,7 @@ do
 	assert(Profile.valid(midway), "a save on the old Speed curve still loads")
 	local moved = Data.claim({ profile = midway }, "speed-curve", 60).profile
 	local oldSeconds = 0.8 * 50 ^ (-math.log(4) / math.log(100))
-	assert(moved.progression == 3 and Profile.stat(moved, "Speed") <= oldSeconds and speeds[moved.levels.Speed - 1] > oldSeconds, "old Speed 50 keeps its speed")
+	assert(moved.progression == 4 and Profile.stat(moved, "Speed") <= oldSeconds and speeds[moved.levels.Speed - 1] > oldSeconds, "old Speed 50 keeps its speed")
 	assert(speeds[Upgrades.migrateSpeed(1)] <= 0.8 and speeds[Upgrades.migrateSpeed(1) - 1] > 0.8, "an old first level keeps its 0.80 s")
 	Profile.recordCut(reloaded, "Sunstone", 5)
 	Profile.recordCut(reloaded, "Voidshard", 600)

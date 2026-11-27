@@ -33,13 +33,17 @@ function TouchActions.new(root)
 end
 
 -- Whether a screen point (a touch's Position) is on the Mine disc.
+-- Roblox says what is under the touch, in the touch's own coordinates, so insets, notches and the
+-- top bar never shift the target (adding the inset by hand put it 58 pixels off on phones). The whole
+-- Mine area counts, the disc and the margin round it, as a thumb is wide.
 function TouchActions:hit(point)
 	if not self.hold.Visible then return false end
-	local inset = game:GetService("GuiService"):GetInsetArea(Enum.ScreenInsets.None).Min
-	local at = Vector2.new(point.X, point.Y) + inset - self.disc.AbsolutePosition
-	local size = self.disc.AbsoluteSize
-	-- A little margin round the disc, as a thumb is wide.
-	return at.X >= -10 and at.Y >= -10 and at.X <= size.X + 10 and at.Y <= size.Y + 10
+	local gui = game:GetService("Players").LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if not gui then return false end
+	for _, object in gui:GetGuiObjectsAtPosition(point.X, point.Y) do
+		if object == self.hold or object:IsDescendantOf(self.hold) then return true end
+	end
+	return false
 end
 
 function TouchActions:setPressed(pressed)

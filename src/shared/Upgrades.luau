@@ -16,21 +16,25 @@ for level = 1, speedLevels do
 	speedValues[level] = math.round(1000 * slowest * (fastest / slowest) ^ ((level - 1) / (speedLevels - 1))) / 1000
 end
 -- Capacity: quadratic growth, 8 + 6(L-1) + 2(L-1)^2 slots (8, 16, 28, 44, 64 ... 3,284 at 40).
+-- Capacity: 8 + 8(L-1) + 0.35(L-1)^2 slots, rounded: 8, 16, 25, 35, 46 ... 108 at 10, 286 at 20,
+-- 852 at 40. Packs used to reach 3,284, so big that trips stopped mattering.
 local capacityValues = {}
 for level = 1, 40 do
-	capacityValues[level] = 8 + 6 * (level - 1) + 2 * (level - 1) ^ 2
+	capacityValues[level] = math.round(8 + 8 * (level - 1) + 0.35 * (level - 1) ^ 2)
 end
 local upgrades = {
 	Speed = {
 		values = speedValues,
 		base = 30,
-		growth = 1.55,
+		growth = 1.45,
 		icon = "»",
 		color = rgb(255, 200, 80),
 	},
 	Power = {
 		values = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 },
-		prices = { 110, 400, 1900, 8000, 21000, 60000, 130000, 220000, 350000, 1000000, 1900000, 2700000, 6800000 },
+		-- Cheaper from Power 3 up than they were (the top pick was 6.8M): tuned so a focused free player
+		-- reaches the Starcaller Pick, and the crater's Starfall, in about five hours.
+		prices = { 110, 400, 1500, 2500, 3800, 6500, 11000, 19000, 30000, 85000, 160000, 230000, 560000 },
 		icon = "◆",
 		color = rgb(255, 147, 100),
 	},
@@ -85,10 +89,22 @@ function api.migrateSpeed(level)
 	return #speedValues
 end
 
--- The 100-level Speed curve that progression 2 saves were on.
-local oldSpeed = {}
+-- The 100-level Speed curve and the bigger Capacity curve that progression 2 and 3 saves were on.
+local oldSpeed, oldCapacity = {}, {}
 for level = 1, 100 do
 	oldSpeed[level] = 0.8 * level ^ (-math.log(4) / math.log(100))
+end
+for level = 1, 40 do
+	oldCapacity[level] = 8 + 6 * (level - 1) + 2 * (level - 1) ^ 2
+end
+
+-- A save's Capacity level on the old curve moves to the first new level at least as roomy, or the top.
+function api.migrateCapacity(level)
+	local old = oldCapacity[math.clamp(level, 1, 40)]
+	for newLevel, value in capacityValues do
+		if value >= old then return newLevel end
+	end
+	return #capacityValues
 end
 
 function api.migrateLevel(key, level)
@@ -96,8 +112,8 @@ function api.migrateLevel(key, level)
 	if not old then
 		return level
 	end
-	-- Speed moved onto the 100-level curve then (migrateSpeed takes it on to today's).
-	local values = if key == "Speed" then oldSpeed else upgrades[key].values
+	-- They moved onto the old long curves then (migrateSpeed and migrateCapacity take them on to today's).
+	local values = if key == "Speed" then oldSpeed else oldCapacity
 	for newLevel, value in values do
 		if (key == "Speed" and value <= old) or (key == "Capacity" and value >= old) then
 			return newLevel
@@ -159,6 +175,14 @@ function api.unlockTexts(level)
 		table.insert(texts, table.concat(names, ", ", 1, keep) .. " +" .. #names - keep)
 	end
 	return texts
+end
+
+-- A benchmark for Speed: seconds to cut a Starfall in the crater (its first row) with the top pick,
+-- at this Speed level and nothing else, the same for every miner.
+function api.starfallSeconds(level)
+	local crater = Config.Layers[#Config.Layers].depthBlocks
+	local strength = Config.strength(Config.FloorY - crater * Config.Cell - Config.Cell / 2)
+	return Ores.cutTime(speedValues[level], Ores.byName.Starfall, strength, 0, nil, #upgrades.Power.values)
 end
 
 -- How much faster Speed level `level` cuts than the level before it, in percent (0 at level 1).

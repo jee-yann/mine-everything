@@ -91,8 +91,8 @@ function Panel.new(menu)
 		y += 90
 	end
 	for i, info in {
-		{ "You keep", "Level, skills, Index, achievements, titles, trails, auras, crates, quests and deepest descent.", "Book", leaf },
-		{ "Resets", "Gold, your pack, Power, Speed, Backpack and field supplies.", "Pack", slate },
+		{ "You keep", "Level, skills, Index, titles, effects, crates and some gold. Plus a Starfall Crate.", "Book", leaf },
+		{ "Resets", "Your pack, Power, Speed, Backpack, field supplies and the rest of your gold.", "Pack", slate },
 	} do
 		local box = tile(page, info[1], 264 + (i - 1) * 255, y, 245, 138, info[4])
 		Icons.draw(box, info[3], 12, 9, 34)
@@ -167,7 +167,7 @@ function Panel:refresh()
 	self.button.Interactable = self.live
 	self.note.Text = self.reply or (if self.confirming then "Gold, pack, gear and supplies reset. Press again to rebirth."
 		elseif ready then "Ready when you are."
-		else "Starfall turns up from Prism Grotto down, more often the deeper you dig.")
+		else "Starfall lies only in the Starfall Crater, for the Starcaller Pick.")
 	for _, item in self.perks do
 		item.after.Text, item.now.Text = item.perk.text(n + 1), "Now " .. item.perk.text(n)
 	end

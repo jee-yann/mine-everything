@@ -1,10 +1,12 @@
--- After a Starfall, shows the way to Rebirth and what it does, without pushing: the Rebirth button first,
--- then the button inside the card. Mining on, or closing the card, puts it away for a while.
+-- Once a run has its Starfalls and they've been sold, and the miner pauses (about a second and a half
+-- before they'd mine again), it points out the Rebirth button, without pushing. Only the button: the
+-- card itself is left clear so its keep/reset information can be read, as rebirthing is a choice.
+-- Opening the card once retires the guide for good (the "Guide Rebirth" viewed mark).
 local Gui = game:GetService("GuiService")
 local Input = game:GetService("UserInputService")
 local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local Spotlight, GuideButton = require(script.Parent.SurfaceSpotlight), require(script.Parent.GuideButton)
-local Guide = { calm = 2, shows = 25, rest = 180, limit = 3 }
+local Guide = { calm = 1.5, shows = 25, rest = 180, limit = 3 }
 
 function Guide.wanted(state)
 	return state.ready and not state.busy and state.tries < Guide.limit
@@ -25,8 +27,10 @@ function Guide.start(player, hud, busy)
 		ring:point(nil)
 		showing, hud.guidingRebirth = nil, false
 	end
+	local sent = false
 	game:GetService("RunService").RenderStepped:Connect(function()
 		local ready = player:GetAttribute("ProfileReady") == true and Rebirth.ready(player:GetAttribute("RunStarfalls") or 0, player:GetAttribute("Rebirths") or 0)
+			and (player:GetAttribute("HeldStarfall") or 0) == 0 and not player:GetAttribute("SeenGuideRebirth")
 		local now = os.clock()
 		local panel = hud.menu.rebirth
 		local cardOpen = panel ~= nil and panel.card.modal.Visible and hud.overlay.Visible
@@ -37,20 +41,13 @@ function Guide.start(player, hud, busy)
 		end
 		local motion = player:GetAttribute("MenuMotion") ~= false and not Gui.ReducedMotionEnabled
 		if cardOpen then
-			wasOpen = true
-			outside:show(nil)
-			showing, calm = nil, nil
-			if panel.live and not hud.unlocks.playing then
-				hud.guidingRebirth = true
-				local confirming = panel.confirming
-				inside:show(panel.button, if confirming then "Press again to rebirth" else "You can rebirth now!",
-					if confirming then "Your bonuses are for good.\nClose the card to keep this run."
-						else "Bigger sales, more XP and faster cuts.\nOr close this and keep mining. It waits.", motion)
-				ring:point(panel.button, motion, "Right")
-			else
-				inside:show(nil)
-				ring:point(nil)
+			-- They found it: the guide is done, and the card stays clear to read.
+			if not sent then
+				sent = true
+				hud.menu.net.Action:FireServer("Viewed", "Guide", "Rebirth")
 			end
+			clear()
+			calm = nil
 			return
 		end
 		inside:show(nil)

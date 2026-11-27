@@ -240,7 +240,7 @@ would hide it. Your own name and title hide while you're zoomed in.
 - **Speed:** cut time is divided by `1 + Fast Pick 30% + Haste Tonic 20% + Mining FX`.
 - **XP:** VIP gives +20% XP, on top of rebirths and the friend bonus.
 - **Luck and rebirth.** Starfall is rarer than 1%, so luck makes it turn up more often, and with it
-  rebirths come sooner. Starfall is a natural find from Prism Grotto down (see the README); nothing
+  rebirths come sooner. Starfall is a natural find in the Starfall Crater (see the README); nothing
   guarantees one.
 - Timed boosts of the same kind add their time, up to 4 hours.
 

@@ -25,7 +25,8 @@ for _, layer in Config.Layers do
 	local list, total = {}, 0
 	for _, ore in order do
 		local chance = layer.oreChances[ore.name]
-		if chance then
+		-- Starfall has its own roll (Geology.starfallChance), which grows with depth.
+		if chance and ore.name ~= "Starfall" then
 			assert(type(chance) == "number" and chance > 0, layer.name .. ": bad chance for " .. ore.name)
 			total += chance
 			table.insert(
@@ -49,6 +50,13 @@ local function hash(seed, x, y, z)
 	n = bit32.bxor(n, bit32.rshift(n, 15))
 	n = bit32.band(n * 1597333, 0xffffffff)
 	return bit32.bxor(n, bit32.rshift(n, 16))
+end
+-- Starfall's chance (percent) on block row `row`: none above the bottom region; there, its listed
+-- chance on the first row, a little more on every row below (GameConfig.StarfallDeeper), no limit.
+local bottom = Config.Layers[#Config.Layers]
+function Geology.starfallChance(row)
+	if row < bottom.depthBlocks then return 0 end
+	return bottom.oreChances.Starfall * (1 + Config.StarfallDeeper * (row - bottom.depthBlocks))
 end
 function Geology.new(seed)
 	return setmetatable({ seed = seed }, Geology)
@@ -147,6 +155,13 @@ function Geology:material(p)
 		return Enum.Material.Air
 	end
 	local layer = Config.layer((-p.Y - 0.5) * Config.Cell)
+	local row = -1 - p.Y
+	if row >= bottom.depthBlocks then
+		local fine = hash(self.seed + 7919, p.X, p.Y, p.Z) / 4294967296
+		if fine < Geology.starfallChance(row) / 100 then
+			return Ores.byName.Starfall.material
+		end
+	end
 	local roll = Geology.roll(self.seed, p.X, p.Y, p.Z)
 	for _, entry in thresholds[layer] do
 		if roll < entry.limit then

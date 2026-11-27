@@ -313,6 +313,7 @@ function Menu:gear()
 		title.Size, title.TextSize = UDim2.fromOffset(250, 29), 23
 		local benefit = W.text(row, "", 67, 30, 250, 20, 17, W.white, true)
 		benefit.Name = "Benefit"
+		W.largest(benefit, 17, 11)
 		W.outlineText(benefit, 1)
 		-- The price. Until there is enough gold, how much of it the miner has too.
 		detail.Position, detail.Size, detail.Font = UDim2.fromOffset(67, 50), UDim2.fromOffset(250, 32), Enum.Font.FredokaOne
@@ -347,9 +348,11 @@ function Menu:gear()
 					benefit.Text = if price then W.number(now) .. " → " .. W.number(after) .. " blocks  " .. W.colored("+" .. W.number(after - now), W.green)
 						else W.number(after) .. " blocks"
 				elseif key == "Speed" and price then
+					-- Stone and, as a benchmark, a Starfall in the crater.
 					local values = Upgrades.items.Speed.values
-					benefit.Text = string.format("%.2fs → %.2fs / stone  ", values[level], values[nextLevel])
-						.. W.colored("+" .. Upgrades.speedGain(nextLevel) .. "% faster", W.green)
+					benefit.Text = string.format("%.2f→%.2fs stone · %.0f→%.0fs Starfall  ", values[level], values[nextLevel],
+						Upgrades.starfallSeconds(level), Upgrades.starfallSeconds(nextLevel))
+						.. W.colored("+" .. Upgrades.speedGain(nextLevel) .. "%", W.green)
 				else
 					benefit.Text = describe(key, nextLevel)
 				end

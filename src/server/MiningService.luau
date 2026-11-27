@@ -231,6 +231,8 @@ function Mining.start(world, net, sessions, sync, hooks)
 		local lucky
 		if depthBlocks >= Config.DirtLayers and not world.grid:practice(world.grid:cellAt(center)) then
 			lucky = Mining.luckyFind(Config.layer(depthBlocks * Config.Cell + Config.Cell / 2), name, luck, luckRandom)
+			-- Luck never hands over an ore the pick couldn't cut (Starfall needs the top pick).
+			if lucky and Ores.byName[lucky].hardness > Profile.stat(profile, "Power") then lucky = nil end
 		end
 		if lucky then
 			-- The block opens to show a rare ore inside.

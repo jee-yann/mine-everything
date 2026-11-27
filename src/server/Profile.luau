@@ -16,7 +16,7 @@ local Profile = {}
 function Profile.new()
 	return {
 		version = 1,
-		progression = 3,
+		progression = 4,
 		introSeen = false,
 		firstTrip = {},
 		gold = 0,
@@ -378,6 +378,12 @@ function Profile.upgradeSave(p)
 		p.levels.Speed = Upgrades.migrateSpeed(p.levels.Speed)
 		p.progression = 3
 	end
+	-- The smaller Capacity curve: the first level at least as roomy (the biggest old packs shrink to
+	-- the new top, 852 slots).
+	if p.progression < 4 then
+		p.levels.Capacity = Upgrades.migrateCapacity(p.levels.Capacity)
+		p.progression = 4
+	end
 	if p.xp == nil then
 		p.xp = 0
 		for name, count in p.bag do
@@ -446,6 +452,9 @@ function Profile.markViewed(p, page, id)
 		if not award or Guide.progress(p, award) < award.goal then
 			return false
 		end
+	elseif page == "Guide" then
+		-- One-time guides the miner has followed (the Rebirth button), so they never show again.
+		if id ~= "Rebirth" then return false end
 	else
 		return false
 	end
@@ -523,19 +532,23 @@ function Profile.recordCut(p, name, depth, random, boost)
 	return unlocked, grade, units, record
 end
 
--- Starts a new run when the current one has met Rebirth.requirement. Resets gold, the pack,
--- workshop levels and field supplies; keeps everything earned for the miner. Returns the new count.
+-- Starts a new run when the current one has met Rebirth.requirement. Resets the pack, workshop
+-- levels and field supplies, keeps some of the gold (Rebirth.keptGold) and everything earned for the
+-- miner, and gives Starfall Crates (Rebirth.crates). Returns the new count, the gold kept and the crates.
 function Profile.rebirth(p)
 	if not Rebirth.ready(p.runStarfalls, p.rebirths) then
 		return nil
 	end
+	local kept = Rebirth.keptGold(p.gold, p.rebirths)
 	p.rebirths += 1
 	p.runStarfalls = 0
-	p.gold = 0
+	p.gold = kept
+	local crates = Rebirth.crates(p.rebirths)
+	p.col.items.StarfallGeode = (p.col.items.StarfallGeode or 0) + crates
 	p.bag, p.grades = {}, {}
 	p.levels = { Speed = 1, Power = 1, Capacity = 1 }
 	p.flares, p.temper = 0, 0
-	return p.rebirths
+	return p.rebirths, kept, crates
 end
 
 function Profile.claimJob(p, i)

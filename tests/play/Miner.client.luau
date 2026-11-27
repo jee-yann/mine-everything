@@ -640,8 +640,8 @@ local function test()
 			assert(menu.Marquee.Purse.Visible, "the workshop shows what the miner can spend")
 			-- Speed says how much faster the next level is; the Backpack, how many slots it adds.
 			local speedText, packText = menu.Listings.Speed.Benefit, menu.Listings.Capacity.Benefit
-			assert(speedText.ContentText:find("0.90s → ", 1, true) and speedText.ContentText:find("% faster", 1, true)
-				and speedText.TextFits, speedText.ContentText)
+			assert(speedText.ContentText:find("0.90→", 1, true) and speedText.ContentText:find("s Starfall", 1, true)
+				and speedText.ContentText:find("%", 1, true) and speedText.TextFits, speedText.ContentText)
 			assert(packText.ContentText:find("8 → 16 blocks", 1, true) and packText.ContentText:find("+8", 1, true)
 				and packText.TextFits, packText.ContentText)
 		end
@@ -986,7 +986,7 @@ local function test()
 				end
 				assert(material, "visible block to drill in the starter shafts")
 				n.Swing:FireServer(true, at, Vector3.yAxis)
-				task.wait(ores.cutTime(0.8, material) + 0.18)
+				task.wait(ores.cutTime(require(game.ReplicatedStorage.Shared.Upgrades).items.Speed.values[1], material) + 0.18)
 				n.Mine:FireServer(at, Vector3.yAxis, 1, 1)
 				waitFor(function()
 					return p:GetAttribute("Used") == used + 1
@@ -1207,7 +1207,7 @@ local function test()
 		assert(hit and hit.Instance.Position == at and hit.Instance.Name == "Stone", "underground workface")
 		local target = hit.Instance
 		n.Swing:FireServer(true, at, Vector3.zAxis)
-		task.wait(ores.cutTime(0.8, ores.byName[target.Name]) + 0.15)
+		task.wait(ores.cutTime(require(game.ReplicatedStorage.Shared.Upgrades).items.Speed.values[1], ores.byName[target.Name]) + 0.15)
 		n.Mine:FireServer(at, Vector3.zAxis, 1, 1)
 		waitFor(function()
 			return not target.Parent
@@ -1330,7 +1330,7 @@ local function test()
 			return
 		end
 		n.Swing:FireServer(true, best, side)
-		task.wait(ores.cutTime(0.8, material) + 0.05)
+		task.wait(ores.cutTime(require(game.ReplicatedStorage.Shared.Upgrades).items.Speed.values[1], material) + 0.05)
 		n.Mine:FireServer(best, side, count, 2 ^ count - 1)
 		n.Swing:FireServer(false)
 	end

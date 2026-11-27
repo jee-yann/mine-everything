@@ -5,6 +5,9 @@ local Config = {
 	-- mining fast. Miners at least ReturnDepth blocks down go back to their spot in the new mine, so a
 	-- reset never costs anyone their climb down.
 	ResetSeconds = 3600,
+	-- Starfall's chance grows by this share of its crater chance for every row below the crater's top
+	-- (0.001: +10% at 100 rows down, double at 1,000).
+	StarfallDeeper = 0.001,
 	ResetWarning = 20,
 	ReturnDepth = 12,
 	-- The gallery begins one cell behind the entrance and spans ten cells on each axis.
@@ -42,9 +45,10 @@ local Config = {
 }
 -- Regions: each has its own ore table (percent of solid blocks; the rest is plain stone).
 -- Some ores span many regions, some peak in one and fade below it, and some are found in only
--- one region. Starfall is found from Prism Grotto down: rare near the top (0.03%), more often deeper,
--- most of all in the crater (0.35%). Tuned so a focused free player finds their first in about two
--- hours and a casual one in about three (rebirth N needs N of them; see Shared.Rebirth).
+-- one region. Starfall is found only in the bottom region, the Starfall Crater, and only with the top
+-- pick: 0.1% of blocks on its first row (the listed chance), rising very slowly with every row deeper
+-- (StarfallDeeper) with no limit, as the mine goes down for ever. Tuned with the pick prices so a
+-- focused free player finds their first in about five to six hours (rebirth N needs N of them).
 Config.Layers = {
 	{
 		depthBlocks = 0,
@@ -84,7 +88,6 @@ Config.Layers = {
 		name = "Prism Grotto",
 		theme = "Crystal-lined caves that split the lamplight",
 		oreChances = {
-			Starfall = 0.03,
 			Coal = 1,
 			Copper = 2,
 			Iron = 6,
@@ -103,7 +106,6 @@ Config.Layers = {
 		name = "Saltglass Sinks",
 		theme = "Pale salt flats and satin selenite",
 		oreChances = {
-			Starfall = 0.07,
 			Copper = 1,
 			Iron = 4,
 			Quartz = 3.5,
@@ -122,7 +124,6 @@ Config.Layers = {
 		name = "Emerald Deep",
 		theme = "Green-veined dark where emeralds grow",
 		oreChances = {
-			Starfall = 0.1,
 			Iron = 3,
 			Quartz = 2.5,
 			Silver = 4,
@@ -141,7 +142,6 @@ Config.Layers = {
 		name = "Glowcap Hollows",
 		theme = "Mossy caverns lit by glowing fungus",
 		oreChances = {
-			Starfall = 0.12,
 			Iron = 3,
 			Silver = 3,
 			Gold = 5,
@@ -160,7 +160,6 @@ Config.Layers = {
 		name = "Midnight Fault",
 		theme = "A black fault of obsidian and hidden geodes",
 		oreChances = {
-			Starfall = 0.14,
 			Iron = 2,
 			Gold = 4,
 			Diamond = 6,
@@ -180,7 +179,6 @@ Config.Layers = {
 		name = "Frostglass Reach",
 		theme = "Frozen caverns of blue crystal",
 		oreChances = {
-			Starfall = 0.16,
 			Gold = 3,
 			Diamond = 5,
 			Platinum = 1.5,
@@ -199,7 +197,6 @@ Config.Layers = {
 		name = "Cinderheart Forge",
 		theme = "Volcanic rock, sulphur crusts and molten seams",
 		oreChances = {
-			Starfall = 0.2,
 			Diamond = 3,
 			Obsidian = 6,
 			Ruby = 2,
@@ -217,7 +214,6 @@ Config.Layers = {
 		name = "Abyssal Hollows",
 		theme = "Drowned, silent caverns far below the sea",
 		oreChances = {
-			Starfall = 0.25,
 			Diamond = 2,
 			Obsidian = 3,
 			Ruby = 1,
@@ -242,7 +238,7 @@ Config.Layers = {
 			Meteorite = 6,
 			Adamantite = 1.6,
 			Voidshard = 0.085,
-			Starfall = 0.35,
+			Starfall = 0.1,
 		},
 		material = Enum.Material.Basalt,
 		color = Color3.fromRGB(66, 54, 98),
