@@ -1,5 +1,6 @@
 local Rebirth = require(game:GetService("ReplicatedStorage").Shared.Rebirth)
 local E = require(game.ReplicatedStorage.Shared.Expeditions)
+local Collectibles = require(game.ReplicatedStorage.Shared.Collectibles)
 local function equip(player, char)
 	local human = char:WaitForChild("Humanoid", 8)
 	if not human then
@@ -73,7 +74,10 @@ local function equip(player, char)
 		binding.C0 = CFrame.new(0, -0.14, z)
 		seam.C0 = binding.C0 * CFrame.new(0, 0.59 * scale, 0.02 * scale)
 		clasp.C0 = binding.C0 * CFrame.new(0, 0.36 * scale, 0.442 * scale)
-		nameplate.StudsOffsetWorldSpace = Vector3.new(0, torso.Size.Y / 2 + 1.85, 0)
+		-- A halo aura sits just over the head, where the nameplate would cover it: lift the plate above it.
+		local aura = Collectibles.auraById[player:GetAttribute("Aura") or ""]
+		local lift = if aura and aura.look == "halo" then 1.1 else 0
+		nameplate.StudsOffsetWorldSpace = Vector3.new(0, torso.Size.Y / 2 + 1.85 + lift, 0)
 		local tier, rank = E.rank(E.level(player:GetAttribute("MiningXP") or 0))
 		-- VIP owners get a gold tag; Celestial Miner owners wear its title in place of their rank.
 		local passes = "," .. (player:GetAttribute("Passes") or "") .. ","
@@ -98,7 +102,7 @@ local function equip(player, char)
 	end
 	fit()
 	local signals = { torso:GetPropertyChangedSignal("Size"):Connect(fit) }
-	for _, key in { "Capacity", "MiningXP", "EquippedTitle", "Rebirths", "Passes" } do
+	for _, key in { "Capacity", "MiningXP", "EquippedTitle", "Rebirths", "Passes", "Aura" } do
 		table.insert(signals, player:GetAttributeChangedSignal(key):Connect(fit))
 	end
 	kit.Destroying:Once(function()

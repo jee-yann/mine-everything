@@ -24,371 +24,148 @@ local function branch(name, icon)
 	end
 end
 
+-- The tree is drawn as wedges round the Prospector, one family each, with its later skills further
+-- out in the same wedge: Pickwork (upper left) leads on to Momentum, Survey optics (top) to Showmanship,
+-- Geology (right) to Scholar and Assaying, Hauling (lower left) to Trade. Positions come from
+-- art/skills/tree_layout.py; requirements only cross into a neighbouring wedge.
+-- Pickwork: reach and cutting.
 local pickwork = branch("Pickwork", "Power")
-pickwork("Reach", "Long Arm I", "+5 studs of pick reach.", -180, -84, {}, "reach", 5, "Hook")
-pickwork("ReachII", "Long Arm II", "+5 more studs of pick reach.", -365, -180, { "Reach" }, "reach", 5, "Hook")
-pickwork("ReachIII", "Long Arm III", "+5 more studs of pick reach.", -550, -300, { "ReachII" }, "reach", 5, "Hook")
-pickwork(
-	"Tempo",
-	"Steady Hands I",
-	"Subtract 10% of base cut time on every block.",
-	-460,
-	-55,
-	{ "ReachII" },
-	"cut",
-	10,
-	"Tempo"
-)
-pickwork(
-	"TempoII",
-	"Steady Hands II",
-	"Subtract another 10% of base cut time.",
-	-645,
-	-55,
-	{ "Tempo" },
-	"cut",
-	10,
-	"Tempo"
-)
-pickwork(
-	"TempoIII",
-	"Steady Hands III",
-	"Subtract another 10% of base cut time (30% total).",
-	-835,
-	-55,
-	{ "TempoII" },
-	"cut",
-	10,
-	"Tempo"
-)
-pickwork("StoneSplit", "Fault Splitter", "Spend 15% less time cutting any grade of stone.", -730, -195, { "TempoII" })
-pickwork(
-	"GemCutter",
-	"Facet Cutter",
-	"Cut diamond and rarer gems in 20% less time.",
-	-760,
-	-340,
-	{ "ReachIII", "StoneSplit" },
-	nil,
-	nil,
-	"Crystal"
-)
+pickwork("Reach", "Long Arm I", "+5 studs of pick reach.", -155, -110, {}, "reach", 5, "Hook")
+pickwork("Tempo", "Steady Hands I", "Subtract 10% of base cut time on every block.", -340, -140, { "Reach" }, "cut", 10, "Tempo")
+pickwork("ReachII", "Long Arm II", "+5 more studs of pick reach.", -235, -280, { "Reach" }, "reach", 5, "Hook")
+pickwork("TempoII", "Steady Hands II", "Subtract another 10% of base cut time.", -505, -195, { "Tempo" }, "cut", 10, "Tempo")
+pickwork("ReachIII", "Long Arm III", "+5 more studs of pick reach.", -340, -420, { "ReachII" }, "reach", 5, "Hook")
+pickwork("TempoIII", "Steady Hands III", "Subtract another 10% of base cut time (30% total).", -680, -235, { "TempoII" }, "cut", 10, "Tempo")
+pickwork("StoneSplit", "Fault Splitter", "Spend 15% less time cutting any grade of stone.", -590, -410, { "TempoII" })
+pickwork("ReachIV", "Long Arm IV", "+5 more studs of pick reach.", -390, -605, { "ReachIII" }, "reach", 5, "Hook")
+pickwork("GemCutter", "Facet Cutter", "Cut diamond and rarer gems in 20% less time.", -630, -635, { "ReachIII", "StoneSplit" }, nil, nil, "Crystal")
 
+-- Lamplight: your lamp and survey flares.
 local lamplight = branch("Lamplight", "Lamp")
-lamplight("Lamp", "Lantern Wick I", "+8 studs of personal lamp radius.", 180, -84, {}, "lamp", 8)
-lamplight(
-	"Lantern",
-	"Lantern Wick II",
-	"+8 more studs of personal lamp radius.",
-	365,
-	-180,
-	{ "Lamp" },
-	"lamp",
-	8,
-	"Beacon"
-)
-lamplight(
-	"LanternIII",
-	"Lantern Wick III",
-	"+8 more studs of personal lamp radius.",
-	550,
-	-300,
-	{ "Lantern" },
-	"lamp",
-	8,
-	"Beacon"
-)
-lamplight("LongBurn", "Slow Burn I", "Survey flares burn 15 seconds longer.", 455, -55, { "Lantern" }, "burn", 15)
-lamplight(
-	"LongBurnII",
-	"Slow Burn II",
-	"Add 15 more seconds to each flare (60 seconds total).",
-	640,
-	-55,
-	{ "LongBurn" },
-	"burn",
-	15
-)
-lamplight("FlareThrow", "Long Toss", "Throw survey flares up to 16 studs ahead.", 820, -55, { "LongBurnII" })
-lamplight(
-	"CaveEcho",
-	"Cave Listener",
-	"Flares sense natural caves within 15 blocks.",
-	760,
-	-220,
-	{ "LongBurnII", "LanternIII" },
-	nil,
-	nil,
-	"Beacon"
-)
+lamplight("Lamp", "Lantern Wick I", "+8 studs of personal lamp radius.", 140, -125, {}, "lamp", 8)
+lamplight("Lantern", "Lantern Wick II", "+8 more studs of personal lamp radius.", 270, -245, { "Lamp" }, "lamp", 8, "Beacon")
+lamplight("LanternIII", "Lantern Wick III", "+8 more studs of personal lamp radius.", 325, -435, { "Lantern" }, "lamp", 8, "Beacon")
+lamplight("LongBurn", "Slow Burn I", "Survey flares burn 15 seconds longer.", 465, -275, { "Lantern" }, "burn", 15)
+lamplight("LanternIV", "Lantern Wick IV", "+8 more studs of personal lamp radius.", 400, -595, { "LanternIII" }, "lamp", 8)
+lamplight("LongBurnII", "Slow Burn II", "Add 15 more seconds to each flare (60 seconds total).", 635, -335, { "LongBurn" }, "burn", 15)
+lamplight("CaveEcho", "Cave Listener", "Flares sense natural caves within 15 blocks.", 665, -600, { "LongBurnII", "LanternIII" }, nil, nil, "Beacon")
+lamplight("FlareThrow", "Long Toss", "Throw survey flares up to 16 studs ahead.", 805, -390, { "LongBurnII" })
+lamplight("LongBurnIII", "Slow Burn III", "Survey flares burn another 15 seconds.", 940, -515, { "FlareThrow" }, "burn", 15, "Beacon")
 
+-- Survey optics: the mining light.
 local survey = branch("Survey optics", "Beacon")
-survey(
-	"Focus",
-	"Face Lantern",
-	"Light the face you strike while you mine the block.",
-	0,
-	-210,
-	{ "Reach", "Lamp" },
-	"focus",
-	9
-)
-survey("FocusII", "Wide Beam", "Widen your mining light from 9 to 15 studs.", 0, -380, { "Focus" }, "focus", 6)
-survey(
-	"Longbeam",
-	"Prism Lens",
-	"Gain 5 studs of reach. Known ores tint your light as you mine them.",
-	-215,
-	-415,
-	{ "FocusII", "ReachII" },
-	"reach",
-	5
-)
-survey(
-	"LightTrail",
-	"Miner’s Fireflies",
-	"Mined ore leaves a light for 15s. Keep up to four lit.",
-	215,
-	-415,
-	{ "FocusII", "Lantern" }
-)
-survey(
-	"Constellation",
-	"Constellation",
-	"Your ore lights last 30s and you can keep eight lit.",
-	0,
-	-565,
-	{ "Longbeam", "LightTrail" }
-)
+survey("Focus", "Face Lantern", "Light the face you strike while you mine the block.", 0, -365, { "Reach", "Lamp" }, "focus", 9)
+survey("FocusII", "Wide Beam", "Widen your mining light from 9 to 15 studs.", 0, -540, { "Focus" }, "focus", 6)
+survey("Longbeam", "Prism Lens", "Gain 5 studs of reach. Known ores tint your light as you mine them.", -105, -710, { "FocusII" }, "reach", 5)
+survey("LightTrail", "Miner’s Fireflies", "Mined ore leaves a light for 15s. Keep up to four lit.", 105, -710, { "FocusII" })
+survey("Constellation", "Constellation", "Your ore lights last 30s and you can keep eight lit.", 0, -895, { "Longbeam", "LightTrail" })
 
+-- Footwork: walking and jumping.
 local footwork = branch("Footwork", "Boot")
-footwork("Stride", "Quick Feet I", "+3 walking speed.", 0, 155, {}, "walk", 3)
-footwork("StrideII", "Quick Feet II", "+2 walking speed.", 150, 300, { "Stride" }, "walk", 2)
-footwork("StrideIII", "Quick Feet III", "+2 more walking speed.", 145, 480, { "StrideII" }, "walk", 2)
-footwork("Spring", "Spring Step I", "+25% jump height.", -65, 305, { "Stride" }, "jump", 25, "Spring")
-footwork("Scout", "Trail Runner", "+3 walking speed.", -65, 455, { "Spring" }, "walk", 3)
-footwork("SpringII", "Spring Step II", "+15% jump height (40% total).", -65, 610, { "Scout" }, "jump", 15, "Spring")
-footwork(
-	"Summit",
-	"Summit Boots",
-	"+10% jump height and +2 walking speed.",
-	130,
-	635,
-	{ "StrideIII", "SpringII" },
-	"walk",
-	2,
-	"Spring"
-)
+footwork("Stride", "Quick Feet I", "+3 walking speed.", 20, 190, {}, "walk", 3)
+footwork("Spring", "Spring Step I", "+25% jump height.", -50, 360, { "Stride" }, "jump", 25, "Spring")
+footwork("StrideII", "Quick Feet II", "+2 walking speed.", 125, 345, { "Stride" }, "walk", 2)
+footwork("Scout", "Trail Runner", "+3 walking speed.", -30, 540, { "Spring" }, "walk", 3)
+footwork("StrideIII", "Quick Feet III", "+2 more walking speed.", 145, 525, { "StrideII" }, "walk", 2)
+footwork("SpringII", "Spring Step II", "+15% jump height (40% total).", -15, 720, { "Scout" }, "jump", 15, "Spring")
+footwork("ScoutII", "Trail Runner II", "+2 more walking speed.", -65, 890, { "SpringII" }, "walk", 2)
+footwork("Summit", "Summit Boots", "+10% jump height and +2 walking speed.", 130, 885, { "StrideIII", "SpringII" }, "walk", 2, "Spring")
+footwork("SpringIII", "Spring Step III", "+10% jump height (50% in all).", -50, 1070, { "ScoutII" }, "jump", 10, "Spring")
+footwork("StrideIV", "Quick Feet IV", "+2 more walking speed.", 200, 1050, { "Summit" }, "walk", 2)
 
+-- Hauling: the pack, tempering and supplies.
 local hauling = branch("Hauling", "Inventory")
-hauling("Pack", "Pack Stitch I", "+10% of your workshop bag’s base block limit.", -185, 85, {}, "pack", 10)
-hauling("PackII", "Pack Stitch II", "Add another 10% of the base block limit.", -365, 175, { "Pack" }, "pack", 10)
-hauling(
-	"PackIII",
-	"Pack Stitch III",
-	"Add another 10% of the base block limit (30% total).",
-	-550,
-	265,
-	{ "PackII" },
-	"pack",
-	10
-)
-hauling(
-	"TemperKit",
-	"Field Forge I",
-	"Each fresh temper lasts 10 more hard cuts.",
-	-470,
-	65,
-	{ "PackII" },
-	"charges",
-	10,
-	"Power"
-)
-hauling(
-	"TemperKitII",
-	"Field Forge II",
-	"Add 10 more temper charges (45 total).",
-	-650,
-	85,
-	{ "TemperKit" },
-	"charges",
-	10,
-	"Power"
-)
-hauling(
-	"HotSteel",
-	"Hot Steel",
-	"Tempering now cuts hard-block mining time by 30%.",
-	-850,
-	95,
-	{ "TemperKitII", "TempoIII" },
-	nil,
-	nil,
-	"Power"
-)
-hauling(
-	"PackMule",
-	"Second Wind",
-	"+3 walking speed while your pack is at least 75% full.",
-	-235,
-	318,
-	{ "PackII", "Stride" },
-	nil,
-	nil,
-	"Boot"
-)
-hauling(
-	"DeepPockets",
-	"Hidden Pockets",
-	"Your pack holds 24 more blocks after percentage bonuses.",
-	-395,
-	447,
-	{ "PackIII", "PackMule" },
-	"slots",
-	24
-)
-hauling(
-	"SupplyRunner",
-	"Supply Runner",
-	"Earn a second survey flare on each daily delivery.",
-	-605,
-	460,
-	{ "DeepPockets" },
-	nil,
-	nil,
-	"Jobs"
-)
+hauling("Pack", "Pack Stitch I", "+10% of your workshop bag’s base block limit.", -165, 100, {}, "pack", 10)
+hauling("PackII", "Pack Stitch II", "Add another 10% of the base block limit.", -315, 190, { "Pack" }, "pack", 10)
+hauling("TemperKit", "Field Forge I", "Each fresh temper lasts 10 more hard cuts.", -530, 115, { "PackII" }, "charges", 10, "Power")
+hauling("PackIII", "Pack Stitch III", "Add another 10% of the base block limit (30% total).", -465, 280, { "PackII" }, "pack", 10)
+hauling("PackMule", "Second Wind", "+3 walking speed while your pack is at least 75% full.", -350, 415, { "PackII", "Stride" }, nil, nil, "Boot")
+hauling("TemperKitII", "Field Forge II", "Add 10 more temper charges (45 total).", -710, 120, { "TemperKit" }, "charges", 10, "Power")
+hauling("Broker", "Fair Trade", "Earn 10% more on each piece of ore you sell, rounded to the nearest gold.", -655, 290, { "PackIII" }, nil, nil, "Coins")
+hauling("PackIV", "Pack Stitch IV", "Add another 10% of the base block limit.", -565, 445, { "PackIII" }, "pack", 10)
+hauling("DeepPockets", "Hidden Pockets", "Your pack holds 24 more blocks after percentage bonuses.", -440, 570, { "PackIII", "PackMule" }, "slots", 24)
+hauling("HotSteel", "Hot Steel", "Tempering now cuts hard-block mining time by 30%.", -895, 20, { "TemperKitII", "TempoIII" }, nil, nil, "Power")
+hauling("TemperKitIII", "Field Forge III", "Add 10 more temper charges.", -870, 195, { "TemperKitII" }, "charges", 10, "Power")
+hauling("PackV", "Pack Stitch V", "Add another 10% of the base block limit (50% in all).", -725, 520, { "PackIV" }, "pack", 10)
+hauling("DeepPocketsII", "Hidden Pockets II", "Your pack holds 24 more blocks.", -610, 655, { "PackIV" }, "slots", 24)
+hauling("SupplyRunner", "Supply Runner", "Earn a second survey flare on each daily delivery.", -470, 760, { "DeepPockets" }, nil, nil, "Jobs")
 
-hauling("Broker", "Fair Trade", "Earn 10% more on each piece of ore you sell, rounded to the nearest gold.", -780, 305, { "PackIII" }, nil, nil, "Coins")
-
-local geology = branch("Geology", "Crystal")
-geology("Notes", "Field Notes I", "Earn +1 XP from every ore you mine.", 185, 85, {}, "oreXP", 1)
-geology("NotesII", "Field Notes II", "Earn another +1 XP from every ore.", 365, 175, { "Notes" }, "oreXP", 1)
-geology(
-	"NotesIII",
-	"Field Notes III",
-	"Earn another +1 XP from every ore (+3 total).",
-	550,
-	280,
-	{ "NotesII" },
-	"oreXP",
-	1
-)
+-- Geology: XP from ore, and Fortune.
 -- Fresh Find (once First Edition, which only paid for each ore's first find and then went dead):
 -- XP for an ore you aren't carrying any of, which keeps paying for good.
-geology(
-	"FirstFind",
-	"Fresh Find I",
-	"Earn +10 XP from an ore you aren't carrying any of.",
-	470,
-	65,
-	{ "NotesII" },
-	"freshXP",
-	10,
-	"Jobs"
-)
-geology(
-	"FirstFindII",
-	"Fresh Find II",
-	"Earn another +15 XP from an ore you aren't carrying (+25 total).",
-	655,
-	90,
-	{ "FirstFind" },
-	"freshXP",
-	15,
-	"Jobs"
-)
-geology("DeepStudy", "Deep Survey", "Ore mined at 185+ blocks earns +3 XP.", 825, 205, { "FirstFindII", "NotesIII" })
-geology("RareStudy", "Gem Journal", "Diamond and rarer gems earn +4 XP.", 765, 375, { "NotesIII" })
-geology(
-	"Rockhound",
-	"Rockhound",
-	"+3 walking speed while carrying diamond or a rarer gem.",
-	370,
-	425,
-	{ "NotesII", "StrideII" },
-	nil,
-	nil,
-	"Boot"
-)
+local geology = branch("Geology", "Crystal")
+geology("Notes", "Field Notes I", "Earn +1 XP from every ore you mine.", 180, 60, {}, "oreXP", 1)
+geology("NotesII", "Field Notes II", "Earn another +1 XP from every ore.", 345, 120, { "Notes" }, "oreXP", 1)
+geology("Rockhound", "Rockhound", "+3 walking speed while carrying diamond or a rarer gem.", 430, 330, { "NotesII", "StrideII" }, nil, nil, "Boot")
+geology("NotesIII", "Field Notes III", "Earn another +1 XP from every ore (+3 total).", 510, 175, { "NotesII" }, "oreXP", 1)
+geology("FirstFind", "Fresh Find I", "Earn +10 XP from an ore you aren't carrying any of.", 540, 0, { "NotesII" }, "freshXP", 10, "Jobs")
+geology("RareStudy", "Gem Journal", "Diamond and rarer gems earn +4 XP.", 645, 315, { "NotesIII" })
+geology("DeepStudy", "Deep Survey", "Ore mined at 185+ blocks earns +3 XP.", 705, 150, { "NotesIII" })
+geology("FirstFindII", "Fresh Find II", "Earn another +15 XP from an ore you aren't carrying (+25 total).", 715, -30, { "FirstFind" }, "freshXP", 15, "Jobs")
+geology("Fortune", "Fortune", "One cut in ten gives you two pieces of ore if your pack has room.", 735, 510, { "RareStudy" })
 
-geology("Fortune", "Fortune", "One cut in ten gives you two pieces of ore if your pack has room.", 615, 565, { "RareStudy" }, nil, nil, "Crystal")
-
-
--- More skills (the outer ring). Each family has one rule below in Skills.cutTime, Skills.oreXP,
--- Bonuses or Profile, so a skill is never just a number on a card.
+-- Each family below has one rule in Skills.cutTime, Skills.oreXP, Bonuses or Profile, so a skill
+-- is never just a number on a card.
 -- Momentum: speed from mining well.
 local momentum = branch("Momentum", "Flame")
-momentum("HotStreak", "Hot Streak I", "Each ore mined in a row cuts 4% faster, up to 5 in a row. Stone breaks the streak.", -1020, -140, { "TempoIII" }, "streakStep", 4)
-momentum("HotStreakII", "Hot Streak II", "Your streak builds up to 8 in a row.", -1200, -230, { "HotStreak" }, "streakCap", 3)
-momentum("HotStreakIII", "Hot Streak III", "Each ore in your streak cuts 6% faster.", -1380, -320, { "HotStreakII" }, "streakStep", 2)
-momentum("StreakKeeper", "Streak Keeper", "One stone block in a row doesn't break your streak.", -1380, -140, { "HotStreakII" })
-momentum("StoneBreaker", "Stone Breaker I", "Cut plain stone 8% faster.", -1020, 40, { "TempoIII" }, "stone", 8, "Power")
-momentum("StoneBreakerII", "Stone Breaker II", "Cut plain stone another 8% faster.", -1200, 90, { "StoneBreaker" }, "stone", 8, "Power")
-momentum("Deepcutter", "Deepcutter", "Cut 8% faster 300 or more blocks down.", -1380, 220, { "StoneBreakerII" }, "deep", 8, "Power")
-momentum("CraterVeteran", "Crater Veteran", "Cut 10% faster in the Starfall Crater.", -1560, 130, { "Deepcutter" }, "crater", 10, "Flame")
-momentum("FacetCutterII", "Facet Cutter II", "Cut diamond and rarer gems another 10% faster.", -940, -430, { "GemCutter" }, "gem", 10, "Crystal")
-momentum("RareTouch", "Rare Touch", "Cut Epic and rarer ores 10% faster.", -1120, -500, { "FacetCutterII" }, "rare", 10, "Crystal")
-momentum("ReachIV", "Long Arm IV", "+5 more studs of pick reach.", -600, -470, { "ReachIII" }, "reach", 5, "Hook")
+momentum("StoneBreaker", "Stone Breaker I", "Cut plain stone 8% faster.", -860, -240, { "TempoIII" }, "stone", 8, "Power")
+momentum("HotStreak", "Hot Streak I", "Each ore mined in a row cuts 4% faster, up to 5 in a row. Stone breaks the streak.", -780, -435, { "TempoIII" }, "streakStep", 4)
+momentum("StoneBreakerII", "Stone Breaker II", "Cut plain stone another 8% faster.", -1015, -345, { "StoneBreaker" }, "stone", 8, "Power")
+momentum("HotStreakII", "Hot Streak II", "Your streak builds up to 8 in a row.", -905, -570, { "HotStreak" }, "streakCap", 3)
+momentum("FacetCutterII", "Facet Cutter II", "Cut diamond and rarer gems another 10% faster.", -725, -790, { "GemCutter" }, "gem", 10, "Crystal")
+momentum("Deepcutter", "Deepcutter", "Cut 8% faster 300 or more blocks down.", -1160, -450, { "StoneBreakerII" }, "deep", 8, "Power")
+momentum("StreakKeeper", "Streak Keeper", "One stone block in a row doesn't break your streak.", -1085, -615, { "HotStreakII" })
+momentum("HotStreakIII", "Hot Streak III", "Each ore in your streak cuts 6% faster.", -985, -760, { "HotStreakII" }, "streakStep", 2)
+momentum("RareTouch", "Rare Touch", "Cut Epic and rarer ores 10% faster.", -870, -895, { "FacetCutterII" }, "rare", 10, "Crystal")
+momentum("CraterVeteran", "Crater Veteran", "Cut 10% faster in the Starfall Crater.", -1310, -560, { "Deepcutter" }, "crater", 10)
 
 -- Showmanship: mining near other miners.
 local showmanship = branch("Showmanship", "Showoff")
-showmanship("ShowOff", "Show Off I", "Cut 5% faster with another miner within 30 studs.", 0, -740, { "Constellation" }, "crowdCut", 5)
-showmanship("ShowOffII", "Show Off II", "Cut another 5% faster near another miner.", -180, -830, { "ShowOff" }, "crowdCut", 5)
-showmanship("ShowOffIII", "Show Off III", "Cut another 5% faster near another miner (15% in all).", -360, -920, { "ShowOffII" }, "crowdCut", 5)
-showmanship("CrowdPleaser", "Crowd Pleaser I", "+5% XP with another miner within 30 studs.", 180, -830, { "ShowOff" }, "crowdXP", 5, "Friends")
-showmanship("CrowdPleaserII", "Crowd Pleaser II", "Another +5% XP near another miner.", 360, -920, { "CrowdPleaser" }, "crowdXP", 5, "Friends")
-showmanship("CashOut", "Cash Out Crew I", "+4% gold from sales with another miner within 30 studs.", 0, -920, { "ShowOff" }, "crowdGold", 4, "Coins")
-showmanship("CashOutII", "Cash Out Crew II", "Another +4% gold near another miner.", 0, -1100, { "CashOut" }, "crowdGold", 4, "Coins")
-showmanship("CashOutIII", "Cash Out Crew III", "Another +4% gold near another miner (12% in all).", 0, -1280, { "CashOutII" }, "crowdGold", 4, "Coins")
+showmanship("ShowOff", "Show Off I", "Cut 5% faster with another miner within 30 studs.", 0, -1070, { "Constellation" }, "crowdCut", 5)
+showmanship("ShowOffII", "Show Off II", "Cut another 5% faster near another miner.", -175, -1235, { "ShowOff" }, "crowdCut", 5)
+showmanship("CashOut", "Cash Out Crew I", "+4% gold from sales with another miner within 30 studs.", 0, -1245, { "ShowOff" }, "crowdGold", 4, "Coins")
+showmanship("CrowdPleaser", "Crowd Pleaser I", "+5% XP with another miner within 30 studs.", 175, -1235, { "ShowOff" }, "crowdXP", 5, "Friends")
+showmanship("ShowOffIII", "Show Off III", "Cut another 5% faster near another miner (15% in all).", -180, -1410, { "ShowOffII" }, "crowdCut", 5)
+showmanship("CashOutII", "Cash Out Crew II", "Another +4% gold near another miner.", 0, -1420, { "CashOut" }, "crowdGold", 4, "Coins")
+showmanship("CrowdPleaserII", "Crowd Pleaser II", "Another +5% XP near another miner.", 180, -1410, { "CrowdPleaser" }, "crowdXP", 5, "Friends")
+showmanship("CashOutIII", "Cash Out Crew III", "Another +4% gold near another miner (12% in all).", 0, -1600, { "CashOutII" }, "crowdGold", 4, "Coins")
 
 -- Scholar: experience.
 local scholar = branch("Scholar", "Book")
-scholar("Scholar", "Scholar I", "+3% XP from everything you mine.", 1010, 120, { "DeepStudy" }, "xpPercent", 3)
-scholar("ScholarII", "Scholar II", "Another +3% XP.", 1190, 60, { "Scholar" }, "xpPercent", 3)
-scholar("ScholarIII", "Scholar III", "Another +3% XP.", 1370, 0, { "ScholarII" }, "xpPercent", 3)
-scholar("ScholarIV", "Scholar IV", "Another +3% XP.", 1370, 180, { "ScholarIII" }, "xpPercent", 3)
-scholar("ScholarV", "Scholar V", "Another +3% XP (15% in all).", 1550, 90, { "ScholarIV" }, "xpPercent", 3)
-scholar("AbyssScholar", "Abyss Scholar", "Ore mined 340 or more blocks down earns +5 XP.", 1010, 300, { "DeepStudy" }, "deepXP", 5, "Crystal")
-scholar("CraterScholar", "Crater Scholar", "Ore mined in the Starfall Crater earns +8 XP.", 1190, 360, { "AbyssScholar" }, "craterXP", 8, "Flame")
-scholar("GemJournalII", "Gem Journal II", "Diamond and rarer gems earn another +4 XP.", 950, 470, { "RareStudy" }, "gemXP", 4, "Crystal")
-scholar("CleanCut", "Clean Cut", "Pieces of 90% purity or better earn +5 XP.", 1130, 540, { "GemJournalII" }, "pureXP", 5, "Assay")
-scholar("LanternIV", "Lantern Wick IV", "+8 more studs of personal lamp radius.", 735, -420, { "LanternIII" }, "lamp", 8, "Lamp")
-scholar("LongBurnIII", "Slow Burn III", "Survey flares burn another 15 seconds.", 1000, -150, { "FlareThrow" }, "burn", 15, "Beacon")
+scholar("GemJournalII", "Gem Journal II", "Diamond and rarer gems earn another +4 XP.", 825, 340, { "RareStudy" }, "gemXP", 4, "Crystal")
+scholar("AbyssScholar", "Abyss Scholar", "Ore mined 340 or more blocks down earns +5 XP.", 880, 155, { "DeepStudy" }, "deepXP", 5, "Crystal")
+scholar("Scholar", "Scholar I", "+3% XP from everything you mine.", 890, -60, { "FirstFindII" }, "xpPercent", 3)
+scholar("CleanCut", "Clean Cut", "Pieces of 90% purity or better earn +5 XP.", 1000, 380, { "GemJournalII" }, "pureXP", 5, "Assay")
+scholar("CraterScholar", "Crater Scholar", "Ore mined in the Starfall Crater earns +8 XP.", 1055, 175, { "AbyssScholar" }, "craterXP", 8, "Flame")
+scholar("ScholarII", "Scholar II", "Another +3% XP.", 1070, -35, { "Scholar" }, "xpPercent", 3)
+scholar("ScholarIII", "Scholar III", "Another +3% XP.", 1245, 20, { "ScholarII" }, "xpPercent", 3)
+scholar("ScholarIV", "Scholar IV", "Another +3% XP.", 1420, 80, { "ScholarIII" }, "xpPercent", 3)
+scholar("ScholarV", "Scholar V", "Another +3% XP (15% in all).", 1590, 140, { "ScholarIV" }, "xpPercent", 3)
 
 -- Assaying: purity and luck.
 local assaying = branch("Assaying", "Assay")
-assaying("Assayer", "Assayer I", "10% of your finds roll purity twice and keep the better.", 800, 650, { "Fortune" }, "assay", 10)
-assaying("AssayerII", "Assayer II", "20% of your finds roll purity twice.", 980, 720, { "Assayer" }, "assay", 10)
-assaying("AssayerIII", "Assayer III", "30% of your finds roll purity twice.", 1160, 790, { "AssayerII" }, "assay", 10)
-assaying("Polish", "Polish", "Nothing you mine is under 55% purity.", 980, 900, { "AssayerII" })
-assaying("FortuneII", "Fortune II", "One ore cut in seven gives two pieces, not one in ten.", 615, 760, { "Fortune" }, nil, nil, "Crystal")
-assaying("LuckyStrike", "Lucky Strike I", "+5% luck: ores rarer than 1% turn up a little more.", 430, 720, { "Fortune" }, "luck", 5, "Clover")
-assaying("LuckyStrikeII", "Lucky Strike II", "Another +5% luck.", 430, 900, { "LuckyStrike" }, "luck", 5, "Clover")
-assaying("LuckyStrikeIII", "Lucky Strike III", "Another +5% luck (15% in all).", 615, 950, { "LuckyStrikeII" }, "luck", 5, "Clover")
+assaying("LuckyStrike", "Lucky Strike I", "+5% luck: ores rarer than 1% turn up a little more.", 695, 815, { "Fortune" }, "luck", 5, "Clover")
+assaying("FortuneII", "Fortune II", "One ore cut in seven gives two pieces, not one in ten.", 820, 685, { "Fortune" }, nil, nil, "Crystal")
+assaying("Assayer", "Assayer I", "10% of your finds roll purity twice and keep the better.", 925, 540, { "Fortune" }, "assay", 10)
+assaying("LuckyStrikeII", "Lucky Strike II", "Another +5% luck.", 880, 885, { "LuckyStrike" }, "luck", 5, "Clover")
+assaying("AssayerII", "Assayer II", "20% of your finds roll purity twice.", 1090, 600, { "Assayer" }, "assay", 10)
+assaying("LuckyStrikeIII", "Lucky Strike III", "Another +5% luck (15% in all).", 1060, 950, { "LuckyStrikeII" }, "luck", 5, "Clover")
+assaying("Polish", "Polish", "Nothing you mine is under 55% purity.", 1215, 735, { "AssayerII" })
+assaying("AssayerIII", "Assayer III", "30% of your finds roll purity twice.", 1300, 580, { "AssayerII" }, "assay", 10)
 
--- Trade: gold, supplies and the pack.
+-- Trade: gold and tonics.
 local trade = branch("Trade", "Coins")
-trade("Haggler", "Haggler I", "+3% gold from every sale.", -960, 360, { "Broker" }, "gold", 3)
-trade("HagglerII", "Haggler II", "Another +3% gold.", -1140, 420, { "Haggler" }, "gold", 3)
-trade("HagglerIII", "Haggler III", "Another +3% gold.", -1320, 480, { "HagglerII" }, "gold", 3)
-trade("HagglerIV", "Haggler IV", "Another +3% gold.", -1320, 660, { "HagglerIII" }, "gold", 3)
-trade("HagglerV", "Haggler V", "Another +3% gold (15% in all).", -1500, 570, { "HagglerIV" }, "gold", 3)
-trade("BulkSeller", "Bulk Seller", "+5% gold when you sell 50 or more blocks at once.", -960, 540, { "Haggler" }, nil, nil, "Inventory")
-trade("RebornTrader", "Reborn Trader", "+1% gold per rebirth, up to +10%.", -1140, 600, { "BulkSeller" }, nil, nil, "Rebirth")
-trade("EarlyBird", "Early Bird", "Gold from the daily card is 25% bigger.", -605, 640, { "SupplyRunner" }, nil, nil, "Daily")
-trade("Brewmaster", "Brewmaster I", "Tonics last 25% longer.", -780, 700, { "EarlyBird" }, "brew", 25, "Boosts")
-trade("BrewmasterII", "Brewmaster II", "Tonics last another 25% longer.", -960, 760, { "Brewmaster" }, "brew", 25, "Boosts")
-trade("DoubleDose", "Double Dose", "One tonic in ten isn't used up.", -780, 880, { "Brewmaster" }, nil, nil, "Boosts")
-trade("PackIV", "Pack Stitch IV", "Add another 10% of the base block limit.", -395, 620, { "DeepPockets" }, "pack", 10, "Inventory")
-trade("PackV", "Pack Stitch V", "Add another 10% of the base block limit (50% in all).", -395, 800, { "PackIV" }, "pack", 10, "Inventory")
-trade("DeepPocketsII", "Hidden Pockets II", "Your pack holds 24 more blocks.", -220, 710, { "PackIV" }, "slots", 24, "Inventory")
-trade("TemperKitIII", "Field Forge III", "Add 10 more temper charges.", -1030, 210, { "TemperKitII" }, "charges", 10, "Power")
-
--- Footwork, further out.
-footwork("StrideIV", "Quick Feet IV", "+2 more walking speed.", 130, 800, { "Summit" }, "walk", 2)
-footwork("ScoutII", "Trail Runner II", "+2 more walking speed.", -65, 780, { "SpringII" }, "walk", 2)
-footwork("SpringIII", "Spring Step III", "+10% jump height (50% in all).", -65, 950, { "ScoutII" }, "jump", 10, "Spring")
+trade("Haggler", "Haggler I", "+3% gold from every sale.", -815, 365, { "Broker" }, "gold", 3)
+trade("HagglerII", "Haggler II", "Another +3% gold.", -1010, 360, { "Haggler" }, "gold", 3)
+trade("BulkSeller", "Bulk Seller", "+5% gold when you sell 50 or more blocks at once.", -935, 520, { "Haggler" }, nil, nil, "Inventory")
+trade("EarlyBird", "Early Bird", "Gold from the daily card is 25% bigger.", -630, 865, { "SupplyRunner" }, nil, nil, "Daily")
+trade("HagglerIII", "Haggler III", "Another +3% gold.", -1160, 450, { "HagglerII" }, "gold", 3)
+trade("RebornTrader", "Reborn Trader", "+1% gold per rebirth, up to +10%.", -1085, 610, { "BulkSeller" }, nil, nil, "Rebirth")
+trade("Brewmaster", "Brewmaster I", "Tonics last 25% longer.", -790, 965, { "EarlyBird" }, "brew", 25, "Boosts")
+trade("HagglerIV", "Haggler IV", "Another +3% gold.", -1315, 540, { "HagglerIII" }, "gold", 3)
+trade("DoubleDose", "Double Dose", "One tonic in ten isn't used up.", -1010, 1000, { "Brewmaster" }, nil, nil, "Boosts")
+trade("BrewmasterII", "Brewmaster II", "Tonics last another 25% longer.", -880, 1115, { "Brewmaster" }, "brew", 25, "Boosts")
+trade("HagglerV", "Haggler V", "Another +3% gold (15% in all).", -1465, 635, { "HagglerIV" }, "gold", 3)
 
 function Skills.ready(node, owned)
 	for _, id in node.requires do
@@ -397,6 +174,26 @@ function Skills.ready(node, owned)
 		end
 	end
 	return true
+end
+
+-- After an update moves or removes skills, some a miner owns may no longer connect (they need a
+-- skill the miner doesn't have, or no longer exist). Drop those, and anything that hung off them,
+-- so their points come back to spend again: a partial reset of just the bits that broke. Points
+-- are level minus skills owned, so removing a skill is the refund. Returns the names refunded.
+function Skills.prune(owned)
+	local refunded = {}
+	repeat
+		local changed = false
+		for id in owned do
+			local node = Skills.byId[id]
+			if not node or not Skills.ready(node, owned) then
+				owned[id] = nil
+				table.insert(refunded, if node then node.name else id)
+				changed = true
+			end
+		end
+	until not changed
+	return refunded
 end
 
 function Skills.read(player)

@@ -23,7 +23,7 @@ function LevelRing.new(parent, openSkills)
 	font.MinTextSize, font.MaxTextSize, font.Parent = 10, 19, value
 	W.outlineText(caption, 1.4)
 	W.outlineText(value, 2)
-	return setmetatable({ scale = button["Interaction scale"], button = button, ticks = ticks, caption = caption, value = value }, LevelRing)
+	return setmetatable({ scale = W.scale(button), button = button, ticks = ticks, caption = caption, value = value }, LevelRing)
 end
 
 function LevelRing:update(xp, showGain)

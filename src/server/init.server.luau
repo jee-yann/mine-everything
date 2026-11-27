@@ -282,6 +282,14 @@ local function join(player)
 	applySkills(player, session.profile)
 	player:SetAttribute("IntroSeen", session.profile.introSeen)
 	player:SetAttribute("ProfileReady", true)
+	-- Skills that stopped connecting after a tree update came back as points (Skills.prune).
+	local refunded = session.profile.refunded
+	session.profile.refunded = nil
+	if refunded then
+		task.delay(6, function()
+			if player.Parent == Players then net.Feedback:FireClient(player, "skillsRefunded", refunded) end
+		end)
+	end
 end
 world.grid.onFeature = function(player, kind, item)
 	local s, char = sessions[player], player.Character

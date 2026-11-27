@@ -390,7 +390,7 @@ local list = {
 		flash = "Starfall",
 		gem = true,
 		secret = true,
-		hint = "Only in the Starfall Crater, for the Starcaller Pick. A little more often the deeper you go",
+		hint = "Shards of the star lie in the Starfall Crater",
 	},
 }
 -- The owner scanner filters ores with one bit each. Ores that existed before the expansion

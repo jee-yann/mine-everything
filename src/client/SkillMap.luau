@@ -98,6 +98,7 @@ function Map.new(parent, player, net, close)
 	W.enamel(center, W.ocean, W.ink)
 	Icons.draw(canvas, "Power", -22, -22, 44)
 	W.outlineText(W.title(canvas, "Prospector", -70, 52, 140, 26, 21, W.gold), 2.2)
+	local named = {}
 	for _, node in Skills.nodes do
 		local item = self.nodes[node.id]
 		local b = W.clearButton(canvas, node.id, node.x - 42, node.y - 42, 84, 84, "Select")
@@ -114,8 +115,9 @@ function Map.new(parent, player, net, close)
 		local selection = diamond(b, "Selection", 42, 41, 76, W.aqua)
 		selection.BackgroundTransparency, selection.Visible = 1, false
 		local ring = W.stroke(selection, W.aqua, 5)
-		game:GetService("TweenService"):Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-			{ Transparency = 0.55 }):Play()
+		-- Only the selected skill breathes (refresh plays and cancels this), not all hundred-odd at once.
+		item.breath = game:GetService("TweenService"):Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ Transparency = 0.55 })
 		local arrow = W.title(b, "▼", 0, 0, 40, 30, 30, W.aqua)
 		arrow.Name, arrow.AnchorPoint, arrow.Position, arrow.Visible = "Selected arrow", Vector2.new(0.5, 1), UDim2.fromOffset(42, -2), false
 		W.outlineText(arrow, 2.4)
@@ -126,18 +128,19 @@ function Map.new(parent, player, net, close)
 		local hover = diamond(b, "Hover", 42, 41, 70, W.gold)
 		hover.BackgroundTransparency, hover.Visible = 1, false
 		W.stroke(hover, W.gold, 4)
-		local lift = W.scale(b)
+		b:SetAttribute("HoverScale", 1.12)
 		b.MouseEnter:Connect(function()
 			hover.Visible = true
 			item.title.TextColor3 = W.gold
-			W.tween(lift, 0.12, { Scale = 1.12 })
 		end)
 		b.MouseLeave:Connect(function()
 			hover.Visible = false
 			item.title.TextColor3 = W.white
-			W.tween(lift, 0.12, { Scale = 1 })
 		end)
-		if #node.requires == 0 then
+		-- Each family is named once, under its first skill (the nearest to the Prospector), so the
+		-- outer families (Momentum, Scholar...) are labelled where they start, like the inner ones.
+		if not named[node.branch] then
+			named[node.branch] = true
 			W.outlineText(W.text(b, node.branch, -38, 103, 160, 20, 16, colors[node.branch]), 1.8)
 		end
 		item.setBadge = stateBadge(b, 57, 48)
@@ -588,8 +591,12 @@ function Map:refresh()
 				end
 			end
 		end
-		item.selection.Visible = self.selected == id
-		item.arrow.Visible = self.selected == id
+		local chosen = self.selected == id
+		if item.selection.Visible ~= chosen then
+			if chosen then item.breath:Play() else item.breath:Cancel() end
+		end
+		item.selection.Visible = chosen
+		item.arrow.Visible = chosen
 		for parentId, line in item.lines do
 			local connected = parentId == "Origin" or owned[parentId]
 			line.BackgroundColor3 = if learned

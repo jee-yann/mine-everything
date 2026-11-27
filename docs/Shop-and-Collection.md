@@ -210,14 +210,24 @@ every trail is a streak in its full palette (Prism runs the whole rainbow); Unco
 sparkles; Rare and up add a themed layer (embers, frost, petals, sparks or star twinkles); Epic and up
 a bright core; Legendary and up a soft glow; Mythic and up a turning vortex and shockwave rings.
 Auras gain motes, a glow and a vortex the same way. Colours are kept saturated so they don't wash out
-to white against the sky.
+to white against the sky. The four showpiece auras have their own signature layers on top: the
+**Celestial Halo** is a real ring of light over the head (glowing pieces welded to the aura) with jewels
+twinkling round it, a shaft of light rising from it, motes drifting down and a warm light on the
+miner; the **Founder's Halo** wears a crown (points on the gold ring inside a second, rose ring), wings
+of light fanned behind the shoulders, ripples spreading from the halo, rising sparks and a pulse on the
+ground; **Sunburst** turns a sun of rays, a ring and a corona behind the miner (always behind them, from
+any side) with lens flares and streaming sparks; **Nebula** adds a deeper cloud, a galaxy turning
+behind the miner, blinking stars and the odd comet. Layers on clear textures are only half additive, so
+they keep their colour in daylight; those on black textures stay additive. A miner wearing a halo has
+their nameplate lifted above it.
 
 **Previews** (`src/client/FxPreview.luau`): particles can't be drawn inside UI, so each effect is
 redrawn there with the same pack textures, palette, lifetime, taper and fade: Mining FX as a small
 pick chopping fast, its head sweeping a wide band (the trail runs between the two ends of the head,
 so it's a surface, not a line; white-hot core for Epic and up); player trails as a miner on the left
 with the ribbon streaming from their back, fluttering and fading, as if running; auras as a pulsing
-glow with a turning ring and circling stars; plus the rarity layers. They animate only while on screen, and
+glow with a turning ring and circling stars, plus the signature bits (the halos' shaft, the Founder's
+Halo's rose ring and beating wings, Sunburst's turning rays, Nebula's drifting clouds); plus the rarity layers. They animate only while on screen, and
 the crate reel uses still frames. There's no Try on any more.
 
 **Reduce effects** (Settings) hides other miners' auras and trails on that player's screen.

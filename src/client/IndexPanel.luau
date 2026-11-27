@@ -149,7 +149,9 @@ function Panel:buildOdds()
 		end
 		entries[1].chance = math.floor((100 - total) * 10 + 0.5) / 10
 		local rows = math.ceil(#entries / 5)
-		local height = 70 + rows * 46
+		-- Starfall's listed chance is for the crater's first row; it rises from there.
+		local deeper = layer.oreChances.Starfall
+		local height = 70 + rows * 46 + (if deeper then 30 else 0)
 		local panel = W.frame(list, layer.name, 3, y, 744, height, W.white, 15)
 		local base = layer.color or rgb(120, 120, 160)
 		W.enamelPanel(panel, base:Lerp(rgb(120, 112, 190), 0.55), base:Lerp(rgb(58, 54, 104), 0.72), 15)
@@ -176,6 +178,14 @@ function Panel:buildOdds()
 			local oddsFont = Instance.new("UITextSizeConstraint")
 			oddsFont.MinTextSize, oddsFont.MaxTextSize, oddsFont.Parent = 9, 16, odds
 			table.insert(chips, { ore = entry.ore, name = name, swatch = swatch, odds = odds, chance = entry.chance })
+		end
+		if deeper then
+			local note = W.text(panel, string.format(
+				"★ Starfall odds rise the deeper you go: +%g%% every 100 blocks past %d",
+				Config.StarfallDeeper * 100 * 100, start), 17, 64 + rows * 46, 710, 26, 18, rgb(232, 214, 255), true)
+			note.Name, note.TextScaled = "Deeper", true
+			local size = Instance.new("UITextSizeConstraint")
+			size.MinTextSize, size.MaxTextSize, size.Parent = 10, 18, note
 		end
 		local chances = { Stone = math.max(0, 100 - total) }
 		for name, chance in layer.oreChances do chances[name] = chance end

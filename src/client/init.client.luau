@@ -461,6 +461,10 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		local item = Collectibles.itemById[a]
 		fx:chime(1.75)
 		hud:notice("Free " .. (if item then item.name else "crate") .. "!", "Open it from your Inventory", W.violet)
+	elseif kind == "skillsRefunded" then
+		local count = #a
+		hud:notice("Skill tree updated", string.format("%d skill%s came back as points to spend again: %s.", count,
+			if count == 1 then "" else "s", table.concat(a, ", ", 1, math.min(count, 4)) .. (if count > 4 then " and more" else "")), W.aqua)
 	elseif kind == "serverLuck" then
 		fx:chime(1.9)
 		hud:milestone("SERVER LUCK", a .. " gave everyone 2× luck!", W.green)

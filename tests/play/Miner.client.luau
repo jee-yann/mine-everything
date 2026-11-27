@@ -503,7 +503,16 @@ local function test()
 				not b.AutoButtonColor and gleam.Size.X.Scale <= 0.4 and gleam.Size.X.Offset == 0,
 				"short close highlight"
 			)
+		elseif b.Name == "Enamel highlight" then
+			-- Sized from its button, so a button resized for phones never has a line poking out of it.
+			assert(b.Size.X.Scale > 0 and b.Size.X.Offset <= 0, "button highlight follows its button: " .. b.Parent:GetFullName())
 		end
+		-- Roblox applies one UIScale per object; a second one (a pulse, a pop) would silently do nothing.
+		local scales = 0
+		for _, child in b:GetChildren() do
+			if child:IsA("UIScale") then scales += 1 end
+		end
+		assert(scales <= 1, "two UIScales on " .. b:GetFullName())
 	end
 	local originalSize = safe.Size
 	assert(game.StarterGui.ScreenOrientation == Enum.ScreenOrientation.LandscapeSensor
