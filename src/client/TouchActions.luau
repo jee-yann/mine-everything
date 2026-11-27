@@ -10,7 +10,10 @@ TouchActions.__index = TouchActions
 local size = 70
 function TouchActions.new(root)
 	local self = setmetatable({}, TouchActions)
-	self.hold = W.clearButton(root, "Mine", 0, 0, size + 40, size + 30, "Mine")
+	-- Not a button: like a shooter's fire button, a touch on it doesn't stop the touch from turning
+	-- the camera. The game watches for touches that start on the disc (TouchActions:hit).
+	self.hold = W.frame(root, "Mine", 0, 0, size + 40, size + 30, W.ink)
+	self.hold.BackgroundTransparency, self.hold.Active = 1, false
 	local disc = W.frame(self.hold, "Disc", 20, 0, size, size, Color3.new(0, 0, 0), size / 2)
 	disc.BackgroundTransparency = 0.5
 	local ring = Instance.new("UIStroke")
@@ -24,12 +27,23 @@ function TouchActions.new(root)
 	self.label.Name, self.hint.Name = "Mining mode", "Gesture hint"
 	W.outlineText(self.label, 1.6)
 	W.outlineText(self.hint, 1.2)
-	self.hold:GetPropertyChangedSignal("GuiState"):Connect(function()
-		local pressed = self.hold.GuiState == Enum.GuiState.Press
-		disc.BackgroundTransparency = if pressed then 0.3 else 0.5
-	end)
+
 	self:setAuto(false)
 	return self
+end
+
+-- Whether a screen point (a touch's Position) is on the Mine disc.
+function TouchActions:hit(point)
+	if not self.hold.Visible then return false end
+	local inset = game:GetService("GuiService"):GetInsetArea(Enum.ScreenInsets.None).Min
+	local at = Vector2.new(point.X, point.Y) + inset - self.disc.AbsolutePosition
+	local size = self.disc.AbsoluteSize
+	-- A little margin round the disc, as a thumb is wide.
+	return at.X >= -10 and at.Y >= -10 and at.X <= size.X + 10 and at.Y <= size.Y + 10
+end
+
+function TouchActions:setPressed(pressed)
+	self.disc.BackgroundTransparency = if pressed then 0.3 else 0.5
 end
 
 function TouchActions:setAuto(enabled)

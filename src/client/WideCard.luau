@@ -108,9 +108,10 @@ end
 function Card:layout(area, touch, room)
 	local short = area.X > area.Y and (touch or area.Y < 470)
 	if short and room and self.scrolls then
-		-- A card whose page scrolls (the Shop): as wide as the screen, for the largest text, and as
-		-- tall as fits under Roblox's top bar; the page scrolls inside it.
-		local scale = math.clamp((area.X - 8) / self.size.X, 0.3, 1.45)
+		-- A card whose page scrolls (the Shop): readable first. It's scaled so about 410 rows of the
+		-- card show (the header, the tabs and a card and a half of offers), never wider than the
+		-- screen; the page scrolls inside it.
+		local scale = math.clamp(math.min((area.X - 16) / self.size.X, (area.Y - 6) / 410), 0.3, 1.45)
 		local height = math.min(self.size.Y, math.floor((area.Y - 6) / scale))
 		self.scale.Scale = scale
 		self.modal.Size = UDim2.fromOffset(self.size.X, height)

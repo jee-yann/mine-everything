@@ -17,6 +17,22 @@ local looks = {
 	autosell = { "Coins", rgb(140, 230, 255) },
 	server = { "Friends", rgb(190, 255, 150) },
 }
+-- On a phone every boost and bonus is grouped by what it does, one small icon per group in a row on the
+-- right wall (a bundle owner can have eight going at once). A tap lists that group's bonuses.
+local groups = {
+	{ id = "gold", icon = "Coins", tint = rgb(255, 214, 90), title = "Gold bonuses" },
+	{ id = "mining", icon = "Power", tint = rgb(255, 180, 90), title = "Mining speed" },
+	{ id = "luck", icon = "Crystal", tint = rgb(140, 255, 200), title = "Luck" },
+	{ id = "move", icon = "Speed", tint = rgb(150, 255, 120), title = "Movement speed" },
+	{ id = "pack", icon = "Pack", tint = rgb(140, 230, 255), title = "Pack" },
+}
+local function groupOf(key)
+	if key == "goldTonic" or key == "gold2" or key == "DoubleGold" or key == "VIP" or key:match("^Rebirth") then return "gold" end
+	if key == "speedTonic" or key == "instamine" or key == "FastPick" or key:match("^Mine") then return "mining" end
+	if key == "luck2" or key == "server" or key == "Lucky" or key == "StarfallCompass" then return "luck" end
+	if key:match("^Speed") then return "move" end
+	return "pack"
+end
 -- Lasting bonuses, as circles: the pass (or the worn effect), its icon, a short label and what it does.
 local circles = {
 	{ "DoubleGold", "Coins", "2×", "Double Gold: 2× gold on every sale" },
@@ -24,7 +40,7 @@ local circles = {
 	{ "Lucky", "Crystal", "2×", "2× Lucky: rare ore turns up twice as often" },
 	{ "FastPick", "Speed", "+30%", "Fast Pick: +30% mining speed" },
 	{ "BiggerPack", "Pack", "+50%", "Bigger Pack: +50% backpack capacity" },
-	{ "StarfallCompass", "Crystal", "★", "Starfall Compass: every 2 minutes underground, points to any Starfall within 3 blocks" },
+	{ "StarfallCompass", "Crystal", "★", "Starfall Compass: every 3 minutes underground, points to any Starfall within 2 blocks" },
 }
 
 return function(hud)
@@ -32,6 +48,30 @@ return function(hud)
 	local holder = W.frame(hud.root, "Boosts", 0, 0, 320, 200, W.ink)
 	holder.BackgroundTransparency = 1
 	local fit = W.scale(holder)
+	-- The phone row: one icon per group, right-aligned against the right wall.
+	local phoneRow = W.frame(hud.root, "Bonus groups", 0, 0, 220, 34, W.ink)
+	phoneRow.BackgroundTransparency, phoneRow.Visible = 1, false
+	local rowLayout = Instance.new("UIListLayout")
+	rowLayout.FillDirection, rowLayout.HorizontalAlignment = Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Right
+	rowLayout.Padding, rowLayout.SortOrder = UDim.new(0, 4), Enum.SortOrder.LayoutOrder
+	rowLayout.Parent = phoneRow
+	local groupButtons = {}
+	for i, group in groups do
+		local b = W.clearButton(phoneRow, group.title, 0, 0, 34, 34, "Select")
+		b.LayoutOrder, b.Visible = i, false
+		local disc = W.frame(b, "Disc", 0, 0, 34, 34, W.white, 17)
+		W.enamelPanel(disc, rgb(110, 100, 190), rgb(52, 46, 110), 17)
+		disc:FindFirstChildOfClass("UIStroke").Thickness = 2.5
+		Icons.draw(disc, group.icon, 6, 6, 22, group.tint)
+		local count = W.title(b, "", 20, -4, 18, 16, 12, W.white)
+		count.ZIndex = 6
+		W.navyText(count, 1.6)
+		local entry = { button = b, count = count, lines = {} }
+		b.Activated:Connect(function()
+			hud:notice(group.title, table.concat(entry.lines, "  ·  "), group.tint)
+		end)
+		groupButtons[group.id] = entry
+	end
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection, layout.HorizontalAlignment = Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Right
 	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
@@ -58,7 +98,7 @@ return function(hud)
 		label.Name = "Short"
 		W.navyText(label, 1.8)
 		b.Activated:Connect(function() hud:notice(about, "", W.gold) end)
-		entry = { button = b, label = label }
+		entry = { button = b, label = label, about = about }
 		rings[key] = entry
 		return entry
 	end
@@ -158,11 +198,32 @@ return function(hud)
 			-- The bottom right corner; on phones much smaller, against the right edge above the touch buttons.
 			local size = hud.root.AbsoluteSize
 			local phone = hud.edgeMode == true and size.Y < 500
-			fit.Scale = if phone then 0.45 else 1
+			fit.Scale = 1
 			local spot = if phone then hud.bonusSpot else nil
-			W.anchor(holder, 1, 1, if spot then UDim2.fromOffset(spot.X, spot.Y)
-				else UDim2.fromOffset(size.X - 14, if hud.edgeMode then size.Y * 0.62 else size.Y - 14))
-			holder.Visible = hud.layer.Parent.Visible and next(seen) ~= nil
+			W.anchor(holder, 1, 1, UDim2.fromOffset(size.X - 14, if hud.edgeMode then size.Y * 0.62 else size.Y - 14))
+			-- Phones show the grouped row instead.
+			local lists = {}
+			if spot then
+				for key, entry in chips do
+					local g = groupOf(key)
+					lists[g] = lists[g] or {}
+					table.insert(lists[g], entry.label.Text)
+				end
+				for key, entry in rings do
+					local g = groupOf(key)
+					lists[g] = lists[g] or {}
+					table.insert(lists[g], entry.about)
+				end
+			end
+			for id, entry in groupButtons do
+				local lines = lists[id]
+				entry.button.Visible = lines ~= nil
+				entry.lines = lines or {}
+				entry.count.Text = if lines and #lines > 1 then tostring(#lines) else ""
+			end
+			phoneRow.Visible = spot ~= nil and next(lists) ~= nil and hud.layer.Parent.Visible
+			if spot then W.anchor(phoneRow, 1, 0, UDim2.fromOffset(spot.X, spot.Y)) end
+			holder.Visible = spot == nil and hud.layer.Parent.Visible and next(seen) ~= nil
 			task.wait(0.5)
 		end
 	end)

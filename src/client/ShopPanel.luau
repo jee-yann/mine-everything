@@ -75,7 +75,8 @@ function Panel.new(menu)
 	self.paints = card:tabRow(tabs, function(key) self:jump(key, true) end)
 	-- The page scrolls on its own; the card's body stays put (also on phones).
 	local layout = card.layout
-	-- On a phone the Shop is sized like the other windows, so more of it fits; its page scrolls.
+	-- On a phone the Shop is sized for reading (WideCard: scrolls), not to show the whole card.
+	card.scrolls = true
 	card.layout = function(c, area, touch, room)
 		layout(c, area, touch, room)
 		c.body.ScrollingEnabled, c.body.CanvasSize, c.body.CanvasPosition = false, UDim2.new(), Vector2.zero

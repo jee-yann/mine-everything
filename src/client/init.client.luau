@@ -186,55 +186,12 @@ UIS.InputBegan:Connect(function(input, processed)
 		held = input
 	end
 end)
-hud.mine.InputBegan:Connect(function(input)
-	if
-		hud.mine.Visible
-		and not held
-		and not passage.active
-		and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1)
-	then
-		held = input
-	end
-end)
--- Roblox recognizes taps on this button separately from holds and camera drags.
--- Ending a manual hold must leave the first tap available for the second.
-hud.mine.TouchLongPress:Connect(clearMineTap)
-hud.mine.TouchPan:Connect(clearMineTap)
--- Sliding the finger that holds Mine turns the camera, like a shooter's fire button: the other thumb
--- is on the move stick, so this is the only way to look around while mining. The default camera
--- picks the turned view up from the camera itself on its next update.
-local mineLook = Vector2.zero
-UIS.InputChanged:Connect(function(input)
-	if input == held and input.UserInputType == Enum.UserInputType.Touch then
-		mineLook += Vector2.new(input.Delta.X, input.Delta.Y)
-	end
-end)
-RunService:BindToRenderStep("Mine button look", Enum.RenderPriority.Camera.Value - 1, function()
-	if mineLook == Vector2.zero then return end
-	local turn = mineLook
-	mineLook = Vector2.zero
-	local camera = workspace.CurrentCamera
-	if camera.CameraType ~= Enum.CameraType.Custom or not held then return end
-	local perPixel = math.rad(0.4) * UserSettings():GetService("UserGameSettings").MouseSensitivity
-	local look = camera.CFrame.LookVector
-	local flat = Vector3.new(look.X, 0, look.Z)
-	if flat.Magnitude < 1e-3 then return end
-	flat = (CFrame.Angles(0, -turn.X * perPixel, 0) * flat).Unit
-	local pitch = math.clamp(math.asin(math.clamp(look.Y, -1, 1)) - turn.Y * perPixel, math.rad(-80), math.rad(80))
-	local direction = flat * math.cos(pitch) + Vector3.yAxis * math.sin(pitch)
-	local focus = camera.Focus.Position
-	local distance = (camera.CFrame.Position - focus).Magnitude
-	camera.CFrame = if distance < 0.6 then CFrame.lookAt(camera.CFrame.Position, camera.CFrame.Position + direction)
-		else CFrame.lookAt(focus - direction * distance, focus)
-end)
-hud.mine.TouchTap:Connect(function(positions)
-	if
-		#positions ~= 1
-		or not mobile
-		or not hud.mine.Visible
-		or passage.active
-		or not player:GetAttribute("ProfileReady")
-	then
+-- The Mine disc works like a shooter's fire button: a touch that starts on it mines, and the same
+-- finger turns the camera as it slides (the disc isn't a button, so Roblox's own camera still gets
+-- the touch, in every direction). A quick tap counts toward the double-tap for auto-mine.
+local mineTouch
+local function mineTap()
+	if not mobile or not hud.mine.Visible or passage.active or not player:GetAttribute("ProfileReady") then
 		clearMineTap()
 		return
 	end
@@ -254,6 +211,32 @@ hud.mine.TouchTap:Connect(function(positions)
 		return
 	end
 	Audio.preview()
+end
+UIS.InputBegan:Connect(function(input)
+	if input.UserInputType ~= Enum.UserInputType.Touch or held or passage.active or not hud.touchActions:hit(input.Position) then
+		return
+	end
+	held = input
+	mineTouch = { input = input, at = os.clock(), from = input.Position }
+	hud.touchActions:setPressed(true)
+end)
+UIS.InputChanged:Connect(function(input)
+	-- A drag on the disc is a look around, not a tap.
+	if mineTouch and input == mineTouch.input and (input.Position - mineTouch.from).Magnitude > 14 then
+		mineTouch.dragged = true
+		clearMineTap()
+	end
+end)
+UIS.InputEnded:Connect(function(input)
+	if not mineTouch or input ~= mineTouch.input then return end
+	local touch = mineTouch
+	mineTouch = nil
+	hud.touchActions:setPressed(false)
+	if not touch.dragged and os.clock() - touch.at < 0.3 then
+		mineTap()
+	else
+		clearMineTap()
+	end
 end)
 UIS.InputEnded:Connect(function(input)
 	if
@@ -660,6 +643,8 @@ end
 
 UIS.TouchTapInWorld:Connect(function(screen, processed)
 	if processed or not mobile or hud.inOpening or hud.overlay.Visible or passage.active or not minerFocus.underground then return end
+	-- A tap on the Mine disc is for mining, not for picking out a block behind it.
+	if hud.touchActions:hit(screen) then return end
 	local camera = workspace.CurrentCamera
 	if not camera then return end
 	local ray = camera:ViewportPointToRay(screen.X, screen.Y)
@@ -782,6 +767,21 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 end)
 
+-- A published game with any playtest switch on says so on screen, small, so it can't go out to
+-- players by mistake (GameConfig: AllFxForTesting, FreeUnconfiguredItems, AllowProgressReset).
+do
+	local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
+	local on = {}
+	if GameConfig.AllFxForTesting then table.insert(on, "every effect unlocked") end
+	if GameConfig.FreeUnconfiguredItems then table.insert(on, "Shop items free") end
+	if GameConfig.AllowProgressReset then table.insert(on, "progress reset on") end
+	if #on > 0 and not RunService:IsStudio() then
+		local note = W.text(hud.root, "PLAYTEST BUILD · " .. table.concat(on, " · "), 0, 0, 520, 16, 12, Color3.fromRGB(255, 220, 120))
+		note.Name, note.AnchorPoint, note.Position = "Playtest build", Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -2)
+		note.TextTransparency, note.ZIndex = 0.25, 2
+		W.outlineText(note, 1.2)
+	end
+end
 -- Only your own mining lamp casts shadows. The server sends every lamp without them, so a busy
 -- server doesn't ask a low-end device for a shadow-casting light per miner.
 local function ownLamp(character)

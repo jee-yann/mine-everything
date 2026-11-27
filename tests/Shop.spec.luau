@@ -223,7 +223,7 @@ print("PASS gold and speed stacking")
 do
 	assert(not S.passByKey.AutoSell, "Auto-Sell is no longer sold")
 	local prices = { BiggerPack = 79, DoubleGold = 249, FastPick = 229, VIP = 449, Lucky = 349, StarfallCompass = 449, Everything = 1199 }
-	assert(S.compassRadius == 3 and S.compassEvery == 120 and table.find(S.passByKey.Everything.grants, "StarfallCompass"), "the compass and the bundle")
+	assert(S.compassRadius == 2 and S.compassEvery == 180 and table.find(S.passByKey.Everything.grants, "StarfallCompass"), "the compass and the bundle")
 	assert(S.passByKey.Everything.name == "All Passes Bundle")
 	for key, price in prices do assert(S.passByKey[key].price == price, key) end
 	assert(not S.passByKey.StarfallDrake and not S.passByKey.CelestialMiner)

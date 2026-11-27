@@ -256,13 +256,13 @@ An owned pass can't be bought again.
 | Fast Pick | 229 | +30% mining speed |
 | VIP | 449 | +20% gold, +20% XP, a free Starfall Crate every 20 hours and a gold VIP tag. "Popular" |
 | 2× Lucky | 349 | Doubles luck |
-| Starfall Compass | 449 | Every 2 minutes underground, points to any Starfall within 3 blocks (buried too) with a star seen through the rock. "New" |
+| Starfall Compass | 449 | Every 3 minutes underground, points to any Starfall within 2 blocks (buried too) with a star seen through the rock. "New" |
 
-**Why the Starfall Compass's numbers.** A ping checks about 113 cells (a 3-block sphere); a miner
-digging about 30 blocks a minute goes through about 60 in the 2 minutes between pings, so Starfall
-turns up roughly two to three times as often, close to 2× Lucky, and it never makes a find certain.
-A bigger radius or faster pings would make rebirths trivial (a 5-block sphere every minute would find
-Starfall about fifteen times as often). `S.compassRadius` and `S.compassEvery` in StoreConfig tune it.
+**Why the Starfall Compass's numbers.** A ping checks 81 cells (every cell within 2 blocks); every
+3 minutes that is about 1,600 cells an hour, against the ~900 a miner digs, so Starfall turns up a
+bit under three times as often, a little more than 2× Lucky, and a find is never certain. The first
+version (3 blocks every 2 minutes, ~3,700 cells an hour) was 3-5× and too strong.
+`S.compassRadius` and `S.compassEvery` in StoreConfig tune it.
 
 The All Passes Bundle's "Worth" value is the passes on sale added up, so it stays right if a
 price changes.

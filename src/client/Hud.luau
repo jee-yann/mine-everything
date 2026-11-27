@@ -497,10 +497,11 @@ function Hud.new(player, net, mobile)
 			loc.Position = UDim2.fromOffset(titleX, locationY)
 			local depthY = belowChat(titleX - 58, locationY + 37, 116, 21)
 			self.depth.Position = UDim2.fromOffset(0, depthY - locationY)
-			-- Phones skip the region name and depth up top (the screen is short), and the Surface
-			-- button takes their place at the top.
-			self.layer.Visible, self.depth.Visible = not railsOnEdge, not railsOnEdge
-			local surfaceY = belowChat(titleX - 66, if railsOnEdge then locationY else depthY + 24, 132, 46)
+			-- Phones skip the big region name up top (the screen is short): the depth line (which
+			-- decides how often Starfall turns up) sits at the very top, the Surface button under it.
+			self.layer.Visible, self.depth.Visible = not railsOnEdge, true
+			if railsOnEdge then self.depth.Position = UDim2.fromOffset(0, 0) end
+			local surfaceY = belowChat(titleX - 66, if railsOnEdge then locationY + 22 else depthY + 24, 132, 46)
 			self.surface.Position = UDim2.new(0.5, 0, 0, surfaceY - locationY)
 			local right = if topActions then freeRight else width - margin
 			local rowY = if topActions then top elseif inTopbar then 4 else math.max(73, depthY + 26)
@@ -573,8 +574,9 @@ function Hud.new(player, net, mobile)
 				W.anchor(rewardRail, 0, 0, UDim2.fromOffset(right - pairWidth, rowY + 1))
 				-- The menu buttons: a small two-column rail at the top left, under Roblox's own buttons
 				-- and above where the thumbstick sits. The gold sits beside it.
-				-- A clear gap under Roblox's own buttons (and its chat), so the rail never touches them.
-				local railTop = belowChat(leftEdge, top + 62, 2 * tileStep * 0.4, 40)
+				-- A clear gap under Roblox's own buttons. It stays put when the chat window opens (the
+				-- window draws over it): following the chat pushed the whole rail down and shrank it.
+				local railTop = top + 62
 				local menuHeight = menuRail.Size.Y.Offset
 				local railScale = math.clamp((height * 0.7 - railTop) / menuHeight, 0.3, 0.62)
 				menuRailScale.Scale = railScale
@@ -649,15 +651,17 @@ function Hud.new(player, net, mobile)
 		local touchGui = gui.Parent:FindFirstChild("TouchGui")
 		local jump = touchGui and touchGui:FindFirstChild("JumpButton", true)
 		local validJump = jump and jump:IsA("ImageButton") and jump.Visible and jump.AbsoluteSize.Y > 0
+		-- Phones: a row of bonus icons sits on the right wall under the stats, so Mine starts below it.
+		local bonusRow = edge and rosterOnDemand
 		local touchBounds = self.touchActions:layout(
 			root,
 			if validJump then jump else nil,
 			self.mobile and playing and not browsing and not typing,
-			toolsBottom
+			toolsBottom + (if bonusRow then 40 else 0)
 		)
-		-- Phones and tablets: the boost and bonus icons sit in the very bottom right corner, under the
-		-- jump button.
-		self.bonusSpot = if edge and rosterOnDemand then Vector2.new(width - 2, height - 1) else nil
+		-- Phones: the boost and bonus icons, grouped by kind, in a row against the right wall under the
+		-- stats (BoostChips).
+		self.bonusSpot = if bonusRow then Vector2.new(width - 2, toolsBottom + 5) else nil
 		local speechWidth = if edge then math.clamp(width - 175, 144, 290) else 460
 		speechScale.Scale = s
 		self.blockedScale.Scale = if edge then math.min(1, width / 560) else s
