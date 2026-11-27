@@ -98,6 +98,7 @@ function Map.new(parent, player, net, close)
 	W.enamel(center, W.ocean, W.ink)
 	Icons.draw(canvas, "Power", -22, -22, 44)
 	W.outlineText(W.title(canvas, "Prospector", -70, 52, 140, 26, 21, W.gold), 2.2)
+	local named = {}
 	for _, node in Skills.nodes do
 		local item = self.nodes[node.id]
 		local b = W.clearButton(canvas, node.id, node.x - 42, node.y - 42, 84, 84, "Select")
@@ -127,18 +128,19 @@ function Map.new(parent, player, net, close)
 		local hover = diamond(b, "Hover", 42, 41, 70, W.gold)
 		hover.BackgroundTransparency, hover.Visible = 1, false
 		W.stroke(hover, W.gold, 4)
-		local lift = W.scale(b)
+		b:SetAttribute("HoverScale", 1.12)
 		b.MouseEnter:Connect(function()
 			hover.Visible = true
 			item.title.TextColor3 = W.gold
-			W.tween(lift, 0.12, { Scale = 1.12 })
 		end)
 		b.MouseLeave:Connect(function()
 			hover.Visible = false
 			item.title.TextColor3 = W.white
-			W.tween(lift, 0.12, { Scale = 1 })
 		end)
-		if #node.requires == 0 then
+		-- Each family is named once, under its first skill (the nearest to the Prospector), so the
+		-- outer families (Momentum, Scholar...) are labelled where they start, like the inner ones.
+		if not named[node.branch] then
+			named[node.branch] = true
 			W.outlineText(W.text(b, node.branch, -38, 103, 160, 20, 16, colors[node.branch]), 1.8)
 		end
 		item.setBadge = stateBadge(b, 57, 48)

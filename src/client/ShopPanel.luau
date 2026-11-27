@@ -665,7 +665,7 @@ end
 function Panel:arrive()
 	if self.player:GetAttribute("MenuMotion") == false then return end
 	for i, tile in self.tiles do
-		local scale = tile:FindFirstChild("Pop") or W.scale(tile)
+		local scale = tile:FindFirstChild("Pop", true) or W.scale(tile)
 		scale.Name = "Pop"
 		scale.Scale = 0.85
 		task.delay(math.min(i, 10) * 0.035, function() W.tween(scale, 0.28, { Scale = 1 }) end)

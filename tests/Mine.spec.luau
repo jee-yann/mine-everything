@@ -488,6 +488,17 @@ assert(Profile.buySupply(specialist, "Temper") and specialist.temper == 55)
 	veteran = Data.claim({ profile = veteran }, "veteran", 101).profile
 	assert(Guide.points(veteran.xp, veteran.skills) == 1 and Profile.learn(veteran, "Focus"))
 	assert(Skills.walkSpeed(veteran.skills, {}, 0, 36) == 22 and Skills.bonus(veteran.skills, "cut") == 10)
+	-- A tree update that leaves skills unconnected (or removes one) refunds just those as points.
+	local reshuffled = Profile.new()
+	reshuffled.xp = titles.levelXP(10)
+	reshuffled.skills = { Reach = true, TempoII = true, TempoIII = true, HotStreak = true, OldSkill = true, Lamp = true }
+	assert(Profile.valid(reshuffled), "an old tree's skill ids still load")
+	local before = Guide.points(reshuffled.xp, reshuffled.skills)
+	reshuffled = Data.claim({ profile = reshuffled }, "reshuffled", 102).profile
+	assert(reshuffled.skills.Reach and reshuffled.skills.Lamp and not reshuffled.skills.TempoII and not reshuffled.skills.HotStreak)
+	assert(not reshuffled.skills.OldSkill and #reshuffled.refunded == 4, "orphans and what hung off them are refunded")
+	assert(Guide.points(reshuffled.xp, reshuffled.skills) == before + 4)
+	assert(#Skills.prune(reshuffled.skills) == 0, "a connected tree keeps everything")
 	local farCave = {
 		isCave = function(_, cell)
 			return cell == Vector3.new(13, 0, 0)

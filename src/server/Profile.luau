@@ -302,8 +302,9 @@ function Profile.valid(p)
 		if type(p.skills) ~= "table" then
 			return false
 		end
+		-- Ids from an older tree are fine here: Profile.upgradeSave refunds them (Skills.prune).
 		for id, owned in p.skills do
-			if not Guide.byId[id] or owned ~= true then
+			if type(id) ~= "string" or #id > 40 or owned ~= true then
 				return false
 			end
 		end
@@ -392,6 +393,8 @@ function Profile.upgradeSave(p)
 	end
 	p.viewed = p.viewed or {}
 	p.skills = p.skills or {}
+	p.refunded = Skills.prune(p.skills)
+	if #p.refunded == 0 then p.refunded = nil end
 	if p.counts == nil then
 		-- Earlier fields measured records in four-stud blocks.
 		p.bestDepth = math.floor(p.bestDepth / 4) * savedUnitsPerBlock

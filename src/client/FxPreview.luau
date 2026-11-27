@@ -97,6 +97,70 @@ function Preview.new(parent, kind, id, x, y, size, animate)
 		for i = 1, 4 + rank do
 			parts.orbit[i] = image(frame, "Star", textures.star, (10 + rank) * s, sample(palette, i / (4 + rank)), 5)
 		end
+		-- The showpiece auras' signatures, as in the world (CosmeticLooks): halos raise a shaft of light,
+		-- the Founder's Halo adds its rose ring and wings, Sunburst a turning sun, Nebula drifting clouds.
+		local function bar(name, w, h, color, z)
+			local f = Instance.new("Frame")
+			f.Name, f.BorderSizePixel, f.BackgroundColor3, f.ZIndex = name, 0, color, z
+			f.Size = UDim2.fromOffset(w, h)
+			local round = Instance.new("UICorner")
+			round.CornerRadius, round.Parent = UDim.new(0.5, 0), f
+			f.Parent = frame
+			return f
+		end
+		if entry.id == "Halo" or entry.id == "FounderHalo" then
+			parts.shaft = bar("Shaft", 16 * s, 58 * s, white:Lerp(palette[1], 0.4), 2)
+			parts.shaft.AnchorPoint, parts.shaft.Position = Vector2.new(0.5, 1), UDim2.fromScale(0.5, 0.5)
+			local fade = Instance.new("UIGradient")
+			fade.Rotation, fade.Parent = 90, parts.shaft
+			fade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.6, 0.55),
+				NumberSequenceKeypoint.new(1, 0.35) })
+		end
+		if entry.id == "FounderHalo" then
+			parts.outer = image(frame, "Outer ring", textures.ring, 108 * s, palette[3]:Lerp(Color3.new(0, 0, 0), 0.15), 3)
+			parts.outer.Position = UDim2.fromScale(0.5, 0.5)
+			parts.wings = {}
+			for _, side in { -1, 1 } do
+				for k = 1, 4 do
+					-- A UI element turns about its own centre, so each feather hangs off a pivot at the wing root.
+					local pivot = Instance.new("Frame")
+					pivot.Name, pivot.BackgroundTransparency, pivot.ZIndex = "Wing pivot", 1, 2
+					pivot.Position, pivot.Size, pivot.Parent = UDim2.fromScale(0.5 + side * 0.04, 0.6), UDim2.fromOffset(0, 0), frame
+					local feather = bar("Wing", (58 - 7 * k) * s, 8 * s, white, 2)
+					feather.Parent, feather.Position = pivot, UDim2.fromOffset(0, 0)
+					feather.AnchorPoint = Vector2.new(if side == 1 then 0 else 1, 0.5)
+					-- Pale gold fading to rose, solid enough to stand out on the offer's orange card.
+					local paint = Instance.new("UIGradient")
+					paint.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, white), ColorSequenceKeypoint.new(0.5, white:Lerp(palette[1], 0.6)),
+						ColorSequenceKeypoint.new(1, palette[3]) })
+					paint.Transparency = NumberSequence.new(0, 0.3)
+					paint.Rotation, paint.Parent = if side == 1 then 0 else 180, feather
+					table.insert(parts.wings, { frame = pivot, side = side, k = k })
+				end
+			end
+		elseif entry.id == "Sunburst" then
+			local sun = Instance.new("Frame")
+			sun.Name, sun.BackgroundTransparency, sun.AnchorPoint = "Sun", 1, Vector2.new(0.5, 0.5)
+			sun.Position, sun.Size, sun.ZIndex, sun.Parent = UDim2.fromScale(0.5, 0.46), UDim2.fromOffset(0, 0), 1, frame
+			-- Rays through the centre, bright in the middle and fading out at both ends.
+			for i = 1, 8 do
+				local ray = bar("Ray", 100 * s, 5 * s, palette[1], 1)
+				ray.Parent, ray.AnchorPoint, ray.Position = sun, Vector2.new(0.5, 0.5), UDim2.fromOffset(0, 0)
+				ray.Rotation = i * 180 / 8
+				local taper = Instance.new("UIGradient")
+				taper.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.45),
+					NumberSequenceKeypoint.new(0.5, 0.1), NumberSequenceKeypoint.new(0.7, 0.45), NumberSequenceKeypoint.new(1, 1) })
+				taper.Parent = ray
+			end
+			parts.sun = sun
+		elseif entry.id == "Nebula" then
+			parts.clouds = {}
+			for i = 1, 3 do
+				local cloud = image(frame, "Cloud", textures.dot, 64 * s, palette[i], 1)
+				cloud.ImageTransparency = 0.35
+				parts.clouds[i] = cloud
+			end
+		end
 	else
 		-- The band: segments along the recent path. A core rides down the middle for Epic and up.
 		local ribbon = kind == "ribbon"
@@ -239,6 +303,22 @@ function Preview.draw(parts, t)
 			local a = t * 1.4 + i * math.pi * 2 / #parts.orbit
 			place(star, 0.5 + 0.36 * math.cos(a), 0.5 + 0.22 * math.sin(a) - 0.06 * math.sin(t * 2 + i))
 			star.Rotation = (t * 120 + i * 30) % 360
+		end
+		if parts.shaft then parts.shaft.BackgroundTransparency = 0.25 + 0.15 * math.sin(t * 2.2) end
+		if parts.outer then parts.outer.Rotation = -(t * 60) % 360 end
+		if parts.wings then
+			-- Fanned from up and out to down and out, beating slowly.
+			local beat = 5 * math.sin(t * 2.2)
+			for _, wing in parts.wings do
+				local angle = -64 + (wing.k - 1) * 25 - beat
+				wing.frame.Rotation = if wing.side == 1 then angle else -angle
+			end
+		end
+		if parts.sun then parts.sun.Rotation = (t * 25) % 360 end
+		if parts.clouds then
+			for i, cloud in parts.clouds do
+				place(cloud, 0.5 + 0.13 * math.cos(t * 0.6 + i * 2.1), 0.5 + 0.1 * math.sin(t * 0.5 + i * 2.1))
+			end
 		end
 	else
 		local ribbon = parts.kind == "ribbon"

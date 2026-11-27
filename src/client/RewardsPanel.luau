@@ -135,7 +135,7 @@ function Panel:buildDaily()
 		shade.Size, shade.BackgroundTransparency, shade.ZIndex, shade.Visible = UDim2.fromScale(1, 1), 0.62, 4, false
 		self.days[i] = { tile = tile, scale = scale, button = button, paint = paint, label = label, done = done, rim = rim,
 			sun = sun, shade = shade, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"), grand = big, describes = describes,
-			pictureRest = picture:FindFirstChildOfClass("UIScale").Scale, buttonScale = button["Interaction scale"], w = w }
+			pictureRest = picture:FindFirstChildOfClass("UIScale").Scale, buttonScale = W.scale(button), w = w }
 	end
 	self.dailyNext = W.title(page, "", 0, 334, 764, 26, 21, W.white)
 	W.navyText(self.dailyNext, 2.4)
@@ -214,7 +214,7 @@ function Panel:buildPlaytime()
 		W.navyText(tick, 4)
 		self.gifts[i] = { tile = tile, scale = scale, knob = knob, button = button, paint = paint, label = label, done = done, words = giftWords,
 			grand = last, sun = sun, rim = rim, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"),
-			pictureRest = picture:FindFirstChildOfClass("UIScale").Scale, buttonScale = button["Interaction scale"], w = w }
+			pictureRest = picture:FindFirstChildOfClass("UIScale").Scale, buttonScale = W.scale(button), w = w }
 	end
 	self.playedLabel = W.title(page, "", 4, 308, 182, 34, 22, W.white, true)
 	W.navyText(self.playedLabel, 2.6)

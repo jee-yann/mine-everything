@@ -129,9 +129,31 @@ function W.outlineText(label, thickness)
 		label.TextStrokeColor3, label.TextStrokeTransparency = W.ink, 0.15
 	end
 end
+-- Roblox applies only one UIScale per object, so a button keeps exactly one ("Interaction scale").
+-- Hover and press drive `press`; any other scale the code wants on the button (a click pop, a
+-- pulse, a heartbeat) comes from W.scale, which files it under "Extra scales" and multiplies it in.
 local function animateButton(button)
 	local scale = Instance.new("UIScale")
 	scale.Name, scale.Parent = "Interaction scale", button
+	local press = Instance.new("NumberValue")
+	press.Name, press.Value, press.Parent = "Press", 1, scale
+	local extras = Instance.new("Folder")
+	extras.Name, extras.Parent = "Extra scales", button
+	local function apply()
+		local total = press.Value
+		for _, extra in extras:GetChildren() do
+			if extra:IsA("UIScale") then total *= extra.Scale end
+		end
+		scale.Scale = total
+	end
+	press.Changed:Connect(apply)
+	extras.ChildAdded:Connect(function(extra)
+		if extra:IsA("UIScale") then
+			extra:GetPropertyChangedSignal("Scale"):Connect(apply)
+			apply()
+		end
+	end)
+	extras.ChildRemoved:Connect(apply)
 	local isClose = button.Name == "Close"
 	local restingColor = button.BackgroundColor3
 	local over, pressed, focused, tween = false, false, false, nil
@@ -145,11 +167,12 @@ local function animateButton(button)
 				then restingColor:Lerp(W.white, 0.08)
 				else restingColor
 		end
-		local target = if not enabled then 1 elseif pressed then 0.94 elseif highlighted and not isClose then 1.045 else 1
+		local hover = button:GetAttribute("HoverScale") or 1.045
+		local target = if not enabled then 1 elseif pressed then 0.94 elseif highlighted and not isClose then hover else 1
 		if tween then
 			tween:Cancel()
 		end
-		tween = W.tween(scale, if pressed then 0.07 else 0.13, { Scale = target })
+		tween = W.tween(press, if pressed then 0.07 else 0.13, { Value = target })
 	end
 	button.MouseEnter:Connect(function()
 		over = true
@@ -224,8 +247,10 @@ function W.button(parent, name, x, y, w, h, tint, label, cue)
 	W.stroke(b, W.navy, 3)
 	W.navyText(b, 2.2)
 	W.gradient(b, Color3.new(1, 1, 1), rgb(196, 188, 214), 90)
-	local gleam = W.frame(b, "Enamel highlight", 8, 2, w - 16, 2, W.white, 1)
-	gleam.BackgroundTransparency = 0.48
+	-- Sized from the button, not fixed at its first width: phones shrink some buttons after they're
+	-- built, and a fixed line then ran past both ends.
+	local gleam = W.frame(b, "Enamel highlight", 8, 2, 0, 2, W.white, 1)
+	gleam.Size, gleam.BackgroundTransparency = UDim2.new(1, -16, 0, 2), 0.48
 	b.Parent = parent
 	animateButton(b)
 	Audio.bind(b, cue)
@@ -245,7 +270,8 @@ function W.closeButton(parent, x, y, size)
 end
 function W.scale(obj)
 	local s = Instance.new("UIScale")
-	s.Parent = obj
+	-- On an animated button this is multiplied into its one interaction scale (see animateButton).
+	s.Parent = obj:FindFirstChild("Extra scales") or obj
 	return s
 end
 function W.anchor(obj, x, y, pos)

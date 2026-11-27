@@ -56,7 +56,7 @@ function Panel.new(menu)
 	W.round(button, 14)
 	self.paint = W.enamelPanel(button, rgb(150, 154, 176), rgb(98, 102, 128), 14)
 	self.label = words(button, "", 0, 0, 214, 58, 30)
-	self.button, self.buttonScale = button, button["Interaction scale"]
+	self.button, self.buttonScale = button, W.scale(button)
 	self.note = words(hero, "", 12, 352, 226, 50, 16)
 	self.note.TextWrapped = true
 
