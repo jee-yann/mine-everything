@@ -155,12 +155,9 @@ function Panel:refresh()
 	self.live = ready and not pending
 	self.card.sub.Text = if n > 0 then "You are on rebirth " .. n .. ". Start a new run for more." else "Start a new run with permanent bonuses."
 	self.nextName.Text = "Rebirth " .. n + 1
-	-- The run's Starfalls: how many are found of the ones this rebirth needs, and how far along the
-	-- trail (Rebirth.trail) the next one is.
-	local trail = Rebirth.trail(n)
-	local walked = math.min(trail.blocks, player:GetAttribute("RunTrail") or 0)
+	-- The run's Starfalls: how many are found of the ones this rebirth needs.
 	local have = math.min(found, need)
-	local share = if found >= need then 1 else (have + walked / trail.blocks) / need
+	local share = have / need
 	self.goal.Text = if found >= need then "Starfalls found ✓" else "Find " .. need .. " Starfall" .. (if need == 1 then "" else "s")
 	self.fill.Size = UDim2.new(math.clamp(share, 0, 1), 0, 1, 0)
 	self.fill.Visible = share > 0
@@ -170,7 +167,7 @@ function Panel:refresh()
 	self.button.Interactable = self.live
 	self.note.Text = self.reply or (if self.confirming then "Gold, pack, gear and supplies reset. Press again to rebirth."
 		elseif ready then "Ready when you are."
-		else string.format("Cut blocks in %s or deeper: every %d holds a Starfall (%d to go).", trail.region, trail.blocks, trail.blocks - walked))
+		else "Starfall turns up from Prism Grotto down, more often the deeper you dig.")
 	for _, item in self.perks do
 		item.after.Text, item.now.Text = item.perk.text(n + 1), "Now " .. item.perk.text(n)
 	end

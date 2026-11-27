@@ -239,14 +239,6 @@ function Mining.start(world, net, sessions, sync, hooks)
 			net.Feedback:FireClient(player, "lucky", name, lucky, luck)
 			name = lucky
 		end
-		-- The Starfall trail: enough blocks along it and the next one holds the run's Starfall.
-		if name ~= "Starfall" and depthBlocks >= Config.DirtLayers and not world.grid:practice(world.grid:cellAt(center))
-			and Profile.followTrail(profile, depthBlocks) then
-			loot = { Starfall = 1 }
-			finds = { Starfall = center }
-			net.Feedback:FireClient(player, "trailEnd", name)
-			name = "Starfall"
-		end
 		local ore = Ores.byName[name]
 		local discovery = not ore.host and not profile.discoveries[name]
 		local oldLevel = Expeditions.level(profile.xp)
@@ -286,6 +278,7 @@ function Mining.start(world, net, sessions, sync, hooks)
 			net.Feedback:FireClient(player, "freeGeode", id)
 		end
 		if name == "Starfall" then
+			player:SetAttribute("StarfallAt", nil) -- the compass's find, if it was this one
 			for _, other in Players:GetPlayers() do
 				net.Feedback:FireClient(other, "starfall", player.DisplayName, profile.counts.Starfall or 1, other == player)
 			end

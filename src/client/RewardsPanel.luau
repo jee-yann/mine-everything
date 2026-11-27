@@ -78,12 +78,24 @@ function Panel:buildDaily()
 		W.navyText(W.title(tile, "Day " .. i, 0, if big then 10 else 5, w, if big then 40 else 28, if big then 36 else 24, W.white), 2.8)
 		local size = if big then 128 else 56
 		local picture = Icons.draw(tile, reward.icon, (w - size) / 2, if big then 58 else 33, size, rgb(120, 225, 255))
-		local name = W.title(tile, if big then reward.name else Field.describe(reward, Field.context(self.menu.player)), 4, if big then 190 else 89, w - 8, if big then 30 else 24, if big then 26 else 19, W.white)
+		-- Several of one thing (the grand prize's three crates): a big count on the picture, so it
+		-- can't read as one.
+		local many = 0
+		for _, n in reward.items or {} do many = math.max(many, n) end
+		if many > 1 then
+			local count = W.title(tile, "×" .. many, (w + size) / 2 - (if big then 46 else 30), (if big then 58 else 33) + size - (if big then 50 else 30),
+				if big then 90 else 56, if big then 56 else 34, if big then 54 else 30, rgb(255, 225, 90))
+			count.ZIndex, count.Rotation = 6, -8
+			W.navyText(count, if big then 4.5 else 3)
+		end
+		local name = W.title(tile, W.rich(if big then reward.name else Field.describe(reward, Field.context(self.menu.player))), 4, if big then 190 else 89, w - 8, if big then 30 else 24, if big then 26 else 19, W.white)
+		name.RichText = true
 		W.largest(name, if big then 26 else 19, 11)
 		local describes = { if big then nil else name }
 		W.navyText(name, 2.3)
 		if big then
-			local list = W.title(tile, Field.describe(reward, Field.context(self.menu.player)), 6, 220, w - 12, 24, 17, rgb(255, 240, 150))
+			local list = W.title(tile, W.rich(Field.describe(reward, Field.context(self.menu.player))), 6, 220, w - 12, 24, 17, rgb(255, 240, 150))
+			list.RichText = true
 			W.largest(list, 17, 11)
 			describes = { list }
 			W.navyText(list, 2.2)
@@ -182,7 +194,8 @@ function Panel:buildPlaytime()
 		W.navyText(W.title(tile, gift.minutes .. " min", 0, if last then 155 else 96, w, if last then 32 else 26, if last then 28 else 21, W.white), if last then 3 else 2.4)
 		local line = if last then 189 else 124
 		-- What the gift gives; gold gifts follow the miner's own earnings, so refresh keeps them current.
-		local giftWords = W.title(tile, Field.describe(gift.reward, Field.context(self.menu.player)), 0, line, w, if last then 26 else 21, if last then 22 else 16, rgb(255, 250, 190))
+		local giftWords = W.title(tile, W.rich(Field.describe(gift.reward, Field.context(self.menu.player))), 0, line, w, if last then 26 else 21, if last then 22 else 16, rgb(255, 250, 190))
+		giftWords.RichText = true
 		W.largest(giftWords, if last then 22 else 16, 9)
 		W.navyText(giftWords, 2.2)
 		local button = W.clearButton(tile, "Claim", if last then 10 else 7, h - (if last then 58 else 46), w - (if last then 20 else 14), if last then 48 else 38, "Buy")
@@ -247,7 +260,8 @@ function Panel:claimed(kind, index)
 	local overlay = self.menu.overlay
 	local at = entry.tile.AbsolutePosition + entry.tile.AbsoluteSize * 0.45 - overlay.AbsolutePosition
 	Burst.confetti(overlay, at.X, at.Y, if kind == "Daily" and index == #Field.daily then 46 else 28)
-	local won = W.title(overlay, Field.describe(reward, Field.context(self.menu.player)), at.X, at.Y, 420, 60, 44, rgb(255, 244, 120))
+	local won = W.title(overlay, W.rich(Field.describe(reward, Field.context(self.menu.player))), at.X, at.Y, 420, 60, 44, rgb(255, 244, 120))
+	won.RichText = true
 	won.AnchorPoint, won.ZIndex = Vector2.one * 0.5, 70
 	local stroke = W.navyText(won, 4)
 	local scale = W.scale(won)
@@ -336,15 +350,16 @@ function Panel:refresh()
 		end
 		local ctx = Field.context(player)
 		for i, entry in self.days do
-			for _, label in entry.describes do label.Text = Field.describe(Field.daily[i], ctx) end
+			for _, label in entry.describes do label.Text = W.rich(Field.describe(Field.daily[i], ctx)) end
 		end
-		self.dailyNext.Text = if ready then "Your day " .. ready .. " reward: " .. Field.describe(Field.daily[ready], ctx) else "Next reward in " .. clock(wait)
+		self.dailyNext.RichText = true
+		self.dailyNext.Text = if ready then W.rich("Your day " .. ready .. " reward: " .. Field.describe(Field.daily[ready], ctx)) else "Next reward in " .. clock(wait)
 	else
 		local played, claims = Field.played(player, now), player:GetAttribute("GiftClaims") or 0
 		local waiting = Field.giftState(player, now)
 		local ctx = Field.context(player)
 		for i, entry in self.gifts do
-			entry.words.Text = Field.describe(Field.gifts[i].reward, ctx)
+			entry.words.Text = W.rich(Field.describe(Field.gifts[i].reward, ctx))
 		end
 		-- Steps are evenly spaced, so the line moves by how far it is between them.
 		local at, n = self.giftCenters[1], #Field.gifts

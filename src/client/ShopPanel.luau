@@ -63,7 +63,7 @@ local function tag(parent, text, corner, color)
 	t.ZIndex = 9
 	return label
 end
-local tagColors = { ["BEST VALUE"] = rgb(255, 150, 60), POPULAR = rgb(255, 80, 120), STATUS = rgb(150, 100, 255), ["RARE ORE"] = rgb(60, 190, 255), ["FOR EVERYONE"] = rgb(60, 200, 120) }
+local tagColors = { ["BEST VALUE"] = rgb(255, 150, 60), POPULAR = rgb(255, 80, 120), STATUS = rgb(150, 100, 255), ["RARE ORE"] = rgb(60, 190, 255), ["FOR EVERYONE"] = rgb(60, 200, 120), NEW = rgb(60, 190, 255) }
 
 function Panel.new(menu)
 	local self = setmetatable({ menu = menu, player = menu.player, net = menu.net, hud = menu.hud, updates = {}, prices = {},
@@ -75,7 +75,7 @@ function Panel.new(menu)
 	self.paints = card:tabRow(tabs, function(key) self:jump(key, true) end)
 	-- The page scrolls on its own; the card's body stays put (also on phones).
 	local layout = card.layout
-	card.scrolls = true
+	-- On a phone the Shop is sized like the other windows, so more of it fits; its page scrolls.
 	card.layout = function(c, area, touch, room)
 		layout(c, area, touch, room)
 		c.body.ScrollingEnabled, c.body.CanvasSize, c.body.CanvasPosition = false, UDim2.new(), Vector2.zero

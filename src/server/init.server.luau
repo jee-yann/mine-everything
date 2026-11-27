@@ -135,7 +135,6 @@ local function sync(player, p, awardName)
 	put(player, "SkillPoints", Guide.points(p.xp, p.skills))
 	put(player, "Rebirths", p.rebirths)
 	put(player, "RunStarfalls", p.runStarfalls)
-	put(player, "RunTrail", p.runTrail)
 	player.leaderstats.Level.Value = E.level(p.xp)
 	put(player, "Gold", p.gold)
 	put(player, "StampDay", p.stampDay)
@@ -769,6 +768,47 @@ for name, prompt in site.stations do
 		end
 	end)
 end
+-- The Starfall Compass pass: every StoreConfig.compassEvery seconds underground, look through the rock
+-- within compassRadius blocks (buried cells too) and point the owner to the nearest Starfall there
+-- (the StarfallAt attribute, a world position; StarfallPing counts the pings).
+task.spawn(function()
+	local Shop = require(Rep.Shared.StoreConfig)
+	local starfall = Ores.byName.Starfall
+	local due = {}
+	while true do
+		task.wait(1)
+		local now = os.clock()
+		for player, s in sessions do
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if not (s.profile and root and world.ready and Store.benefits(player).StarfallCompass
+				and Config.inMine(root.Position - world.origin)) then
+				continue
+			end
+			if now < (due[player] or 0) then continue end
+			due[player] = now + Shop.compassEvery
+			local center = world.grid:cellAt(root.Position)
+			local r = Shop.compassRadius
+			local best, bestDistance = nil, math.huge
+			for x = -r, r do
+				for y = -r, r do
+					for z = -r, r do
+						local offset = Vector3.new(x, y, z)
+						if offset.Magnitude <= r + 0.5 and offset.Magnitude < bestDistance then
+							local cell = center + offset
+							if world.grid:oreAt(cell) == starfall then best, bestDistance = cell, offset.Magnitude end
+						end
+					end
+				end
+			end
+			player:SetAttribute("StarfallAt", if best then world.grid:center(best) else nil)
+			player:SetAttribute("StarfallPing", (player:GetAttribute("StarfallPing") or 0) + 1)
+			player:SetAttribute("StarfallPingNext", workspace:GetServerTimeNow() + Shop.compassEvery)
+		end
+		for player in due do
+			if not sessions[player] then due[player] = nil end
+		end
+	end
+end)
 -- Auto Sell (the timed boost) also empties a pack that was already full when it started, or that
 -- filled some other way: once a second, anyone with Auto Sell running and a full pack sells.
 task.spawn(function()
@@ -820,6 +860,8 @@ end
 task.spawn(function()
 	while true do
 		world:generate()
+		-- A compass find belonged to the old rock.
+		for _, miner in Players:GetPlayers() do miner:SetAttribute("StarfallAt", nil) end
 		sendBack()
 		local renewAt = os.clock() + Config.ResetSeconds
 		net:SetAttribute("Ready", true)

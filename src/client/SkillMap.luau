@@ -179,6 +179,7 @@ function Map.new(parent, player, net, close)
 	pointFont.MinTextSize, pointFont.MaxTextSize, pointFont.Parent = 12, 33, self.points
 	self.pointsLabel = W.text(balance, "SKILL POINTS\nTO SPEND", 54, 0, 97, 46, 16, W.ink, true)
 	self.balance = balance
+	self.balanceHome = header
 	self.legend = clear(header, "Skill key", 0, 0, 312, 26)
 	local function legendEntry(x, state, width)
 		local setBadge = stateBadge(self.legend, x, 1)
@@ -378,6 +379,7 @@ function Map:position()
 		return
 	end
 	self.header.Position = UDim2.fromOffset(0, 0)
+	self:bare(false)
 	self.footer.Position = UDim2.new(0.5, 0, 1, -6)
 	self.centerShift = -54
 	self.path.Visible, self.summary.Visible, self.summary.TextWrapped = true, true, true
@@ -434,6 +436,9 @@ function Map:compact(size)
 	local rowW = size.X - headerX - room.right
 	self.header.Position = UDim2.fromOffset(headerX, headerY)
 	self.header.Size = UDim2.new(1, -headerX - room.right, 0, 50)
+	-- No bar on a phone: just the buttons, floating over the map. The level and XP line is left out,
+	-- and the points to spend sit on the skill card, where they're spent.
+	self:bare(true)
 	self.view.Position, self.view.Size = UDim2.new(), UDim2.fromScale(1, 1)
 	-- The tree centres in the open space between the control row and the footer.
 	local top, bottom = headerY + 50, size.Y - room.bottom - 82
@@ -448,13 +453,10 @@ function Map:compact(size)
 	end
 	self.heading.Visible, self.legend.Visible = false, false
 	local cardWidth = 104
-	self.balance.Size, self.balance.Position = UDim2.fromOffset(cardWidth, 40), UDim2.fromOffset(4, 5)
 	self.points.Size = UDim2.fromOffset(38, 38)
 	self.pointsLabel.Position, self.pointsLabel.Size, self.pointsLabel.TextSize = UDim2.fromOffset(40, 0), UDim2.fromOffset(62, 40), 11
-	local summaryX = cardWidth + 12
-	self.summary.Position, self.summary.Size = UDim2.fromOffset(summaryX, 5), UDim2.fromOffset(math.max(0, rowW + right - summaryX - 4), 40)
-	self.summary.Visible = rowW + right - summaryX > 80
-	self.summary.TextWrapped = false
+	self.summary.Visible = false
+	local _ = rowW
 	self.footerScale.Scale = 1
 	local width = math.clamp(size.X - room.left - room.right - 16, 190, 600)
 	self.footer.Size = UDim2.fromOffset(width, 76)
@@ -463,7 +465,20 @@ function Map:compact(size)
 	self.detail.Position, self.detail.Size, self.detail.TextSize = UDim2.fromOffset(14, 32), UDim2.fromOffset(width - 150, 40), 15
 	self.path.Visible = false
 	self.learn.Size, self.learn.Position, self.learn.TextSize = UDim2.fromOffset(124, 48), UDim2.new(1, -134, 0, 14), 18
+	-- The points tag stands on the skill card's top right edge.
+	self.balance.Parent = self.footer
+	self.balance.Size, self.balance.Position = UDim2.fromOffset(cardWidth, 38), UDim2.new(1, -cardWidth - 6, 0, -44)
 	self.canvas.Position = UDim2.new(0.5, self.pan.X, 0.5, self.pan.Y + self.centerShift)
+end
+
+-- The header's own bar (its fill, edge and seam), shown on larger screens and left off on phones.
+function Map:bare(on)
+	self.header.BackgroundTransparency = if on then 1 else 0
+	for _, child in self.header:GetChildren() do
+		if child:IsA("UIGradient") or child:IsA("UIStroke") then child.Enabled = not on end
+		if child.Name == "Seam" then child.Visible = not on end
+	end
+	if not on then self.balance.Parent = self.balanceHome end
 end
 
 function Map:zoomBy(factor)

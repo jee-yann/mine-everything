@@ -49,7 +49,6 @@ function Data.snapshot(p)
 		bestDepth = p.bestDepth,
 		rebirths = p.rebirths,
 		runStarfalls = p.runStarfalls,
-		runTrail = p.runTrail,
 		levels = table.clone(p.levels),
 		progression = p.progression,
 		preferences = table.clone(p.preferences),

@@ -24,6 +24,7 @@ local circles = {
 	{ "Lucky", "Crystal", "2×", "2× Lucky: rare ore turns up twice as often" },
 	{ "FastPick", "Speed", "+30%", "Fast Pick: +30% mining speed" },
 	{ "BiggerPack", "Pack", "+50%", "Bigger Pack: +50% backpack capacity" },
+	{ "StarfallCompass", "Crystal", "★", "Starfall Compass: every 2 minutes underground, points to any Starfall within 3 blocks" },
 }
 
 return function(hud)
@@ -157,7 +158,7 @@ return function(hud)
 			-- The bottom right corner; on phones much smaller, against the right edge above the touch buttons.
 			local size = hud.root.AbsoluteSize
 			local phone = hud.edgeMode == true and size.Y < 500
-			fit.Scale = if phone then 0.6 else 1
+			fit.Scale = if phone then 0.45 else 1
 			local spot = if phone then hud.bonusSpot else nil
 			W.anchor(holder, 1, 1, if spot then UDim2.fromOffset(spot.X, spot.Y)
 				else UDim2.fromOffset(size.X - 14, if hud.edgeMode then size.Y * 0.62 else size.Y - 14))

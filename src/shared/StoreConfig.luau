@@ -21,14 +21,20 @@ S.passes = {
 	{ key = "FastPick", id = 0, price = 229, name = "Fast Pick", detail = "+30% mining speed on every block", grants = { "FastPick" }, icon = "Speed" },
 	{ key = "VIP", id = 0, price = 449, name = "VIP", detail = "+20% gold, +20% XP, a free Starfall Crate every day and a gold VIP tag", grants = { "VIP" }, icon = "Achievements", tag = "POPULAR" },
 	{ key = "Lucky", id = 0, price = 349, name = "2× Lucky", detail = "Doubles the chance of every ore rarer than 1%, Starfall included", grants = { "Lucky" }, icon = "Crystal", luck = true },
+	-- Starfall Compass: every `compassEvery` seconds underground it checks the rock within
+	-- `compassRadius` blocks, buried or not, and points to a Starfall there. At a typical 30 blocks
+	-- a minute that is about twice the rock the miner digs through, so Starfall turns up roughly
+	-- two to three times as often: about what 2× Lucky gives, never a sure thing.
+	{ key = "StarfallCompass", id = 0, price = 449, name = "Starfall Compass", detail = "Every 2 minutes underground it points to any Starfall within 3 blocks, even buried", grants = { "StarfallCompass" }, icon = "Crystal", tag = "NEW" },
 }
+S.compassRadius, S.compassEvery = 3, 120
 local everything = { "Everything" }
 for _, pass in S.passes do
 	for _, benefit in pass.grants do table.insert(everything, benefit) end
 end
 -- Every pass in one, plus the Celestial title, the Celestial mining trail and the Prism Ribbon.
 table.insert(S.passes, 1, {
-	key = "Everything", id = 0, price = 999, name = "All Passes Bundle", icon = "Achievements", luck = true, tag = "BEST VALUE",
+	key = "Everything", id = 0, price = 1199, name = "All Passes Bundle", icon = "Achievements", luck = true, tag = "BEST VALUE",
 	detail = "Every pass, the Celestial title, the Celestial mining trail and the Prism Ribbon", grants = everything, bundle = true,
 })
 

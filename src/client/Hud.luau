@@ -655,13 +655,9 @@ function Hud.new(player, net, mobile)
 			self.mobile and playing and not browsing and not typing,
 			toolsBottom
 		)
-		-- Phones: the boost and bonus icons sit along the bottom edge, just left of Mine and jump.
-		self.bonusSpot = nil
-		if edge and rosterOnDemand and touchBounds then
-			local leftmost = width
-			for _, box in touchBounds do leftmost = math.min(leftmost, box.Min.X) end
-			self.bonusSpot = Vector2.new(leftmost - 8, height - 6)
-		end
+		-- Phones and tablets: the boost and bonus icons sit in the very bottom right corner, under the
+		-- jump button.
+		self.bonusSpot = if edge and rosterOnDemand then Vector2.new(width - 2, height - 1) else nil
 		local speechWidth = if edge then math.clamp(width - 175, 144, 290) else 460
 		speechScale.Scale = s
 		self.blockedScale.Scale = if edge then math.min(1, width / 560) else s

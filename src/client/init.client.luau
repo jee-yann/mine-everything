@@ -347,7 +347,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		fx:chime(1.9)
 		hud:notice(
 			if spread then "★ You unearthed Starfall!" else "★ " .. a .. " unearthed Starfall!",
-			if point > 1 then "Their Starfall number " .. point .. ". The rarest ore in the mine." else "The rarest ore in the mine, found only in the crater.",
+			if point > 1 then "Their Starfall number " .. point .. ". The rarest ore in the mine." else "The rarest ore in the mine. Every one counts toward a rebirth.",
 			Ores.byName.Starfall.color
 		)
 		hud:announceStarfall(a)
@@ -395,7 +395,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		if not hud.overlay.Visible then hud:notice(spread, finds, W.gold) end
 		-- A crate: offer to open it now, as after buying one (after the claim's own burst).
 		if type(spread) == "string" and (spread:find("Crate") or spread:find("Haul")) then
-			task.delay(if hud.overlay.Visible then 1.3 else 0.2, function()
+			task.delay(0.15, function()
 				local checkout = hud.checkout
 				if checkout then checkout:crateWon(spread, finds or spread) end
 			end)
@@ -470,10 +470,6 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		fx:chime(1.85)
 		local ore = Ores.byName[point]
 		hud:notice("Lucky find! " .. point .. " inside the " .. a, string.format("%g× luck", math.floor(spread * 100 + 0.5) / 100), ore and ore.color or W.green)
-	elseif kind == "trailEnd" then
-		-- a = what the block looked like: the end of the Starfall's trail (Rebirth.trail).
-		fx:chime(1.85)
-		hud:notice("A Starfall on the trail, inside the " .. a .. "!", "The Rebirth card counts your Starfalls", Ores.byName.Starfall.color)
 	elseif kind == "freeGeode" then
 		local item = Collectibles.itemById[a]
 		fx:chime(1.75)
@@ -511,6 +507,7 @@ for _, other in Players:GetPlayers() do
 end
 
 require(script.OreCompass)(hud, origin)
+require(script.StarfallCompass)(hud)
 require(script.FirstPersonPick)(player)
 require(script.BoostChips)(hud)
 local lastDepth, lastRegion

@@ -38,6 +38,8 @@ end
 local function compose(player, count)
 	local gui = Instance.new("ScreenGui")
 	gui.Name, gui.IgnoreGuiInset, gui.ResetOnSpawn, gui.DisplayOrder = "Rebirth cutscene", true, false, 60
+	-- The bars run edge to edge on every device, past notches and rounded corners (like the film's).
+	gui.ScreenInsets, gui.SafeAreaCompatibility = Enum.ScreenInsets.None, Enum.SafeAreaCompatibility.None
 	gui.Parent = player.PlayerGui
 	local bars = {}
 	for i, side in { "Top", "Bottom" } do

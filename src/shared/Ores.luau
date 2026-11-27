@@ -379,16 +379,18 @@ local list = {
 	{
 		name = "Starfall",
 		rarity = "Celestial",
-		value = 600000,
+		-- Found from Prism Grotto (Power 4) down, so any pick that reaches it can take it. Still the most
+		-- valuable ore (just above Voidshard), though its real value is the rebirth it counts toward.
+		value = 125000,
 		xp = 400,
-		hardness = 14,
+		hardness = 4,
 		effort = 5.5,
 		material = Enum.Material.Foil,
 		color = rgb(181, 133, 255),
 		flash = "Starfall",
 		gem = true,
 		secret = true,
-		hint = "The rarest thing that ever fell. Follow its trail from the Rebirth card",
+		hint = "Shards of the star lie from Prism Grotto down, more the deeper you dig",
 	},
 }
 -- The owner scanner filters ores with one bit each. Ores that existed before the expansion

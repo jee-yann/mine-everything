@@ -98,6 +98,9 @@ function Preview.new(parent, kind, id, x, y, size, animate)
 	else
 		-- The band: segments along the recent path. A core rides down the middle for Epic and up.
 		local ribbon = kind == "ribbon"
+		-- Common and Uncommon Mining FX are plain in the game (CosmeticLooks.streak), so here too: no
+		-- bright core, no sparkles, a small dot at the tip.
+		local plainTrail = not ribbon and rank <= 2
 		local count = if ribbon then 24 else 20
 		parts.lifetime = if ribbon then 0.5 + 0.06 * rank else 0.16 + 0.025 * rank
 		parts.band, parts.core = {}, {}
@@ -114,14 +117,15 @@ function Preview.new(parent, kind, id, x, y, size, animate)
 			local seg = segment("Band", 3)
 			seg.BackgroundColor3 = sample(palette, fade)
 			parts.band[i] = seg
-			if rank >= 4 or not ribbon then
+			if (rank >= 4 or not ribbon) and not plainTrail then
 				local core = segment("Core", 4)
 				core.BackgroundColor3 = white:Lerp(palette[1], 0.15 + 0.6 * fade)
 				parts.core[i] = core
 			end
 		end
 		-- The tip: a bright star for Mining FX, the miner's glow for Player FX.
-		parts.head = image(frame, "Head", if ribbon then textures.dot else textures.star, (if ribbon then 30 else 12 + 2 * rank) * s, white, 6)
+		parts.head = image(frame, "Head", if ribbon or plainTrail then textures.dot else textures.star,
+			(if ribbon then 30 elseif plainTrail then 9 else 12 + 2 * rank) * s, if plainTrail then palette[1] else white, 6)
 		if ribbon then
 			-- Glints travelling along the ribbon, so it reads as flowing.
 			parts.flow = {}
@@ -138,7 +142,7 @@ function Preview.new(parent, kind, id, x, y, size, animate)
 		end
 	end
 	-- Themed bits for Rare and up (Uncommon gets a couple of plain sparkles).
-	if rank >= 2 then
+	if rank >= (if kind == "trail" then 3 else 2) then
 		parts.bits = {}
 		local n = if rank >= 3 then 3 + rank else 2
 		local texture = textures[if rank >= 3 then themeBits[theme] else "star"]

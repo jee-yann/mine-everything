@@ -160,13 +160,18 @@ function Looks.streak(entry, a, b, mark, options)
 	local seq = Looks.sequence(entry)
 	local made = {}
 	local lifetime = options.lifetime or (0.4 + 0.05 * r)
+	-- Common and Uncommon trails stay plain, so the rare ones read as rare: a thin, short, unlit
+	-- streak (a Common one in a single colour), no sparks, no glow. Sparks start at Rare, the themed
+	-- layer and bright core at Epic, glow and flare at Legendary, vortex and ring at Mythic.
+	local plain = r <= 2
+	if plain then lifetime *= 0.6 end
 	local body = Instance.new("Trail")
 	body.Name, body.Attachment0, body.Attachment1 = options.name or "Streak", a, b
-	body.Color, body.FaceCamera, body.MinLength = seq, true, 0.1
-	body.LightEmission, body.LightInfluence = 0.15 + 0.04 * r, 0
-	body.Brightness = 1.3 + 0.25 * r
-	body.Transparency = nums({ 0, 0.02 }, { 0.55, 0.35 }, { 1, 1 })
-	body.WidthScale = nums({ 0, 1 }, { 1, 0.3 })
+	body.Color, body.FaceCamera, body.MinLength = if r <= 1 then ColorSequence.new(palette[1]) else seq, true, 0.1
+	body.LightEmission, body.LightInfluence = if plain then 0 else 0.15 + 0.04 * r, if plain then 1 else 0
+	body.Brightness = if plain then 1 else 1.3 + 0.25 * r
+	body.Transparency = if plain then nums({ 0, 0.35 }, { 0.5, 0.6 }, { 1, 1 }) else nums({ 0, 0.02 }, { 0.55, 0.35 }, { 1, 1 })
+	body.WidthScale = if plain then nums({ 0, 0.5 }, { 1, 0.15 }) else nums({ 0, 1 }, { 1, 0.3 })
 	body.Lifetime = lifetime
 	mark(body)
 	table.insert(made, body)
@@ -184,14 +189,14 @@ function Looks.streak(entry, a, b, mark, options)
 		table.insert(made, core)
 		core.Parent = a.Parent
 	end
-	if r >= 2 then
+	if r >= 3 then
 		local sparks = emitter("Streak sparks", textures.star, seq, a, mark, made)
 		sparks.Size = nums({ 0, (0.2 + 0.04 * r) * scale }, { 1, 0 })
 		sparks.RotSpeed = NumberRange.new(-120, 120)
-		sparks.Lifetime, sparks.Speed, sparks.Rate = NumberRange.new(0.3, 0.7), NumberRange.new(0.3, 1.6), 3 + 3 * r
+		sparks.Lifetime, sparks.Speed, sparks.Rate = NumberRange.new(0.3, 0.7), NumberRange.new(0.3, 1.6), 3 * r - 3
 		sparks.SpreadAngle, sparks.Drag = Vector2.new(180, 180), 2
 	end
-	if r >= 3 then themed(entry, b, scale, mark, made) end
+	if r >= 4 then themed(entry, b, scale, mark, made) end
 	if r >= 5 then
 		local glow = emitter("Streak glow", textures.glow, seq, a, mark, made)
 		glow.Size = nums({ 0, 0.9 * scale }, { 1, 0.5 * scale })

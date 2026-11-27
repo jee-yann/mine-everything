@@ -11,31 +11,11 @@
 local Rebirth = {}
 
 -- Rebirths are about finding Starfall: rebirth N needs N Starfalls found in the run (the first needs
--- one, the fifth needs five).
+-- one, the fifth needs five). Starfall is a natural find from Prism Grotto down, more often deeper
+-- (GameConfig.Layers); luck makes it more likely, and nothing guarantees one.
 Rebirth.requirement = { ore = "Starfall" }
 function Rebirth.need(n: number): number
 	return n + 1
-end
-
--- The Starfall's trail. The star came down in the crater, but its shards scattered up through the
--- mine, and a newer miner meets the trail shallower: the first rebirth's runs through Saltglass Sinks
--- (Power 5, about an hour of play), and from the sixth on it is the crater itself. Every `blocks`
--- blocks cut at or below the trail's depth, the next block there holds a Starfall, until the run has
--- as many as its rebirth needs. Luck never moves this count, so paid luck can't buy a rebirth; a
--- Starfall found by chance (in the crater, where they occur naturally) still counts.
-Rebirth.trails = {
-	{ depth = 140, blocks = 150, region = "Saltglass Sinks" },
-	{ depth = 225, blocks = 200, region = "Glowcap Hollows" },
-	{ depth = 260, blocks = 250, region = "Midnight Fault" },
-	{ depth = 340, blocks = 300, region = "Frostglass Reach" },
-	{ depth = 400, blocks = 350, region = "Cinderheart Forge" },
-	{ depth = 550, blocks = 400, region = "Starfall Crater" },
-}
-
--- The trail for a miner with `n` rebirths: { depth, blocks (per Starfall), region }.
-function Rebirth.trail(n: number): { depth: number, blocks: number, region: string }
-	local row = Rebirth.trails[math.min(n + 1, #Rebirth.trails)]
-	return { depth = row.depth, blocks = row.blocks, region = row.region }
 end
 
 Rebirth.cutCap = 0.25 -- the most cutting speed rebirths can add

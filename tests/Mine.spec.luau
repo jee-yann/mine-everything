@@ -630,8 +630,15 @@ do
 			assert(ore.hardness <= tierAt(layers[i].depthBlocks) + 2, ore.name .. " in " .. layers[i].name .. " is in reach")
 		end
 	end
-	assert(#appears.Starfall == 1 and appears.Starfall[1] == last, "Starfall appears only in the final region")
-	assert(Ores.byName.Starfall.hardness == #grades, "Starfall needs the final pick")
+	-- Starfall: from Prism Grotto down, more often the deeper the region, most of all in the crater,
+	-- and any pick that reaches it can take it.
+	local firstStarfall = appears.Starfall[1]
+	assert(layers[firstStarfall].name == "Prism Grotto" and appears.Starfall[#appears.Starfall] == last, "Starfall's regions")
+	for k = 2, #appears.Starfall do
+		local a, b = layers[appears.Starfall[k - 1]], layers[appears.Starfall[k]]
+		assert(b.oreChances.Starfall > a.oreChances.Starfall, "Starfall grows with depth: " .. b.name)
+	end
+	assert(Ores.byName.Starfall.hardness <= tierAt(layers[firstStarfall].depthBlocks), "Starfall needs no more pick than its region")
 	assert(#appears.Sunstone == 1 and appears.Sunstone[1] == 1, "Sunstone is found only in the first stone region")
 	assert(Ores.byName.Sunstone.hardness <= tierAt(layers[1].depthBlocks), "a starter pick can mine Sunstone")
 	local exclusive = 0
@@ -649,7 +656,7 @@ do
 		end
 	end
 	assert(earlyMystery, "a mystery ore exists outside the final regions")
-	-- The fine roll keeps every share exact, even Starfall's one in 40,000.
+	-- The fine roll keeps every share exact, even the rarest.
 	for _, layer in layers do
 		local previous, total, listed = 0, 0, 0
 		for _, entry in Geology.thresholds[layer] do
@@ -677,7 +684,7 @@ do
 		error(name .. " is not in " .. layer.name)
 	end
 	local starfallLow, starfallHigh = band(layers[last], "Starfall")
-	assert(math.abs((starfallHigh - starfallLow) / Geology.scale - 0.000025) < 1e-9, "Starfall is one block in 40,000")
+	assert(math.abs((starfallHigh - starfallLow) / Geology.scale - layers[last].oreChances.Starfall / 100) < 1e-9, "the crater's Starfall share is exact")
 	-- Sampled with the real rolls across several seeds, rare ores land near their odds.
 	local function hits(layer, name, seeds, cells)
 		local low, high = band(layer, name)
@@ -714,9 +721,9 @@ do
 	end
 	local sunstone = hits(layers[1], "Sunstone", { 3, 17, 29, 41 }, 250000) -- expect 500
 	assert(sunstone > 420 and sunstone < 580, "Sunstone sampled " .. sunstone .. " times in a million blocks")
-	local starfall = hits(layers[last], "Starfall", { 5, 6, 7, 8, 9 }, 1000000) -- expect 125
-	assert(starfall >= 92 and starfall <= 158, "Starfall sampled " .. starfall .. " times in five million blocks")
-	print("SAMPLE Sunstone", sunstone, "per million; Starfall", starfall, "per five million")
+	local starfall = hits(layers[last], "Starfall", { 5, 6 }, 100000) -- expect 700 at 0.35%
+	assert(starfall >= 600 and starfall <= 800, "Starfall sampled " .. starfall .. " times in 200,000 crater blocks")
+	print("SAMPLE Sunstone", sunstone, "per million; Starfall", starfall, "per 200,000")
 	-- Rebirth: locked until a Starfall is mined this run; resets the run and keeps the miner.
 	do
 		local Rebirth = require(Shared.Rebirth)
@@ -764,34 +771,21 @@ do
 		Profile.upgradeSave(legacy)
 		assert(legacy.rebirths == 0 and legacy.runStarfalls == 2 and Profile.valid(legacy))
 		local saved = Data.snapshot(run)
-		assert(saved.rebirths == 1 and saved.runStarfalls == 0 and saved.runTrail == 0, "rebirth fields save")
-		-- The Starfall trail: the first rebirth's runs through Saltglass Sinks; it deepens to the crater.
-		local first, later = Rebirth.trail(0), Rebirth.trail(5)
-		assert(first.depth == 140 and first.blocks == 150 and later.depth == 550 and later.blocks == 400)
-		assert(Rebirth.trail(100).blocks == later.blocks and Rebirth.need(0) == 1 and Rebirth.need(4) == 5)
+		assert(saved.rebirths == 1 and saved.runStarfalls == 0 and saved.runTrail == nil, "rebirth fields save")
+		-- Rebirth N needs N Starfalls found in the run.
+		assert(Rebirth.need(0) == 1 and Rebirth.need(4) == 5)
 		local walker = Profile.new()
-		assert(not Profile.followTrail(walker, first.depth - 1) and walker.runTrail == 0, "above the trail")
-		for i = 1, first.blocks - 1 do
-			assert(not Profile.followTrail(walker, first.depth + 3), "block " .. i)
-		end
-		assert(Profile.followTrail(walker, first.depth) and walker.runTrail == 0, "the last block holds it")
-		Profile.recordCut(walker, "Starfall", first.depth, Random.new(4))
-		assert(Rebirth.ready(walker.runStarfalls, 0) and not Profile.followTrail(walker, 300), "enough for this rebirth")
-		assert(Profile.rebirth(walker) == 1 and walker.runTrail == 0 and Profile.valid(walker))
-		-- The second rebirth needs two Starfalls, deeper, each a trail's length apart.
-		local second = Rebirth.trail(1)
-		assert(not Profile.followTrail(walker, first.depth), "the second trail runs deeper")
-		for found = 1, 2 do
-			for _ = 1, second.blocks - 1 do assert(not Profile.followTrail(walker, second.depth)) end
-			assert(Profile.followTrail(walker, second.depth), "Starfall " .. found)
-			Profile.recordCut(walker, "Starfall", second.depth, Random.new(found))
-			assert(Rebirth.ready(walker.runStarfalls, 1) == (found == 2), "two for the second rebirth")
-		end
-		assert(not Profile.followTrail(walker, second.depth) and Profile.rebirth(walker) == 2)
+		Profile.recordCut(walker, "Starfall", 100, Random.new(4))
+		assert(Profile.rebirth(walker) == 1 and walker.runStarfalls == 0)
+		Profile.recordCut(walker, "Starfall", 200, Random.new(5))
+		assert(Profile.rebirth(walker) == nil, "the second rebirth needs two")
+		Profile.recordCut(walker, "Starfall", 210, Random.new(6))
+		assert(Profile.rebirth(walker) == 2 and Profile.valid(walker))
+		-- Saves from the retired Starfall trail drop its counter.
 		local old = Profile.new()
-		old.runTrail = nil
+		old.runTrail = 40
 		Profile.upgradeSave(old)
-		assert(old.runTrail == 0 and Profile.valid(old))
+		assert(old.runTrail == nil and Profile.valid(old))
 		print("PASS rebirth unlock, reset, kept progress, XP bonus and legacy saves")
 	end
 	-- A save from before the expansion still loads, with its picks, pack and discoveries.
