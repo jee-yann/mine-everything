@@ -38,12 +38,13 @@ function Purity.bonus(percent)
 	return anchors[#anchors][2]
 end
 
--- Purity text for players: "65.432%". Perfect pieces read "100%".
+-- Purity text for players, to one decimal and rounded down so only a perfect piece reads "100%":
+-- 65.432 reads "65.4%", 99.999 reads "99.9%". Prices still use the exact value.
 function Purity.text(percent)
 	if percent >= 100 then
 		return "100%"
 	end
-	return string.format("%.3f%%", percent)
+	return string.format("%.1f%%", math.floor(percent * 10) / 10)
 end
 
 -- The sale multiplier a purity gives, as text: "×1.10".

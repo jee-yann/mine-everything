@@ -10,6 +10,24 @@ local Field = require(Rep.Shared.FieldRewards)
 local Pulse = require(script.MinePulse)
 local Skills = require(Rep.Shared.Skills)
 local Flare = require(script.SurveyFlare)
+-- A live server says out loud when playtest switches are still on or purchases have no IDs yet, so
+-- it can't be missed before release (see the PR's "Before release" list).
+if not game:GetService("RunService"):IsStudio() then
+	local on = {}
+	for _, flag in { "AllFxForTesting", "FreeUnconfiguredItems", "AllowProgressReset" } do
+		if Config[flag] then table.insert(on, flag) end
+	end
+	local Shop, missing = require(Rep.Shared.StoreConfig), 0
+	for _, list in { Shop.passes, Shop.products } do
+		for _, item in list do
+			if item.id == 0 and not item.retired then missing += 1 end
+		end
+	end
+	if #on > 0 or missing > 0 then
+		warn(string.format("Mine EVERYTHING! playtest build: %s on, %d purchase%s without an ID", if #on > 0 then table.concat(on, ", ") else "no flags",
+			missing, if missing == 1 then "" else "s"))
+	end
+end
 local Preferences = require(Rep.Shared.Preferences)
 local Store, Collection, Cosmetics = require(script.Store), require(script.Collection), require(script.Cosmetics)
 local Bonuses, C = require(Rep.Shared.Bonuses), require(Rep.Shared.Collectibles)
@@ -59,9 +77,9 @@ net.Parent = Rep
 local sessions, loading, closing, nextAction = {}, {}, {}, {}
 local shuttingDown = false
 local geodeRandom = Random.new()
--- What a miner's passes, pets and boosts add up to right now (see Shared.Bonuses).
+-- What a miner's passes and boosts add up to right now (see Shared.Bonuses).
 local function bonusState(player, p)
-	return Bonuses.make(Store.benefits(player), p.col, p.rebirths, nil, os.time())
+	return Bonuses.make(Store.benefits(player), p.col, p.rebirths, nil, os.time(), p.skills, player:GetAttribute("NearMiner") == true)
 end
 -- GiftClock is the moment today's play time counted from. It only moves when the clock is capped or reset.
 local function updateGifts(player, session, now)
@@ -84,7 +102,8 @@ local function applySkills(player, p)
 	end
 	local owned = p.skills
 	char:SetAttribute("PickReach", Config.Reach + Skills.bonus(owned, "reach"))
-	human.WalkSpeed = Skills.walkSpeed(owned, p.bag, Profile.used(p), Profile.stat(p, "Capacity"))
+	-- Worn trails add movement speed (Collectibles.speeds), on top of skills.
+	human.WalkSpeed = Skills.walkSpeed(owned, p.bag, Profile.used(p), Profile.stat(p, "Capacity")) * (1 + C.wornSpeed(p.col) / 100)
 	local jump = 1 + (Skills.bonus(owned, "jump") + (if owned.Summit then 10 else 0)) / 100
 	human.JumpHeight = game.StarterPlayer.CharacterJumpHeight * jump
 	human.JumpPower = game.StarterPlayer.CharacterJumpPower * math.sqrt(jump)
@@ -93,68 +112,68 @@ local function applySkills(player, p)
 		lamp.Range = 25 + Skills.bonus(owned, "lamp")
 	end
 end
+-- Writes an attribute only when its value changed. sync runs after every cut and touches about 150
+-- attributes, nearly all unchanged, so this keeps the per-cut replication small.
+local function put(player, key, value)
+	if player:GetAttribute(key) ~= value then player:SetAttribute(key, value) end
+end
 local function sync(player, p, awardName)
-	player:SetAttribute("Level", E.level(p.xp))
-	player:SetAttribute("EquippedTitle", Guide.selectedTitle(p))
-	-- `Pet` is the lead pet (the first equipped), the one that carries the pet's name.
-	player:SetAttribute("Pet", p.col.eq[1] or "")
-	player:SetAttribute("DrakeUnlocked", p.col.pets.Drake ~= nil)
-	player:SetAttribute("PetName", p.petName)
+	put(player, "Level", E.level(p.xp))
+	put(player, "EquippedTitle", Guide.selectedTitle(p))
 	local encoded = Collection.encode(p.col, os.time())
 	if player:GetAttribute("Collection") ~= encoded then
-		player:SetAttribute("Collection", encoded)
+		put(player, "Collection", encoded)
 	end
-	player:SetAttribute("Trail", p.col.trail or "")
-	player:SetAttribute("Ribbon", p.col.ribbon or "")
-	player:SetAttribute("Aura", p.col.aura or "")
-	player:SetAttribute("PetStyle", p.col.style or "")
+	put(player, "Trail", p.col.trail or "")
+	put(player, "Ribbon", p.col.ribbon or "")
+	put(player, "Aura", p.col.aura or "")
 	-- What a Gold Bundle would pay right now, for the Shop to show.
-	player:SetAttribute("GoldBundle", Store.goldCrate(p))
-	player:SetAttribute("GeodeDust", p.col.dust)
-	player:SetAttribute("StarterBought", p.store.starter == true)
-	player:SetAttribute("VipChestAt", p.store.vipAt or 0)
+	put(player, "GoldBundle", Store.goldCrate(p))
+	put(player, "StarterBought", p.store.starter == true)
+	put(player, "VipChestAt", p.store.vipAt or 0)
 	p.bigPack = Store.benefits(player).BiggerPack == true
-	player:SetAttribute("SkillPoints", Guide.points(p.xp, p.skills))
-	player:SetAttribute("Rebirths", p.rebirths)
-	player:SetAttribute("RunStarfalls", p.runStarfalls)
+	put(player, "SkillPoints", Guide.points(p.xp, p.skills))
+	put(player, "Rebirths", p.rebirths)
+	put(player, "RunStarfalls", p.runStarfalls)
 	player.leaderstats.Level.Value = E.level(p.xp)
-	player:SetAttribute("Gold", p.gold)
-	player:SetAttribute("Gems", p.gems)
-	player:SetAttribute("StampDay", p.stampDay)
-	player:SetAttribute("StampAt", p.stampAt)
-	player:SetAttribute("StampCount", p.stampCount)
-	player:SetAttribute("HasteCuts", p.hasteCuts)
-	player:SetAttribute("StoneChips", p.stoneChips)
-	player:SetAttribute("CavePulses", p.pulses)
-	player:SetAttribute("OreCompass", p.oreCompass == true)
-	player:SetAttribute("Used", Profile.used(p))
-	player:SetAttribute("PackSlots", Profile.stat(p, "Capacity"))
-	if p.skills.PackMule or p.skills.Rockhound then
+	put(player, "Gold", p.gold)
+	put(player, "StampDay", p.stampDay)
+	put(player, "StampAt", p.stampAt)
+	put(player, "StampCount", p.stampCount)
+	put(player, "HasteCuts", p.hasteCuts)
+	put(player, "StoneChips", p.stoneChips)
+	put(player, "CavePulses", p.pulses)
+	put(player, "OreCompass", p.oreCompass == true)
+	put(player, "Used", Profile.used(p))
+	put(player, "PackSlots", Profile.stat(p, "Capacity"))
+	local trailSpeed = C.wornSpeed(p.col)
+	if p.skills.PackMule or p.skills.Rockhound or player:GetAttribute("TrailSpeed") ~= trailSpeed then
+		put(player, "TrailSpeed", trailSpeed)
 		applySkills(player, p)
 	end
-	player:SetAttribute("BagValue", Profile.value(p.bag, p.grades, p.skills.Broker))
-	player:SetAttribute("Flares", p.flares)
-	player:SetAttribute("TemperCharges", p.temper)
-	player:SetAttribute("DailyClaim", p.dailyClaim)
-	player:SetAttribute("Mined", p.mined)
-	player:SetAttribute("ExpeditionStep", Profile.expeditionStep(p))
-	player:SetAttribute("MiningXP", p.xp)
-	player:SetAttribute("Jobs", p.jobs)
-	player:SetAttribute("ClaimedJobs", p.claimedJobs)
+	put(player, "BagValue", Profile.value(p.bag, p.grades, p.skills.Broker))
+	put(player, "Flares", p.flares)
+	put(player, "TemperCharges", p.temper)
+	put(player, "DailyClaim", p.dailyClaim)
+	put(player, "Mined", p.mined)
+	put(player, "ExpeditionStep", Profile.expeditionStep(p))
+	put(player, "MiningXP", p.xp)
+	put(player, "Jobs", p.jobs)
+	put(player, "ClaimedJobs", p.claimedJobs)
 	for _, award in Guide.achievements do
-		player:SetAttribute("Award" .. award.id, Guide.progress(p, award))
+		put(player, "Award" .. award.id, Guide.progress(p, award))
 	end
 	for _, ore in Ores.list do
-		player:SetAttribute("Lifetime" .. ore.name, p.counts[ore.name] or 0)
-		player:SetAttribute("Held" .. ore.name, p.bag[ore.name] or 0)
+		put(player, "Lifetime" .. ore.name, p.counts[ore.name] or 0)
+		put(player, "Held" .. ore.name, p.bag[ore.name] or 0)
 		if not ore.host then
-			player:SetAttribute("Grades" .. ore.name, Purity.encode(p.grades[ore.name]))
-			player:SetAttribute("BestPurity" .. ore.name, p.bestPurity[ore.name] or 0)
+			put(player, "Grades" .. ore.name, Purity.encode(p.grades[ore.name]))
+			put(player, "BestPurity" .. ore.name, p.bestPurity[ore.name] or 0)
 		end
-		player:SetAttribute("Found" .. ore.name, p.discoveries[ore.name] == true)
+		put(player, "Found" .. ore.name, p.discoveries[ore.name] == true)
 	end
 	for _, key in Upgrades.order do
-		player:SetAttribute(key, p.levels[key])
+		put(player, key, p.levels[key])
 	end
 	player.leaderstats.Gold.Value = p.gold
 	player.leaderstats.Depth.Value = Profile.depthRecord(p)
@@ -206,7 +225,8 @@ local function onCharacter(player, character)
 		mount.Position = if head then root.CFrame:PointToObjectSpace(head.Position) else Vector3.new(0, 1.5, 0)
 		local lamp = Instance.new("PointLight")
 		lamp.Name, lamp.Color, lamp.Range, lamp.Brightness = "Mining lamp", Color3.fromRGB(255, 236, 213), 25, 0.8
-		lamp.Shadows = true
+		-- No shadows from the server copy: each client turns on shadows for its own lamp only.
+		lamp.Shadows = false
 		lamp.Parent, mount.Parent = mount, root
 	end
 	if sessions[player] then
@@ -248,13 +268,6 @@ local function join(player)
 	board.Parent = player
 	sessions[player], loading[player] = session, nil
 	Collection.passRewards(session.profile.col, Store.benefits(player), session.profile.preferences.TrailEnabled)
-	-- Gems for trying the Shop: 1,000 in every unpublished Studio session (not in automated tests), and
-	-- once for the game's owner.
-	local studio = session.practice and not Rep:GetAttribute("MiningTestMode")
-	if studio or (player.UserId == PIXELII_USER_ID and not session.profile.store.testGems) then
-		session.profile.gems += 1000
-		session.profile.store.testGems = true
-	end
 	updateGifts(player, session, os.time())
 	for key, value in session.profile.preferences do
 		player:SetAttribute(key, value)
@@ -315,14 +328,13 @@ world.grid.onFeature = function(player, kind, item)
 	local depth = Config.depthInBlocks(world.origin.Y - item.Position.Y)
 	local gold = 25 + 5 * math.floor(depth / 10)
 	s.profile.gold += gold
-	s.profile.flares += 1
-	local hatched = kind == "Egg" and not s.profile.col.pets.Drake
-	if hatched then
-		s.profile.drake = true
-		Collection.grant(s.profile.col, { kind = "pet", id = "Drake" })
+	-- A drake egg deep in the mine holds a Starfall Crate.
+	local egg = kind == "Egg"
+	if egg then
+		s.profile.col.items.StarfallGeode = (s.profile.col.items.StarfallGeode or 0) + 1
 	end
 	sync(player, s.profile)
-	net.Feedback:FireClient(player, "caveCache", gold, hatched)
+	net.Feedback:FireClient(player, "caveCache", gold, egg)
 	return true
 end
 local function leave(player)
@@ -346,7 +358,7 @@ local function atCounter(player, prompt)
 		and (root.Position - prompt.Parent.Position).Magnitude <= prompt.MaxActivationDistance + 1
 end
 
-local counterFor = { Sell = "Sell", Buy = "Shop", Supply = "Supplies", Craft = "Supplies" }
+local counterFor = { Sell = "Sell", Buy = "Shop", Supply = "Supplies" }
 
 -- Sells the whole pack wherever the miner is (Sell Anywhere, Auto-Sell). Returns the gold.
 local function sellAll(player)
@@ -369,7 +381,69 @@ local function announceServerLuck(buyer)
 	end
 end
 
+-- Opens one of the miner's crates and shows them what was inside. Legendary and better is announced.
+local function openCrate(player, geodeId)
+	local s = sessions[player]
+	if not s or s.resetting then return false end
+	local p = s.profile
+	local reward, result = Collection.open(p, geodeId or "Starfall", geodeRandom)
+	if not reward then
+		net.Feedback:FireClient(player, "hint", result)
+		return false
+	end
+	local award = Profile.unlock(p, "FirstCrate")
+	sync(player, p, award)
+	net.Feedback:FireClient(player, "geode", geodeId or "Starfall", reward.kind, reward.id, reward.count or 1, result)
+	local entry = Geodes.entry(reward)
+	if C.rarities[entry.rarity].rank >= C.rarities.Legendary.rank then
+		for _, other in Players:GetPlayers() do
+			net.Feedback:FireClient(other, "geodeAnnounce", player.DisplayName, entry.name, entry.rarity)
+		end
+	end
+	return true
+end
+
+-- After a skill reset: every skill is unlearned and its points are back to spend.
+local function resetSkills(player)
+	local s = sessions[player]
+	if not s then return end
+	for _, node in Skills.nodes do
+		player:SetAttribute("Skill" .. node.id, false)
+	end
+	applySkills(player, s.profile)
+end
+
+-- The Fling product: who the buyer pointed at (their FlingTarget action), and the fling itself. The
+-- target is sent flying by their own client (it owns their character); the server only picks who.
+local flingTargets = {}
+local function fling(player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local wanted = flingTargets[player]
+	flingTargets[player] = nil
+	local target, best = nil, 22
+	for _, other in Players:GetPlayers() do
+		local there = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if there then
+			local gap = (there.Position - root.Position).Magnitude
+			-- The miner they chose, if still close; otherwise whoever is nearest.
+			if wanted and other.UserId == wanted.id and gap <= 22 then target, best = other, -1 end
+			if gap < best then target, best = other, gap end
+		end
+	end
+	if not target then
+		net.Feedback:FireClient(player, "hint", "Nobody close enough to fling")
+		return
+	end
+	local away = (target.Character.HumanoidRootPart.Position - root.Position) * Vector3.new(1, 0, 1)
+	away = if away.Magnitude > 0.1 then away.Unit else Vector3.zAxis
+	net.Feedback:FireClient(target, "flung", player.DisplayName, away)
+	net.Feedback:FireClient(player, "hint", "You flung " .. target.DisplayName .. "!")
+end
 local storeContext = {
+	fling = fling,
+	openCrate = openCrate,
+	resetSkills = resetSkills,
 	sessions = sessions,
 	saveNow = Data.saveNow,
 	sellAll = sellAll,
@@ -433,9 +507,9 @@ local function action(player, key, option, value)
 		if s.resetting or shuttingDown or s.travel or option ~= s.profile.rebirths then
 			return
 		end
-		local count = Profile.rebirth(s.profile)
+		local count, kept, crates = Profile.rebirth(s.profile)
 		if not count then
-			net.Feedback:FireClient(player, "rebirth", false, "Mine a Starfall this run to rebirth.")
+			net.Feedback:FireClient(player, "rebirth", false, "Find this rebirth's Starfalls first. The Rebirth card shows where.")
 			return
 		end
 		local char = player.Character
@@ -448,6 +522,12 @@ local function action(player, key, option, value)
 		s.climb, s.lavaUntil = nil, nil
 		sync(player, s.profile)
 		applySkills(player, s.profile)
+		task.delay(6, function()
+			if player.Parent then
+				net.Feedback:FireClient(player, "hint", string.format("You kept %s G and got %d Starfall Crate%s",
+					tostring(kept):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""), crates, if crates == 1 then "" else "s"))
+			end
+		end)
 		task.spawn(Data.save, player, s)
 		net.Feedback:FireClient(player, "rebirth", true, count)
 		for _, other in Players:GetPlayers() do
@@ -518,10 +598,7 @@ local function action(player, key, option, value)
 		and key ~= "OwnerClear"
 		and key ~= "Title"
 		and key ~= "Skill"
-		and key ~= "PetName"
 		and key ~= "OpenGeode"
-		and key ~= "Craft"
-		and key ~= "EquipPet"
 		and key ~= "Wear"
 		and key ~= "UseItem"
 		and key ~= "BuyPass"
@@ -543,6 +620,8 @@ local function action(player, key, option, value)
 		actionKey = "Job" .. option
 	end
 	if now < (times[actionKey] or 0) then
+		-- A purchase asked for again too soon gets an answer, so the checkout screen never waits on it.
+		if key == "BuyPass" or key == "BuyProduct" then net.Feedback:FireClient(player, "hint", "One moment…") end
 		return
 	end
 	times[actionKey] = now + 0.18
@@ -553,65 +632,34 @@ local function action(player, key, option, value)
 	end
 	local p = s.profile
 	if key == "Stamp" then
-		local day, reward = Field.claim(p, os.time())
+		local perHour = Store.goldCrate(p)
+		local ctx = { perHour = perHour, power = p.levels.Power, intro = p.col.intro }
+		local day, reward = Field.claim(p, os.time(), perHour)
 		if day then
 			sync(player, p)
-			net.Feedback:FireClient(player, "reward", "Daily", day, reward.name, Field.describe(reward))
+			net.Feedback:FireClient(player, "reward", "Daily", day, reward.name, Field.describe(reward, ctx))
 		end
 	elseif key == "Gift" then
 		local at = os.time()
-		local given = Field.claimGift(s, at, option)
+		local perHour = Store.goldCrate(p)
+		local ctx = { perHour = perHour, power = p.levels.Power, intro = p.col.intro }
+		local given = Field.claimGift(s, at, option, perHour)
 		updateGifts(player, s, at)
 		if given then
 			sync(player, p)
 			local last = given[#given]
 			net.Feedback:FireClient(player, "reward", "Playtime", option,
-				if #given > 1 then #given .. " gifts" else last.name, if #given > 1 then "All collected" else Field.describe(last))
+				if #given > 1 then #given .. " gifts" else last.name, if #given > 1 then "All collected" else Field.describe(last, ctx))
 		end
 	elseif key == "OpenGeode" and type(option) == "string" and Geodes.byId[option] then
-		local paid = value == true
-		-- Gems can be bought with Robux, so a geode bought with gems is a paid random item.
-		if paid and player:GetAttribute("PaidRandomRestricted") ~= false then
-			net.Feedback:FireClient(player, "hint", "Buying geodes isn't available in your region. Free geodes still open, and the Forge crafts any reward.")
-			return
-		end
-		local reward, result = Collection.open(p, option, paid, geodeRandom)
-		if not reward then
-			net.Feedback:FireClient(player, "hint", result)
-			return
-		end
-		times[actionKey] = now + 0.6
-		sync(player, p)
-		net.Feedback:FireClient(player, "geode", option, reward.kind, reward.id, reward.count or 1, result)
-		local entry = Geodes.entry(reward)
-		if C.rarities[entry.rarity].rank >= C.rarities.Legendary.rank and option ~= "Welcome" then
-			for _, other in Players:GetPlayers() do
-				net.Feedback:FireClient(other, "geodeAnnounce", player.DisplayName, entry.name, entry.rarity)
-			end
-		end
-	elseif key == "Craft" and type(option) == "string" then
-		local recipe, why = Collection.craft(p, option)
-		if not recipe then
-			net.Feedback:FireClient(player, "hint", why)
-			return
-		end
-		Profile.consume(p, Collection.recipeOres(recipe))
-		p.gems -= recipe.gems or 0
-		p.col.dust -= recipe.dust or 0
-		local give = recipe.give
-		local result = Collection.grant(p.col, { kind = give.kind, id = give.id, count = give.count })
-		sync(player, p)
-		net.Feedback:FireClient(player, "crafted", give.kind, give.id, give.count or 1, result)
-	elseif key == "EquipPet" and type(option) == "string" and type(value) == "boolean" then
-		if Collection.equipPet(p.col, option, value) then
-			sync(player, p)
-		end
+		-- Crates open from the inventory; they are bought with Robux in the Shop.
+		if openCrate(player, option) then times[actionKey] = now + 0.6 end
 	elseif key == "Wear" and type(option) == "string" then
 		if Collection.wear(p.col, option, if type(value) == "string" then value else nil) then
 			sync(player, p)
 		end
 	elseif key == "UseItem" and type(option) == "string" then
-		local item, why = Collection.use(p.col, option, os.time())
+		local item, why = Collection.use(p.col, option, os.time(), p.skills)
 		if not item then
 			net.Feedback:FireClient(player, "hint", why)
 			return
@@ -621,11 +669,13 @@ local function action(player, key, option, value)
 	elseif (key == "BuyPass" or key == "BuyProduct") and type(option) == "string" then
 		times[actionKey] = now + 1
 		Store.prompt(player, s, if key == "BuyPass" then "pass" else "product", option, storeContext)
+	elseif key == "FlingTarget" and type(option) == "number" then
+		flingTargets[player] = { id = option, at = os.clock() }
 	elseif key == "VipChest" then
-		local gems, why = Store.vipChest(player, s)
-		if gems then
+		local given, why = Store.vipChest(player, s)
+		if given then
 			sync(player, p)
-			net.Feedback:FireClient(player, "reward", "VIP", 0, gems .. " gems", "VIP gem chest")
+			net.Feedback:FireClient(player, "reward", "VIP", 0, "Starfall Crate", "Your VIP crate is in your inventory")
 		else
 			net.Feedback:FireClient(player, "hint", why)
 		end
@@ -657,7 +707,7 @@ local function action(player, key, option, value)
 			net.Feedback:FireClient(
 				player,
 				"job",
-				order.name .. (if p.skills.SupplyRunner then " (+2 gems, 2 flares)" else " (+2 gems, 1 flare)"),
+				order.name .. (if p.skills.SupplyRunner then " (+2 Gold Tonics)" else " (+1 Gold Tonic)"),
 				order.gold
 			)
 		end
@@ -684,37 +734,6 @@ local function action(player, key, option, value)
 				net.Feedback:FireClient(player, "skillLearned", option)
 			end
 		end
-	elseif key == "PetName" then
-		if type(option) ~= "string" or #option > 80 then
-			return
-		end
-		local name = option:match("^%s*(.-)%s*$")
-		local length = utf8.len(name)
-		if not length or length < 1 or length > 20 then
-			net.Feedback:FireClient(player, "hint", "Choose a name with 1–20 characters")
-			return
-		end
-		if s.filteringPetName then
-			return
-		end
-		if not Guide.petNames[name] then
-			s.filteringPetName = true
-			local ok, filtered = pcall(function()
-				local result = game:GetService("TextService"):FilterStringAsync(name, player.UserId)
-				return result:GetNonChatStringForBroadcastAsync()
-			end)
-			s.filteringPetName = nil
-			if sessions[player] ~= s or s.profile ~= p or s.resetting then
-				return
-			end
-			if not ok or not filtered or filtered == "" or filtered:find("#", 1, true) then
-				net.Feedback:FireClient(player, "hint", "Try another name, or choose a suggested name")
-				return
-			end
-			name = filtered
-		end
-		p.petName = name
-		sync(player, p, if name ~= "Pebble" then Profile.unlock(p, "PetName") else nil)
 	elseif key == "Surface" then
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -746,11 +765,8 @@ local function action(player, key, option, value)
 		net.Feedback:FireClient(player, "sale", gold, quantity, p.gold, option)
 	elseif key == "Buy" and type(option) == "string" and Upgrades.items[option] then
 		local ok, msg, award = Profile.buy(p, option)
-		-- The first upgrade earns the Welcome Geode: a guaranteed Comet Trail, opened right away.
-		local welcome = ok and Collection.welcome(p.col)
 		sync(player, p, award)
 		net.Feedback:FireClient(player, if ok then "upgrade" else "hint", msg, option, p.levels[option])
-		if welcome then net.Feedback:FireClient(player, "welcomeGeode") end
 	elseif key == "Job" then
 		local job, award = Profile.claimJob(p, option)
 		if job then
@@ -788,10 +804,85 @@ for name, prompt in site.stations do
 		end
 	end)
 end
+-- NearMiner: another miner within 30 studs, for the Show Off, Crowd Pleaser and Cash Out Crew skills.
+-- Checked once a second; the client reads the same attribute, so both sides time cuts alike.
+task.spawn(function()
+	while true do
+		task.wait(1)
+		local roots = {}
+		for player in sessions do
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root then roots[player] = root.Position end
+		end
+		for player, at in roots do
+			local near = false
+			for other, there in roots do
+				if other ~= player and (there - at).Magnitude <= 30 then near = true break end
+			end
+			if (player:GetAttribute("NearMiner") == true) ~= near then player:SetAttribute("NearMiner", near or nil) end
+		end
+	end
+end)
+-- The Starfall Compass pass: every StoreConfig.compassEvery seconds underground, look through the rock
+-- within compassRadius blocks (buried cells too) and point the owner to the nearest Starfall there
+-- (the StarfallAt attribute, a world position; StarfallPing counts the pings).
+task.spawn(function()
+	local Shop = require(Rep.Shared.StoreConfig)
+	local starfall = Ores.byName.Starfall
+	local due = {}
+	while true do
+		task.wait(1)
+		local now = os.clock()
+		for player, s in sessions do
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if not (s.profile and root and world.ready and Store.benefits(player).StarfallCompass
+				and Config.inMine(root.Position - world.origin)) then
+				continue
+			end
+			if now < (due[player] or 0) then continue end
+			due[player] = now + Shop.compassEvery
+			local center = world.grid:cellAt(root.Position)
+			local r = Shop.compassRadius
+			local best, bestDistance = nil, math.huge
+			for x = -r, r do
+				for y = -r, r do
+					for z = -r, r do
+						local offset = Vector3.new(x, y, z)
+						if offset.Magnitude <= r + 0.5 and offset.Magnitude < bestDistance then
+							local cell = center + offset
+							if world.grid:oreAt(cell) == starfall then best, bestDistance = cell, offset.Magnitude end
+						end
+					end
+				end
+			end
+			player:SetAttribute("StarfallAt", if best then world.grid:center(best) else nil)
+			player:SetAttribute("StarfallPing", (player:GetAttribute("StarfallPing") or 0) + 1)
+			player:SetAttribute("StarfallPingNext", workspace:GetServerTimeNow() + Shop.compassEvery)
+		end
+		for player in due do
+			if not sessions[player] then due[player] = nil end
+		end
+	end
+end)
+-- Auto Sell (the timed boost) also empties a pack that was already full when it started, or that
+-- filled some other way: once a second, anyone with Auto Sell running and a full pack sells.
+task.spawn(function()
+	while true do
+		task.wait(1)
+		for player, s in sessions do
+			local p = s.profile
+			if p and not s.resetting and Profile.used(p) >= Profile.stat(p, "Capacity")
+				and Bonuses.autoSell(Bonuses.state(player)) then
+				task.spawn(sellAll, player)
+			end
+		end
+	end
+end)
 Mining.start(world, net, sessions, sync, {
 	bonuses = bonusState,
 	autoSell = function(player)
-		if Store.benefits(player).AutoSell then
+		-- The Auto Sell boost (and the old Auto-Sell benefit, if anyone still has it).
+		if Store.benefits(player).AutoSell or Bonuses.autoSell(Bonuses.state(player)) then
 			return sellAll(player) > 0
 		end
 		return false
@@ -805,9 +896,28 @@ for _, player in Players:GetPlayers() do
 	task.spawn(join, player)
 end
 
+-- Miners who were deep when the mine renewed, and the cell each one stood in.
+local returns = {}
+local function sendBack()
+	for player, spot in returns do
+		local char = player.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		if player.Parent == Players and char == spot.character and root and not Config.inMine(root.Position - world.origin) then
+			-- A pocket where they stood, and a step of floor if the new rock there is a cave.
+			world.grid:hollow(spot.cell)
+			mineFit(char, true)
+			moveCharacter(char, CFrame.new(world.grid:center(spot.cell)) * spot.facing)
+			net.Feedback:FireClient(player, "hint", string.format("Back at your spot · %d blocks down", spot.depth))
+		end
+	end
+	table.clear(returns)
+end
 task.spawn(function()
 	while true do
 		world:generate()
+		-- A compass find belonged to the old rock.
+		for _, miner in Players:GetPlayers() do miner:SetAttribute("StarfallAt", nil) end
+		sendBack()
 		local renewAt = os.clock() + Config.ResetSeconds
 		net:SetAttribute("Ready", true)
 		repeat
@@ -822,7 +932,7 @@ task.spawn(function()
 				end
 				world.grid:refreshStarter(os.clock(), miners)
 			end
-		until world.removed >= Config.ResetAfter or os.clock() >= renewAt
+		until os.clock() >= renewAt
 		net.Feedback:FireAllClients("resetSoon", Config.ResetWarning)
 		task.wait(Config.ResetWarning)
 		world.ready = false
@@ -831,6 +941,11 @@ task.spawn(function()
 			local char = player.Character
 			local root = char and char:FindFirstChild("HumanoidRootPart")
 			if root and Config.inMine(root.Position - world.origin) then
+				local depth = Config.depthInBlocks(world.origin.Y + Config.FloorY - root.Position.Y)
+				if depth >= Config.ReturnDepth then
+					returns[player] = { character = char, cell = world.grid:cellAt(root.Position), depth = depth,
+						facing = root.CFrame.Rotation }
+				end
 				mineFit(char, false)
 				moveCharacter(char, CFrame.lookAt(entrance, entrance - Vector3.zAxis))
 			end

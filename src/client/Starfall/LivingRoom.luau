@@ -350,6 +350,20 @@ function Room:seat()
 	end
 	self.kid, self.kidUnit = performer("Kid")
 	self.sib, self.sibUnit = performer("Sibling")
+	-- The kid's cast file has a shirt and no trousers, which read as bare legs: denim trousers and
+	-- dark trainers, through the body colours and the leg parts themselves.
+	local denim, shoe = hex("33476E"), hex("2A2A33")
+	for _, item in self.kid.model:GetDescendants() do
+		if item:IsA("BodyColors") then
+			item.LeftLegColor3, item.RightLegColor3 = denim, denim
+		elseif item:IsA("BasePart") then
+			if item.Name:find("Foot") then
+				item.Color = shoe
+			elseif item.Name:find("Leg") then
+				item.Color = denim
+			end
+		end
+	end
 end
 
 function Room:draw(frame, motion)

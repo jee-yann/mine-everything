@@ -379,16 +379,18 @@ local list = {
 	{
 		name = "Starfall",
 		rarity = "Celestial",
-		value = 600000,
+		-- Only in the Starfall Crater, and only the top pick (Starcaller) can cut it. The most valuable
+		-- ore (just above Voidshard), though its real value is the rebirth it counts toward.
+		value = 125000,
 		xp = 400,
 		hardness = 14,
-		effort = 5.5,
+		effort = 9,
 		material = Enum.Material.Foil,
 		color = rgb(181, 133, 255),
 		flash = "Starfall",
 		gem = true,
 		secret = true,
-		hint = "The rarest thing that ever fell, at the very bottom",
+		hint = "Only in the Starfall Crater, for the Starcaller Pick. A little more often the deeper you go",
 	},
 }
 -- The owner scanner filters ores with one bit each. Ores that existed before the expansion
@@ -438,10 +440,13 @@ local function surplusFactor(power, required)
 	end
 	return 1 - 0.07 * math.clamp(power - required, 0, 4)
 end
+-- Rarer ores take longer to cut, on top of their own effort, so a rare find is a moment: up to 1.6x for
+-- Mythic. Starfall's own effort makes it the slowest of all (about 9 s even at top Speed in the crater).
+local rarityEffort = { Common = 1, Uncommon = 1.05, Rare = 1.15, Epic = 1.3, Legendary = 1.45, Mythic = 1.6, Celestial = 1 }
 local function cutTime(base, ore, strength, charges, temperMultiplier, power)
 	local required = math.max(strength or 1, ore.hardness)
 	local tempered = (charges or 0) > 0 and required >= 2
-	return base * ore.effort * strengthFactor(strength) * surplusFactor(power, required) * (if tempered
+	return base * ore.effort * (rarityEffort[ore.rarity] or 1) * strengthFactor(strength) * surplusFactor(power, required) * (if tempered
 		then temperMultiplier or 0.8
 		else 1),
 		tempered

@@ -13,51 +13,68 @@ for _, key in { "gems", "stampDay", "stampCount", "shiftDay", "shiftSeconds", "s
 local p = assert(Data.claim({profile = legacy}, "new session", 1000)).profile
 assert(p.gems == 0 and p.hasteCuts == 0 and not Profile.hasUpgrade(p))
 assert(#Field.daily == 7, "a week of daily rewards")
+-- No gems, flares or supplies anywhere: crates, tonics and gold only.
+for _, reward in Field.daily do
+	assert(not reward.gems and not reward.flares and not reward.pulses, reward.name)
+end
+for _, gift in Field.gifts do
+	assert(not gift.reward.gems and not gift.reward.flares and not gift.reward.pulses, gift.reward.name)
+end
+assert(Field.daily[1].welcome and Field.daily[2].items.GoldTonic == 2 and Field.daily[7].items.StarfallGeode == 3 and Field.daily[6].goldPower,
+	"day 1 welcome, day 2 tonics, day 6 pickaxe gold, day 7 crates")
+local perHour = 600
 for day, reward in Field.daily do
 	local today = (20000 + 3 * day) * 86400
-	local before = { gold = p.gold, gems = p.gems, flares = p.flares, pulses = p.pulses }
+	local ctx = { perHour = perHour, power = p.levels.Power, intro = p.col.intro }
+	local gold, items = Field.amounts(reward, ctx)
+	local beforeGold, beforeItems = p.gold, table.clone(p.col.items)
 	local ready, done = Field.dailyState(p.stampCount, p.stampAt, today)
 	assert(ready == day and done == day - 1)
-	local number, given = Field.claim(p, today)
-	assert(number == day and given == reward and Field.describe(reward) ~= "")
-	for key, amount in before do
-		assert(p[key] == amount + (reward[key] or 0), key .. " on day " .. day)
+	local number, given = Field.claim(p, today, perHour)
+	assert(number == day and given == reward and Field.describe(reward, ctx) ~= "")
+	assert(p.gold == beforeGold + gold, "gold on day " .. day)
+	for id, n in items do
+		assert(p.col.items[id] == (beforeItems[id] or 0) + n, id .. " on day " .. day)
 	end
 	assert(not Field.claim(p, today) and not Field.claim(p, today - 1) and not Field.claim(p, today + Field.cooldown - 1))
 	assert(not Field.dailyState(p.stampCount, p.stampAt, today))
 end
-assert(Field.claim(p, 20100 * 86400) == 1, "the card starts again after day 7")
+assert(p.col.items.WelcomeGeode == 1 and p.col.intro, "day 1 gave the Welcome Crate")
+local crates = p.col.items.StarfallGeode or 0
+assert(Field.claim(p, 20100 * 86400, perHour) == 1, "the card starts again after day 7")
+assert(p.col.items.WelcomeGeode == 1 and p.col.items.StarfallGeode == crates + 1, "a second day 1 gives a Starfall Crate instead")
+-- Day 6 grows with the pickaxe.
+assert(Field.powerGold(5) > Field.powerGold(2) and Field.powerGold(2) >= 100)
 -- 18 hours after a claim, not the next UTC day: an earlier visit the next day still gets its reward.
 local evening = 20200 * 86400 + 22 * 3600
 assert(Field.claim(p, evening) == 2)
 local _, _, wait = Field.dailyState(p.stampCount, p.stampAt, evening + 3600)
 assert(wait == Field.cooldown - 3600 and not Field.claim(p, 20201 * 86400 + 3600 * 15))
 assert(Field.claim(p, evening + Field.cooldown) == 3, "the next morning")
-p.gold, p.gems, p.flares, p.pulses = 0, 37, 0, 0
-assert(not Profile.buySupply(p, "Haste") and p.gems == 37)
+p.gold, p.flares, p.pulses = 0, 0, 0
+assert(not Profile.buySupply(p, "Haste"))
 p.bag = { Stone = 2, Coal = 3, Iron = 3, Copper = 5 }
 assert(Profile.buySupply(p, "Haste") and p.hasteCuts == 12 and not Profile.buySupply(p, "Haste"))
 assert(Profile.buySupply(p, "Compass") and p.oreCompass and not Profile.buySupply(p, "Compass"))
-p.gems = 2
-assert(not Profile.buySupply(p, "Pulse") and p.bag.Copper == 2 and p.gems == 2)
-p.gems = 11
-assert(Profile.buySupply(p, "Chips") and p.stoneChips == 6 and p.gems == 3)
-assert(Profile.buySupply(p, "Pulse") and p.pulses == 1 and p.gems == 0 and not next(p.bag))
+-- Supplies cost only ore now.
+assert(Profile.buySupply(p, "Chips") and p.stoneChips == 6)
+assert(Profile.buySupply(p, "Pulse") and p.pulses == 1 and not next(p.bag))
 p.gold = 8
 assert(Profile.buy(p, "Capacity") and Profile.hasUpgrade(p))
 p.auraOff = true
 local day = 20101
 p.bag = table.clone(Materials.daily(day).recipe)
-assert(Profile.deliver(p, day, day) and p.gems == 2 and not Profile.deliver(p, day, day))
+local tonics = p.col.items.GoldTonic or 0
+assert(Profile.deliver(p, day, day) and p.col.items.GoldTonic == tonics + 1 and not Profile.deliver(p, day, day))
 local snapshot = Data.snapshot(p)
 local restored = assert(Data.claim({ profile = snapshot }, "later", 2000)).profile
-for _, key in { "gems", "stampCount", "stampDay", "stampAt", "oreCompass", "pulses", "hasteCuts", "stoneChips", "auraOff" } do
+for _, key in { "stampCount", "stampDay", "stampAt", "oreCompass", "pulses", "hasteCuts", "stoneChips", "auraOff" } do
 	assert(p[key] == restored[key], key)
 end
 assert(Profile.hasUpgrade(restored))
 snapshot.stampCount = 8
 assert(not Profile.valid(snapshot))
-print("PASS gem card rollover, missed days, duplicate claims, recipes, saved charges, first-upgrade aura")
+print("PASS daily card rewards, rollover, missed days, duplicate claims, recipes, saved charges")
 
 -- Gifts at 5 and 10 minutes, then every 10 minutes, the last at an hour.
 assert(Field.gifts[1].minutes == 5 and Field.gifts[2].minutes == 10)
@@ -76,8 +93,8 @@ Field.trackGifts(returnVisit, start + 2000)
 assert(resumed.giftSeconds == 299 and not Field.claimGift(returnVisit, start + 2000, 1), "time away does not count")
 assert(not Field.claimGift(returnVisit, start + 2001, 2) and not Field.claimGift(returnVisit, start + 2001, 0) and not Field.claimGift(returnVisit, start + 2001, "1"))
 local gold = resumed.gold
-local given = Field.claimGift(returnVisit, start + 2001, 1)
-assert(given and #given == 1 and resumed.gold == gold + Field.gifts[1].reward.gold)
+local given = Field.claimGift(returnVisit, start + 2001, 1, 600)
+assert(given and #given == 1 and resumed.gold == gold + Field.amounts(Field.gifts[1].reward, { perHour = 600 }))
 assert(not Field.claimGift(returnVisit, start + 2001, 1), "a gift was given twice")
 -- Claiming a later gift collects the ones before it.
 local all = Field.claimGift(returnVisit, start + 12000, #Field.gifts)

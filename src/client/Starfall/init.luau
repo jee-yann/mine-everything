@@ -56,13 +56,27 @@ local function compose(screen, safe)
 	caption.TextStrokeColor3 = ink
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MinTextSize, limit.MaxTextSize, limit.Parent = 13, 39, caption
+	-- Skip: a pill in the bottom right corner, in the lower matte, clear of the captions.
 	local skip = Instance.new("TextButton")
-	skip.Name, skip.Text, skip.Font, skip.TextSize = "Skip", "Skip  ›", Enum.Font.BuilderSansMedium, 16
-	skip.AnchorPoint, skip.Position, skip.Size = Vector2.new(1, 0), UDim2.new(1, -12, 0, 6), UDim2.fromOffset(84, 44)
-	skip.BackgroundColor3, skip.BackgroundTransparency, skip.TextColor3 = ink, 0.28, Color3.fromHex("FFF5DF")
-	skip.BorderSizePixel, skip.Parent = 0, safe
-	W.round(skip, 7)
-	skip.ZIndex = 12
+	skip.Name, skip.Text, skip.Font, skip.TextSize = "Skip", "Skip", Enum.Font.FredokaOne, 21
+	skip.AnchorPoint, skip.Position, skip.Size = Vector2.new(1, 1), UDim2.new(1, -18, 1, -12), UDim2.fromOffset(136, 46)
+	skip.BackgroundColor3, skip.BackgroundTransparency, skip.TextColor3 = ink, 0.18, Color3.fromHex("FFF5DF")
+	skip.BorderSizePixel, skip.AutoButtonColor, skip.Parent = 0, false, safe
+	W.round(skip, 23)
+	local rim = Instance.new("UIStroke")
+	rim.ApplyStrokeMode, rim.Color, rim.Thickness, rim.Transparency = Enum.ApplyStrokeMode.Border, Color3.fromHex("FFF5DF"), 2, 0.45
+	rim.Parent = skip
+	local grow = Instance.new("UIScale")
+	grow.Parent = skip
+	skip.MouseEnter:Connect(function()
+		rim.Transparency, skip.BackgroundTransparency = 0.1, 0.05
+		W.tween(grow, 0.12, { Scale = 1.06 })
+	end)
+	skip.MouseLeave:Connect(function()
+		rim.Transparency, skip.BackgroundTransparency = 0.45, 0.18
+		W.tween(grow, 0.12, { Scale = 1 })
+	end)
+	skip.ZIndex = 60
 	local strike, drawPrompt = BeaconPrompt(safe)
 	local title = IntroTitles.new(safe, screen)
 	return skip,
@@ -129,6 +143,18 @@ function Opening.play(player, net, hud)
 	stage.Name, stage.Parent = "Mine origins set", camera
 	local controls, restoreControls, chat, film, fade, showOtherMiners
 	local skipped, finished = false, false
+	-- Skipping fades the picture to black first, then the film ends and the game fades in.
+	local skipCurtain
+	local function beginSkip()
+		if skipCurtain or skipped then return end
+		skipCurtain = Instance.new("Frame")
+		skipCurtain.Name, skipCurtain.Size, skipCurtain.BorderSizePixel = "Skip fade", UDim2.fromScale(1, 1), 0
+		skipCurtain.BackgroundColor3, skipCurtain.BackgroundTransparency, skipCurtain.ZIndex = Color3.new(), 1, 100
+		skipCurtain.Parent = screen
+		W.tween(skipCurtain, 0.45, { BackgroundTransparency = 0 }).Completed:Once(function()
+			skipped = true
+		end)
+	end
 	hud.inOpening, hud.root.Visible, reticle.Enabled, Prompts.Enabled = true, false, false, false
 	local function run()
 		showOtherMiners = hideOtherMiners(player)
@@ -161,12 +187,10 @@ function Opening.play(player, net, hud)
 			return Enum.ContextActionResult.Pass
 		end, false, 3110, Enum.KeyCode.Space, Enum.KeyCode.ButtonX)
 		fade = curtain
-		skip.Activated:Connect(function()
-			skipped = true
-		end)
+		skip.Activated:Connect(beginSkip)
 		Actions:BindActionAtPriority("Skip mine origins", function(_, state)
 			if state == Enum.UserInputState.Begin then
-				skipped = true
+				beginSkip()
 			end
 			return Enum.ContextActionResult.Sink
 		end, false, 3100, Enum.KeyCode.Return, Enum.KeyCode.ButtonB)
@@ -324,6 +348,16 @@ function Opening.play(player, net, hud)
 	safe:Destroy()
 	if remote and fade then
 		W.tween(fade, 0.20, { BackgroundTransparency = 1 }).Completed:Wait()
+	end
+	-- After a skip, the game fades in from the black.
+	if skipCurtain and skipCurtain.Parent then
+		if fade then fade.BackgroundTransparency = 1 end
+		-- The black bars go with the film, under the black, so they never trail the fade-in.
+		for _, name in { "Top matte", "Bottom matte" } do
+			local matte = screen:FindFirstChild(name)
+			if matte then matte.Visible = false end
+		end
+		W.tween(skipCurtain, 0.5, { BackgroundTransparency = 1 }).Completed:Wait()
 	end
 	screen:Destroy()
 	if showOtherMiners then

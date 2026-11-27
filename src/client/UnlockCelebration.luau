@@ -25,8 +25,10 @@ function Celebration.new(hud)
 	return setmetatable({ hud = hud, queue = {} }, Celebration)
 end
 
-function Celebration:show(kind, name, detail, icon, gold)
-	table.insert(self.queue, { kind = kind, name = name, detail = detail, icon = icon, gold = gold })
+function Celebration:show(kind, name, detail, icon, gold, extra)
+	local item = { kind = kind, name = name, detail = detail, icon = icon, gold = gold }
+	for key, value in extra or {} do item[key] = value end
+	table.insert(self.queue, item)
 	if self.playing then
 		return
 	end
@@ -38,6 +40,29 @@ function Celebration:show(kind, name, detail, icon, gold)
 		end
 		self.playing = false
 	end)
+end
+
+-- A workshop upgrade. Buying the same upgrade again while its card is up (or still waiting) doesn't
+-- queue another card: the one card counts up, "Lv 20 → Lv 28". `describe(from, to)` gives the
+-- headline and the detail.
+function Celebration:upgrade(key, level, describe)
+	local now = self.current
+	if now and now.item.kind == "upgrade" and now.item.icon == key and now.item.from then
+		now.item.to = level
+		now.headline.Text, now.detail.Text = describe(now.item.from, level)
+		now.untilTime = math.max(now.untilTime, os.clock() + 1.6)
+		if Burst.allowed(self.hud.player) then Burst.pop(now.medalScale, 1, 1.2) end
+		return
+	end
+	for _, item in self.queue do
+		if item.kind == "upgrade" and item.icon == key and item.from then
+			item.to = level
+			item.name, item.detail = describe(item.from, level)
+			return
+		end
+	end
+	local name, detail = describe(level - 1, level)
+	self:show("upgrade", name, detail, key, nil, { from = level - 1, to = level })
 end
 
 function Celebration:skillsLeft()
@@ -63,10 +88,12 @@ function Celebration:present(item)
 	local quick = #self.queue > 0
 	local group = W.fadeGroup(root, "Unlock celebration", 470, 170)
 	group.ZIndex = 35
-	local center = UDim2.fromScale(0.5, 0.3)
+	-- On a phone (the compact HUD) the card is small and high, so it never covers the mine.
+	local phone = self.hud.edgeMode == true and root.AbsoluteSize.Y < 500
+	local center = UDim2.fromScale(0.5, if phone then 0.2 else 0.3)
 	W.anchor(group, 0.5, 0.5, center)
 	local scale = W.scale(group)
-	local fit = math.min(1.1, (root.AbsoluteSize.X - 16) / 470, (root.AbsoluteSize.Y - 10) / 340)
+	local fit = math.min(if phone then 0.6 else 1.1, (root.AbsoluteSize.X - 16) / 470, (root.AbsoluteSize.Y - 10) / 340)
 	scale.Scale = fit
 	local body = W.frame(group, "Plaque", 12, 22, 446, 124, W.white, 22)
 	W.enamelPanel(body, top, bottom, 22)
@@ -102,7 +129,13 @@ function Celebration:present(item)
 			Burst.confetti(root, at.X, at.Y, if kind == "rebirth" then 48 elseif kind == "levelUp" then 34 else 22, if ore then { top, bottom, W.white, W.gold } else nil)
 		end)
 	end
-	task.wait(if quick then 1.7 else 2.5)
+	local current = { item = item, headline = headline, detail = detail, medalScale = medalScale,
+		untilTime = os.clock() + (if quick then 1.7 else 2.5) }
+	self.current = current
+	while os.clock() < current.untilTime and group.Parent do
+		task.wait(0.1)
+	end
+	if self.current == current then self.current = nil end
 	if group.Parent then
 		local finish = { GroupTransparency = 1 }
 		if motion then

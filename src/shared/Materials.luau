@@ -5,9 +5,9 @@ Materials.supplies = {
 	Flare = { name = "Survey flare", recipe = { Copper = 2, Coal = 3 } },
 	Temper = { name = "Pickaxe temper", recipe = { Coal = 4 } },
 	Haste = { name = "Quick-cut wax", recipe = { Coal = 3, Stone = 2 }, detail = "Mine twice as fast for 12 cuts", stock = "HasteCuts" },
-	Chips = { name = "Diamond teeth", recipe = { Iron = 2 }, gems = 8, detail = "Break 6 plain stone blocks in a blink", stock = "StoneChips" },
-	Pulse = { name = "Cave pulse", recipe = { Copper = 2 }, gems = 3, detail = "Clear nearby plain stone; leave ore to mine" },
-	Compass = { name = "Pet's ore compass", recipe = { Copper = 3, Iron = 1 }, detail = "Your pet points to nearby exposed ore" },
+	Chips = { name = "Diamond teeth", recipe = { Iron = 2 }, detail = "Break 6 plain stone blocks in a blink", stock = "StoneChips" },
+	Pulse = { name = "Cave pulse", recipe = { Copper = 2 }, detail = "Clear nearby plain stone; leave ore to mine" },
+	Compass = { name = "Ore compass", recipe = { Copper = 3, Iron = 1 }, detail = "A marker over your head points to nearby exposed ore" },
 }
 Materials.supplyOrder = { "Flare", "Temper", "Haste", "Chips", "Pulse", "Compass" }
 Materials.temperCharges = 25

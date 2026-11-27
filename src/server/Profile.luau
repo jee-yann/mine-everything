@@ -16,7 +16,7 @@ local Profile = {}
 function Profile.new()
 	return {
 		version = 1,
-		progression = 2,
+		progression = 4,
 		introSeen = false,
 		firstTrip = {},
 		gold = 0,
@@ -205,7 +205,9 @@ function Profile.valid(p)
 		return false
 	end
 	for _, k in Upgrades.order do
-		if not integer(p.levels[k], #Upgrades.items[k].values) or p.levels[k] < 1 then
+		-- Saves from before the 30-level Speed curve (progression 3) may hold up to the old 100.
+		local most = if k == "Speed" and (p.progression or 1) < 3 then 100 else #Upgrades.items[k].values
+		if not integer(p.levels[k], most) or p.levels[k] < 1 then
 			return false
 		end
 	end
@@ -371,6 +373,17 @@ function Profile.upgradeSave(p)
 		end
 		p.progression = 2
 	end
+	-- The 30-level Speed curve: keep at least the speed they had.
+	if p.progression < 3 then
+		p.levels.Speed = Upgrades.migrateSpeed(p.levels.Speed)
+		p.progression = 3
+	end
+	-- The smaller Capacity curve: the first level at least as roomy (the biggest old packs shrink to
+	-- the new top, 852 slots).
+	if p.progression < 4 then
+		p.levels.Capacity = Upgrades.migrateCapacity(p.levels.Capacity)
+		p.progression = 4
+	end
 	if p.xp == nil then
 		p.xp = 0
 		for name, count in p.bag do
@@ -390,6 +403,7 @@ function Profile.upgradeSave(p)
 	-- Saves from before rebirths: every Starfall so far belongs to the current run.
 	p.rebirths = p.rebirths or 0
 	if p.runStarfalls == nil then p.runStarfalls = p.counts.Starfall or 0 end
+	p.runTrail = nil -- the retired Starfall trail
 	p.preferences = p.preferences or {}
 	for key, value in Preferences.defaults do
 		if p.preferences[key] == nil then
@@ -438,6 +452,9 @@ function Profile.markViewed(p, page, id)
 		if not award or Guide.progress(p, award) < award.goal then
 			return false
 		end
+	elseif page == "Guide" then
+		-- One-time guides the miner has followed (the Rebirth button), so they never show again.
+		if id ~= "Rebirth" then return false end
 	else
 		return false
 	end
@@ -479,7 +496,14 @@ function Profile.recordCut(p, name, depth, random, boost)
 	if not ore.host then
 		random = random or miningRandom
 		grade = Purity.roll(random)
-		if p.skills.Fortune and Profile.used(p) + 1 < Profile.stat(p, "Capacity") and random:NextInteger(1, 10) == 1 then
+		-- Assayer: some finds roll twice and keep the better. Polish: never under 55%.
+		local assay = Skills.bonus(p.skills, "assay")
+		if assay > 0 and random:NextInteger(1, 100) <= assay then
+			grade = math.max(grade, Purity.roll(random))
+		end
+		if p.skills.Polish then grade = math.max(grade, 55) end
+		local odds = if p.skills.FortuneII then 7 else 10
+		if p.skills.Fortune and Profile.used(p) + 1 < Profile.stat(p, "Capacity") and random:NextInteger(1, odds) == 1 then
 			units = 2
 		end
 		local stock = p.grades[name] or {}
@@ -489,7 +513,7 @@ function Profile.recordCut(p, name, depth, random, boost)
 		record = grade > (p.bestPurity[name] or 0)
 		if record then p.bestPurity[name] = grade end
 	end
-	local xp = math.floor(Skills.oreXP(ore, p.skills, not p.discoveries[name], depth or 0) * Rebirth.xpMultiplier(p.rebirths) * (boost or 1) + 0.5)
+	local xp = math.floor(Skills.oreXP(ore, p.skills, (p.bag[name] or 0) == 0, depth or 0, grade) * Rebirth.xpMultiplier(p.rebirths) * (boost or 1) + 0.5)
 	if name == Rebirth.requirement.ore then p.runStarfalls += 1 end
 	p.discoveries[name] = true
 	p.bag[name] = (p.bag[name] or 0) + units
@@ -515,19 +539,23 @@ function Profile.recordCut(p, name, depth, random, boost)
 	return unlocked, grade, units, record
 end
 
--- Starts a new run when the current one has met Rebirth.requirement. Resets gold, the pack,
--- workshop levels and field supplies; keeps everything earned for the miner. Returns the new count.
+-- Starts a new run when the current one has met Rebirth.requirement. Resets the pack, workshop
+-- levels and field supplies, keeps some of the gold (Rebirth.keptGold) and everything earned for the
+-- miner, and gives Starfall Crates (Rebirth.crates). Returns the new count, the gold kept and the crates.
 function Profile.rebirth(p)
-	if not Rebirth.ready(p.runStarfalls) then
+	if not Rebirth.ready(p.runStarfalls, p.rebirths) then
 		return nil
 	end
+	local kept = Rebirth.keptGold(p.gold, p.rebirths)
 	p.rebirths += 1
 	p.runStarfalls = 0
-	p.gold = 0
+	p.gold = kept
+	local crates = Rebirth.crates(p.rebirths)
+	p.col.items.StarfallGeode = (p.col.items.StarfallGeode or 0) + crates
 	p.bag, p.grades = {}, {}
 	p.levels = { Speed = 1, Power = 1, Capacity = 1 }
 	p.flares, p.temper = 0, 0
-	return p.rebirths
+	return p.rebirths, kept, crates
 end
 
 function Profile.claimJob(p, i)
@@ -592,6 +620,8 @@ function Profile.sell(p, multiplier, selectedOre, portion)
 			end
 		end
 	end
+	-- Bulk Seller: a big sale at once pays 5% more.
+	if p.skills.BulkSeller and quantity >= 50 then multiplier = (multiplier or 1) * 1.05 end
 	-- Gold is always whole: passes and boosts can make fractions.
 	local amount = math.floor(value * (multiplier or 1) + 0.5)
 	if quantity > 0 then p.firstTrip.sold = true end
@@ -627,16 +657,13 @@ function Profile.buySupply(p, key)
 	if (key == "Haste" and p.hasteCuts > 0) or (key == "Chips" and p.stoneChips > 0) then
 		return false, "Finish the charges on your pick first"
 	elseif key == "Compass" and p.oreCompass then
-		return false, "Your pet already has a compass"
-	elseif item.gems and p.gems < item.gems then
-		return false, string.format("Need %d more gems", item.gems - p.gems)
+		return false, "You already have an ore compass"
 	end
 	local name, count = Materials.missing(item.recipe, p.bag)
 	if name then
 		return false, string.format("Bring %d more %s to Field Supplies", count, name)
 	end
 	Profile.consume(p, item.recipe)
-	p.gems -= item.gems or 0
 	if key == "Haste" then
 		p.hasteCuts = Field.hasteCuts
 		return true, "Quick-cut wax ready for 12 cuts"
@@ -648,7 +675,7 @@ function Profile.buySupply(p, key)
 		return true, "Cave pulse packed. Use it underground from Supplies."
 	elseif key == "Compass" then
 		p.oreCompass = true
-		return true, "Ore compass crafted. Equip a pet and follow its gaze."
+		return true, "Ore compass crafted. Its marker over your head points to nearby ore."
 	end
 	if key == "Flare" then
 		p.flares += 1
@@ -668,8 +695,8 @@ function Profile.deliver(p, day, requestedDay)
 	Profile.consume(p, order.recipe)
 	p.dailyClaim = day
 	p.gold += order.gold
-	p.gems += 2
-	p.flares += if p.skills.SupplyRunner then 2 else 1
+	-- And Gold Tonics: two with the Supply Runner skill.
+	p.col.items.GoldTonic = (p.col.items.GoldTonic or 0) + (if p.skills.SupplyRunner then 2 else 1)
 	return true
 end
 return Profile

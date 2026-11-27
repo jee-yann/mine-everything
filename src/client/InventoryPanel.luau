@@ -1,8 +1,8 @@
 -- The inventory: items (crates, tonics and field supplies), mining trails, player effects (trails
--- that follow you and auras), the Forge and titles. Pets and their styles have their own card.
+-- that follow you and auras) and titles.
 local Shared = game:GetService("ReplicatedStorage").Shared
-local C, Recipes, Bonuses = require(Shared.Collectibles), require(Shared.Recipes), require(Shared.Bonuses)
-local Ores, E, Skills = require(Shared.Ores), require(Shared.Expeditions), require(Shared.Skills)
+local C, Bonuses = require(Shared.Collectibles), require(Shared.Bonuses)
+local E, Skills = require(Shared.Expeditions), require(Shared.Skills)
 local W, Icons, Card = require(script.Parent.Widgets), require(script.Parent.Icons), require(script.Parent.WideCard)
 local Grid = require(script.Parent.CollectionGrid)
 local Panel = {}
@@ -11,16 +11,13 @@ local rgb = Color3.fromRGB
 local orange = { rgb(255, 208, 138), rgb(240, 138, 58) }
 local tabs = {
 	{ "Items", "Items", "Inventory" },
-	{ "MiningTrails", "Mining", "Power" },
+	{ "MiningTrails", "Mining FX", "Power" },
 	{ "PlayerFX", "Player FX", "Trail" },
-	{ "Forge", "Forge", "Forge" },
 	{ "Titles", "Titles", "Achievements" },
 }
-local headings = { Items = "Inventory", MiningTrails = "Mining Trails", PlayerFX = "Player Effects", Forge = "Forge", Titles = "Titles" }
+local headings = { Items = "Inventory", MiningTrails = "Mining FX", PlayerFX = "Player FX", Titles = "Titles" }
 local green = ColorSequence.new(rgb(166, 245, 110), rgb(62, 178, 52))
 local grey = ColorSequence.new(rgb(150, 154, 176), rgb(98, 102, 128))
-local goldPaint = ColorSequence.new(rgb(255, 226, 120), rgb(240, 150, 30))
-local unmet = rgb(255, 141, 137)
 local words, press, set = Grid.words, Grid.press, Grid.set
 
 local function box(parent, name, x, y, w, h, tint)
@@ -41,7 +38,6 @@ function Panel.new(menu)
 	self:buildItems()
 	self.grids.MiningTrails = Grid.new(self, self.pages.MiningTrails, "trail")
 	self.grids.PlayerFX = Grid.new(self, self.pages.PlayerFX, { "ribbon", "aura" })
-	self:buildForge()
 	self:buildTitles()
 	return self
 end
@@ -78,7 +74,7 @@ function Panel:buildItems()
 	end
 	for _, item in order do
 		local entry = self:row(list, item.name, Grid.tint(item.rarity, true), if item.kind == "geode" then "Geode" else "Boosts")
-		entry.detail.Text = item.detail
+		entry.detail.Text = W.rich(item.detail)
 		entry.use[1].Activated:Connect(function()
 			if item.kind == "geode" then
 				self.net.Action:FireServer("OpenGeode", item.geode, false)
@@ -140,70 +136,6 @@ function Panel:buildItems()
 	local _ = Skills
 end
 
-function Panel:buildForge()
-	local page = self.pages.Forge
-	local note = words(page, "Craft exactly what you want from ore in your pack, Crate Dust (from duplicates) and gems.", 0, 0, 764, 24, 16, rgb(255, 244, 170))
-	note.TextWrapped = true
-	local list = Card.scroller(page, "Recipes", 0, 28, 764, 330)
-	local y = 0
-	for _, group in Recipes.groups do
-		local heading = words(list, group, 4, y, 300, 28, 20, rgb(255, 230, 160), true)
-		heading.Name = group
-		y += 30
-		for _, recipe in Recipes.list do
-			if recipe.group ~= group then continue end
-			local give = recipe.give
-			local entry = C.find(give.kind, give.id)
-			local row = box(list, recipe.id, 0, y, 750, 74, Grid.tint(entry.rarity, true))
-			if C.isCosmetic(give.kind) then
-				Grid.look(row, give.kind, entry, 10, 9, 56)
-			else
-				local well = W.frame(row, "Icon well", 10, 9, 56, 56, W.white, 12)
-				well.BackgroundTransparency = 0.72
-				Icons.draw(well, if give.kind == "pet" then "Pets" else "Boosts", 4, 4, 48)
-			end
-			words(row, entry.name .. "  ·  " .. C.kindNames[give.kind], 76, 4, 480, 30, 21, nil, true)
-			local cost = words(row, "", 78, 34, 480, 34, 15, nil, true)
-			cost.RichText, cost.TextWrapped = true, true
-			local craft, paint, label = press(row, "Craft", 572, 15, 166, 44, 20)
-			craft.Activated:Connect(function() self.net.Action:FireServer("Craft", recipe.id) end)
-			table.insert(self.updates, function()
-				local col = self:col()
-				local parts, ok = {}, true
-				for _, ore in Ores.list do
-					local need = (recipe.ores or {})[ore.name]
-					if need then
-						local have = self.player:GetAttribute("Held" .. ore.name) or 0
-						local met = have >= need
-						ok = ok and met
-						local name = if self.player:GetAttribute("Found" .. ore.name) or not ore.secret then ore.name else "???"
-						table.insert(parts, W.colored(string.format("%s %d/%d", name, have, need), if met then W.green else unmet))
-					end
-				end
-				if recipe.dust then
-					local met = (col.dust or 0) >= recipe.dust
-					ok = ok and met
-					table.insert(parts, W.colored(string.format("Dust %s/%s", W.number(col.dust or 0), W.number(recipe.dust)), if met then W.green else unmet))
-				end
-				if recipe.gems then
-					local have = self.player:GetAttribute("Gems") or 0
-					ok = ok and have >= recipe.gems
-					table.insert(parts, W.colored(string.format("Gems %s/%d", W.number(have), recipe.gems), if have >= recipe.gems then W.green else unmet))
-				end
-				cost.Text = table.concat(parts, "   ")
-				local owned = give.kind ~= "item" and (if give.kind == "pet" then (col.pets or {})[give.id] ~= nil else (col.cos or {})[give.id] == true)
-				if owned then
-					set(craft, paint, label, "Owned ✓", grey, false)
-				else
-					set(craft, paint, label, "Craft", if ok then goldPaint else grey, ok)
-				end
-			end)
-			y += 82
-		end
-	end
-	list.CanvasSize = UDim2.fromOffset(0, y)
-end
-
 function Panel:buildTitles()
 	local list = Card.scroller(self.pages.Titles, "Titles", 0, 0, 764, 358)
 	for i, title in E.ranks do
@@ -228,7 +160,7 @@ function Panel:open(key)
 	for name, page in self.pages do page.Visible = name == tab end
 	Card.paintTabs(self.paints, tab)
 	local card = self.card
-	card:setIcon(({ Items = "Inventory", MiningTrails = "Power", PlayerFX = "Trail", Forge = "Forge", Titles = "Achievements" })[tab])
+	card:setIcon(({ Items = "Inventory", MiningTrails = "Power", PlayerFX = "Trail", Titles = "Achievements" })[tab])
 	card.headerPaint.Color = ColorSequence.new(orange[1], orange[2])
 	card.heading.Text = headings[tab]
 	self:refresh()
@@ -241,8 +173,7 @@ function Panel:refresh()
 		local entry = C.find(kind, col[kind] or "")
 		if entry then table.insert(worn, entry.name) end
 	end
-	self.card.sub.Text = (if #worn > 0 then "Wearing: " .. table.concat(worn, ", ") else "Nothing worn yet")
-		.. "   ·   Dust " .. W.goldAmount(col.dust or 0)
+	self.card.sub.Text = if #worn > 0 then "Wearing: " .. table.concat(worn, ", ") else "Nothing worn yet"
 	for _, update in self.updates do update() end
 	for _, grid in self.grids do grid:refresh() end
 end

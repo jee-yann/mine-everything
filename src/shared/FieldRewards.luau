@@ -1,30 +1,37 @@
 -- Daily rewards and playtime gifts. Each waits 18 hours: a daily reward after the last one was claimed,
 -- and the playtime gifts after their round began, so playing earlier the next day still counts.
--- The rewards below are placeholders: change an entry's amounts, name or icon here and the menu,
--- the claim and the notice all follow. An entry can hold any of gold, gems, flares and pulses.
+-- Rewards are crates, tonics and gold that grows with the miner: change an entry here and the menu,
+-- the claim and the notice all follow. An entry can hold:
+--   gold         a fixed amount of gold
+--   goldMinutes  that many minutes of the miner's own earnings (Shared.Earnings)
+--   goldPower    half the price of the miner's next pickaxe (Power) upgrade
+--   items        { itemId = count } into the inventory (crates, tonics)
+--   welcome      the Welcome Crate the first time; a Starfall Crate after that
+local Collectibles = require(script.Parent.Collectibles)
+local Upgrades = require(script.Parent.Upgrades)
 local Field = {}
 
 -- Seven days, then it starts again at day 1. Missing a day keeps the place on the card.
 Field.daily = {
-	{ name = "Pocket change", gold = 50, icon = "Coins" },
-	{ name = "Gem chips", gems = 2, icon = "Crystal" },
-	{ name = "Survey flare", flares = 1, icon = "Beacon" },
-	{ name = "Coin pouch", gold = 200, icon = "Coins" },
-	{ name = "Gem cluster", gems = 5, icon = "Crystal" },
-	{ name = "Cave pulse", pulses = 1, icon = "Power" },
-	{ name = "Citrine cache", gold = 500, gems = 15, flares = 2, icon = "Playtime" },
+	{ name = "Welcome Crate", welcome = true, icon = "Geode" },
+	{ name = "Gold Tonics", items = { GoldTonic = 2 }, icon = "Boosts" },
+	{ name = "Haste Tonics", items = { HasteTonic = 2 }, icon = "Speed" },
+	{ name = "Starfall Crate", items = { StarfallGeode = 1 }, icon = "Geode" },
+	{ name = "Lucky Brews", items = { LuckyBrew = 2 }, icon = "Boosts" },
+	{ name = "Pickaxe Bounty", goldPower = true, icon = "Power" },
+	{ name = "Starfall Haul", items = { StarfallGeode = 3 }, icon = "Geode" },
 }
 
 -- Gifts for time played today: at 5 and 10 minutes, then every 10 minutes up to an hour.
 local minutes = { 5, 10, 20, 30, 40, 50, 60 }
 local prizes = {
-	{ name = "Pocket change", gold = 25, icon = "Coins" },
-	{ name = "Gem chip", gems = 1, icon = "Crystal" },
-	{ name = "Coin stack", gold = 50, icon = "Coins" },
-	{ name = "Survey flare", flares = 1, icon = "Beacon" },
-	{ name = "Coin pouch", gold = 100, icon = "Coins" },
-	{ name = "Gem pair", gems = 2, icon = "Crystal" },
-	{ name = "Gift chest", gold = 250, gems = 5, icon = "Playtime" },
+	{ name = "Pocket change", goldMinutes = 3, icon = "Coins" },
+	{ name = "Haste Tonic", items = { HasteTonic = 1 }, icon = "Speed" },
+	{ name = "Coin stack", goldMinutes = 6, icon = "Coins" },
+	{ name = "Gold Tonic", items = { GoldTonic = 1 }, icon = "Boosts" },
+	{ name = "Coin pouch", goldMinutes = 10, icon = "Coins" },
+	{ name = "Lucky Brew", items = { LuckyBrew = 1 }, icon = "Boosts" },
+	{ name = "Gift crate", items = { StarfallGeode = 1 }, icon = "Geode" },
 }
 Field.gifts = {}
 for i, reward in prizes do
@@ -34,27 +41,64 @@ Field.maxGiftTime = Field.gifts[#Field.gifts].seconds
 Field.hasteCuts, Field.stoneChips = 12, 6
 Field.cooldown = 18 * 3600
 
-local kinds = {
-	{ key = "gold", one = "gold", many = "gold" },
-	{ key = "gems", one = "gem", many = "gems" },
-	{ key = "flares", one = "flare", many = "flares" },
-	{ key = "pulses", one = "cave pulse", many = "cave pulses" },
-}
-function Field.describe(reward)
+-- Half the price of the next pickaxe upgrade (or of the last one, at the top).
+function Field.powerGold(level)
+	local price = Upgrades.price("Power", level) or Upgrades.price("Power", math.max(1, level - 1)) or 1000
+	return math.max(100, math.floor(price / 2 / 10 + 0.5) * 10)
+end
+
+-- What a reward pays this miner. `ctx` is { perHour, power, intro }: their hourly earnings, pickaxe
+-- level and whether they had their Welcome Crate. Returns gold and { itemId = count }.
+function Field.amounts(reward, ctx)
+	local gold = reward.gold or 0
+	if reward.goldMinutes then
+		gold += math.max(5, math.floor((ctx.perHour or 250) * reward.goldMinutes / 60 / 5 + 0.5) * 5)
+	end
+	if reward.goldPower then
+		gold += Field.powerGold(ctx.power or 1)
+	end
+	local items = table.clone(reward.items or {})
+	if reward.welcome then
+		local id = if ctx.intro then "StarfallGeode" else "WelcomeGeode"
+		items[id] = (items[id] or 0) + 1
+	end
+	return gold, items
+end
+
+-- The reward in words, each part starting with "+": "+1,240 gold", "+2 Gold Tonics".
+function Field.describe(reward, ctx)
+	local gold, items = Field.amounts(reward, ctx or {})
 	local parts = {}
-	for _, kind in kinds do
-		local amount = reward[kind.key]
-		if amount then
-			table.insert(parts, "+" .. amount .. " " .. (if amount == 1 then kind.one else kind.many))
+	if gold > 0 then
+		local grouped = tostring(gold):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+		table.insert(parts, "+" .. grouped .. " gold")
+	end
+	for _, item in Collectibles.items do
+		local n = items[item.id]
+		if n then
+			table.insert(parts, "+" .. (if n > 1 then n .. " " .. item.name .. "s" else item.name))
 		end
 	end
 	return table.concat(parts, "  ")
 end
-function Field.grant(p, reward)
-	for _, kind in kinds do
-		if reward[kind.key] then
-			p[kind.key] = (p[kind.key] or 0) + reward[kind.key]
+
+-- The context from a player's replicated attributes, for the client.
+function Field.context(player)
+	local col = require(script.Parent.Bonuses).decode(player:GetAttribute("Collection")) or {}
+	return { perHour = player:GetAttribute("GoldBundle"), power = player:GetAttribute("Power"), intro = col.intro == true }
+end
+
+-- Gives a reward to a profile. `perHour` is the miner's hourly earnings.
+function Field.grant(p, reward, perHour, daily)
+	local gold, items = Field.amounts(reward, { perHour = perHour, power = p.levels and p.levels.Power, intro = p.col and p.col.intro })
+	-- Early Bird: gold from the daily card is 25% bigger.
+	if daily and p.skills and p.skills.EarlyBird then gold = math.floor(gold * 1.25) end
+	p.gold += gold
+	if p.col then
+		for id, n in items do
+			p.col.items[id] = (p.col.items[id] or 0) + n
 		end
+		if items.WelcomeGeode then p.col.intro = true end
 	end
 end
 
@@ -69,12 +113,12 @@ function Field.dailyState(count, last, now)
 	end
 	return if ready then done + 1 else nil, done, math.max(0, wait)
 end
-function Field.claim(p, now)
+function Field.claim(p, now, perHour)
 	local day = Field.dailyState(p.stampCount, p.stampAt, now)
 	if not day then return nil end
 	-- The day number is kept for older servers that read the same save.
 	p.stampCount, p.stampAt, p.stampDay = day, now, math.floor(now / 86400)
-	Field.grant(p, Field.daily[day])
+	Field.grant(p, Field.daily[day], perHour, true)
 	return day, Field.daily[day]
 end
 
@@ -95,7 +139,7 @@ function Field.trackGifts(session, now)
 end
 
 -- Claims gift `requested` and any earlier one still waiting. Returns the rewards given, or nil.
-function Field.claimGift(session, now, requested)
+function Field.claimGift(session, now, requested, perHour)
 	Field.trackGifts(session, now)
 	local p = session.profile
 	local gift = type(requested) == "number" and Field.gifts[requested]
@@ -104,7 +148,7 @@ function Field.claimGift(session, now, requested)
 	end
 	local given = {}
 	for i = p.giftClaims + 1, requested do
-		Field.grant(p, Field.gifts[i].reward)
+		Field.grant(p, Field.gifts[i].reward, perHour)
 		table.insert(given, Field.gifts[i].reward)
 	end
 	p.giftClaims = requested

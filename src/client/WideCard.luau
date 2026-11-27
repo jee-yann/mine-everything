@@ -102,11 +102,41 @@ function Card:select(key)
 	end
 end
 
-function Card:layout(area, touch)
+-- `room` is set on phones held sideways (see Menu:layout). The card then stays inside the safe area,
+-- clear of Roblox's top bar and chat, centred, and scaled so the whole of it fits: nothing scrolls out
+-- of sight.
+function Card:layout(area, touch, room)
 	local short = area.X > area.Y and (touch or area.Y < 470)
+	if short and room and self.scrolls then
+		-- A card whose page scrolls (the Shop): readable first. It's scaled so about 410 rows of the
+		-- card show (the header, the tabs and a card and a half of offers), never wider than the
+		-- screen; the page scrolls inside it.
+		local scale = math.clamp(math.min((area.X - 16) / self.size.X, (area.Y - 6) / 410), 0.3, 1.45)
+		local height = math.min(self.size.Y, math.floor((area.Y - 6) / scale))
+		self.scale.Scale = scale
+		self.modal.Size = UDim2.fromOffset(self.size.X, height)
+		local top = self.body.Position.Y.Offset
+		self.body.Size = UDim2.fromOffset(self.size.X - 22, height - top - 11)
+		self.center = UDim2.fromScale(0.5, 0.5)
+		if self.modal.Visible then self.modal.Position = self.center end
+		return
+	end
+	if short and room then
+		local scale = math.clamp(math.min((area.X - 16) / self.size.X, (area.Y - 8) / self.size.Y), 0.3, 1.45)
+		self.scale.Scale = scale
+		self.modal.Size = UDim2.fromOffset(self.size.X, self.size.Y)
+		local top = self.body.Position.Y.Offset
+		self.body.Size = UDim2.fromOffset(self.size.X - 22, self.size.Y - top - 11)
+		self.body.ScrollingEnabled, self.body.ScrollBarThickness = false, 0
+		self.body.CanvasPosition = Vector2.zero
+		self.center = UDim2.fromScale(0.5, 0.5)
+		if self.modal.Visible then self.modal.Position = self.center end
+		return
+	end
+	self.center = nil
 	local margin = if short then 8 else 34
 	-- On a phone held sideways the card keeps readable type and its body scrolls.
-	local least = if short then 390 else self.size.Y
+	local least = if short then 470 else self.size.Y
 	local scale = math.clamp(math.min((area.X - margin) / self.size.X, (area.Y - margin) / least), 0.3, 1.45)
 	local height = math.min(self.size.Y, math.floor((area.Y - margin) / scale))
 	self.scale.Scale = scale
@@ -117,12 +147,12 @@ function Card:layout(area, touch)
 	self.body.ScrollBarThickness = if height < self.size.Y then 8 else 0
 end
 function Card:enter(animate, arriving)
-	local center = UDim2.fromScale(0.5, 0.5)
+	local center = self.center or UDim2.fromScale(0.5, 0.5)
 	self.modal.Visible = true
 	if animate and arriving then
 		Burst.drop(self.modal, center)
 	elseif animate then
-		self.modal.Position = UDim2.new(0.5, 0, 0.5, 60)
+		self.modal.Position = center + UDim2.fromOffset(0, 60)
 		W.tween(self.modal, 0.22, { Position = center })
 	else
 		self.modal.Position = center

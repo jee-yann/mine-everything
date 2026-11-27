@@ -118,13 +118,20 @@ local function ribbon(root, at, path, delay, list)
 	end
 end
 
-local stone = { "5B5F6C", "656977", "6E7281", "555A67", "61606F" }
-local earth = { "8A5E45", "7E553F", "946749", "775039" }
+-- The island's look down here too: studded plastic blocks in lighter stone, earth underfoot.
+local stone = { "8A8F9C", "949AA8", "7F8593", "9AA0AC", "868B97" }
+local earth = { "9C6B4E", "8E6047", "A57452", "875A42" }
+local function studs(p)
+	p.Material = M.Plastic
+	p.TopSurface, p.BottomSurface, p.FrontSurface = Enum.SurfaceType.Studs, Enum.SurfaceType.Studs, Enum.SurfaceType.Studs
+	p.BackSurface, p.LeftSurface, p.RightSurface = Enum.SurfaceType.Studs, Enum.SurfaceType.Studs, Enum.SurfaceType.Studs
+	return p
+end
 
 local function set(root)
 	local rng = Random.new(5531)
 	local function block(x, y, z, depth, palette)
-		local p = S.part(root, "Mine block", CF(x, y, z), V(5.94, 5.94, depth), palette[rng:NextInteger(1, #palette)])
+		local p = studs(S.part(root, "Mine block", CF(x, y, z), V(5.94, 5.94, depth), palette[rng:NextInteger(1, #palette)]))
 		p.CastShadow = false
 		return p
 	end
@@ -149,15 +156,15 @@ local function set(root)
 	end
 	for ix = -3, 3 do
 		for iz = 0, 4 do
-			local p = S.part(root, "Dig floor", CF(ix * 6, -3 + rng:NextNumber(-0.05, 0.05), iz * 6 + 3), V(5.94, 6, 5.94), earth[rng:NextInteger(1, #earth)])
+			local p = studs(S.part(root, "Dig floor", CF(ix * 6, -3 + rng:NextNumber(-0.05, 0.05), iz * 6 + 3), V(5.94, 6, 5.94), earth[rng:NextInteger(1, #earth)]))
 			p.CastShadow = false
 		end
 	end
 	for iz = 0, 4 do
 		for iy = 0, 2 do
 			for _, side in { -1, 1 } do
-				local p = S.part(root, "Gallery wall", CF(side * 19.5 + side * rng:NextNumber(-1.2, 0.6), iy * 6 + 3, iz * 6 + 3),
-					V(6, 5.94, 5.94), stone[rng:NextInteger(1, #stone)])
+				local p = studs(S.part(root, "Gallery wall", CF(side * 19.5 + side * rng:NextNumber(-1.2, 0.6), iy * 6 + 3, iz * 6 + 3),
+					V(6, 5.94, 5.94), stone[rng:NextInteger(1, #stone)]))
 				p.CastShadow = false
 			end
 		end
@@ -168,7 +175,7 @@ local function set(root)
 		end
 	end
 	-- The roof closes the gallery. There is no sky down here.
-	S.part(root, "Roof rock", CF(0, 15.6, 14), V(48, 4, 42), "3A3C48", M.Slate).CastShadow = false
+	studs(S.part(root, "Roof rock", CF(0, 15.6, 14), V(48, 4, 42), "5A5E6C")).CastShadow = false
 	local oak, dark = "8B6545", "6B4C35"
 	for _, z in { 1.6, 10.5 } do
 		for _, x in { -9.6, 9.6 } do
@@ -202,7 +209,7 @@ local function set(root)
 	for _ = 1, 12 do
 		local s = rng:NextNumber(0.6, 1.05)
 		S.part(root, "Loaded ore", tub * CF(rng:NextNumber(-1.1, 1.1), 2.45 + rng:NextNumber(0, 0.35), rng:NextNumber(-1.6, 1.6))
-			* A(rng:NextNumber(0, 3), rng:NextNumber(0, 3), 0), V(s, s, s), stone[rng:NextInteger(1, #stone)], M.Slate)
+			* A(rng:NextNumber(0, 3), rng:NextNumber(0, 3), 0), V(s, s, s), stone[rng:NextInteger(1, #stone)])
 	end
 	for i = 0, 1 do
 		S.part(root, "Rail", CF(5.2 + i * 2.6, 0.12, 14), V(0.2, 0.24, 22), "5C666D", M.Metal)
@@ -210,7 +217,7 @@ local function set(root)
 	for _ = 1, 16 do
 		local s = rng:NextNumber(0.25, 0.8)
 		S.part(root, "Spoil", CF(rng:NextNumber(-6, 5), s * 0.3, rng:NextNumber(0.4, 1.8)) * A(rng:NextNumber(0, 3), rng:NextNumber(0, 3), 0),
-			V(s, s * 0.8, s), stone[rng:NextInteger(1, #stone)], M.Slate)
+			V(s, s * 0.8, s), stone[rng:NextInteger(1, #stone)])
 	end
 	-- A little cold fill from the shaft behind. The key is the shaft itself: see
 	-- `Daylight:scene`.

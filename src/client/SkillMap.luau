@@ -13,6 +13,11 @@ local colors = {
 	Footwork = W.green,
 	Hauling = W.pink,
 	Geology = W.violet,
+	Momentum = Color3.fromRGB(255, 120, 80),
+	Showmanship = Color3.fromRGB(255, 150, 220),
+	Scholar = Color3.fromRGB(120, 200, 255),
+	Assaying = Color3.fromRGB(120, 240, 190),
+	Trade = Color3.fromRGB(255, 210, 90),
 }
 local states = {
 	owned = { label = "Owned", symbol = "✓", tint = W.green },
@@ -104,12 +109,34 @@ function Map.new(parent, player, net, close)
 		W.gradient(item.face, W.white, Color3.fromRGB(158, 153, 192), 66)
 		Icons.draw(b, node.icon, 25, 23, 34, colors[node.branch])
 		item.shade = diamond(b, "Unlearned enamel", 42, 41, 46, W.ink)
-		local selection = diamond(b, "Selection", 42, 41, 63, W.white)
+		-- Selected: a thick aqua frame that breathes, and an arrow over the gem, so the skill the footer
+		-- describes is obvious at a glance (hover is the gold glow).
+		local selection = diamond(b, "Selection", 42, 41, 76, W.aqua)
 		selection.BackgroundTransparency, selection.Visible = 1, false
-		W.stroke(selection, W.white, 2)
-		item.selection = selection
+		local ring = W.stroke(selection, W.aqua, 5)
+		game:GetService("TweenService"):Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ Transparency = 0.55 }):Play()
+		local arrow = W.title(b, "▼", 0, 0, 40, 30, 30, W.aqua)
+		arrow.Name, arrow.AnchorPoint, arrow.Position, arrow.Visible = "Selected arrow", Vector2.new(0.5, 1), UDim2.fromOffset(42, -2), false
+		W.outlineText(arrow, 2.4)
+		item.selection, item.arrow = selection, arrow
 		item.title = W.title(b, node.name, -38, 79, 160, 26, 20, W.white)
 		W.outlineText(item.title, 2.2)
+		-- Hover: a gold glow round the gem, the gem lifts a little and its name turns gold.
+		local hover = diamond(b, "Hover", 42, 41, 70, W.gold)
+		hover.BackgroundTransparency, hover.Visible = 1, false
+		W.stroke(hover, W.gold, 4)
+		local lift = W.scale(b)
+		b.MouseEnter:Connect(function()
+			hover.Visible = true
+			item.title.TextColor3 = W.gold
+			W.tween(lift, 0.12, { Scale = 1.12 })
+		end)
+		b.MouseLeave:Connect(function()
+			hover.Visible = false
+			item.title.TextColor3 = W.white
+			W.tween(lift, 0.12, { Scale = 1 })
+		end)
 		if #node.requires == 0 then
 			W.outlineText(W.text(b, node.branch, -38, 103, 160, 20, 16, colors[node.branch]), 1.8)
 		end
@@ -157,6 +184,7 @@ function Map.new(parent, player, net, close)
 	pointFont.MinTextSize, pointFont.MaxTextSize, pointFont.Parent = 12, 33, self.points
 	self.pointsLabel = W.text(balance, "SKILL POINTS\nTO SPEND", 54, 0, 97, 46, 16, W.ink, true)
 	self.balance = balance
+	self.balanceHome = header
 	self.legend = clear(header, "Skill key", 0, 0, 312, 26)
 	local function legendEntry(x, state, width)
 		local setBadge = stateBadge(self.legend, x, 1)
@@ -197,7 +225,22 @@ function Map.new(parent, player, net, close)
 	end
 	local exit = W.closeButton(header, 0, 10, 60)
 	exit.TextSize = 38
-	self.controls = { exit, home, header["Zoom in"], header["Zoom out"] }
+	-- A Robux reset that gives every skill point back to spend again.
+	local reset = W.button(header, "Reset skills", 0, 10, 98, 60, Color3.fromRGB(80, 200, 90), "", "Select")
+	local resetContent = W.frame(reset, "Content", 0, 0, 0, 0, W.white)
+	resetContent.BackgroundTransparency, resetContent.Size = 1, UDim2.fromScale(1, 1)
+	local resetWord = W.title(resetContent, "Reset", 0, 2, 98, 26, 18, W.white)
+	resetWord.Size = UDim2.new(1, 0, 0.45, 0)
+	W.navyText(resetWord, 2)
+	local priceHolder = W.frame(resetContent, "Price", 0, 0, 0, 0, W.white)
+	priceHolder.BackgroundTransparency, priceHolder.Position, priceHolder.Size = 1, UDim2.fromScale(0, 0.42), UDim2.fromScale(1, 0.55)
+	W.robux(priceHolder, require(game:GetService("ReplicatedStorage").Shared.StoreConfig).productByKey.ResetSkills.price, 20)
+	reset.Activated:Connect(function()
+		local checkout = require(script.Parent.Checkout).current
+		local item = require(game:GetService("ReplicatedStorage").Shared.StoreConfig).productByKey.ResetSkills
+		if checkout then checkout:buy("product", item) else self.net.Action:FireServer("BuyProduct", "ResetSkills") end
+	end)
+	self.controls = { exit, reset, home, header["Zoom in"], header["Zoom out"] }
 	exit.Activated:Connect(close)
 	local footer = W.frame(screen, "Skill details", 0, 0, 500, 112, W.panel, 12)
 	W.anchor(footer, 0.5, 1, UDim2.new(0.5, 0, 1, -6))
@@ -224,7 +267,8 @@ function Map.new(parent, player, net, close)
 		return d.X >= 0 and d.Y >= 0 and d.X < box.AbsoluteSize.X and d.Y < box.AbsoluteSize.Y
 	end
 	Input.InputBegan:Connect(function(input)
-		if not screen.Visible or drag or not inside(input.Position, view) or inside(input.Position, footer) then
+		if not screen.Visible or drag or not inside(input.Position, view) or inside(input.Position, footer)
+			or inside(input.Position, self.header) then
 			return
 		end
 		if
@@ -234,8 +278,27 @@ function Map.new(parent, player, net, close)
 			drag, start, initial = input, Vector2.new(input.Position.X, input.Position.Y), self.pan
 		end
 	end)
+	-- Pinch to zoom on touch screens, from the zoom the pinch started at. A pinch stops the drag.
+	local pinchFrom
+	Input.TouchPinch:Connect(function(_, scale, _, state)
+		if not screen.Visible then
+			return
+		end
+		if state == Enum.UserInputState.Begin then
+			pinchFrom, drag = self.zoom, nil
+		elseif state == Enum.UserInputState.Change and pinchFrom then
+			self.suppressClickUntil = math.huge
+			self:zoomBy(pinchFrom * scale / self.zoom)
+		else
+			pinchFrom = nil
+			self.suppressClickUntil = os.clock() + 0.25
+		end
+	end)
 	Input.InputChanged:Connect(function(input)
 		if not screen.Visible then
+			return
+		end
+		if pinchFrom then
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseWheel and inside(input.Position, view) then
@@ -288,6 +351,20 @@ function Map.new(parent, player, net, close)
 	return self
 end
 
+-- On a phone held sideways (`room` from the menu): the map fills the whole screen, to every edge, so
+-- more of the tree shows; one slim row of controls and a slim footer stay inside the safe area.
+function Map:fit(room)
+	self.room = room
+	if room then
+		self.screen.Position = UDim2.fromOffset(-room.left, -room.raise)
+		self.screen.Size = UDim2.new(1, room.left + room.right, 1, room.raise + room.bottom)
+	else
+		self.screen.Position, self.screen.Size = UDim2.new(), UDim2.fromScale(1, 1)
+	end
+	self.layoutSize = nil
+	if self.screen.Visible then self:position() end
+end
+
 function Map:position()
 	local size = self.view.AbsoluteSize
 	if size.X <= 0 or size.Y <= 0 then
@@ -297,11 +374,22 @@ function Map:position()
 	self.scale.Scale = scale
 	local bounds = self.extent * scale + Vector2.new(75, 95)
 	self.pan = Vector2.new(math.clamp(self.pan.X, -bounds.X, bounds.X), math.clamp(self.pan.Y, -bounds.Y, bounds.Y))
-	self.canvas.Position = UDim2.new(0.5, self.pan.X, 0.5, self.pan.Y - 54)
+	self.canvas.Position = UDim2.new(0.5, self.pan.X, 0.5, self.pan.Y + (self.centerShift or -54))
 	if self.layoutSize == size then
 		return
 	end
 	self.layoutSize = size
+	if self.room then
+		self:compact(size)
+		return
+	end
+	self.header.Position = UDim2.fromOffset(0, 0)
+	self:bare(false)
+	self.footer.Position = UDim2.new(0.5, 0, 1, -6)
+	self.centerShift = -54
+	self.path.Visible, self.summary.Visible, self.summary.TextWrapped = true, true, true
+	self.learn.Size, self.learn.Position, self.learn.TextSize = UDim2.fromOffset(144, 56), UDim2.new(1, -156, 0, 12), 20
+	self.title.Position, self.title.TextSize, self.detail.Position, self.detail.TextSize = UDim2.fromOffset(16, 6), 26, UDim2.fromOffset(16, 38), 18
 	self.footerScale.Scale = math.clamp(size.X / 1080, 1, 1.24)
 	local width = math.clamp((size.X - 12) / self.footerScale.Scale, 190, 640)
 	self.footer.Size = UDim2.fromOffset(width, 112)
@@ -314,8 +402,9 @@ function Map:position()
 	local control = if wide then 60 else 48
 	local right = -8
 	for i, button in self.controls do
-		local w = if i == 2 then control * 1.62 else control
-		button.Size, button.TextSize = UDim2.fromOffset(w, control), if i == 2 then control * 0.42 else control * 0.9
+		-- The reset and Center buttons are wider than the square ones.
+		local w = if i == 2 or i == 3 then control * 1.62 else control
+		button.Size, button.TextSize = UDim2.fromOffset(w, control), if i == 3 then control * 0.42 elseif i == 2 then 1 else control * 0.9
 		right -= w
 		button.Position = UDim2.new(1, right, 0, if wide then 11 else 3)
 		right -= 7
@@ -343,6 +432,60 @@ function Map:position()
 			UDim2.fromOffset(x, if narrow then 85 else 57), UDim2.new(1, -x - 12, 0, if narrow then 20 else 26)
 	end
 end
+-- The phone layout (see Map:fit): the map under the whole screen, one 50-pixel row of controls at the
+-- very top, right after Roblox's menu and chat buttons in the top bar, and a 76-pixel footer at the
+-- bottom of the safe area.
+function Map:compact(size)
+	local room = self.room
+	local headerX, headerY = room.bar + 4, math.max(0, room.raise - 54)
+	local rowW = size.X - headerX - room.right
+	self.header.Position = UDim2.fromOffset(headerX, headerY)
+	self.header.Size = UDim2.new(1, -headerX - room.right, 0, 50)
+	-- No bar on a phone: just the buttons, floating over the map. The level and XP line is left out,
+	-- and the points to spend sit on the skill card, where they're spent.
+	self:bare(true)
+	self.view.Position, self.view.Size = UDim2.new(), UDim2.fromScale(1, 1)
+	-- The tree centres in the open space between the control row and the footer.
+	local top, bottom = headerY + 50, size.Y - room.bottom - 82
+	self.centerShift = (top + bottom) / 2 - size.Y / 2
+	local control, right = 40, -6
+	for i, button in self.controls do
+		local w = if i == 2 or i == 3 then control * 1.62 else control
+		button.Size, button.TextSize = UDim2.fromOffset(w, control), if i == 3 then 17 elseif i == 2 then 1 else 34
+		right -= w
+		button.Position = UDim2.new(1, right, 0, 5)
+		right -= 6
+	end
+	self.heading.Visible, self.legend.Visible = false, false
+	local cardWidth = 104
+	self.points.Size = UDim2.fromOffset(38, 38)
+	self.pointsLabel.Position, self.pointsLabel.Size, self.pointsLabel.TextSize = UDim2.fromOffset(40, 0), UDim2.fromOffset(62, 40), 11
+	self.summary.Visible = false
+	local _ = rowW
+	self.footerScale.Scale = 1
+	local width = math.clamp(size.X - room.left - room.right - 16, 190, 600)
+	self.footer.Size = UDim2.fromOffset(width, 76)
+	self.footer.Position = UDim2.new(0.5, 0, 1, -6 - room.bottom)
+	self.title.Position, self.title.Size, self.title.TextSize = UDim2.fromOffset(14, 4), UDim2.fromOffset(width - 150, 28), 22
+	self.detail.Position, self.detail.Size, self.detail.TextSize = UDim2.fromOffset(14, 32), UDim2.fromOffset(width - 150, 40), 15
+	self.path.Visible = false
+	self.learn.Size, self.learn.Position, self.learn.TextSize = UDim2.fromOffset(124, 48), UDim2.new(1, -134, 0, 14), 18
+	-- The points tag stands on the skill card's top right edge.
+	self.balance.Parent = self.footer
+	self.balance.Size, self.balance.Position = UDim2.fromOffset(cardWidth, 38), UDim2.new(1, -cardWidth - 6, 0, -44)
+	self.canvas.Position = UDim2.new(0.5, self.pan.X, 0.5, self.pan.Y + self.centerShift)
+end
+
+-- The header's own bar (its fill, edge and seam), shown on larger screens and left off on phones.
+function Map:bare(on)
+	self.header.BackgroundTransparency = if on then 1 else 0
+	for _, child in self.header:GetChildren() do
+		if child:IsA("UIGradient") or child:IsA("UIStroke") then child.Enabled = not on end
+		if child.Name == "Seam" then child.Visible = not on end
+	end
+	if not on then self.balance.Parent = self.balanceHome end
+end
+
 function Map:zoomBy(factor)
 	local before = self.zoom
 	self.zoom = math.clamp(before * factor, 0.5, 1.8)
@@ -426,21 +569,27 @@ function Map:refresh()
 		local color = colors[item.node.branch]
 		local state = if learned then states.owned elseif ready then nextState else states.locked
 		if item.state ~= state then
+			-- A skill that lights up (a level earned while mining, a point spent) fades into its new look
+			-- instead of flashing; the very first drawing is instant.
+			local fade = item.state ~= nil
 			item.state = state
 			item.setBadge(state)
-			item.face.BackgroundColor3 = if learned then color elseif state == states.available then W.gold else W.card
-			item.shade.BackgroundTransparency = if state == states.locked
-				then 0.42
-				elseif state == states.unfunded then 0.75
-				else 1
-			item.title.TextColor3 = if state == states.locked
-				then states.locked.tint
-				elseif state == states.available then W.gold
-				else W.white
-			item.rim.Color = if state == states.locked then W.line else state.tint
-			item.rim.Thickness = if learned or state == states.available then 4 else 2
+			local look = {
+				face = { BackgroundColor3 = if learned then color elseif state == states.available then W.gold else W.card },
+				shade = { BackgroundTransparency = if state == states.locked then 0.42 elseif state == states.unfunded then 0.75 else 1 },
+				title = { TextColor3 = if state == states.locked then states.locked.tint elseif state == states.available then W.gold else W.white },
+				rim = { Color = if state == states.locked then W.line else state.tint, Thickness = if learned or state == states.available then 4 else 2 },
+			}
+			for part, goal in look do
+				if fade then
+					W.tween(item[part], 0.7, goal)
+				else
+					for key, value in goal do item[part][key] = value end
+				end
+			end
 		end
 		item.selection.Visible = self.selected == id
+		item.arrow.Visible = self.selected == id
 		for parentId, line in item.lines do
 			local connected = parentId == "Origin" or owned[parentId]
 			line.BackgroundColor3 = if learned

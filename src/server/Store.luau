@@ -1,9 +1,10 @@
--- Game passes, developer products and their rewards. The server decides everything:
+-- Game passes, developer products and their rewards. Everything is bought with Robux. The server
+-- decides everything:
 --   * pass ownership is checked with MarketplaceService when a miner joins and when a purchase finishes;
 --   * developer product receipts are granted once: each PurchaseId is stored in the profile, the profile
 --     is saved, and only then is the receipt reported as granted (a retry after a failed save never
 --     gives the reward twice in one session, and is granted again only if the earlier grant was lost);
---   * players whose region restricts paid random items can't open paid geodes or buy luck.
+--   * players whose region restricts paid random items can't buy crates or luck.
 -- In an unpublished Studio test, items without an ID can be tried for free instead.
 local Players = game:GetService("Players")
 local Market = game:GetService("MarketplaceService")
@@ -12,9 +13,9 @@ local Run = game:GetService("RunService")
 local Rep = game:GetService("ReplicatedStorage")
 local Shared = Rep.Shared
 local S, C = require(Shared.StoreConfig), require(Shared.Collectibles)
-local Config, Ores, Upgrades = require(Shared.GameConfig), require(Shared.Ores), require(Shared.Upgrades)
-local Skills, Purity, Rebirth = require(Shared.Skills), require(Shared.OrePurity), require(Shared.Rebirth)
 local Collection = require(script.Parent.Collection)
+local Earnings, Geodes = require(Shared.Earnings), require(Shared.Geodes)
+local Config = require(Shared.GameConfig)
 local DSS = game:GetService("DataStoreService")
 local Store = { owned = {}, sold = {} }
 -- The player a receipt belongs to. Tests swap this for a stand-in.
@@ -141,68 +142,51 @@ end
 
 -- Whether a player may buy this pass or product now, and why not.
 function Store.allowed(player, item)
-	if item.luck and player:GetAttribute("PaidRandomRestricted") ~= false then
-		return false, "Sorry, luck boosts aren't available in your region"
+	if (item.luck or item.random) and player:GetAttribute("PaidRandomRestricted") ~= false then
+		return false, if item.random then "Sorry, crates can't be bought in your region" else "Sorry, luck boosts aren't available in your region"
 	end
 	return true
 end
 
--- About an hour of this miner's own earnings, without passes, pets or boosts: their deepest region's
--- average sale value per block times the blocks an hour at their Speed, Power and skills, at a relaxed
--- pace (half the time is spent cutting, and each full pack costs a 30-second trip to sell), times their
--- rebirth bonus.
+-- About an hour of this miner's own earnings (see Shared.Earnings).
 function Store.goldCrate(p)
-	local depth = math.max(Config.DirtLayers + 1, math.floor(p.bestDepth / 5))
-	local layer = Config.layer(depth * Config.Cell)
-	local strength = Config.strength(-depth * Config.Cell)
-	local stone, value, ore = 100, 0, 0
-	for name, percent in layer.oreChances do
-		local found = Ores.byName[name]
-		if found and not found.secret then
-			value += percent / 100 * Purity.unitPrice(found, nil, p.skills.Broker) * 1.25
-			stone -= percent
-			ore += percent
-		end
-	end
-	value += math.max(0, stone) / 100 * Purity.unitPrice(Ores.byName.Stone, nil, p.skills.Broker)
-	local base = Upgrades.items.Speed.values[p.levels.Speed] * Rebirth.cutMultiplier(p.rebirths or 0)
-	local cut = Skills.cutTime(base, Ores.byName.Stone, strength, 0, p.skills, 0, 0, Upgrades.items.Power.values[p.levels.Power])
-	local capacity = Skills.capacity(Upgrades.items.Capacity.values[p.levels.Capacity], p.skills)
-	local blocks = 3600 / (cut + 0.6 + 30 / capacity) * 0.5
-	return math.max(250, math.floor(blocks * value * Rebirth.goldMultiplier(p.rebirths or 0) + 0.5))
+	return Earnings.perHour(p)
 end
 
 -- The reward of one product, given to the loaded profile. `context` holds the server hooks.
 local function deliver(player, session, product, context)
 	local p, now = session.profile, os.time()
-	if product.gems then
-		p.gems += product.gems
-	end
 	if product.key == "StarterPack" then
 		if not p.store.starter then
 			p.store.starter = true
-			p.flares += 3
 			Collection.boost(p.col, "gold2", 30, now)
+			p.col.items.HasteTonic = (p.col.items.HasteTonic or 0) + 1
 		end
-	elseif product.limited then
+	end
+	if product.crates then
+		-- The crates go to the inventory; the player opens them when they like.
+		p.col.items.StarfallGeode = (p.col.items.StarfallGeode or 0) + product.crates
+	elseif product.cosmetic then
 		p.store.limited = p.store.limited or {}
 		if not p.store.limited[product.key] then
 			p.store.limited[product.key] = true
-			countSale(product)
+			if product.limited then countSale(product) end
 		end
-		if product.pet and not p.col.pets[product.pet] then
-			p.col.pets[product.pet] = { l = 1, x = 0, s = 0 }
-			p.col.eq = { product.pet }
-		end
-		context.feedback(player, "hint", product.name .. " is yours. Only " .. product.limited .. " will ever exist!")
+		local look = product.cosmetic
+		p.col.cos[look.id] = true
+		Collection.wear(p.col, look.kind, look.id)
 	elseif product.boost then
 		Collection.boost(p.col, product.boost, product.minutes, now)
-	elseif product.key == "SellAnywhere" then
-		context.sellAll(player)
-	elseif product.key == "GoldCrate" then
-		local gold = Store.goldCrate(p)
+	elseif product.group == "Gold" then
+		local gold = Earnings.minutes(p, product.minutes)
 		p.gold += gold
-		context.feedback(player, "hint", "Gold Crate: +" .. gold .. " gold")
+		context.feedback(player, "goldPack", gold, product.name)
+	elseif product.key == "ResetSkills" then
+		p.skills = {}
+		if context.resetSkills then context.resetSkills(player) end
+		context.feedback(player, "hint", "Skill tree reset: every skill point is yours to spend again")
+	elseif product.key == "Fling" then
+		if context.fling then context.fling(player) end
 	elseif product.key == "ServerLuck" then
 		local from = math.max(Rep:GetAttribute("ServerLuckUntil") or 0, now)
 		Rep:SetAttribute("ServerLuckUntil", from + product.minutes * 60)
@@ -231,6 +215,7 @@ function Store.receipt(info, sessions, context, save)
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		deliver(player, session, product, context)
+		if context.feedback then context.feedback(player, "purchase", product.name, "product", product.key) end
 		done[info.PurchaseId] = true
 		table.insert(p.store.order, info.PurchaseId)
 		while #p.store.order > receiptLimit do
@@ -243,11 +228,15 @@ function Store.receipt(info, sessions, context, save)
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
--- A client asks to buy a pass or product. In an unpublished Studio test an item without an ID is
--- given for free so the whole flow can be tried.
+-- A client asks to buy a pass or product. An item without an ID is given for free in an unpublished
+-- Studio test, and anywhere while GameConfig.FreeUnconfiguredItems is on (playtesting).
 function Store.prompt(player, session, kind, key, context)
 	local item = if kind == "pass" then S.passByKey[key] else S.productByKey[key]
 	if not item then return end
+	if item.retired then
+		context.feedback(player, "hint", item.name .. " is no longer sold. It's part of the All Passes Bundle")
+		return
+	end
 	local ok, why = Store.allowed(player, item)
 	if not ok then
 		context.feedback(player, "hint", why)
@@ -258,7 +247,7 @@ function Store.prompt(player, session, kind, key, context)
 			context.feedback(player, "hint", "You already own " .. item.name)
 			return
 		end
-	elseif item.once and (if item.limited then (session.profile.store.limited or {})[key] else session.profile.store.starter) then
+	elseif item.once and (if item.cosmetic then (session.profile.store.limited or {})[key] else session.profile.store.starter) then
 		context.feedback(player, "hint", "You already have the " .. item.name)
 		return
 	elseif item.limited and Store.left(item) <= 0 then
@@ -268,27 +257,27 @@ function Store.prompt(player, session, kind, key, context)
 	if item.id > 0 then
 		local sent = pcall(if kind == "pass" then Market.PromptGamePassPurchase else Market.PromptProductPurchase, Market, player, item.id)
 		if not sent then context.feedback(player, "hint", "Checkout is unavailable") end
-	elseif practice(player) then
+	elseif practice(player) or Config.FreeUnconfiguredItems then
 		if kind == "pass" then
 			own(player, key)
 		else
 			deliver(player, session, item, context)
 		end
-		context.feedback(player, "purchase", item.name, kind)
+		context.feedback(player, "purchase", item.name, kind, key)
 	else
 		context.feedback(player, "hint", item.name .. " isn't on sale yet")
 	end
 end
 
--- VIP's free gem chest, once every 20 hours.
+-- VIP's free Starfall Crate, once every 20 hours. It goes to the inventory.
 function Store.vipChest(player, session)
 	local p, now = session.profile, os.time()
 	if not Store.benefits(player).VIP then return nil, "VIP only" end
-	local wait = (p.store.vipAt or 0) + S.vipChest.cooldown - now
-	if wait > 0 then return nil, string.format("Next chest in %dh %02dm", wait // 3600, wait // 60 % 60) end
+	local wait = (p.store.vipAt or 0) + S.vipCrateHours * 3600 - now
+	if wait > 0 then return nil, string.format("Next VIP crate in %dh %02dm", wait // 3600, wait // 60 % 60) end
 	p.store.vipAt = now
-	p.gems += S.vipChest.gems
-	return S.vipChest.gems
+	p.col.items.StarfallGeode = (p.col.items.StarfallGeode or 0) + 1
+	return 1
 end
 
 function Store.start(context)
@@ -307,7 +296,7 @@ function Store.start(context)
 		for _, pass in S.passes do
 			if pass.id > 0 and pass.id == id then
 				own(player, pass.key)
-				context.feedback(player, "purchase", pass.name, "pass")
+				context.feedback(player, "purchase", pass.name, "pass", pass.key)
 			end
 		end
 	end)

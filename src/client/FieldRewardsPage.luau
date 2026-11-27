@@ -6,7 +6,7 @@ function Page.extraKit(menu)
 	local p = menu.player
 	for i, key in { "Haste", "Chips", "Pulse", "Compass" } do
 		local item = Materials.supplies[key]
-		local _, detail, b = menu:row(i + 2, item.name, if key == "Compass" then "Pets" else "Power", W.aqua)
+		local _, detail, b = menu:row(i + 2, item.name, if key == "Compass" then "Crystal" else "Power", W.aqua)
 		if key == "Pulse" then
 			b.Activated:Connect(function() menu.net.Action:FireServer("Pulse") end)
 		end

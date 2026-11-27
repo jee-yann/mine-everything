@@ -45,8 +45,8 @@ function Panel.new(menu)
 	self.picture = Icons.draw(hero, "Rebirth", 57, 52, 136)
 	self.pictureScale = self.picture:FindFirstChildOfClass("UIScale")
 	self.pictureRest = self.pictureScale.Scale
-	local need = Rebirth.requirement
-	words(hero, "Mine " .. (if need.count == 1 then "a " .. need.ore else need.count .. " " .. need.ore) .. " this run", 4, 204, 242, 26, 20, rgb(255, 244, 170))
+	self.goal = words(hero, "", 4, 204, 242, 26, 20, rgb(255, 244, 170))
+	W.largest(self.goal, 20, 13)
 	local track = W.frame(hero, "Progress", 22, 238, 206, 28, W.navy, 14)
 	W.stroke(track, W.navy, 4)
 	self.fill = W.frame(track, "Fill", 0, 0, 0, 28, W.white, 14)
@@ -91,13 +91,21 @@ function Panel.new(menu)
 		y += 90
 	end
 	for i, info in {
-		{ "You keep", "Level, skills, gems, Index, achievements, titles, pets, quests and deepest descent.", "Book", leaf },
-		{ "Resets", "Gold, your pack, Power, Speed, Backpack and field supplies.", "Pack", slate },
+		{ "You keep", "Level, skills, Index, titles, effects and crates, plus a Starfall Crate.", "Book", leaf },
+		{ "Resets", "Your pack, Power, Speed, Backpack, field supplies and the rest of your gold.", "Pack", slate },
 	} do
 		local box = tile(page, info[1], 264 + (i - 1) * 255, y, 245, 138, info[4])
 		Icons.draw(box, info[3], 12, 9, 34)
 		words(box, info[1], 54, 10, 180, 32, 25, nil, true)
 		local list = words(box, info[2], 14, 48, 217, 82, 18, nil, true)
+		if i == 1 then
+			-- Under "You keep": the gold this rebirth would keep, live.
+			list.Size = UDim2.fromOffset(217, 44)
+			self.keepGold = words(box, "", 14, 90, 217, 44, 15, rgb(255, 244, 170), true)
+			self.keepGold.TextWrapped, self.keepGold.RichText = true, true
+			self.keepGold.TextYAlignment = Enum.TextYAlignment.Top
+			W.largest(self.keepGold, 15, 10)
+		end
 		list.TextYAlignment = Enum.TextYAlignment.Top
 		W.largest(list, 18, 13)
 	end
@@ -119,7 +127,7 @@ end
 
 function Panel:press()
 	local menu, player = self.menu, self.menu.player
-	if menu.rebirthPending or not Rebirth.ready(player:GetAttribute("RunStarfalls") or 0) then return end
+	if menu.rebirthPending or not Rebirth.ready(player:GetAttribute("RunStarfalls") or 0, player:GetAttribute("Rebirths") or 0) then return end
 	self.reply = nil
 	if not self.confirming then
 		self.confirming = true
@@ -148,21 +156,32 @@ end
 function Panel:refresh()
 	local player = self.menu.player
 	local n, found = player:GetAttribute("Rebirths") or 0, player:GetAttribute("RunStarfalls") or 0
-	local need = Rebirth.requirement.count
-	local ready = Rebirth.ready(found) and player:GetAttribute("ProfileReady") == true
+	local need = Rebirth.need(n)
+	local ready = Rebirth.ready(found, n) and player:GetAttribute("ProfileReady") == true
 	if not ready then self.confirming = false end
 	local pending = self.menu.rebirthPending
 	self.live = ready and not pending
 	self.card.sub.Text = if n > 0 then "You are on rebirth " .. n .. ". Start a new run for more." else "Start a new run with permanent bonuses."
 	self.nextName.Text = "Rebirth " .. n + 1
-	self.fill.Size = UDim2.new(math.clamp(found / need, 0, 1), 0, 1, 0)
-	self.fill.Visible = found > 0
-	self.progress.Text = math.min(found, need) .. " / " .. need
+	-- The run's Starfalls: how many are found of the ones this rebirth needs.
+	local have = math.min(found, need)
+	local share = have / need
+	self.goal.Text = if found >= need then "Starfalls found ✓" else "Find " .. need .. " Starfall" .. (if need == 1 then "" else "s")
+	self.fill.Size = UDim2.new(math.clamp(share, 0, 1), 0, 1, 0)
+	self.fill.Visible = share > 0
+	self.progress.Text = have .. " / " .. need .. " Starfall" .. (if need == 1 then "" else "s")
 	self.label.Text = if pending then "Rebirthing…" elseif self.confirming then "Confirm!" elseif ready then "Rebirth!" else "Locked"
 	self.paint.Color = if not self.live then grey elseif self.confirming then yellow else green
 	self.button.Interactable = self.live
-	self.note.Text = self.reply or (if self.confirming then "Gold, pack, gear and supplies reset. Press again to rebirth."
-		elseif ready then "Ready when you are." else Rebirth.requirement.ore .. " is found in the deepest region.")
+	-- What they'd keep: a share of the gold that gets smaller as the pile gets bigger.
+	local gold = player:GetAttribute("Gold") or 0
+	local kept = Rebirth.keptGold(gold, n)
+	self.keepGold.Text = W.rich(if gold > 0
+		then string.format("You keep %s G of your %s G. The more gold you have, the smaller the share you keep.", W.goldAmount(kept), W.goldAmount(gold))
+		else "You keep some of your gold: the more you have, the smaller the share.")
+	self.note.Text = self.reply or (if self.confirming then "Pack, gear and supplies reset. Press again to rebirth."
+		elseif ready then "Ready when you are."
+		else "Starfall lies only in the Starfall Crater, for the Starcaller Pick.")
 	for _, item in self.perks do
 		item.after.Text, item.now.Text = item.perk.text(n + 1), "Now " .. item.perk.text(n)
 	end

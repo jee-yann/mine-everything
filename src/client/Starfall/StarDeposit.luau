@@ -6,8 +6,9 @@ local M = Enum.Material
 local Deposit = { center = V(0, 26.2, -32) }
 Deposit.__index = Deposit
 
-local skin = { "5A36A8", "7448C9", "8A5CE0", "6640B8", "7C50D2", "9468E6" }
-local tipTone = { "D8C6FA", "BFA2F4", "EDE4FF", "CBB3F6", "E2D6FC", "B090EE" }
+-- Bright violet to lavender, so the crystals read even in the dark of the bowl.
+local skin = { "8E63E8", "A57BF2", "B793F7", "9A70EC", "AE86F4", "C3A2FA" }
+local tipTone = { "F2EAFF", "E3D3FF", "FFFFFF", "EADDFF", "F7F1FF", "DCC8FF" }
 
 function Deposit.crystal(parent, at, height, radius, buried, lit)
 	local sides, shoulder = 6, height * 0.68
@@ -39,7 +40,8 @@ function Deposit.crystal(parent, at, height, radius, buried, lit)
 	return made
 end
 
-local rock = { "2E2A38", "38323F", "262431", "413844", "332D3B" }
+-- The broken beds are cartoon rock like the island's, not realistic slate.
+local rock = { "4A4458", "54495F", "443F52", "5C5068", "4E4760" }
 
 function Deposit.new()
 	local root = S.group("Star deposit")
@@ -52,8 +54,8 @@ function Deposit.new()
 		local r = rng:NextNumber(3.0, 4.6)
 		local out = CF(c) * A(0, a, 0) * CF(0, 0, -r) * A(math.rad(rng:NextNumber(26, 48)), rng:NextNumber(-0.2, 0.2), rng:NextNumber(-0.15, 0.15))
 		local w, h, d = rng:NextNumber(1.5, 2.7), rng:NextNumber(0.7, 1.3), rng:NextNumber(2.0, 3.4)
-		S.part(root, "Fused bed", out, V(w, h, d), rock[rng:NextInteger(1, #rock)], M.Slate)
-		S.part(root, "Broken edge", out * CF(0, h * 0.35, d * 0.46) * A(0.4, 0, 0), V(w * 0.94, h * 0.5, d * 0.24), rock[rng:NextInteger(1, #rock)], M.Slate)
+		S.part(root, "Fused bed", out, V(w, h, d), rock[rng:NextInteger(1, #rock)])
+		S.part(root, "Broken edge", out * CF(0, h * 0.35, d * 0.46) * A(0.4, 0, 0), V(w * 0.94, h * 0.5, d * 0.24), rock[rng:NextInteger(1, #rock)])
 		if i % 2 == 0 then
 			-- The underside is the last thing to cool.
 			S.part(root, "Residual heat", out * CF(0, -h * 0.2, d * 0.5), V(w * 0.86, 0.10, 0.12), "C2451C", M.Neon).CastShadow = false
@@ -63,7 +65,7 @@ function Deposit.new()
 		local a, r = rng:NextNumber(0, math.pi * 2), rng:NextNumber(4.4, 8.6)
 		local s = rng:NextNumber(0.3, 1.0)
 		S.part(root, "Ejecta", CF(c + V(math.cos(a) * r, 0.35 + r * 0.03, math.sin(a) * r * 0.85)) * A(rng:NextNumber(0, 3), rng:NextNumber(0, 3), 0),
-			V(s, s * 0.7, s * 1.2), rock[rng:NextInteger(1, #rock)], M.Slate)
+			V(s, s * 0.7, s * 1.2), rock[rng:NextInteger(1, #rock)])
 	end
 	-- x, z, height, radius, lean away from the centre
 	for _, q in {
@@ -86,18 +88,28 @@ function Deposit.new()
 		end
 	end
 	local lamps = {}
-	for _, q in { { V(0, 3.4, 1.8), 20, 1.5 }, { V(-2.4, 1.4, -0.6), 11, 0.9 }, { V(2.6, 1.6, 0.8), 11, 0.9 } } do
+	for _, q in { { V(0, 3.4, 1.8), 24, 2.4 }, { V(-2.4, 1.4, -0.6), 13, 1.4 }, { V(2.6, 1.6, 0.8), 13, 1.4 }, { V(0, 6.5, 0), 16, 1.2 } } do
 		local pin = S.part(root, "Star light", CF(c + q[1]), Vector3.one * 0.05, "FFFFFF")
 		pin.Transparency = 1
 		table.insert(lamps, { light = S.light(pin, "9B66F0", q[2], q[3]), power = q[3] })
 	end
+	-- Star twinkles rising off the crystals (the VFX pack's four-point star).
+	local spark = S.part(root, "Star twinkles", CF(c + V(0, 2.2, 0)), V(4, 4, 4), "FFFFFF")
+	spark.Transparency = 1
+	local twinkle = Instance.new("ParticleEmitter")
+	twinkle.Texture, twinkle.LightEmission, twinkle.LightInfluence = "rbxassetid://4963436775", 1, 0
+	twinkle.Color = ColorSequence.new(Color3.fromHex("F2EAFF"), Color3.fromHex("B793F7"))
+	twinkle.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.55), NumberSequenceKeypoint.new(1, 0) })
+	twinkle.Lifetime, twinkle.Rate, twinkle.Speed = NumberRange.new(0.8, 1.4), 14, NumberRange.new(0.4, 1.2)
+	twinkle.SpreadAngle, twinkle.Acceleration, twinkle.RotSpeed = Vector2.new(60, 60), Vector3.new(0, 0.8, 0), NumberRange.new(-90, 90)
+	twinkle.Parent = spark
 	local glow = {}
 	for _, part in root:GetDescendants() do
 		if part:IsA("BasePart") and part.Material == M.Neon then
 			table.insert(glow, { part = part, color = part.Color, heat = part.Name == "Residual heat" })
 		end
 	end
-	return setmetatable({ root = root, lamps = lamps, glow = glow, level = -1 }, Deposit)
+	return setmetatable({ root = root, lamps = lamps, glow = glow, level = -1, twinkle = twinkle }, Deposit)
 end
 
 function Deposit:place(at)
@@ -110,6 +122,7 @@ function Deposit:burn(life)
 		return
 	end
 	self.level = life
+	if self.twinkle then self.twinkle.Rate = 14 * life end
 	for _, g in self.glow do
 		local k = if g.heat then math.clamp(life * 1.6 - 0.6, 0, 1) else life
 		g.part.Color = g.color:Lerp(Color3.fromHex("0C0812"), 1 - k)

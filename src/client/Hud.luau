@@ -20,16 +20,15 @@ local Input = game:GetService("UserInputService")
 local fullRed = Color3.fromRGB(255, 113, 109)
 local hotbar = {
 	{ page = "Inventory", code = Enum.KeyCode.B },
-	{ page = "Skills", code = Enum.KeyCode.K },
+	{ page = "Skills", code = Enum.KeyCode.Q },
 	{ page = "Achievements", code = Enum.KeyCode.H },
-	{ page = "Book", code = Enum.KeyCode.J },
+	{ page = "Book", code = Enum.KeyCode.C },
 	{ page = "Settings", code = Enum.KeyCode.P },
 	{ page = "Rebirth", code = Enum.KeyCode.U },
 	{ page = "Profile", code = Enum.KeyCode.F },
 	{ page = "Daily", code = Enum.KeyCode.L },
 	{ page = "Playtime", code = Enum.KeyCode.G },
 	{ page = "Shop", code = Enum.KeyCode.N },
-	{ page = "Pets", code = Enum.KeyCode.T },
 }
 -- Shortcut letters shown on the side buttons' keycaps.
 local shortcutLetters = {}
@@ -66,31 +65,26 @@ function Hud.new(player, net, mobile)
 	self.coin = Icons.draw(wallet, "Coins", 0, 1, 47)
 	self.coinScale = self.coin:FindFirstChildOfClass("UIScale")
 	self.coinScale:SetAttribute("Rest", self.coinScale.Scale)
+	-- A + on the coin: a shortcut to the Shop's gold packs.
+	local plus = W.clearButton(wallet, "Get gold", 33, 31, 18, 18, "Open")
+	plus.ZIndex = 6
+	local plusFace = W.frame(plus, "Face", 0, 0, 18, 18, Color3.fromRGB(80, 200, 80), 9)
+	plusFace.ZIndex = 6
+	W.stroke(plusFace, W.navy, 2)
+	W.gradient(plusFace, Color3.fromRGB(130, 230, 100), Color3.fromRGB(40, 160, 60), 90)
+	local plusText = W.title(plusFace, "+", 0, -2, 18, 20, 18, W.white)
+	plusText.ZIndex = 7
+	W.navyText(plusText, 2)
+	plus.Activated:Connect(function()
+		self:openPage("ShopGold")
+	end)
+	self.goldPlus = plus
 	self.gold = W.title(wallet, "0", 50, -1, 170, 52, 52, W.gold, true)
 	self.gold.Size = UDim2.new(1, -50, 0, 52)
 	self.gold.TextScaled = true
 	local goldSize = Instance.new("UITextSizeConstraint")
 	goldSize.MinTextSize, goldSize.MaxTextSize, goldSize.Parent = 17, 52, self.gold
 	W.outlineText(self.gold, 3)
-	-- Gems, just above the gold, with a + that opens the gem packs.
-	local gemWallet = W.clearButton(wallet, "Gem counter", 0, -42, 190, 38, "Select")
-	Icons.draw(gemWallet, "Gems", 4, 1, 36)
-	self.gemCount = W.title(gemWallet, "0", 44, 0, 110, 38, 32, Color3.fromRGB(170, 240, 255), true)
-	W.outlineText(self.gemCount, 3)
-	local gemPlus = W.frame(gemWallet, "Plus", 0, 7, 26, 26, W.white, 13)
-	W.enamelPanel(gemPlus, Color3.fromRGB(166, 245, 110), Color3.fromRGB(62, 178, 52), 13)
-	W.navyText(W.title(gemPlus, "+", 0, -2, 26, 26, 22, W.white), 2)
-	self.gemPlus = gemPlus
-	local function placePlus()
-		-- TextBounds are on-screen pixels; the wallet is scaled, so convert back before placing the +.
-		local scale = math.max(0.1, gemWallet.AbsoluteSize.X / 190)
-		gemPlus.Position = UDim2.fromOffset(math.min(158, 50 + self.gemCount.TextBounds.X / scale), 6)
-	end
-	self.gemCount:GetPropertyChangedSignal("TextBounds"):Connect(placePlus)
-	gemWallet:GetPropertyChangedSignal("AbsoluteSize"):Connect(placePlus)
-	gemWallet.Activated:Connect(function()
-		self:openPage("ShopGems")
-	end)
 	local tools = clearFrame(root, "Equipment and level", 0, 0, 200, 46)
 	self.tools = tools
 	self.levelRing = LevelRing.new(tools, function()
@@ -205,7 +199,9 @@ function Hud.new(player, net, mobile)
 	end
 	local tileStep = SideButtons.size + 24
 	local menuRail = clearFrame(root, "Menu buttons", 0, 0, 2 * tileStep, 3 * tileStep + 68)
-	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, SideButtons.size + 18, 2 * tileStep)
+	-- The right rail: the Shop on top, then the daily card and playtime gifts, with the featured offers
+	-- in a column beside them.
+	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, tileStep + SideButtons.size + 18, 3 * tileStep)
 	self.sideKeys = {}
 	local settingsButton = SideButtons.round(menuRail, "Settings", shortcutLetters.Settings)
 	settingsButton.button.Activated:Connect(function()
@@ -213,14 +209,14 @@ function Hud.new(player, net, mobile)
 	end)
 	table.insert(self.sideKeys, settingsButton.key)
 	local railTiles = {}
-	for i, key in { "Shop", "Pets", "Inventory", "Skills", "Achievements", "Book", "Rebirth", "Profile" } do
+	for i, key in { "Inventory", "Skills", "Achievements", "Book", "Rebirth", "Profile" } do
 		local caption = if key == "Book" then "Index" elseif key == "Achievements" then "Awards" else key
 		local tile = SideButtons.tile(menuRail, key, caption, shortcutLetters[key])
 		railTiles[i] = tile.button
 		table.insert(self.sideKeys, tile.key)
 		if key == "Skills" then self.skillsTile = tile.button end
 		if key == "Rebirth" then self.rebirthTile = tile end
-		if key ~= "Pets" and key ~= "Profile" then
+		if key ~= "Profile" then
 			self.navDots[key] = SideButtons.badge(tile, if key == "Book" then "NEW" elseif key == "Inventory" then "OPEN" else "!")
 		end
 		tile.button.Activated:Connect(function()
@@ -239,13 +235,38 @@ function Hud.new(player, net, mobile)
 		menuRail.Size = UDim2.fromOffset(columns * tileStep, rows * tileStep + 68)
 	end
 	arrangeRail(2)
+	local offerColumn = clearFrame(rewardRail, "Featured offers", 0, 16, SideButtons.size, 3 * tileStep)
+	self.offers = require(script.Parent.FeaturedOffers).new(self, net, offerColumn, SideButtons.size)
+	local shop = SideButtons.tile(rewardRail, "Shop", "Shop", shortcutLetters.Shop)
+	shop.button.Position = UDim2.fromOffset(tileStep, 6)
+	shop.button.Activated:Connect(function()
+		self:toggleHotbarPage("Shop")
+	end)
+	table.insert(self.sideKeys, shop.key)
+	self.shopTile = shop
+	self.navDots.Shop = SideButtons.badge(shop, "!")
 	local daily = SideButtons.tile(rewardRail, "Daily", "Daily", shortcutLetters.Daily)
-	daily.button.Position = UDim2.fromOffset(0, 6)
+	daily.button.Position = UDim2.fromOffset(tileStep, 6 + tileStep)
 	daily.button.Activated:Connect(function()
 		self:toggleHotbarPage("Daily")
 	end)
 	local gift = SideButtons.tile(rewardRail, "Playtime", "Gift", shortcutLetters.Playtime)
-	gift.button.Position = UDim2.fromOffset(0, 6 + tileStep)
+	gift.button.Position = UDim2.fromOffset(tileStep, 6 + 2 * tileStep)
+	-- On phones the reward rail is a row (Shop, Daily, Gift) with the featured offers to the left of
+	-- the Shop.
+	local rewardTiles = { shop.button, daily.button, gift.button }
+	local function arrangeRewards(row)
+		if self.rewardRow == row then return end
+		self.rewardRow = row
+		offerColumn.Position = if row then UDim2.fromOffset(0, -2) else UDim2.fromOffset(0, 16)
+		self.offers.horizontal = row
+		self.offers:refresh()
+		for i, button in rewardTiles do
+			button.Position = if row then UDim2.fromOffset((i - 1) * tileStep, 0) else UDim2.fromOffset(tileStep, 6 + (i - 1) * tileStep)
+		end
+		rewardRail.Size = if row then UDim2.fromOffset(3 * tileStep - 18, tileStep) else UDim2.fromOffset(tileStep + SideButtons.size + 18, 3 * tileStep)
+	end
+	self.arrangeRewards = arrangeRewards
 	gift.button.Activated:Connect(function()
 		self:toggleHotbarPage("Playtime")
 	end)
@@ -403,7 +424,9 @@ function Hud.new(player, net, mobile)
 		local freeLeft = math.max(math.max(0, bar.Min.X) + 5, if narrow then leftEdge + minimumWallet + 6 else 0)
 		local freeRight = if bar.Max.X >= core.Max.X - 1 then outerRight else width + bar.Max.X - core.Max.X - 5
 		local top = math.max(full.Min.Y + 11, device.Min.Y + 8)
-		local pairWidth = 172
+		-- The top right row: Pack and Menu, or on touch screens Pack and the Shop / Daily / Gift row.
+		-- Phones drop the Pack shortcut (the haul card shows the bag), so the row is Shop / Daily / Gift.
+		local pairWidth = if edge and rosterOnDemand then 162 else 172
 		local topActions = edge and width >= height and freeRight - freeLeft >= pairWidth + 189
 		local titleRight = freeRight - (if topActions then pairWidth + 8 else 0)
 		local inTopbar = titleRight - freeLeft >= 148
@@ -424,11 +447,21 @@ function Hud.new(player, net, mobile)
 		local rosterRoom = if edge then height * 0.45 else height - 18 - self.haul.Size.Y.Offset * s
 		local rosterHeight, browsing = self.roster:layout(s, margin, edge, rosterRoom, rosterOnDemand)
 		self.roster.panel.Visible = playing and (not rosterOnDemand or browsing)
+		-- Touch screens keep the side buttons (smaller); only small keyboard windows fall back to the
+		-- Pack and Menu shortcuts.
+		local railsOnEdge = edge and rosterOnDemand
+		self.railsOnEdge = railsOnEdge
+		self.arrangeRewards(railsOnEdge)
+		-- Keyboard letters only where there's a keyboard.
+		for _, cap in self.sideKeys do
+			cap.Visible = not rosterOnDemand
+		end
+		menuButton.Visible = not railsOnEdge
 		shortcuts.Visible = playing and edge and not typing and not (browsing and narrow)
-		menuRail.Visible = playing and not edge
-		rewardRail.Visible = playing and not edge
+		menuRail.Visible = playing and (not edge or (railsOnEdge and not typing))
+		rewardRail.Visible = playing and (not edge or (railsOnEdge and not typing and not (browsing and narrow)))
 		taskCard.Visible = playing and not edge and not browsing
-		haul.Visible = playing and not edge and not browsing
+		haul.Visible = playing and (not edge or railsOnEdge) and not browsing
 		wallet.Visible = playing and not (edge and (typing or (browsing and narrow)))
 		loc.Visible = playing and not (edge and browsing)
 		tools.Visible = wallet.Visible
@@ -464,7 +497,11 @@ function Hud.new(player, net, mobile)
 			loc.Position = UDim2.fromOffset(titleX, locationY)
 			local depthY = belowChat(titleX - 58, locationY + 37, 116, 21)
 			self.depth.Position = UDim2.fromOffset(0, depthY - locationY)
-			local surfaceY = belowChat(titleX - 66, depthY + 24, 132, 46)
+			-- Phones skip the big region name up top (the screen is short): the depth line (which
+			-- decides how often Starfall turns up) sits at the very top, the Surface button under it.
+			self.layer.Visible, self.depth.Visible = not railsOnEdge, true
+			if railsOnEdge then self.depth.Position = UDim2.fromOffset(0, 0) end
+			local surfaceY = belowChat(titleX - 66, if railsOnEdge then locationY + 22 else depthY + 24, 132, 46)
 			self.surface.Position = UDim2.new(0.5, 0, 0, surfaceY - locationY)
 			local right = if topActions then freeRight else width - margin
 			local rowY = if topActions then top elseif inTopbar then 4 else math.max(73, depthY + 26)
@@ -485,9 +522,21 @@ function Hud.new(player, net, mobile)
 			rowY = belowChat(right - pairWidth, rowY, pairWidth, 48)
 			local gearY = belowChat(right - 150, rowY + 51, 150, 46)
 			local levelY = belowChat(right - 46, gearY + 48, 46, 46)
-			toolsBottom = levelY + 46
-			tools.Size = UDim2.fromOffset(150, toolsBottom - gearY)
-			self.levelRing.button.Position = UDim2.fromOffset(104, levelY - gearY)
+			if railsOnEdge then
+				-- Phones: the haul card under the Shop row, then Power, Speed, Bag and the level ring in
+				-- one row under it.
+				local haulY = rowY + 54
+				gearY = haulY + math.ceil(haul.Size.Y.Offset * 0.62) + 6
+				levelY = gearY
+				toolsBottom = gearY + 46
+				tools.Size = UDim2.fromOffset(200, 46)
+				self.levelRing.button.Position = UDim2.fromOffset(154, 0)
+				self.haulY = haulY
+			else
+				toolsBottom = levelY + 46
+				tools.Size = UDim2.fromOffset(150, toolsBottom - gearY)
+				self.levelRing.button.Position = UDim2.fromOffset(104, levelY - gearY)
+			end
 			local walletTop = belowChat(leftEdge, math.floor(height * (if width > height then 0.36 else 0.42)), walletWidth, 52)
 			if narrow and leftEdge + walletWidth > right - 150 and walletTop < gearY + 46 and walletTop + 52 > rowY then
 				walletTop = gearY + 50
@@ -514,8 +563,37 @@ function Hud.new(player, net, mobile)
 			shortcuts.Position = UDim2.fromOffset(right - pairWidth, rowY)
 			menuButton.Position = UDim2.fromOffset(88, 0)
 			W.anchor(tools, 1, 0, UDim2.fromOffset(right, gearY))
+			packButton.Visible = not railsOnEdge
+			if railsOnEdge then
+				-- The haul card, small, under the Shop row on the right (as on desktop, in place of the
+				-- Pack shortcut).
+				haulScale.Scale = 0.62
+				W.anchor(haul, 1, 0, UDim2.fromOffset(right, self.haulY or rowY + 54))
+				local rowScale = 150 / (3 * tileStep - 18)
+				rewardRailScale.Scale = rowScale
+				W.anchor(rewardRail, 0, 0, UDim2.fromOffset(right - pairWidth, rowY + 1))
+				-- The menu buttons: a small two-column rail at the top left, under Roblox's own buttons
+				-- and above where the thumbstick sits. The gold sits beside it.
+				-- A clear gap under Roblox's own buttons. It stays put when the chat window opens (the
+				-- window draws over it): following the chat pushed the whole rail down and shrank it.
+				local railTop = top + 62
+				local menuHeight = menuRail.Size.Y.Offset
+				local railScale = math.clamp((height * 0.7 - railTop) / menuHeight, 0.3, 0.62)
+				menuRailScale.Scale = railScale
+				W.anchor(menuRail, 0, 0, UDim2.fromOffset(leftEdge + 2, railTop))
+				local railRight = leftEdge + 2 + menuRail.Size.X.Offset * railScale + 8
+				local room = math.max(minimumWallet, math.min(220, titleX - titleHalf - railRight - 6))
+				wallet.Size = UDim2.fromOffset(room, 52)
+				-- The gold sits in the bottom left corner on phones.
+				wallet.Size = UDim2.fromOffset(220, 52)
+				W.anchor(wallet, 0, 1, UDim2.fromOffset(leftEdge + 4, height - 4))
+				local _ = railRight
+			else
+				packButton.Position = UDim2.fromOffset(0, 0)
+			end
 		else
 			tools.Size = UDim2.fromOffset(200, 46)
+			self.layer.Visible, self.depth.Visible = true, true
 			self.levelRing.button.Position = UDim2.fromOffset(154, 0)
 			self.depth.Position = UDim2.fromOffset(0, 37)
 			self.surface.Position = UDim2.new(0.5, 0, 1, 3)
@@ -536,8 +614,7 @@ function Hud.new(player, net, mobile)
 				cap.Visible = keyboard
 			end
 			local railScale = math.clamp(math.min(width / 1400, height / 780), 0.78, 1.15)
-			-- The gem counter sits on top of the wallet.
-			local walletTop = height - margin - (46 + 52 + 42) * s - (if self.status.Text == "" then 0 else 18 * s)
+			local walletTop = height - margin - (46 + 52) * s - (if self.status.Text == "" then 0 else 18 * s)
 			local topLimit = margin + 6
 			if StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.Chat) and chatWindow and chatWindow.Enabled then
 				for _, chat in { chatWindow, chatInput } do
@@ -574,12 +651,17 @@ function Hud.new(player, net, mobile)
 		local touchGui = gui.Parent:FindFirstChild("TouchGui")
 		local jump = touchGui and touchGui:FindFirstChild("JumpButton", true)
 		local validJump = jump and jump:IsA("ImageButton") and jump.Visible and jump.AbsoluteSize.Y > 0
+		-- Phones: a row of bonus icons sits on the right wall under the stats, so Mine starts below it.
+		local bonusRow = edge and rosterOnDemand
 		local touchBounds = self.touchActions:layout(
 			root,
 			if validJump then jump else nil,
 			self.mobile and playing and not browsing and not typing,
-			toolsBottom
+			toolsBottom + (if bonusRow then 40 else 0)
 		)
+		-- Phones: the boost and bonus icons, grouped by kind, in a row against the right wall under the
+		-- stats (BoostChips).
+		self.bonusSpot = if bonusRow then Vector2.new(width - 2, toolsBottom + 5) else nil
 		local speechWidth = if edge then math.clamp(width - 175, 144, 290) else 460
 		speechScale.Scale = s
 		self.blockedScale.Scale = if edge then math.min(1, width / 560) else s
@@ -698,7 +780,7 @@ function Hud:toggleHotbarPage(key)
 	local page = menu.page or ""
 	local samePage = page == key or (key == "Shop" and page:match("^Shop") ~= nil)
 		or (key == "Inventory" and menu.inventory ~= nil and menu.wide == menu.inventory)
-		or (key == "Pets" and menu.pets ~= nil and menu.wide == menu.pets)
+
 	if self.overlay.Visible and samePage and not menu.closing then
 		Audio.menu(false)
 		menu:close()
@@ -727,7 +809,6 @@ function Hud:refresh()
 	end
 	local used, cap = p:GetAttribute("Used") or 0, (p:GetAttribute("PackSlots") or Upgrades.items.Capacity.values[1])
 	self.goldFlow:set(p:GetAttribute("Gold") or 0)
-	self.gemCount.Text = W.goldAmount(p:GetAttribute("Gems") or 0)
 	self.pack.Text = W.number(used) .. " / " .. W.number(cap)
 	self.edgeCount.Text = W.number(used) .. "/" .. W.number(cap)
 	local full = used >= cap
@@ -759,6 +840,10 @@ function Hud:refresh()
 	local held = Ores.carried(p)
 	for _, row in self.rows do
 		row.Visible = false
+	end
+	-- A phone shows the four rarest ores carried; the sell value still counts everything.
+	if self.railsOnEdge and #held > 4 then
+		held = table.move(held, 1, 4, 1, {})
 	end
 	for i, entry in held do
 		local ore = entry.ore
@@ -952,15 +1037,18 @@ function Hud:milestone(kind, name, color)
 		end
 	end)
 end
+-- One card per run of the same upgrade: buying Speed eight times quickly shows "Lv 20 → Lv 28" once.
 function Hud:workshop(key, level)
-	local headline = if key == "Power"
-		then Upgrades.pickNames[level]
-		elseif key == "Capacity" then "Bigger Backpack"
-		else "Faster Swings"
-	local detail = "Lv " .. (level - 1) .. " → Lv " .. level .. "  ·  "
-		.. (if key == "Power" then "Mines " .. Upgrades.unlockTexts(level)[math.min(2, #Upgrades.unlockTexts(level))] else Upgrades.describe(key, level))
 	self.menu:upgraded(key)
-	self.unlocks:show("upgrade", headline, detail, key)
+	self.unlocks:upgrade(key, level, function(from, to)
+		local headline = if key == "Power"
+			then Upgrades.pickNames[to]
+			elseif key == "Capacity" then "Bigger Backpack"
+			else "Faster Swings"
+		local detail = "Lv " .. from .. " → Lv " .. to .. "  ·  "
+			.. (if key == "Power" then "Mines " .. Upgrades.unlockTexts(to)[math.min(2, #Upgrades.unlockTexts(to))] else Upgrades.describe(key, to))
+		return headline, detail
+	end)
 end
 -- A line in chat when anyone in the server finds Starfall.
 function Hud:announceStarfall(who)
@@ -993,7 +1081,7 @@ end
 function Hud:notice(title, detail, color)
 	self.untilTime = os.clock() + 2.1
 	-- Notices can carry any text. Only the guide's own lines use colour tags.
-	self.detail.RichText = false
+	self.detail.RichText, self.message.RichText = false, false
 	self.message.Text, self.message.TextColor3, self.detail.Text = title, color or W.white, detail or ""
 	if self.overlay.Visible then
 		self.menu.status.Text = title
@@ -1062,8 +1150,9 @@ function Hud:guide(title, detail, visible, blocked)
 		if not was and Burst.allowed(self.player) then Burst.pop(self.blockedScale, self.speechBase, 1.15) end
 		return
 	end
-	self.speech.Visible, self.detail.RichText = visible, true
-	self.message.Text, self.message.TextColor3, self.detail.Text = title, W.white, detail
+	-- Guide lines colour their gold amounts and progress counts (W.highlight).
+	self.speech.Visible, self.detail.RichText, self.message.RichText = visible, true, true
+	self.message.Text, self.message.TextColor3, self.detail.Text = W.highlight(title), W.white, W.highlight(detail)
 end
 -- The two reward tiles: a badge when something can be claimed, and the time to the next gift.
 function Hud:refreshRewards()

@@ -1,4 +1,4 @@
--- "Try on": shows a cosmetic on the player's own miner (or their pet) for a few seconds, before they
+-- "Try on": shows a cosmetic on the player's own miner for a few seconds, before they
 -- own it or before they wear it. Everything is made on this client only; nobody else sees it.
 -- A mining trail is shown as a spark circling the miner, trailing the trail's colours.
 local Players = game:GetService("Players")
@@ -23,18 +23,9 @@ local function orbit(root, entry, items)
 	spark.Material, spark.Color = Enum.Material.Neon, C.colors(entry)[1]
 	spark.Anchored, spark.CanCollide, spark.CanQuery, spark.CanTouch = true, false, false, false
 	local a, b = Instance.new("Attachment"), Instance.new("Attachment")
-	a.Position, b.Position = Vector3.new(0, 0.3, 0), Vector3.new(0, -0.3, 0)
+	a.Position, b.Position = Vector3.new(0, 0.35, 0), Vector3.new(0, -0.35, 0)
 	a.Parent, b.Parent = spark, spark
-	local trail = Instance.new("Trail")
-	trail.Attachment0, trail.Attachment1 = a, b
-	trail.Color, trail.Lifetime, trail.LightEmission = Looks.sequence(entry), 0.5, 0.9
-	trail.Transparency = NumberSequence.new(0.1, 1)
-	trail.Parent = spark
-	local sparks = Instance.new("ParticleEmitter")
-	sparks.Texture, sparks.Color = "rbxasset://textures/particles/sparkles_main.dds", Looks.sequence(entry)
-	sparks.Size, sparks.Rate, sparks.LightEmission = NumberSequence.new(0.3, 0), 14, 1
-	sparks.Lifetime, sparks.Speed = NumberRange.new(0.3, 0.6), NumberRange.new(0.5, 1.5)
-	sparks.Parent = spark
+	Looks.streak(entry, a, b, function() end, { lifetime = 0.45 + 0.05 * Looks.rank(entry), scale = 0.8 })
 	spark.Parent = workspace
 	table.insert(items, spark)
 	local start = os.clock()
@@ -55,13 +46,7 @@ function TryOn.start(hud, kind, id)
 	stop()
 	local items = {}
 	current = { items = items }
-	if kind == "style" then
-		if (player:GetAttribute("Pet") or "") == "" then
-			hud:notice("Equip a pet first", "Pet styles are worn by your pet", W.violet)
-			return false
-		end
-		hud.previewStyle = { id = id, untilTime = os.clock() + TryOn.seconds }
-	elseif kind == "ribbon" then
+	if kind == "ribbon" then
 		Looks.ribbon(root, id, function(item) table.insert(items, item) end)
 	elseif kind == "aura" then
 		local holder, look = Looks.aura(char, id)

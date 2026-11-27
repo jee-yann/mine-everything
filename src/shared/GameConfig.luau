@@ -1,11 +1,15 @@
 local cell = 6
 local Config = {
 	LandscapeSeed = 73129,
-	-- Blocks removed server-wide before the mine renews. It leaves about 2,000 blocks of mining after
-	-- a shaft down to the crater (row 550), as 2,400 did for the old deepest region at row 340.
-	ResetAfter = 2600,
+	-- The mine renews once an hour, on the clock: no cut budget, so nobody can bring it on sooner by
+	-- mining fast. Miners at least ReturnDepth blocks down go back to their spot in the new mine, so a
+	-- reset never costs anyone their climb down.
 	ResetSeconds = 3600,
+	-- Starfall's chance grows by this share of its crater chance for every row below the crater's top
+	-- (0.001: +10% at 100 rows down, double at 1,000).
+	StarfallDeeper = 0.001,
 	ResetWarning = 20,
+	ReturnDepth = 12,
 	-- The gallery begins one cell behind the entrance and spans ten cells on each axis.
 	Cell = cell,
 	Chunk = 8,
@@ -26,6 +30,13 @@ local Config = {
 	Reach = 34,
 	StoreName = "EndlessMining_v1",
 	AllowProgressReset = true, -- Prototype Settings option. Set false to retire it for release.
+	-- Playtesting: every miner can wear every Mining FX and Player FX, even in the published game.
+	-- Crates still roll and grant as normal. Set false for release.
+	AllFxForTesting = true,
+	-- Playtesting: anything in the Shop without a Robux ID yet (StoreConfig id = 0) is given free when
+	-- bought, even in the published game, so crates, boosts and passes can be tried. Items with an ID
+	-- always go through Roblox's checkout. Set false for release.
+	FreeUnconfiguredItems = true,
 	LeaseSeconds = 180,
 	AutosaveSeconds = 45,
 	-- Maximum pattern faces checked per second across all players.
@@ -34,7 +45,11 @@ local Config = {
 }
 -- Regions: each has its own ore table (percent of solid blocks; the rest is plain stone).
 -- Some ores span many regions, some peak in one and fade below it, and some are found in only
--- one region. Starfall appears only in the crater, at the bottom of the mine.
+-- one region. Starfall is found only in the bottom region, the Starfall Crater, and only with the top
+-- pick: 0.15% of blocks on its first row (the listed chance), rising very slowly with every row deeper
+-- (StarfallDeeper) with no limit, as the mine goes down for ever. Tuned with the pick prices so a
+-- focused free player finds their first in about two hours and a casual one in about three (rebirth N
+-- needs N of them).
 Config.Layers = {
 	{
 		depthBlocks = 0,
@@ -224,7 +239,7 @@ Config.Layers = {
 			Meteorite = 6,
 			Adamantite = 1.6,
 			Voidshard = 0.085,
-			Starfall = 0.0025,
+			Starfall = 0.15,
 		},
 		material = Enum.Material.Basalt,
 		color = Color3.fromRGB(66, 54, 98),

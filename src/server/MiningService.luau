@@ -12,25 +12,24 @@ local Bonuses = require(Shared.Bonuses)
 local Mining = {}
 local luckRandom = Random.new()
 
--- Gems for progress: a level gained, a new ore found.
-Mining.levelGems, Mining.discoveryGems = 3, 5
-
--- Free geodes for progress: every 5th level a Pebble Geode, every 25th a Crystal Geode, and every
--- Starfall mined a Starfall Geode. Returns the geode items given, in order.
+-- Free crates for progress: a Starfall Crate every 5th level (two every 25th), and one for every Starfall
+-- mined. Returns the crate items given, in order.
 function Mining.progressGeodes(col, oldLevel, level, ore)
 	local given = {}
-	local function give(id)
-		col.items[id] = (col.items[id] or 0) + 1
-		table.insert(given, id)
+	local function give(n)
+		for _ = 1, n do
+			col.items.StarfallGeode = (col.items.StarfallGeode or 0) + 1
+			table.insert(given, "StarfallGeode")
+		end
 	end
 	for reached = oldLevel + 1, level do
 		if reached % 25 == 0 then
-			give("CrystalGeode")
+			give(2)
 		elseif reached % 5 == 0 then
-			give("PebbleGeode")
+			give(1)
 		end
 	end
-	if ore == "Starfall" then give("StarfallGeode") end
+	if ore == "Starfall" then give(1) end
 	return given
 end
 
@@ -130,7 +129,12 @@ function Mining.start(world, net, sessions, sync, hooks)
 			return
 		end
 		local ore = world:oreAt(point)
-		local speed = 1 + Bonuses.speed(state(player, p))
+		-- Where and how they mine, for the depth, crowd and streak skills (the client reads the same).
+		local ctx = {
+			row = Config.depthInBlocks(Config.FloorY + world.origin.Y - point.Y),
+			crowd = player:GetAttribute("NearMiner") == true,
+			streak = player:GetAttribute("OreStreak") or 0,
+		}
 		local duration, tempered = Skills.cutTime(
 			Profile.stat(p, "Speed") * Rebirth.cutMultiplier(p.rebirths),
 			ore,
@@ -139,9 +143,10 @@ function Mining.start(world, net, sessions, sync, hooks)
 			p.skills,
 			p.hasteCuts,
 			p.stoneChips,
-			Profile.stat(p, "Power")
+			Profile.stat(p, "Power"),
+			ctx
 		)
-		duration /= speed
+		duration = Bonuses.cut(state(player, p), duration)
 		strokes[player] = {
 			profile = p,
 			point = point,
@@ -233,6 +238,8 @@ function Mining.start(world, net, sessions, sync, hooks)
 		local lucky
 		if depthBlocks >= Config.DirtLayers and not world.grid:practice(world.grid:cellAt(center)) then
 			lucky = Mining.luckyFind(Config.layer(depthBlocks * Config.Cell + Config.Cell / 2), name, luck, luckRandom)
+			-- Luck never hands over an ore the pick couldn't cut (Starfall needs the top pick).
+			if lucky and Ores.byName[lucky].hardness > Profile.stat(profile, "Power") then lucky = nil end
 		end
 		if lucky then
 			-- The block opens to show a rare ore inside.
@@ -242,20 +249,21 @@ function Mining.start(world, net, sessions, sync, hooks)
 			name = lucky
 		end
 		local ore = Ores.byName[name]
+		-- Hot Streak: ores mined in a row. Stone breaks it (Streak Keeper forgives one stone).
+		local streak = player:GetAttribute("OreStreak") or 0
+		if not ore.host and name ~= "Stone" then
+			streak += 1
+			player:SetAttribute("StreakSpared", nil)
+		elseif profile.skills.StreakKeeper and streak > 0 and not player:GetAttribute("StreakSpared") then
+			player:SetAttribute("StreakSpared", true)
+		else
+			streak = 0
+		end
+		if streak ~= (player:GetAttribute("OreStreak") or 0) then player:SetAttribute("OreStreak", streak) end
 		local discovery = not ore.host and not profile.discoveries[name]
 		local oldLevel = Expeditions.level(profile.xp)
 		local awards, purity, units, record = Profile.recordCut(profile, name, depthBlocks, nil,
 			FriendBonus.multiplier(player:GetAttribute("FriendsHere")) * Bonuses.xp(bonus))
-		local gems = 0
-		if not ore.host and luckRandom:NextNumber() < Bonuses.gemChance(bonus) then
-			gems += 1
-			net.Feedback:FireClient(player, "gemFind", center)
-		end
-		if discovery then gems += Mining.discoveryGems end
-		if Expeditions.level(profile.xp) > oldLevel then
-			gems += Mining.levelGems * (Expeditions.level(profile.xp) - oldLevel)
-		end
-		profile.gems += gems
 		local freeGeodes = Mining.progressGeodes(profile.col, oldLevel, Expeditions.level(profile.xp), name)
 		loot[name] = units
 		if request.speedSupply then
@@ -290,6 +298,7 @@ function Mining.start(world, net, sessions, sync, hooks)
 			net.Feedback:FireClient(player, "freeGeode", id)
 		end
 		if name == "Starfall" then
+			player:SetAttribute("StarfallAt", nil) -- the compass's find, if it was this one
 			for _, other in Players:GetPlayers() do
 				net.Feedback:FireClient(other, "starfall", player.DisplayName, profile.counts.Starfall or 1, other == player)
 			end

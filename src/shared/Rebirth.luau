@@ -10,10 +10,15 @@
 -- `milestones` for a one-off unlock at a given rebirth count.
 local Rebirth = {}
 
--- What the current run must achieve before the miner can rebirth.
-Rebirth.requirement = { ore = "Starfall", count = 1 }
+-- Rebirths are about finding Starfall: rebirth N needs N Starfalls found in the run (the first needs
+-- one, the fifth needs five). Starfall is a natural find from Prism Grotto down, more often deeper
+-- (GameConfig.Layers); luck makes it more likely, and nothing guarantees one.
+Rebirth.requirement = { ore = "Starfall" }
+function Rebirth.need(n: number): number
+	return n + 1
+end
 
-Rebirth.cutCap = 0.25 -- the most cutting speed rebirths can add
+Rebirth.cutCap = 0.4 -- the most cutting speed rebirths can add
 
 function Rebirth.goldMultiplier(n: number): number
 	return 1 + n
@@ -23,9 +28,23 @@ function Rebirth.xpMultiplier(n: number): number
 	return 1 + 0.25 * n
 end
 
--- Multiplies the base cut time (so 0.95 is 5% faster).
+-- Multiplies the base cut time (so 0.92 is 8% faster): 8% a rebirth, up to 40%.
 function Rebirth.cutMultiplier(n: number): number
-	return 1 - math.min(Rebirth.cutCap, 0.05 * n)
+	return 1 - math.min(Rebirth.cutCap, 0.08 * n)
+end
+
+-- A rebirth shouldn't feel like starting over: the new run begins with some of the old run's gold.
+-- The share shrinks as the pile grows (k * ln(1 + gold / k)), so banking gold before a rebirth
+-- barely pays: with k = 20,000 G x the gold multiplier, 100k keeps about 36k on the first rebirth,
+-- 1M about 79k and 10M about 124k.
+function Rebirth.keptGold(gold: number, n: number): number
+	local k = 20000 * Rebirth.goldMultiplier(n)
+	return math.floor(k * math.log(1 + math.max(0, gold) / k))
+end
+
+-- Starfall Crates for reaching rebirth `count`: one, and two every fifth.
+function Rebirth.crates(count: number): number
+	return if count % 5 == 0 then 2 else 1
 end
 
 -- Bonuses that grow with every rebirth. `text(n)` describes the bonus after n rebirths.
@@ -58,8 +77,9 @@ Rebirth.milestones = {
 	{ at = 1, name = "Reborn", detail = "Your rebirth count shows beside your name on the Server miners board" },
 }
 
-function Rebirth.ready(found: number): boolean
-	return found >= Rebirth.requirement.count
+-- Whether a run with `found` Starfalls can rebirth, for a miner with `n` rebirths.
+function Rebirth.ready(found: number, n: number): boolean
+	return found >= Rebirth.need(n or 0)
 end
 
 -- The badge beside a miner's name: one star in the colour of their tier, with the count on it, so

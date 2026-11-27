@@ -110,9 +110,10 @@ function SellCounter.build(menu)
 			end
 		end
 		local slots = #order
-		menu.sellAll.Text = string.format("Sell entire pack\n%s %s · +%s G", W.goldAmount(blocks),
-			if blocks == 1 then "block" else "blocks", W.goldAmount(value))
-		menu.sellAll.Interactable, menu.sellAll.BackgroundColor3 = value > 0, if value > 0 then W.gold else W.muted
+		-- Just what it pays, in gold, on a green button (so the gold reads).
+		menu.sellAll.RichText = true
+		menu.sellAll.Text = if value > 0 then "Sell all  " .. W.colored("+" .. W.goldAmount(value) .. " G", W.gold) else "Sell all"
+		menu.sellAll.Interactable, menu.sellAll.BackgroundColor3 = value > 0, if value > 0 then W.green else W.muted
 		empty.Visible, empty.Position = value == 0, UDim2.fromOffset(0, slots * stride + 8)
 		menu.list.CanvasSize = UDim2.fromOffset(0, slots * stride + (if empty.Visible then 61 else 0))
 	end)

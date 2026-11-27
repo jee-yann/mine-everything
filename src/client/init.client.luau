@@ -186,28 +186,12 @@ UIS.InputBegan:Connect(function(input, processed)
 		held = input
 	end
 end)
-hud.mine.InputBegan:Connect(function(input)
-	if
-		hud.mine.Visible
-		and not held
-		and not passage.active
-		and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1)
-	then
-		held = input
-	end
-end)
--- Roblox recognizes taps on this button separately from holds and camera drags.
--- Ending a manual hold must leave the first tap available for the second.
-hud.mine.TouchLongPress:Connect(clearMineTap)
-hud.mine.TouchPan:Connect(clearMineTap)
-hud.mine.TouchTap:Connect(function(positions)
-	if
-		#positions ~= 1
-		or not mobile
-		or not hud.mine.Visible
-		or passage.active
-		or not player:GetAttribute("ProfileReady")
-	then
+-- The Mine disc works like a shooter's fire button: a touch that starts on it mines, and the same
+-- finger turns the camera as it slides (the disc isn't a button, so Roblox's own camera still gets
+-- the touch, in every direction). A quick tap counts toward the double-tap for auto-mine.
+local mineTouch
+local function mineTap()
+	if not mobile or not hud.mine.Visible or passage.active or not player:GetAttribute("ProfileReady") then
 		clearMineTap()
 		return
 	end
@@ -227,6 +211,32 @@ hud.mine.TouchTap:Connect(function(positions)
 		return
 	end
 	Audio.preview()
+end
+UIS.InputBegan:Connect(function(input)
+	if input.UserInputType ~= Enum.UserInputType.Touch or held or passage.active or not hud.touchActions:hit(input.Position) then
+		return
+	end
+	held = input
+	mineTouch = { input = input, at = os.clock(), from = input.Position }
+	hud.touchActions:setPressed(true)
+end)
+UIS.InputChanged:Connect(function(input)
+	-- A drag on the disc is a look around, not a tap.
+	if mineTouch and input == mineTouch.input and (input.Position - mineTouch.from).Magnitude > 14 then
+		mineTouch.dragged = true
+		clearMineTap()
+	end
+end)
+UIS.InputEnded:Connect(function(input)
+	if not mineTouch or input ~= mineTouch.input then return end
+	local touch = mineTouch
+	mineTouch = nil
+	hud.touchActions:setPressed(false)
+	if not touch.dragged and os.clock() - touch.at < 0.3 then
+		mineTap()
+	else
+		clearMineTap()
+	end
 end)
 UIS.InputEnded:Connect(function(input)
 	if
@@ -264,10 +274,14 @@ UIS:GetPropertyChangedSignal("PreferredInput"):Connect(function()
 end)
 
 local reveal = require(script.GeodeReveal).new(hud, net)
+hud.checkout = require(script.Checkout).new(hud, net, reveal)
+require(script.ShopSign)(hud)
 hud.reveal = reveal
 local Collectibles = require(shared.Collectibles)
 local function chime(pitch) fx:chime(pitch) end
 net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, normal)
+	-- A refusal right after asking to buy ends the checkout's waiting screen.
+	if kind == "hint" then hud.checkout:refused() end
 	if kind == "achievement" or kind == "titleUnlocked" or kind == "levelUp" then
 		hud.unlocks:show(kind, a)
 	elseif kind == "skillLearned" then
@@ -305,8 +319,8 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 	elseif kind == "caveCache" then
 		fx:chime(1.65)
 		hud:notice(
-			if point then "Cave drake hatched! Equip it in Pets" else "Survey cache found",
-			"+" .. a .. " G   ·   +1 survey flare",
+			if point then "Drake egg cracked: a Starfall Crate!" else "Survey cache found",
+			"+" .. a .. " G" .. (if point then "   ·   open the crate from your Inventory" else ""),
 			W.gold
 		)
 	elseif kind == "milestone" then
@@ -316,7 +330,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		fx:chime(1.9)
 		hud:notice(
 			if spread then "★ You unearthed Starfall!" else "★ " .. a .. " unearthed Starfall!",
-			if point > 1 then "Their Starfall number " .. point .. ". The rarest ore in the mine." else "The rarest ore in the mine, found only in the crater.",
+			if point > 1 then "Their Starfall number " .. point .. ". The rarest ore in the mine." else "The rarest ore in the mine. Every one counts toward a rebirth.",
 			Ores.byName.Starfall.color
 		)
 		hud:announceStarfall(a)
@@ -362,12 +376,19 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			hud.menu.rewards:claimed(a, point)
 		end
 		if not hud.overlay.Visible then hud:notice(spread, finds, W.gold) end
+		-- A crate: offer to open it now, as after buying one (after the claim's own burst).
+		if type(spread) == "string" and (spread:find("Crate") or spread:find("Haul")) then
+			task.delay(0.15, function()
+				local checkout = hud.checkout
+				if checkout then checkout:crateWon(spread, finds or spread) end
+			end)
+		end
 	elseif kind == "job" then
 		fx:chime(1.65)
 		hud.unlocks:show("job", a, "+" .. W.number(point) .. " gold", nil, point)
 	elseif kind == "resetSoon" then
 		hud:milestone("MINE RENEWAL", "New ore in " .. a .. " seconds", W.aqua)
-		hud:notice("Mine renews in " .. a .. " seconds", "Your haul returns to the entrance with you", W.aqua)
+		hud:notice("Mine renews in " .. a .. " seconds", "Deep miners go straight back to their spot", W.aqua)
 	elseif kind == "progressReset" then
 		hud.menu.preferences.resetPending = false
 		if a then
@@ -411,38 +432,39 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		-- a = geode, point = reward kind, spread = reward id, finds = count, normal = what happened
 		reveal:play(a, point, spread, finds, normal, chime)
 		hud.menu:refresh()
-	elseif kind == "welcomeGeode" then
-		-- The onboarding gift opens on its own once the upgrade has been celebrated.
-		task.delay(3, function()
-			if not reveal:busy() then net.Action:FireServer("OpenGeode", "Welcome", false) end
-		end)
-	elseif kind == "crafted" then
-		fx:chime(1.6)
-		local entry = Collectibles.find(a, point)
-		hud.unlocks:show("upgrade", "Forged: " .. entry.name, require(script.GeodeReveal).outcome(a, point, spread, finds))
+	elseif kind == "goldPack" then
+		-- a = gold, point = the pack's name. A pack bought from the Shop shows its gold in the thank-you.
+		fx:chime(1.8)
+		if hud.checkout:expecting() then
+			hud.checkout:gold(a)
+		else
+			hud.unlocks:show("upgrade", point, "+" .. W.goldAmount(a) .. " gold")
+		end
 	elseif kind == "itemUsed" then
 		fx:chime(1.4)
 		local item = Collectibles.itemById[a]
 		if item then hud:notice(item.name .. " used", item.detail, W.green) end
 	elseif kind == "purchase" then
+		-- a = name, point = "pass" or "product", spread = its key
 		fx:chime(1.8)
-		hud.unlocks:show("upgrade", "Thank you!", a .. (if point == "pass" then " is yours for good" else " delivered"))
+		hud.checkout:purchased(a, point, spread)
 	elseif kind == "lucky" then
 		-- a = what the block looked like, point = the rare ore inside, spread = luck
 		fx:chime(1.85)
 		local ore = Ores.byName[point]
 		hud:notice("Lucky find! " .. point .. " inside the " .. a, string.format("%g× luck", math.floor(spread * 100 + 0.5) / 100), ore and ore.color or W.green)
+	elseif kind == "flung" then
+		-- a = who bought the fling, point = the way to fly.
+		require(script.TrollFling).throw(point)
+		hud:notice(a .. " flung you!", "Walk up to a miner and press E (or tap) to return the favour", W.pink)
 	elseif kind == "freeGeode" then
 		local item = Collectibles.itemById[a]
 		fx:chime(1.75)
 		hud:notice("Free " .. (if item then item.name else "crate") .. "!", "Open it from your Inventory", W.violet)
-	elseif kind == "gemFind" then
-		fx:chime(1.7)
-		hud:notice("+1 gem", "Found in the rock", W.aqua)
 	elseif kind == "serverLuck" then
 		fx:chime(1.9)
 		hud:milestone("SERVER LUCK", a .. " gave everyone 2× luck!", W.green)
-		hud:chatLine("🍀 " .. a .. " turned on Server Luck!", "Everyone here has 2× luck for " .. point .. " minutes.", W.green)
+		hud:chatLine("🍀 " .. a .. " redeemed 2× Luck for the server!", "Everyone here has 2× luck for " .. point .. " minutes.", W.green)
 	elseif kind == "geodeAnnounce" then
 		local rarity = Collectibles.rarities[spread]
 		hud:chatLine("◆ " .. a .. " opened a " .. spread .. " " .. point .. "!", "", rarity and rarity.color or W.gold)
@@ -471,7 +493,10 @@ for _, other in Players:GetPlayers() do
 	end
 end
 
-require(script.PetFollowers)(hud, origin)
+require(script.OreCompass)(hud, origin)
+require(script.StarfallCompass)(hud)
+require(script.TrollFling).start(hud, net)
+require(script.FirstPersonPick)(player)
 require(script.BoostChips)(hud)
 local lastDepth, lastRegion
 local function targetName(ore, center)
@@ -537,8 +562,19 @@ local function sampleAim()
 	end
 	local ready = net:GetAttribute("Ready") and player:GetAttribute("ProfileReady")
 	local centerAim = mobile or UIS.PreferredInput == Enum.PreferredInput.Gamepad
-	local screen = if centerAim then camera.ViewportSize * 0.5 else UIS:GetMouseLocation()
-	local ray = camera:ViewportPointToRay(screen.X, screen.Y)
+	local screen, ray
+	if centerAim then
+		-- Aim exactly through the aim dot: the middle of its full-screen layer, in that layer's own
+		-- coordinates (where the dot, the mining cursor and its label are drawn) and on screen for the
+		-- ray. Using the camera's viewport centre instead could sit off the dot on screens with insets.
+		local layer = hud.reticle.Parent
+		screen = layer.AbsoluteSize * 0.5
+		local at = layer.AbsolutePosition + screen
+		ray = camera:ScreenPointToRay(at.X, at.Y)
+	else
+		screen = UIS:GetMouseLocation()
+		ray = camera:ViewportPointToRay(screen.X, screen.Y)
+	end
 	local reach = char:GetAttribute("PickReach") or Config.Reach
 	local hit = workspace:Raycast(ray.Origin, ray.Direction * (if inMine then math.max(reach + 48, minerFocus.range) else reach + 48), params)
 	local onControl = GuiService.MenuIsOpen or UIS:GetFocusedTextBox() or (hud.chatInput and hud.chatInput.IsFocused)
@@ -583,7 +619,9 @@ local function sampleAim()
 		expedition:hide()
 	end
 	if not ready then
-		hud:guide("Opening the mine…", "Preparing your pack and the mine", true)
+		local status = player:GetAttribute("SaveStatus")
+		hud:guide("Opening the mine…", if type(status) == "string" and status:find("^Waiting") then status .. " (up to 3 minutes)"
+			else "Preparing your pack and the mine", true)
 	elseif packed then
 		hud:guide("Backpack full!", if mobile then "Tap ↑ Surface, then sell your haul" else "Press R to surface, then sell your haul", true, true)
 	elseif tooHard then
@@ -610,6 +648,8 @@ end
 
 UIS.TouchTapInWorld:Connect(function(screen, processed)
 	if processed or not mobile or hud.inOpening or hud.overlay.Visible or passage.active or not minerFocus.underground then return end
+	-- A tap on the Mine disc is for mining, not for picking out a block behind it.
+	if hud.touchActions:hit(screen) then return end
 	local camera = workspace.CurrentCamera
 	if not camera then return end
 	local ray = camera:ViewportPointToRay(screen.X, screen.Y)
@@ -698,10 +738,15 @@ RunService.RenderStepped:Connect(function(dt)
 		owned,
 		player:GetAttribute("HasteCuts"),
 		player:GetAttribute("StoneChips"),
-		Upgrades.items.Power.values[player:GetAttribute("Power") or 1]
+		Upgrades.items.Power.values[player:GetAttribute("Power") or 1],
+		{
+			row = Config.depthInBlocks(Config.FloorY - (target.Y - origin.Y)),
+			crowd = player:GetAttribute("NearMiner") == true,
+			streak = player:GetAttribute("OreStreak") or 0,
+		}
 	)
-	-- Pets, Fast Pick and Haste Tonic: the same speed the server uses.
-	duration /= 1 + require(shared.Bonuses).speed(require(shared.Bonuses).state(player))
+	-- Fast Pick and Haste Tonic: the same speed the server uses.
+	duration = require(shared.Bonuses).cut(require(shared.Bonuses).state(player), duration)
 	if rig and not rig.shoulder:IsDescendantOf(workspace) then
 		rig:destroy()
 		rig = nil
@@ -732,6 +777,31 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 end)
 
+-- A published game with any playtest switch on says so on screen, small, so it can't go out to
+-- players by mistake (GameConfig: AllFxForTesting, FreeUnconfiguredItems, AllowProgressReset).
+do
+	local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
+	local on = {}
+	if GameConfig.AllFxForTesting then table.insert(on, "every effect unlocked") end
+	if GameConfig.FreeUnconfiguredItems then table.insert(on, "Shop items free") end
+	if GameConfig.AllowProgressReset then table.insert(on, "progress reset on") end
+	if #on > 0 and not RunService:IsStudio() then
+		local note = W.text(hud.root, "PLAYTEST BUILD · " .. table.concat(on, " · "), 0, 0, 520, 16, 12, Color3.fromRGB(255, 220, 120))
+		note.Name, note.AnchorPoint, note.Position = "Playtest build", Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -2)
+		note.TextTransparency, note.ZIndex = 0.25, 2
+		W.outlineText(note, 1.2)
+	end
+end
+-- Only your own mining lamp casts shadows. The server sends every lamp without them, so a busy
+-- server doesn't ask a low-end device for a shadow-casting light per miner.
+local function ownLamp(character)
+	local root = character:WaitForChild("HumanoidRootPart", 30)
+	local mount = root and root:WaitForChild("Lamp mount", 30)
+	local lamp = mount and mount:WaitForChild("Mining lamp", 30)
+	if lamp then lamp.Shadows = true end
+end
+player.CharacterAdded:Connect(function(character) task.spawn(ownLamp, character) end)
+if player.Character then task.spawn(ownLamp, player.Character) end
 hud.root.Parent:SetAttribute("ControllerReady", true)
 local Opening = require(script.Starfall)
 local function playOpening()
@@ -752,6 +822,12 @@ task.spawn(function()
 		repeat task.wait(.1) until player:GetAttribute("ProfileReady") and net:GetAttribute("Ready")
 			and player.Character and player.Character:GetAttribute("MiningViewReady")
 		local character = player.Character
+		-- The film plays on a miner's first visit only. Settings can replay it any time.
+		if player:GetAttribute("IntroSeen") then
+			joinOpeningPending = false
+			Audio.startHarborMusic()
+			return
+		end
 		playOpening()
 		if player.Character == character and character:IsDescendantOf(workspace) then
 			joinOpeningPending = false

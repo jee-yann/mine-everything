@@ -26,7 +26,7 @@ Guide.achievements = {
 		goal = 2,
 		detail = "Mine Starfall twice across any number of shifts.",
 	},
-	{ id = "PetName", name = "Pet Rock, Proper Noun", goal = 1, detail = "Give your rock companion a new name." },
+	{ id = "FirstCrate", name = "Crack It Open", goal = 1, detail = "Open your first crate." },
 	{
 		id = "Branch",
 		name = "Branch Manager",
@@ -45,7 +45,8 @@ Guide.achievements = {
 -- for a real haul. Earlier "First <ore>" badges were retired with the 30-ore expansion.
 Guide.awardsById = {}
 -- Keep previously awarded, retired badges readable in existing saves.
-Guide.storedAwards = { Sandwich = true, Pressure = true, Penny = true, Traffic = true, Variety = true }
+-- Retired awards stay valid in old saves. PetName went with the pets.
+Guide.storedAwards = { Sandwich = true, Pressure = true, Penny = true, Traffic = true, Variety = true, PetName = true }
 for _, award in Guide.achievements do
 	Guide.awardsById[award.id] = award
 	if award.sequence then

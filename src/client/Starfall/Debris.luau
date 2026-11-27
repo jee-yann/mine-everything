@@ -14,7 +14,7 @@ function Debris.new(count, colors, seed, glow)
 		local lit = glow and i % 3 == 0
 		local part = S.part(model, "Chip", CF(), V(size, size * 0.62, size * 1.5),
 			if lit then glow else colors[(i - 1) % #colors + 1],
-			if lit then Enum.Material.Neon else Enum.Material.Slate, "WedgePart")
+			if lit then Enum.Material.Neon else Enum.Material.SmoothPlastic, "WedgePart")
 		local angle, spread = rng:NextNumber(0, math.pi * 2), rng:NextNumber(0.15, 1)
 		table.insert(chips, {
 			part = part,

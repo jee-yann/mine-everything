@@ -101,77 +101,17 @@ local function test()
 	do
 		local returning = not r:GetAttribute("CheckSwing") and p.UserId % 2 == 0
 		assert(p:GetAttribute("IntroSeen") == returning, "the join loaded the expected viewing history")
-		local opening = p.PlayerGui:WaitForChild("Mine origins", 6)
-		local top = opening:WaitForChild("Top matte", 2)
-		local bottom = opening:WaitForChild("Bottom matte", 2)
-		assert(top.Size == bottom.Size and top.Size.Y.Scale >= 0.04 and top.Size.Y.Scale <= 0.09)
-		assert(top.BackgroundColor3 == Color3.new() and bottom.AnchorPoint.Y == 1 and bottom.Position.Y.Scale == 1)
-		local titles = p.PlayerGui:WaitForChild("Mine subtitles", 2)
-		assert(opening and titles and titles.Skip and not gui.SafeArea.Visible, "automatic skippable film on join")
-		local camera = workspace.CurrentCamera
-		local stage = camera:WaitForChild("Mine origins set", 4)
-		local resonance = opening:WaitForChild("Star harmonics", 4)
-		local acousticRig = camera:WaitForChild("Cinematic sound sources", 4)
-		assert(stage and camera.CameraType == Enum.CameraType.Scriptable)
-		assert(
-			resonance.SoundGroup == song.SoundGroup
-				and resonance.SoundId == "rbxasset://sounds/volume_slider.ogg"
-		)
-		assert(not song.IsPlaying and resonance:FindFirstChildOfClass("ReverbSoundEffect"))
-		local effects = game.SoundService["Starfall effects"]
-		local gameplayEffects = game.SoundService["Harbor effects"]
-		assert(gameplayEffects.Volume == 0 and math.abs(effects.Volume - p:GetAttribute("SfxVolume") / 100) < 0.001,
-			"only film effects should be audible at the viewer's effects level")
-		assert(opening["Residual ringing"].SoundGroup == effects and opening.Eruption.SoundGroup == effects)
-		assert(acousticRig.outbound["Ablation flypast"].SoundGroup == effects)
-		assert(acousticRig.inbound["Shale through the air"].SoundGroup == effects)
-		assert(acousticRig.inbound["Debris at the lens"].SoundGroup == effects)
-		assert(acousticRig.left["Resonance in the crystal"].SoundGroup == effects)
-		assert(opening["Iron pick at the working mine"].SoundGroup == effects)
-		if r:GetAttribute("CheckSwing") then
-			local mix = song.SoundGroup.Volume
-			song.SoundGroup.Volume = 0
-			rep:SetAttribute("MuteTestMusic", false)
-			local harborStarts = 0
-			local trackStarts = song.Played:Connect(function() harborStarts += 1 end)
-			local firstCharacter = p.Character
-			r:FireServer("respawnOpening")
-			waitFor(function()
-				return not opening.Parent and not stage.Parent and not acousticRig.Parent and p.Character and p.Character ~= firstCharacter
-			end, 14, "respawn releases the interrupted film")
-			opening = p.PlayerGui:WaitForChild("Mine origins", 12)
-			titles = p.PlayerGui:WaitForChild("Mine subtitles", 3)
-			camera = workspace.CurrentCamera
-			stage = camera:WaitForChild("Mine origins set", 4)
-			assert(opening and opening:WaitForChild("Landfall", 4) and titles.Skip and not p:GetAttribute("IntroSeen"))
-			kit = waitFor(equippedKit, 8, "replacement miner equipment")
-			assert(harborStarts == 0 and not song.IsPlaying, "harbor music interrupted the replacement screening")
-			-- During a respawn the Scriptable camera can retain the retired Humanoid.
-			local retired = Instance.new("Model")
-			local subject = Instance.new("Humanoid")
-			retired.Parent, subject.Parent = workspace, retired
-			camera.CameraSubject = subject
-			retired.Parent = nil
-			assert(camera.CameraSubject == subject, "retired camera subject fixture")
-			local input = game.UserInputService:CreateVirtualInput()
-			input:SendKey(true, Enum.KeyCode.Return)
-			task.wait(0.08)
-			input:SendKey(false, Enum.KeyCode.Return)
-			waitFor(function()
-				return not opening.Parent
-			end, 2, "skip immediately")
-			assert(camera.CameraSubject == p.Character.Humanoid, "skip restored the playable avatar as camera subject")
-			retired:Destroy()
-			waitFor(function()
-				return song.IsPlaying and song.Volume > 0.06
-			end, 3, "music fades up after skip")
-			assert(harborStarts == 1 and song.SoundGroup.Volume == 0, "Skip handed music over exactly once")
-			trackStarts:Disconnect()
-			rep:SetAttribute("MuteTestMusic", true)
-			song:Stop()
-			song.SoundGroup.Volume = mix
-		elseif returning then
-			-- The returning miner skips while the first-time miner keeps watching.
+		if returning then
+			-- A returning miner goes straight into play: the film is for the first visit, and Settings replays it.
+			local opened = p.PlayerGui:FindFirstChild("Mine origins") ~= nil
+			local watch = p.PlayerGui.ChildAdded:Connect(function(child)
+				if child.Name == "Mine origins" then opened = true end
+			end)
+			task.wait(6)
+			watch:Disconnect()
+			assert(not opened and gui.SafeArea.Visible and workspace.CurrentCamera.CameraType == Enum.CameraType.Custom,
+				"a returning miner joins without the film")
+			-- The first-time miner beside them still watches theirs to the end.
 			local peer
 			waitFor(function()
 				for _, miner in game.Players:GetPlayers() do
@@ -179,171 +119,213 @@ local function test()
 				end
 				return peer and peer:GetAttribute("ProfileReady")
 			end, 20, "the other first-time miner joined")
-			local peerHead = waitFor(function()
-				local head = peer.Character and peer.Character:FindFirstChild("Head")
-				return head and head.LocalTransparencyModifier == 1 and head
-			end, 4, "the other miner is hidden from the first scene")
-			local badge = Instance.new("BillboardGui")
-			badge.Parent = peerHead
-			waitFor(function() return not badge.Enabled end, 2, "a late-streamed badge stays out of the film")
-			local input = game.UserInputService:CreateVirtualInput()
-			input:SendKey(true, Enum.KeyCode.Return)
-			task.wait(0.08)
-			input:SendKey(false, Enum.KeyCode.Return)
-			waitFor(function()
-				return not opening.Parent and not stage.Parent and p:GetAttribute("IntroSeen") and gui.SafeArea.Visible
-			end, 4, "one viewer can return to play independently")
-			assert(not peer:GetAttribute("IntroSeen"), "skipping marked the other miner as finished")
-			assert(peerHead.LocalTransparencyModifier < 1 and badge.Enabled, "Skip restores the other miner and their gear")
-			badge:Destroy()
-			local previousCharacter = p.Character
-			local reopened = false
-			local watch = p.PlayerGui.ChildAdded:Connect(function(child)
-				if child.Name == "Mine origins" then reopened = true end
-			end)
-			r:FireServer("respawnAfterOpening")
-			waitFor(function()
-				return p.Character and p.Character ~= previousCharacter and p.Character:GetAttribute("MiningViewReady")
-			end, 14, "completed viewer respawned with the gameplay camera ready")
-			kit = waitFor(equippedKit, 8, "replacement miner equipment")
-			task.wait(1)
-			watch:Disconnect()
-			assert(not reopened and gui.SafeArea.Visible and workspace.CurrentCamera.CameraType == Enum.CameraType.Custom,
-				"a normal respawn after Skip should stay in gameplay")
-			waitFor(function() return peer:GetAttribute("IntroSeen") end, 83, "the other miner finishes their film")
+			assert(not peer:GetAttribute("IntroSeen"), "the first-time miner is still watching")
+			kit = waitFor(equippedKit, 8, "miner equipment")
+			waitFor(function() return peer:GetAttribute("IntroSeen") end, 90, "the other miner finishes their film")
 		else
-			local spawnAt = p.Character.HumanoidRootPart.Position
-			local orchestraStarts, fallbackNotes = 0, 0
-			opening["Rising Hope underscore"].Played:Connect(function() orchestraStarts += 1 end)
-			for _, voice in opening:GetChildren() do
-				if voice.Name == "Expedition horns" or voice.Name == "Ostinato bass" then
-					voice.Played:Connect(function() fallbackNotes += 1 end)
+			local opening = p.PlayerGui:WaitForChild("Mine origins", 6)
+			local top = opening:WaitForChild("Top matte", 2)
+			local bottom = opening:WaitForChild("Bottom matte", 2)
+			assert(top.Size == bottom.Size and top.Size.Y.Scale >= 0.04 and top.Size.Y.Scale <= 0.09)
+			assert(top.BackgroundColor3 == Color3.new() and bottom.AnchorPoint.Y == 1 and bottom.Position.Y.Scale == 1)
+			local titles = p.PlayerGui:WaitForChild("Mine subtitles", 2)
+			assert(opening and titles and titles.Skip and not gui.SafeArea.Visible, "automatic skippable film on join")
+			local camera = workspace.CurrentCamera
+			local stage = camera:WaitForChild("Mine origins set", 4)
+			local resonance = opening:WaitForChild("Star harmonics", 4)
+			local acousticRig = camera:WaitForChild("Cinematic sound sources", 4)
+			assert(stage and camera.CameraType == Enum.CameraType.Scriptable)
+			assert(
+				resonance.SoundGroup == song.SoundGroup
+					and resonance.SoundId == "rbxasset://sounds/volume_slider.ogg"
+			)
+			assert(not song.IsPlaying and resonance:FindFirstChildOfClass("ReverbSoundEffect"))
+			local effects = game.SoundService["Starfall effects"]
+			local gameplayEffects = game.SoundService["Harbor effects"]
+			assert(gameplayEffects.Volume == 0 and math.abs(effects.Volume - p:GetAttribute("SfxVolume") / 100) < 0.001,
+				"only film effects should be audible at the viewer's effects level")
+			assert(opening["Residual ringing"].SoundGroup == effects and opening.Eruption.SoundGroup == effects)
+			assert(acousticRig.outbound["Ablation flypast"].SoundGroup == effects)
+			assert(acousticRig.inbound["Shale through the air"].SoundGroup == effects)
+			assert(acousticRig.inbound["Debris at the lens"].SoundGroup == effects)
+			assert(acousticRig.left["Resonance in the crystal"].SoundGroup == effects)
+			assert(opening["Iron pick at the working mine"].SoundGroup == effects)
+			if r:GetAttribute("CheckSwing") then
+				local mix = song.SoundGroup.Volume
+				song.SoundGroup.Volume = 0
+				rep:SetAttribute("MuteTestMusic", false)
+				local harborStarts = 0
+				local trackStarts = song.Played:Connect(function() harborStarts += 1 end)
+				local firstCharacter = p.Character
+				r:FireServer("respawnOpening")
+				waitFor(function()
+					return not opening.Parent and not stage.Parent and not acousticRig.Parent and p.Character and p.Character ~= firstCharacter
+				end, 14, "respawn releases the interrupted film")
+				opening = p.PlayerGui:WaitForChild("Mine origins", 12)
+				titles = p.PlayerGui:WaitForChild("Mine subtitles", 3)
+				camera = workspace.CurrentCamera
+				stage = camera:WaitForChild("Mine origins set", 4)
+				assert(opening and opening:WaitForChild("Landfall", 4) and titles.Skip and not p:GetAttribute("IntroSeen"))
+				kit = waitFor(equippedKit, 8, "replacement miner equipment")
+				assert(harborStarts == 0 and not song.IsPlaying, "harbor music interrupted the replacement screening")
+				-- During a respawn the Scriptable camera can retain the retired Humanoid.
+				local retired = Instance.new("Model")
+				local subject = Instance.new("Humanoid")
+				retired.Parent, subject.Parent = workspace, retired
+				camera.CameraSubject = subject
+				retired.Parent = nil
+				assert(camera.CameraSubject == subject, "retired camera subject fixture")
+				local input = game.UserInputService:CreateVirtualInput()
+				input:SendKey(true, Enum.KeyCode.Return)
+				task.wait(0.08)
+				input:SendKey(false, Enum.KeyCode.Return)
+				waitFor(function()
+					return not opening.Parent
+				end, 2, "skip immediately")
+				assert(camera.CameraSubject == p.Character.Humanoid, "skip restored the playable avatar as camera subject")
+				retired:Destroy()
+				waitFor(function()
+					return song.IsPlaying and song.Volume > 0.06
+				end, 3, "music fades up after skip")
+				assert(harborStarts == 1 and song.SoundGroup.Volume == 0, "Skip handed music over exactly once")
+				trackStarts:Disconnect()
+				rep:SetAttribute("MuteTestMusic", true)
+				song:Stop()
+				song.SoundGroup.Volume = mix
+			else
+				local spawnAt = p.Character.HumanoidRootPart.Position
+				local orchestraStarts, fallbackNotes = 0, 0
+				opening["Rising Hope underscore"].Played:Connect(function() orchestraStarts += 1 end)
+				for _, voice in opening:GetChildren() do
+					if voice.Name == "Expedition horns" or voice.Name == "Ostinato bass" then
+						voice.Played:Connect(function() fallbackNotes += 1 end)
+					end
 				end
-			end
-			local landed, eruption, breaker, fire, rock, collapse, bow, debris
-			local seamHeard, modernPick
-			acousticRig.left["Resonance in the crystal"].Played:Once(function() seamHeard = os.clock() end)
-			opening["Iron pick at the working mine"].Played:Once(function() modernPick = os.clock() end)
-			opening.Landfall.Played:Once(function() landed = os.clock() end)
-			opening["Collapsing crater wall"].Played:Once(function() collapse = os.clock() end)
-			opening.Eruption.Played:Once(function() eruption = os.clock() end)
-			acousticRig.inbound["Shockwave arrival"].Played:Once(function() breaker = os.clock() end)
-			acousticRig.inbound["Shockwave bow"].Played:Once(function() bow = os.clock() end)
-			acousticRig.inbound["Debris at the lens"].Played:Once(function() debris = os.clock() end)
-			acousticRig.right["Fire in the fissure"].Played:Once(function() fire = os.clock() end)
-			acousticRig.left["Slumping basalt"].Played:Once(function() rock = os.clock() end)
-			waitFor(function()
-				return opening["Atmospheric entry"].IsPlaying or landed or eruption or breaker
-			end, 30, "the film clock starts after native scene construction")
-			waitFor(function() return landed end, 13, "Landfall attack on frame 240")
-			waitFor(function() return eruption end, 2, "Eruption attack on frame 243")
-			waitFor(function() return collapse end, 2, "crater wall collapses after ignition")
-			waitFor(function() return breaker end, 5, "shockwave arrives on frame 324")
-			waitFor(function() return bow end, 1, "directional bow plays with the shockwave")
-			assert(collapse >= landed and collapse - landed < 0.45 and opening["Collapsing crater wall"].IsPlaying, "crumbling rock carries the blast to the coast")
-			assert(eruption - landed > 0.045 and eruption - landed < 0.23, "ignition follows contact by three film frames")
-			waitFor(function() return debris end, 1, "debris lands after the passing wave")
-			assert(math.abs(debris - bow - 3 / 24) < 0.13 and math.abs(bow - breaker - 0.14) < 0.14,
-				"the quieter debris report follows the wave edge")
-			assert(bow - landed > 3.2 and bow - landed < 3.8, "the front reaches the fixed lens 84 film frames after impact")
-			waitFor(function() return fire and rock end, 7, "fire and settling debris sustain the burned basin")
-			assert(rock > breaker and fire > breaker, "the close aftermath follows the pressure wave")
-			waitFor(function()
-				return titles.Caption.Text:find("the star took root", 1, true)
-			end, 10, "the crane finds the star")
-			waitFor(function()
-				return titles.Caption.Text == "Millions of years later"
-			end, 7, "the island today")
-			waitFor(function() return stage:FindFirstChild("Cinematic miner") end, 16, "the dressed performer")
-			local actor
-			waitFor(function()
-				for _, model in stage:GetChildren() do
-					if model.Name == "Cinematic miner" and model:FindFirstChild("Harbor pick") then actor = model end
+				local landed, eruption, breaker, fire, rock, collapse, bow, debris
+				local seamHeard, modernPick
+				acousticRig.left["Resonance in the crystal"].Played:Once(function() seamHeard = os.clock() end)
+				opening["Iron pick at the working mine"].Played:Once(function() modernPick = os.clock() end)
+				opening.Landfall.Played:Once(function() landed = os.clock() end)
+				opening["Collapsing crater wall"].Played:Once(function() collapse = os.clock() end)
+				opening.Eruption.Played:Once(function() eruption = os.clock() end)
+				acousticRig.inbound["Shockwave arrival"].Played:Once(function() breaker = os.clock() end)
+				acousticRig.inbound["Shockwave bow"].Played:Once(function() bow = os.clock() end)
+				acousticRig.inbound["Debris at the lens"].Played:Once(function() debris = os.clock() end)
+				acousticRig.right["Fire in the fissure"].Played:Once(function() fire = os.clock() end)
+				acousticRig.left["Slumping basalt"].Played:Once(function() rock = os.clock() end)
+				waitFor(function()
+					return opening["Atmospheric entry"].IsPlaying or landed or eruption or breaker
+				end, 30, "the film clock starts after native scene construction")
+				waitFor(function() return landed end, 13, "Landfall attack on frame 240")
+				waitFor(function() return eruption end, 2, "Eruption attack on frame 243")
+				waitFor(function() return collapse end, 2, "crater wall collapses after ignition")
+				waitFor(function() return breaker end, 5, "shockwave arrives on frame 324")
+				waitFor(function() return bow end, 1, "directional bow plays with the shockwave")
+				assert(collapse >= landed and collapse - landed < 0.45 and opening["Collapsing crater wall"].IsPlaying, "crumbling rock carries the blast to the coast")
+				assert(eruption - landed > 0.045 and eruption - landed < 0.23, "ignition follows contact by three film frames")
+				waitFor(function() return debris end, 1, "debris lands after the passing wave")
+				assert(math.abs(debris - bow - 3 / 24) < 0.13 and math.abs(bow - breaker - 0.14) < 0.14,
+					"the quieter debris report follows the wave edge")
+				assert(bow - landed > 3.2 and bow - landed < 3.8, "the front reaches the fixed lens 84 film frames after impact")
+				waitFor(function() return fire and rock end, 7, "fire and settling debris sustain the burned basin")
+				assert(rock > breaker and fire > breaker, "the close aftermath follows the pressure wave")
+				waitFor(function()
+					return titles.Caption.Text:find("the star took root", 1, true)
+				end, 10, "the crane finds the star")
+				waitFor(function()
+					return titles.Caption.Text == "Millions of years later"
+				end, 7, "the island today")
+				waitFor(function() return stage:FindFirstChild("Cinematic miner") end, 16, "the dressed performer")
+				local actor
+				waitFor(function()
+					for _, model in stage:GetChildren() do
+						if model.Name == "Cinematic miner" and model:FindFirstChild("Harbor pick") then actor = model end
+					end
+					return actor
+				end, 22, "the player walks in with their own pick")
+				assert(actor.Head.Anchored and p.Character.Head.Transparency == 1)
+				assert(not actor:FindFirstChildWhichIsA("Animator", true), "gameplay animation entered the shot")
+				for _, body in actor:GetDescendants() do
+					if body:IsA("BasePart") then assert(not body.CanCollide, "the performance rig can push the real miner") end
 				end
-				return actor
-			end, 22, "the player walks in with their own pick")
-			assert(actor.Head.Anchored and p.Character.Head.Transparency == 1)
-			assert(not actor:FindFirstChildWhichIsA("Animator", true), "gameplay animation entered the shot")
-			for _, body in actor:GetDescendants() do
-				if body:IsA("BasePart") then assert(not body.CanCollide, "the performance rig can push the real miner") end
-			end
-			local strike = titles:WaitForChild("Strike sample", 2)
-			waitFor(function() return strike.Visible end, 16, "strike control opens")
-			local struck
-			opening["Body of the break"].Played:Connect(function() struck = struck or os.clock() end)
-			struck = nil
-			local prompt = titles["Strike prompt"]
-			local cap, breaks, clicks, jumped = prompt["Strike face"], 0, 0, false
-			opening["Body of the break"].Played:Connect(function() breaks += 1 end)
-			opening["Letterpress snap"].Played:Connect(function() clicks += 1 end)
-			local human = p.Character.Humanoid
-			local leaping = human.StateChanged:Connect(function(_, state)
-				jumped = jumped or state == Enum.HumanoidStateType.Jumping
-			end)
-			-- The cap is clearly ready before it is taken.
-			task.wait(0.6)
-			assert(strike.Interactable and cap.BackgroundTransparency < 0.05)
-			local restY = cap.Position.Y.Offset
-			local tappedAt = os.clock()
-			local input = game.UserInputService:CreateVirtualInput()
-			input:SendKey(true, Enum.KeyCode.Space)
-			waitFor(function() return prompt.Visible and not strike.Interactable end, 0.2, "control shows the accepted press")
-			local answered = os.clock() - tappedAt
-			assert(answered < 0.1, "input lag " .. answered)
-			waitFor(function() return cap.Position.Y.Offset > restY + 3 end, 0.15, "the cap goes down with the key")
-			-- Holding it, and then mashing it, adds nothing.
-			task.wait(0.25)
-			input:SendKey(false, Enum.KeyCode.Space)
-			for _ = 1, 8 do
+				local strike = titles:WaitForChild("Strike sample", 2)
+				waitFor(function() return strike.Visible end, 16, "strike control opens")
+				local struck
+				opening["Body of the break"].Played:Connect(function() struck = struck or os.clock() end)
+				struck = nil
+				local prompt = titles["Strike prompt"]
+				local cap, breaks, clicks, jumped = prompt["Strike face"], 0, 0, false
+				opening["Body of the break"].Played:Connect(function() breaks += 1 end)
+				opening["Letterpress snap"].Played:Connect(function() clicks += 1 end)
+				local human = p.Character.Humanoid
+				local leaping = human.StateChanged:Connect(function(_, state)
+					jumped = jumped or state == Enum.HumanoidStateType.Jumping
+				end)
+				-- The cap is clearly ready before it is taken.
+				task.wait(0.6)
+				assert(strike.Interactable and cap.BackgroundTransparency < 0.05)
+				local restY = cap.Position.Y.Offset
+				local tappedAt = os.clock()
+				local input = game.UserInputService:CreateVirtualInput()
 				input:SendKey(true, Enum.KeyCode.Space)
-				task.wait(0.03)
+				waitFor(function() return prompt.Visible and not strike.Interactable end, 0.2, "control shows the accepted press")
+				local answered = os.clock() - tappedAt
+				assert(answered < 0.1, "input lag " .. answered)
+				waitFor(function() return cap.Position.Y.Offset > restY + 3 end, 0.15, "the cap goes down with the key")
+				-- Holding it, and then mashing it, adds nothing.
+				task.wait(0.25)
 				input:SendKey(false, Enum.KeyCode.Space)
-				task.wait(0.03)
-			end
-			waitFor(function() return struck end, 1.9, "input causes the break")
-			assert(struck - tappedAt < 1.35, "the swing waited for the automatic beat")
-			assert(not prompt.Visible and not strike.Visible, "the prompt outlived the press")
-			local card = titles:WaitForChild("Player introduction", 2)
-			waitFor(function() return card.Visible end, 5, "the introduction")
-			assert(breaks == 1 and clicks == 1, "one press, one break: " .. breaks .. " " .. clicks)
-			leaping:Disconnect()
-			assert(not jumped, "the strike also jumped")
-			waitFor(function() return card.Visible and stage:FindFirstChild("Glass stage") end, 5, "the glass reveal")
-			local named = false
-			for _, label in card:GetDescendants() do
-				named = named or (label:IsA("TextLabel") and label.Text == p.DisplayName)
-			end
-			assert(named, "the reveal carries the player's own name")
-			waitFor(function() return titles["Closing line"].Visible end, 8, "the goal")
-			assert((orchestraStarts == 1 and fallbackNotes == 0) or (orchestraStarts == 0 and fallbackNotes > 0),
-				"the screening keeps one score")
-			local sheet = require(p.PlayerScripts.Client.Starfall.ExposureSheet)
-			local ironAfterLandfall = (sheet.frames.firstHit - sheet.frames.contact) / sheet.fps
-			assert(seamHeard and modernPick and seamHeard < modernPick
-				and math.abs(modernPick - landed - ironAfterLandfall) < 0.24,
-				string.format("first blow: resonance %s, iron %s, expected %.3fs after impact",
-					tostring(seamHeard and seamHeard - landed), tostring(modernPick and modernPick - landed), ironAfterLandfall))
-			for _, miner in game.Players:GetPlayers() do
-				if miner ~= p then
-					local head = miner.Character and miner.Character:FindFirstChild("Head")
-					assert(head and head.LocalTransparencyModifier == 1, "a respawned miner is still hidden at the live mine")
+				for _ = 1, 8 do
+					input:SendKey(true, Enum.KeyCode.Space)
+					task.wait(0.03)
+					input:SendKey(false, Enum.KeyCode.Space)
+					task.wait(0.03)
 				end
+				waitFor(function() return struck end, 1.9, "input causes the break")
+				assert(struck - tappedAt < 1.35, "the swing waited for the automatic beat")
+				assert(not prompt.Visible and not strike.Visible, "the prompt outlived the press")
+				local card = titles:WaitForChild("Player introduction", 2)
+				waitFor(function() return card.Visible end, 5, "the introduction")
+				assert(breaks == 1 and clicks == 1, "one press, one break: " .. breaks .. " " .. clicks)
+				leaping:Disconnect()
+				assert(not jumped, "the strike also jumped")
+				waitFor(function() return card.Visible and stage:FindFirstChild("Glass stage") end, 5, "the glass reveal")
+				local named = false
+				for _, label in card:GetDescendants() do
+					named = named or (label:IsA("TextLabel") and label.Text == p.DisplayName)
+				end
+				assert(named, "the reveal carries the player's own name")
+				waitFor(function() return titles["Closing line"].Visible end, 8, "the goal")
+				assert((orchestraStarts == 1 and fallbackNotes == 0) or (orchestraStarts == 0 and fallbackNotes > 0),
+					"the screening keeps one score")
+				local sheet = require(p.PlayerScripts.Client.Starfall.ExposureSheet)
+				local ironAfterLandfall = (sheet.frames.firstHit - sheet.frames.contact) / sheet.fps
+				assert(seamHeard and modernPick and seamHeard < modernPick
+					and math.abs(modernPick - landed - ironAfterLandfall) < 0.24,
+					string.format("first blow: resonance %s, iron %s, expected %.3fs after impact",
+						tostring(seamHeard and seamHeard - landed), tostring(modernPick and modernPick - landed), ironAfterLandfall))
+				for _, miner in game.Players:GetPlayers() do
+					if miner ~= p then
+						local head = miner.Character and miner.Character:FindFirstChild("Head")
+						assert(head and head.LocalTransparencyModifier == 1, "a respawned miner is still hidden at the live mine")
+					end
+				end
+				assert((p.Character.HumanoidRootPart.Position - spawnAt).Magnitude < 8, "the private film moved the miner")
+				assert((spawnAt - n:GetAttribute("Landing")).Magnitude < 22)
 			end
-			assert((p.Character.HumanoidRootPart.Position - spawnAt).Magnitude < 8, "the private film moved the miner")
-			assert((spawnAt - n:GetAttribute("Landing")).Magnitude < 22)
+			waitFor(function()
+				return not opening.Parent
+					and not stage.Parent
+					and not titles.Parent
+					and p:GetAttribute("IntroSeen")
+					and gui.SafeArea.Visible
+					and workspace.CurrentCamera.CameraType ~= Enum.CameraType.Scriptable
+					and not camera:FindFirstChild("Specimen focus")
+					and not camera:FindFirstChild("Light through ash")
+					and not camera:FindFirstChild("Cinematic sound sources")
+			end, 16, "opening returns camera and HUD")
+			waitFor(function() return math.abs(gameplayEffects.Volume - effects.Volume) < 0.001 end, 2, "gameplay sound restored after film")
 		end
-		waitFor(function()
-			return not opening.Parent
-				and not stage.Parent
-				and not titles.Parent
-				and p:GetAttribute("IntroSeen")
-				and gui.SafeArea.Visible
-				and workspace.CurrentCamera.CameraType ~= Enum.CameraType.Scriptable
-				and not camera:FindFirstChild("Specimen focus")
-				and not camera:FindFirstChild("Light through ash")
-				and not camera:FindFirstChild("Cinematic sound sources")
-		end, 16, "opening returns camera and HUD")
-		waitFor(function() return math.abs(gameplayEffects.Volume - effects.Volume) < 0.001 end, 2, "gameplay sound restored after film")
 	end
 	do
 		local marker = workspace.Terrain:WaitForChild("First expedition waypoint", 4)
@@ -536,14 +518,28 @@ local function test()
 		waitFor(function()
 			return safe.AbsoluteSize == size and safe["Edge shortcuts"].Visible
 		end, 3, "compact HUD")
-		assert(not safe.Haul.Visible and not safe["Current job"].Visible and not safe["Menu buttons"].Visible and not safe["Reward buttons"].Visible)
+		-- Touch screens keep the side buttons as compact rails (no Menu button); small keyboard
+		-- windows fold them into Menu.
+		local rails = game.UserInputService.TouchEnabled
+		-- The haul card stays on touch screens (in place of the Pack shortcut); the job card never shows.
+		assert(safe.Haul.Visible == rails and not safe["Current job"].Visible, "compact HUD cards")
+		assert(safe["Edge shortcuts"].Pack.Visible ~= rails, "Pack only without the haul card")
+		assert(safe["Menu buttons"].Visible == rails and safe["Reward buttons"].Visible == rails, "side buttons on touch only")
 		local pack = safe["Edge shortcuts"].Pack
 		local menuButton = safe["Edge shortcuts"].Menu
-		assert(pack.AbsoluteSize.Y >= 44 and menuButton.AbsoluteSize.Y >= 44, "edge tap targets")
-		local right = menuButton.AbsolutePosition.X + menuButton.AbsoluteSize.X
+		assert(menuButton.Visible ~= rails, "Menu replaces the rails on small keyboard windows")
 		local equipment = controls.Equipment
-		assert(math.abs(equipment.AbsolutePosition.X + equipment.AbsoluteSize.X - right) <= 1, "stats align with Menu")
-		assert(ring.AbsolutePosition.Y >= equipment.AbsolutePosition.Y + equipment.AbsoluteSize.Y, "separate level row")
+		if not rails then
+			assert(pack.AbsoluteSize.Y >= 44 and menuButton.AbsoluteSize.Y >= 44, "edge tap targets")
+			local right = menuButton.AbsolutePosition.X + menuButton.AbsoluteSize.X
+			assert(math.abs(equipment.AbsolutePosition.X + equipment.AbsoluteSize.X - right) <= 1, "stats align with Menu")
+		end
+		if rails then
+			-- Phones: Power, Speed, Bag and the level ring share one row.
+			assert(math.abs(ring.AbsolutePosition.Y - equipment.AbsolutePosition.Y) <= 2, "level in the stats row")
+		else
+			assert(ring.AbsolutePosition.Y >= equipment.AbsolutePosition.Y + equipment.AbsoluteSize.Y, "separate level row")
+		end
 		waitFor(function()
 			local a, b = wallet.AbsolutePosition, safe.Location.AbsolutePosition
 			local aEnd, bEnd = a + wallet.AbsoluteSize, b + safe.Location.AbsoluteSize
@@ -567,8 +563,6 @@ local function test()
 			"Settings",
 			"Inventory",
 			"Titles",
-			"Pets",
-			"Forge",
 			"Skills",
 			"Achievements",
 			"Gear",
@@ -590,11 +584,9 @@ local function test()
 		local listing = ({
 			Menu = "Miners",
 			Settings = "Music volume",
-			Pets = "Rock",
-			Forge = "GoldTonic",
 			Shop = "Starter Pack",
-			ShopGeodes = "Crystal Crate",
-			Titles = "Prismatic Excavator",
+			ShopGeodes = "Starfall Crate",
+			Titles = "Starfall Seeker",
 			ShopPasses = "Double Gold",
 			Achievements = "Once Is Luck, Twice Is Skill",
 			Gear = "Speed",
@@ -608,14 +600,15 @@ local function test()
 				return map and map.Visible and not menu.Visible
 			end
 			-- The Shop, the Inventory and Pets are wide cards with a page per tab.
-			local cardName = if page:match("^Shop") then "Shop" elseif page == "Pets" then "Pets"
-				elseif page == "Inventory" or page == "Titles" or page == "Forge" then "Inventory" else nil
+			local cardName = if page:match("^Shop") then "Shop"
+				elseif page == "Inventory" or page == "Titles" then "Inventory" else nil
 			if cardName then
 				local wideCard = overlay:FindFirstChild(cardName)
-				local tab = ({ Shop = "Featured", ShopGeodes = "Crates", ShopPasses = "Passes", Pets = "Pets", Forge = "Forge",
-					Inventory = "Items", Titles = "Titles" })[page]
-				local body = wideCard and wideCard.Visible and wideCard.Body:FindFirstChild(tab)
-				return body and body.Visible and (listing == nil or body:FindFirstChild(listing, true) ~= nil) and not menu.Visible
+				if not (wideCard and wideCard.Visible) or menu.Visible then return false end
+				-- The Shop is one scrolling page; the Inventory has a page per tab.
+				if cardName == "Shop" then return wideCard.Body:FindFirstChild(listing, true) ~= nil end
+				local body = wideCard.Body:FindFirstChild(if page == "Titles" then "Titles" else "Items")
+				return body and body.Visible and (listing == nil or body:FindFirstChild(listing, true) ~= nil)
 			end
 			if page == "Book" or page == "Daily" or page == "Playtime" then
 				local card = overlay:FindFirstChild(if page == "Book" then "Ore index" else "Rewards")
@@ -629,8 +622,8 @@ local function test()
 			return overlay.Visible and menu.Listings:FindFirstChild(listing)
 		end, 5, "open " .. page)
 		local wide = if page == "Book" then overlay["Ore index"] elseif page == "Daily" or page == "Playtime" then overlay.Rewards
-			elseif page:match("^Shop") then overlay.Shop elseif page == "Pets" then overlay.Pets
-			elseif page == "Inventory" or page == "Titles" or page == "Forge" then overlay.Inventory else nil
+			elseif page:match("^Shop") then overlay.Shop
+			elseif page == "Inventory" or page == "Titles" then overlay.Inventory else nil
 		local close = if page == "Skills" then overlay["Skill map"]["Map header"].Close else (wide or menu).Marquee.Close
 		assert(close.Visible and close.Modal, page .. " must release the first-person pointer")
 		if page == "Gear" and r:GetAttribute("CheckSwing") then
@@ -638,13 +631,19 @@ local function test()
 				local row = menu.Listings[key]
 				waitFor(function()
 					return row.Requirements.ContentText == "0 / " .. price .. " G" and row.Requirements.TextFits
-						and row.Action.Text == "Need " .. price .. " G" and not row.Action.Interactable
+						and row.Action.Text == "Need " .. price .. " G" and row.Action.Interactable
 				end, 2, "gold cost of " .. key .. " for a new miner")
 			end
 			local benefit = menu.Listings.Power.Benefit
 			assert(benefit.Text:sub(1, 12) == "Mines Copper" and benefit.TextFits, benefit.Text)
 			assert(benefit.AbsolutePosition.X + benefit.AbsoluteSize.X <= menu.Listings.Power.Action.AbsolutePosition.X)
 			assert(menu.Marquee.Purse.Visible, "the workshop shows what the miner can spend")
+			-- Speed says how much faster the next level is; the Backpack, how many slots it adds.
+			local speedText, packText = menu.Listings.Speed.Benefit, menu.Listings.Capacity.Benefit
+			assert(speedText.ContentText:find("0.90→", 1, true) and speedText.ContentText:find("s Starfall", 1, true)
+				and speedText.ContentText:find("%", 1, true) and speedText.TextFits, speedText.ContentText)
+			assert(packText.ContentText:find("8 → 16 blocks", 1, true) and packText.ContentText:find("+8", 1, true)
+				and packText.TextFits, packText.ContentText)
 		end
 		if page == "Daily" then
 			assert(wide.Body.Daily["Day 1"].Claim.Interactable and not wide.Body.Daily["Day 2"].Claim.Interactable, "day 1 is ready")
@@ -657,28 +656,14 @@ local function test()
 		if page == "ShopGeodes" then
 			-- Odds come before buying: every geode has its odds button.
 			assert(not overlay.Shop["Odds sheet"].Visible)
-			local stone = overlay.Shop.Body.Crates:FindFirstChild("Stone Crate")
-			assert(stone and stone:FindFirstChild("Odds"), "each crate has an odds button")
+			local crate = overlay.Shop.Body:FindFirstChild("Starfall Crate", true)
+			assert(crate and crate:FindFirstChild("Odds") and crate:FindFirstChild("Rarity mix"), "the crate shows its odds and rarity mix")
 		end
 		if page == "Achievements" then
 			assert(not menu["Inventory tabs"].Visible)
 			assert(menu.Listings:FindFirstChild("Practicing My Scales"))
 		end
-		if page == "Pets" then
-			n.Action:FireServer("EquipPet", "Rock", true)
-			waitFor(function()
-				return workspace["Pet followers"]:FindFirstChild("Pocket Rock")
-			end, 4, "equipped follower")
-			n.Action:FireServer("PetName", "Flint")
-			waitFor(function()
-				return p:GetAttribute("PetName") == "Flint"
-			end, 3, "renamed rock")
-			task.wait(0.25)
-			n.Action:FireServer("EquipPet", "Rock", false)
-			waitFor(function()
-				return p:GetAttribute("Pet") == "" and not workspace["Pet followers"]:FindFirstChild("Pocket Rock")
-			end, 4, "put the rock away")
-		elseif page == "Inventory" then
+		if page == "Inventory" then
 			n.Action:FireServer("Title", 6)
 			task.wait(0.2)
 			assert(p:GetAttribute("EquippedTitle") == 1)
@@ -693,9 +678,10 @@ local function test()
 		local shown = wide or menu
 		local left, top = shown.AbsolutePosition.X, shown.AbsolutePosition.Y
 		local safe = gui.SafeArea
-		assert(left >= safe.AbsolutePosition.X - 1 and top >= safe.AbsolutePosition.Y - 1, "menu origin")
+		local raise = 0
+		assert(left >= safe.AbsolutePosition.X - 1 and top >= safe.AbsolutePosition.Y - raise - 1, "menu origin")
 		assert(
-			shown.AbsoluteSize.X <= safe.AbsoluteSize.X + 1 and shown.AbsoluteSize.Y <= safe.AbsoluteSize.Y + 1,
+			shown.AbsoluteSize.X <= safe.AbsoluteSize.X + 1 and shown.AbsoluteSize.Y <= safe.AbsoluteSize.Y + raise + 1,
 			"menu bounds"
 		)
 	end
@@ -780,8 +766,8 @@ local function test()
 			game:GetService("RunService").Heartbeat:Wait()
 			assert(not overlay.Visible, "O is reserved for the camera")
 			for _, slot in {
-				{ "Inventory", Enum.KeyCode.B }, { "Skills", Enum.KeyCode.K }, { "Achievements", Enum.KeyCode.H },
-				{ "Book", Enum.KeyCode.J }, { "Settings", Enum.KeyCode.P },
+				{ "Inventory", Enum.KeyCode.B }, { "Skills", Enum.KeyCode.Q }, { "Achievements", Enum.KeyCode.H },
+				{ "Book", Enum.KeyCode.C }, { "Settings", Enum.KeyCode.P },
 			} do
 				local page, code = slot[1], slot[2]
 				tapKey(code)
@@ -800,24 +786,6 @@ local function test()
 			end
 			tapKey(Enum.KeyCode.P)
 			waitFor(function() return not overlay.Visible end, 2, "toggle Settings closed")
-			-- The pet name box shows for the lead pet; typing in it doesn't trigger hotkeys.
-			n.Action:FireServer("EquipPet", "Rock", true)
-			waitFor(function() return p:GetAttribute("Pet") == "Rock" end, 3, "lead pet")
-			r:FireServer("openPage", "Pets")
-			local pets = overlay:WaitForChild("Pets")
-			waitFor(function() return overlay.Visible and pets.Visible and pets.Body.Pets.Detail["Pet name"].Visible end, 3, "pets card")
-			local name = pets.Body.Pets.Detail["Pet name"]
-			name:CaptureFocus()
-			waitFor(function() return name:IsFocused() end, 2, "typing pet name")
-			tapKey(Enum.KeyCode.T)
-			task.wait(0.2)
-			assert(overlay.Visible and name:IsFocused() and pets.Visible, "T while typing")
-			name:ReleaseFocus()
-			waitFor(function() return not game.UserInputService:GetFocusedTextBox() end, 2, "pet name focus released")
-			game:GetService("RunService").Heartbeat:Wait()
-			tapKey(Enum.KeyCode.T)
-			waitFor(function() return not overlay.Visible end, 2, "T closes Pets")
-			n.Action:FireServer("EquipPet", "Rock", false)
 		end
 		tapKey(Enum.KeyCode.P)
 		waitFor(function()
@@ -1018,7 +986,7 @@ local function test()
 				end
 				assert(material, "visible block to drill in the starter shafts")
 				n.Swing:FireServer(true, at, Vector3.yAxis)
-				task.wait(ores.cutTime(0.8, material) + 0.18)
+				task.wait(ores.cutTime(require(game.ReplicatedStorage.Shared.Upgrades).items.Speed.values[1], material) + 0.18)
 				n.Mine:FireServer(at, Vector3.yAxis, 1, 1)
 				waitFor(function()
 					return p:GetAttribute("Used") == used + 1
@@ -1239,7 +1207,7 @@ local function test()
 		assert(hit and hit.Instance.Position == at and hit.Instance.Name == "Stone", "underground workface")
 		local target = hit.Instance
 		n.Swing:FireServer(true, at, Vector3.zAxis)
-		task.wait(ores.cutTime(0.8, ores.byName[target.Name]) + 0.15)
+		task.wait(ores.cutTime(require(game.ReplicatedStorage.Shared.Upgrades).items.Speed.values[1], ores.byName[target.Name]) + 0.15)
 		n.Mine:FireServer(at, Vector3.zAxis, 1, 1)
 		waitFor(function()
 			return not target.Parent
@@ -1277,7 +1245,7 @@ local function test()
 			waitFor(function()
 				return p:GetAttribute("HeldDirt") == 2 and p:GetAttribute("Gold") == gold + 2 and row["Sell quantity"].Text == "Sell 1 Dirt\n+1 gold"
 			end, 3, "sell two and reset quantity")
-			assert(menu.Status["Sell all"].Text == string.format("Sell entire pack\n%d blocks · +%d G", p:GetAttribute("Used"), worth - 2))
+			assert(menu.Status["Sell all"].ContentText == string.format("Sell all  +%d G", worth - 2))
 			task.wait(0.25)
 			clickButton(menu.Status["Sell all"])
 			waitFor(function()
@@ -1362,7 +1330,7 @@ local function test()
 			return
 		end
 		n.Swing:FireServer(true, best, side)
-		task.wait(ores.cutTime(0.8, material) + 0.05)
+		task.wait(ores.cutTime(require(game.ReplicatedStorage.Shared.Upgrades).items.Speed.values[1], material) + 0.05)
 		n.Mine:FireServer(best, side, count, 2 ^ count - 1)
 		n.Swing:FireServer(false)
 	end
@@ -1469,7 +1437,7 @@ local function test()
 			local gear = menu.Listings:FindFirstChild(key)
 			local affordable = saleGold >= price
 			return gear and gear.Requirements.ContentText == (if affordable then price .. " G" else saleGold .. " / " .. price .. " G")
-				and gear.Action.Interactable == affordable
+				and gear.Action.Interactable and (if affordable then gear.Action.Text == "Upgrade" else gear.Action.Text:sub(1, 5) == "Need ")
 		end, 3, "correct cost of " .. key .. " after selling")
 	end
 	do
@@ -1489,20 +1457,6 @@ local function test()
 	assert(p:GetAttribute("Used") == 0)
 	assert(kit["Field pack"].Size.Magnitude > packSize.Magnitude, "pack grew after capacity upgrade")
 	assert(p:GetAttribute("ExpeditionStep") == "Return", "any workshop upgrade counts")
-	-- The first upgrade earns the Welcome Geode, which opens by itself and always holds the Comet Trail.
-	local reveal = p.PlayerGui:WaitForChild("GeodeReveal")
-	waitFor(function()
-		return reveal.Enabled and reveal.Stage.Reward.Visible and reveal.Stage.Reward.Name ~= nil
-			and reveal.Stage.Caption.Text == "WELCOME CRATE"
-	end, 8, "welcome geode opens")
-	local shown = false
-	for _, label in reveal.Stage.Reward:GetDescendants() do
-		if label:IsA("TextLabel") and label.Text == "Comet Trail" then shown = true end
-	end
-	assert(shown, "the Welcome Geode holds the Comet Trail")
-	n.Action:FireServer("Wear", "trail", "Comet")
-	waitFor(function() return p:GetAttribute("Trail") == "Comet" end, 3, "wear the Comet Trail")
-	reveal.Enabled = false
 	expectGuideArrow(menu.Marquee.Close)
 	r:FireServer("position")
 	waitFor(function()
@@ -1536,17 +1490,48 @@ local function test()
 		return p:GetAttribute("Jobs") == 2 and p:GetAttribute("ClaimedJobs") == 3
 	end, 5, "two eligible jobs claimed back to back in reverse order")
 	do
-		local gold, reward = p:GetAttribute("Gold"), require(rep.Shared.FieldRewards).daily[1]
+		local gold = p:GetAttribute("Gold")
+		local Bonuses = require(rep.Shared.Bonuses)
+		local function held(id)
+			return ((Bonuses.decode(p:GetAttribute("Collection")) or {}).items or {})[id] or 0
+		end
 		r:FireServer("openPage", "Daily")
 		waitFor(function() return overlay.Rewards.Visible end, 4, "daily rewards")
 		n.Action:FireServer("Stamp")
 		waitFor(function()
-			return p:GetAttribute("StampCount") == 1 and p:GetAttribute("Gold") == gold + reward.gold
-				and overlay.Rewards.Body.Daily["Day 1"].Collected.Visible
-		end, 4, "claim the daily reward")
+			return p:GetAttribute("StampCount") == 1 and held("WelcomeGeode") == 1 and overlay.Rewards.Body.Daily["Day 1"].Collected.Visible
+		end, 4, "day 1 gives the Welcome Crate")
 		n.Action:FireServer("Stamp")
 		task.wait(0.4)
-		assert(p:GetAttribute("StampCount") == 1 and p:GetAttribute("Gold") == gold + reward.gold, "a day was claimed twice")
+		assert(p:GetAttribute("StampCount") == 1 and held("WelcomeGeode") == 1 and p:GetAttribute("Gold") == gold, "a day was claimed twice")
+		-- A crate won from the daily card offers to open it now, like a bought one. Put it away.
+		local checkoutGui = p.PlayerGui:WaitForChild("Checkout", 4)
+		waitFor(function()
+			if not checkoutGui.Enabled then return false end
+			for _, label in checkoutGui:GetDescendants() do
+				if label:IsA("TextLabel") and label.Text == "Open it now" and label.Visible then return true end
+			end
+			return false
+		end, 4, "a won crate offers to open now")
+		checkoutGui.Enabled = false
+		-- A crate bought (free while playtesting) goes to the inventory unopened, then opens with a reel.
+		n.Action:FireServer("BuyProduct", "Crate1")
+		waitFor(function() return held("StarfallGeode") >= 1 end, 4, "a bought crate waits in the inventory")
+		n.Action:FireServer("OpenGeode", "Starfall")
+		local reveal = p.PlayerGui:WaitForChild("GeodeReveal")
+		-- A reel of rewards scrolls past the marker first, then the reward card opens.
+		waitFor(function()
+			return reveal.Enabled and reveal.Stage.Reel.Visible and #reveal.Stage.Reel.Clip.Strip:GetChildren() >= 8
+		end, 4, "the crate reel spins")
+		waitFor(function()
+			return reveal.Enabled and reveal.Stage.Caption.Text == "STARFALL CRATE" and reveal.Stage.Reward.Visible
+				and not reveal.Stage.Reel.Visible
+		end, 9, "the Starfall Crate opens")
+		assert(reveal.Stage.Reward["Reward name"].Text ~= "" and held("StarfallGeode") == 0, "the crate gave its reward")
+		-- Every effect can be worn while playtesting.
+		n.Action:FireServer("Wear", "trail", "Comet")
+		waitFor(function() return p:GetAttribute("Trail") == "Comet" end, 3, "wear the Comet Trail")
+		reveal.Enabled = false
 	end
 	r:FireServer("openPage", "Book")
 	waitFor(function()
@@ -1558,20 +1543,20 @@ local function test()
 	end, 4, "seen ore stays read on return")
 	r:FireServer("openPage", "Achievements")
 	waitFor(function()
-		return menu.Visible and menu.Listings:FindFirstChild("Pet Rock, Proper Noun")
+		return menu.Visible and menu.Listings:FindFirstChild("Crack It Open")
 	end, 4, "achievement list")
 	task.wait(0.55)
-	assert(not p:GetAttribute("SeenAchievementsPetName"), "offscreen achievement incorrectly marked read")
-	local petAward = menu.Listings["Pet Rock, Proper Noun"]
+	assert(not p:GetAttribute("SeenAchievementsFirstCrate"), "offscreen achievement incorrectly marked read")
+	local petAward = menu.Listings["Crack It Open"]
 	menu.Listings.CanvasPosition = Vector2.new(
 		0,
 		petAward.AbsolutePosition.Y - menu.Listings.AbsolutePosition.Y - menu.Listings.AbsoluteWindowSize.Y * 0.4
 	)
 	waitFor(function()
-		return p:GetAttribute("SeenAchievementsPetName")
+		return p:GetAttribute("SeenAchievementsFirstCrate")
 	end, 5, "scroll reads new achievement")
 	local afterJob = p:GetAttribute("Gold")
-	assert(afterJob == saleGold - 8 + secondSale + 80 + 25 + require(rep.Shared.FieldRewards).daily[1].gold)
+	assert(afterJob == saleGold - 8 + secondSale + 80 + 25)
 	task.wait(0.25)
 	n.Action:FireServer("Job", 2)
 	task.wait(0.3)
@@ -1593,9 +1578,15 @@ local function test()
 		tostring(p:GetAttribute("Pet")), tostring(gui.SafeArea:FindFirstChild("Sale receipt") ~= nil)))
 	assert(p:GetAttribute("Used") == 0 and not overlay.Visible, "hold quick-sell empties the pack")
 	n.Action:FireServer("BuyPass", "PrismTrail")
-	waitFor(function()
+	task.wait(1.1) -- purchases have a one-second cooldown
+	assert(p:GetAttribute("Ribbon") ~= "Prism", "the retired Prism Trail pass isn't sold")
+	n.Action:FireServer("BuyPass", "Everything")
+	local everything = pcall(waitFor, function()
 		return p:GetAttribute("Ribbon") == "Prism" and p.Character.HumanoidRootPart:FindFirstChild("Trail ribbon")
-	end, 5, "the Prism Trail pass equips its trail and ribbon")
+	end, 5, "everything")
+	assert(everything, string.format("the Everything Pass includes the Prism Ribbon and wears it: ribbon %s, passes %s, restricted %s, trail %s",
+		tostring(p:GetAttribute("Ribbon")), tostring(p:GetAttribute("Passes")), tostring(p:GetAttribute("PaidRandomRestricted")),
+		tostring(p:GetAttribute("Trail"))))
 	n.Action:FireServer("Wear", "ribbon", nil)
 	waitFor(function()
 		return p:GetAttribute("Ribbon") == "" and not p.Character.HumanoidRootPart:FindFirstChild("Trail ribbon")
@@ -1643,15 +1634,14 @@ local function test()
 			waitFor(function()
 				return p:GetAttribute("ProgressResets") == 1 and p:GetAttribute("Capacity") == 1
 					and p.leaderstats.Depth.Value == 0 and p:GetAttribute("Jobs") == 0
-					and not p:GetAttribute("SeenBookDirt") and p:GetAttribute("AwardPetName") == 0
+					and not p:GetAttribute("SeenBookDirt") and p:GetAttribute("AwardFirstCrate") == 0
 			end, 4, "reset clears gear, depth, jobs, achievements and read markers")
-			assert(p:GetAttribute("PetName") == "Pebble" and p:GetAttribute("Pet") == "")
 			assert(p:GetAttribute("PrismTrail") and p:GetAttribute("DoubleGold"), "passes survive reset")
-			n.Action:FireServer("EquipPet", "Rock", true)
+			n.Action:FireServer("Preference", "SfxVolume", 79)
 			n.Action:FireServer("ResetProgress", 0)
-			waitFor(function() return p:GetAttribute("Pet") == "Rock" end, 2, "fresh miner can equip a pet")
+			waitFor(function() return p:GetAttribute("SfxVolume") == 79 end, 2, "fresh miner can change a setting")
 			task.wait(0.3)
-			assert(p:GetAttribute("Pet") == "Rock" and p:GetAttribute("ProgressResets") == 1, "stale confirmation")
+			assert(p:GetAttribute("SfxVolume") == 79 and p:GetAttribute("ProgressResets") == 1, "stale confirmation")
 		else
 			waitFor(function() return other:GetAttribute("ProgressResets") == 1 end, 5, "peer reset")
 			assert(p:GetAttribute("Gold") == afterJob + double and p:GetAttribute("Capacity") == 2 and p:GetAttribute("Jobs") == 2)

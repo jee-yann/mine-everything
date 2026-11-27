@@ -67,7 +67,8 @@ function Panel:buildDaily()
 		local big = i == #Field.daily
 		local w, h = 170, 160
 		local x, y = (i - 1) % 3 * 180, math.floor((i - 1) / 3) * 170
-		if big then w, h, x, y = 224, 330, 540, 0 end
+		-- The grand prize starts lower so the tag over its top edge has room inside the card.
+		if big then w, h, x, y = 224, 318, 540, 18 end
 		local tile = box(page, "Day " .. i, x, y, w, h, tints[i])
 		local scale = W.scale(tile)
 		Card.rays(tile, w / 2, h * 0.46, w * 0.9, if big then 8 else 6).ZIndex = 1
@@ -76,11 +77,27 @@ function Panel:buildDaily()
 		sun.Visible = false
 		W.navyText(W.title(tile, "Day " .. i, 0, if big then 10 else 5, w, if big then 40 else 28, if big then 36 else 24, W.white), 2.8)
 		local size = if big then 128 else 56
-		local picture = Icons.draw(tile, reward.icon, (w - size) / 2, if big then 66 else 33, size, rgb(120, 225, 255))
-		local name = W.title(tile, if big then reward.name else Field.describe(reward), 4, if big then 206 else 89, w - 8, if big then 30 else 24, if big then 26 else 19, W.white)
+		local picture = Icons.draw(tile, reward.icon, (w - size) / 2, if big then 58 else 33, size, rgb(120, 225, 255))
+		-- Several of one thing (the grand prize's three crates): a big count on the picture, so it
+		-- can't read as one.
+		local many = 0
+		for _, n in reward.items or {} do many = math.max(many, n) end
+		if many > 1 then
+			local count = W.title(tile, "×" .. many, (w + size) / 2 - (if big then 46 else 30), (if big then 58 else 33) + size - (if big then 50 else 30),
+				if big then 90 else 56, if big then 56 else 34, if big then 54 else 30, rgb(255, 225, 90))
+			count.ZIndex, count.Rotation = 6, -8
+			W.navyText(count, if big then 4.5 else 3)
+		end
+		local name = W.title(tile, W.rich(if big then reward.name else Field.describe(reward, Field.context(self.menu.player))), 4, if big then 190 else 89, w - 8, if big then 30 else 24, if big then 26 else 19, W.white)
+		name.RichText = true
+		W.largest(name, if big then 26 else 19, 11)
+		local describes = { if big then nil else name }
 		W.navyText(name, 2.3)
 		if big then
-			local list = W.title(tile, Field.describe(reward), 6, 236, w - 12, 24, 17, rgb(255, 240, 150))
+			local list = W.title(tile, W.rich(Field.describe(reward, Field.context(self.menu.player))), 6, 220, w - 12, 24, 17, rgb(255, 240, 150))
+			list.RichText = true
+			W.largest(list, 17, 11)
+			describes = { list }
 			W.navyText(list, 2.2)
 			-- The week's grand prize: a gold ribbon and twinkling stars around it.
 			local tag = W.frame(tile, "Grand prize", w / 2 - 70, -14, 140, 30, rgb(255, 80, 120), 10)
@@ -117,7 +134,7 @@ function Panel:buildDaily()
 		local shade = W.frame(tile, "Later", 0, 0, 0, 0, W.navy, 16)
 		shade.Size, shade.BackgroundTransparency, shade.ZIndex, shade.Visible = UDim2.fromScale(1, 1), 0.62, 4, false
 		self.days[i] = { tile = tile, scale = scale, button = button, paint = paint, label = label, done = done, rim = rim,
-			sun = sun, shade = shade, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"), grand = big,
+			sun = sun, shade = shade, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"), grand = big, describes = describes,
 			pictureRest = picture:FindFirstChildOfClass("UIScale").Scale, buttonScale = button["Interaction scale"], w = w }
 	end
 	self.dailyNext = W.title(page, "", 0, 334, 764, 26, 21, W.white)
@@ -176,12 +193,11 @@ function Panel:buildPlaytime()
 		end
 		W.navyText(W.title(tile, gift.minutes .. " min", 0, if last then 155 else 96, w, if last then 32 else 26, if last then 28 else 21, W.white), if last then 3 else 2.4)
 		local line = if last then 189 else 124
-		for part in string.gmatch(Field.describe(gift.reward), "%+[^+]+") do
-			local words = W.title(tile, part, 0, line, w, if last then 26 else 21, if last then 22 else 16, rgb(255, 250, 190))
-			W.largest(words, if last then 22 else 16, 10)
-			W.navyText(words, 2.2)
-			line += if last then 26 else 22
-		end
+		-- What the gift gives; gold gifts follow the miner's own earnings, so refresh keeps them current.
+		local giftWords = W.title(tile, W.rich(Field.describe(gift.reward, Field.context(self.menu.player))), 0, line, w, if last then 26 else 21, if last then 22 else 16, rgb(255, 250, 190))
+		giftWords.RichText = true
+		W.largest(giftWords, if last then 22 else 16, 9)
+		W.navyText(giftWords, 2.2)
 		local button = W.clearButton(tile, "Claim", if last then 10 else 7, h - (if last then 58 else 46), w - (if last then 20 else 14), if last then 48 else 38, "Buy")
 		W.round(button, 10)
 		local paint = W.enamelPanel(button, rgb(150, 154, 176), rgb(98, 102, 128), 10)
@@ -196,7 +212,7 @@ function Panel:buildPlaytime()
 		local tick = W.title(done, "✓", 0, if last then 46 else 10, w, 120, if last then 96 else 56, rgb(140, 255, 120))
 		tick.ZIndex = 5
 		W.navyText(tick, 4)
-		self.gifts[i] = { tile = tile, scale = scale, knob = knob, button = button, paint = paint, label = label, done = done,
+		self.gifts[i] = { tile = tile, scale = scale, knob = knob, button = button, paint = paint, label = label, done = done, words = giftWords,
 			grand = last, sun = sun, rim = rim, picture = picture, pictureScale = picture:FindFirstChildOfClass("UIScale"),
 			pictureRest = picture:FindFirstChildOfClass("UIScale").Scale, buttonScale = button["Interaction scale"], w = w }
 	end
@@ -244,7 +260,8 @@ function Panel:claimed(kind, index)
 	local overlay = self.menu.overlay
 	local at = entry.tile.AbsolutePosition + entry.tile.AbsoluteSize * 0.45 - overlay.AbsolutePosition
 	Burst.confetti(overlay, at.X, at.Y, if kind == "Daily" and index == #Field.daily then 46 else 28)
-	local won = W.title(overlay, Field.describe(reward), at.X, at.Y, 420, 60, 44, rgb(255, 244, 120))
+	local won = W.title(overlay, W.rich(Field.describe(reward, Field.context(self.menu.player))), at.X, at.Y, 420, 60, 44, rgb(255, 244, 120))
+	won.RichText = true
 	won.AnchorPoint, won.ZIndex = Vector2.one * 0.5, 70
 	local stroke = W.navyText(won, 4)
 	local scale = W.scale(won)
@@ -254,7 +271,7 @@ function Panel:claimed(kind, index)
 		W.tween(won, 0.3, { TextTransparency = 1 }).Completed:Once(function() won:Destroy() end)
 	end)
 	-- Gold goes to the wallet once the card is closed. The total on screen keeps counting either way.
-	if reward.gold then self.menu.holdGold(0.8, entry.tile) end
+	if reward.gold or reward.goldMinutes or reward.goldPower then self.menu.holdGold(0.8, entry.tile) end
 end
 
 -- A welcome when the card opens by itself: paper once it has landed.
@@ -331,10 +348,19 @@ function Panel:refresh()
 			entry.button.Interactable, entry.live = claim, claim
 			entry.shade.Visible = ready ~= nil and not claim and not collected
 		end
-		self.dailyNext.Text = if ready then "Your day " .. ready .. " reward: " .. Field.describe(Field.daily[ready]) else "Next reward in " .. clock(wait)
+		local ctx = Field.context(player)
+		for i, entry in self.days do
+			for _, label in entry.describes do label.Text = W.rich(Field.describe(Field.daily[i], ctx)) end
+		end
+		self.dailyNext.RichText = true
+		self.dailyNext.Text = if ready then W.rich("Your day " .. ready .. " reward: " .. Field.describe(Field.daily[ready], ctx)) else "Next reward in " .. clock(wait)
 	else
 		local played, claims = Field.played(player, now), player:GetAttribute("GiftClaims") or 0
 		local waiting = Field.giftState(player, now)
+		local ctx = Field.context(player)
+		for i, entry in self.gifts do
+			entry.words.Text = W.rich(Field.describe(Field.gifts[i].reward, ctx))
+		end
 		-- Steps are evenly spaced, so the line moves by how far it is between them.
 		local at, n = self.giftCenters[1], #Field.gifts
 		for i, entry in self.gifts do

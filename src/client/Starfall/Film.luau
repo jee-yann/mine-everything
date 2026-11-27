@@ -269,8 +269,10 @@ function Film:draw(t, liveReady, frame)
 	local crater = frame >= frames.aftermath and not modern
 	self.deposit.root.Parent = if crater then self.island.set else nil
 	if frame >= frames.aftermath then
+		-- The deposit stays lit through the crater floor shot and dims only in the last half second
+		-- before the cut to today, so it never sits there dull.
 		self.island.hot.Parent = nil
-		self.deposit:burn(craterLight(frame) * (1 - if frame < frames.seam then 0 else ease(frame, frames.seam + 14, frames.dark - 2)))
+		self.deposit:burn(craterLight(frame) * (1 - if frame < frames.seam then 0 else ease(frame, frames.dark - 12, frames.dark - 2)))
 	end
 	local base = self.base
 	local black = 0
@@ -287,9 +289,9 @@ function Film:draw(t, liveReady, frame)
 		local look = V(-7, 34, -21) + V(-3.3, 8.4, 0.5) * (lift / 2.9)
 		self:frame(base, eye, look, 54 + open, math.rad(roll), "offshore")
 	elseif frame < frames.seam then
+		-- A straight cut into the crater (it used to dip to black here while the lighting caught up,
+		-- which read as a random blackout).
 		self:frame(base, craterCrane(frame, move))
-		-- A quarter of a second, over the exposures the engine needs to relight.
-		black = 0.92 * (1 - ease(frame, frames.aftermath + 1, frames.aftermath + 7))
 	elseif frame < frames.match then
 		self:frame(base, craterFloor(frame, move))
 		black = ease(frame, frames.dark - 14, frames.dark)

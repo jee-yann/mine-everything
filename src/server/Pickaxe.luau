@@ -1,5 +1,6 @@
 local Ores = require(game.ReplicatedStorage.Shared.Ores)
 local Collectibles = require(game.ReplicatedStorage.Shared.Collectibles)
+local Looks = require(game.ReplicatedStorage.Shared.CosmeticLooks)
 local Pickaxe = {}
 -- The pick's socket takes the colour of the ore its Power level is named for.
 local socketOres = { "Coal", "Copper", "Iron", "Gold", "Diamond", "Emerald", "Platinum", "Obsidian", "Ruby",
@@ -111,12 +112,9 @@ function Pickaxe.equip(player, char)
 	local tipA, tipB = Instance.new("Attachment"), Instance.new("Attachment")
 	tipA.Position, tipB.Position = Vector3.new(-0.91, 0.76, 0), Vector3.new(0.91, 0.76, 0)
 	tipA.Parent, tipB.Parent = handle, handle
-	local trail = Instance.new("Trail")
-	trail.Name, trail.Attachment0, trail.Attachment1 = "Pick arc", tipA, tipB
-	trail.Lifetime, trail.LightEmission, trail.Transparency = 0.12, 0.65, NumberSequence.new(0.48, 1)
-	trail.Parent = handle
+	-- No pick has a swing trail of its own: trails are Mining FX, worn from the Inventory.
 	local sparks = Instance.new("ParticleEmitter")
-	sparks.Name, sparks.Texture = "Trail sparks", "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Name, sparks.Texture = "Trail sparks", "rbxassetid://4963436775" -- the VFX pack's four-point star
 	sparks.Color = ColorSequence.new(Color3.fromRGB(255, 225, 140), Color3.fromRGB(147, 222, 255))
 	sparks.LightEmission, sparks.Rate, sparks.Enabled = 0.75, 8, false
 	sparks.Lifetime, sparks.Speed = NumberRange.new(0.16, 0.35), NumberRange.new(0.5, 1.8)
@@ -137,6 +135,7 @@ function Pickaxe.equip(player, char)
 			table.insert(crystals, facet)
 		end
 	end
+	local streak, streakId = {}, nil
 	local function update()
 		local level = player:GetAttribute("Power") or 1
 		local tint = if level == 1 then pale else Ores.byName[socketOres[math.min(level, #socketOres)]].color
@@ -151,21 +150,20 @@ function Pickaxe.equip(player, char)
 				blade.Material = if level >= 5 then Enum.Material.Neon else Enum.Material.Metal
 			end
 		end
-		trail.Color = ColorSequence.new(tint, tint:Lerp(Color3.new(1, 1, 1), 0.75))
-		trail.Lifetime = 0.09 + level * 0.017
-		-- An equipped mining trail colours the swing and throws its sparks.
+		-- An equipped mining trail draws its own streak: the full palette, and for
+		-- rarer trails sparks, a themed layer, a bright core, a glow and a vortex (CosmeticLooks).
 		local look = Collectibles.trailById[player:GetAttribute("Trail") or ""]
-		local radiant = look ~= nil
 		local swinging = char:GetAttribute("MiningSwing") ~= nil
-		if look then
-			local a, b = look.colors[1], look.colors[2]
-			trail.Color = ColorSequence.new(a, b)
-			trail.Lifetime = 0.14 + 0.012 * Collectibles.rarities[look.rarity].rank
-			sparks.Color = ColorSequence.new(a, b)
-			sparks.Rate = 4 + 2 * Collectibles.rarities[look.rarity].rank
+		if (look and look.id) ~= streakId then
+			for _, item in streak do item:Destroy() end
+			streak, streakId = {}, look and look.id
+			if look then
+				streak = Looks.streak(look, tipA, tipB, function() end,
+					{ name = "Mining trail", lifetime = 0.16 + 0.025 * Looks.rank(look), scale = 0.6 })
+			end
 		end
-		sparks.Enabled = radiant and swinging
-		trail.Enabled = (radiant or level >= 3) and swinging
+		for _, item in streak do item.Enabled = swinging end
+		sparks.Enabled = false
 	end
 	update()
 	model.Parent = char

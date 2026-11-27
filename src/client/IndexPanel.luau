@@ -172,7 +172,9 @@ function Panel:buildOdds()
 			W.stroke(swatch, W.navy, 2)
 			local name = fit(W.title(chip, "", 36, 1, 98, 20, 16, W.white, true), 16)
 			local odds = W.title(chip, string.format("%g%%", entry.chance), 36, 19, 98, 19, 16, W.gold, true)
-			odds.Name = "Chance"
+			odds.Name, odds.TextScaled = "Chance", true
+			local oddsFont = Instance.new("UITextSizeConstraint")
+			oddsFont.MinTextSize, oddsFont.MaxTextSize, oddsFont.Parent = 9, 16, odds
 			table.insert(chips, { ore = entry.ore, name = name, swatch = swatch, odds = odds, chance = entry.chance })
 		end
 		local chances = { Stone = math.max(0, 100 - total) }
@@ -228,7 +230,7 @@ function Panel:observe(now)
 end
 function Panel:open()
 	for _, entry in self.cards do
-		entry.sent, entry.since = nil, nil
+		entry.sent, entry.since, entry.clicked = nil, nil, nil
 	end
 	if not self.chosen then
 		-- Start on the rarest ore this miner has found.
@@ -267,11 +269,22 @@ function Panel:paintCard(entry)
 	elseif entry.picture then
 		entry.picture.Visible = found
 	end
-	entry.fresh.Visible = found and (entry.sent or not self.menu.player:GetAttribute("SeenBook" .. entry.ore.name)) == true
+	entry.fresh.Visible = found and not entry.clicked
+		and (entry.sent or not self.menu.player:GetAttribute("SeenBook" .. entry.ore.name)) == true
 end
 
 function Panel:choose(ore)
 	self.chosen = ore
+	-- Opening an ore's card reads it: its red dot goes at once.
+	local picked = self.cards[ore.name]
+	if picked then
+		picked.clicked = true
+		picked.fresh.Visible = false
+		if not picked.sent and self.menu.player:GetAttribute("Found" .. ore.name) and not self.menu.player:GetAttribute("SeenBook" .. ore.name) then
+			picked.sent = true
+			self.menu.net.Action:FireServer("Viewed", "Book", ore.name)
+		end
+	end
 	for name, entry in self.cards do
 		entry.chosen.Visible = name == ore.name
 	end
@@ -301,7 +314,11 @@ function Panel:refresh()
 			for _, chip in chips do
 				local value = shown[chip.ore.name] or chip.chance
 				local boosted = luck > 1 and chip.chance < Bonuses.rareBelow
-				chip.odds.Text = if luck > 1 then string.format("%.3g%%", value) else string.format("%g%%", chip.chance)
+				-- A boosted chance shows the usual one struck through beside it: "0.05% → 0.1%".
+				chip.odds.RichText = true
+				chip.odds.Text = if boosted then string.format('<font color="#C8C8DC"><s>%g%%</s></font> %.3g%%', chip.chance, value)
+					elseif luck > 1 then string.format("%.3g%%", value)
+					else string.format("%g%%", chip.chance)
 				chip.odds.TextColor3 = if boosted then W.green else W.gold
 				local hidden = chip.ore.secret and not player:GetAttribute("Found" .. chip.ore.name)
 				chip.name.Text = if hidden then "???" else chip.ore.name
