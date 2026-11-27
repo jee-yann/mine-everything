@@ -26,6 +26,32 @@ if imageId then
 	end
 	remote:Destroy()
 end
+-- The bundled pixels must fit one EditableImage (at most 1024 by 1024): eight 128px tiles per row.
+local Encoding = game:GetService("EncodingService")
+local pixels = Encoding:DecompressBuffer(
+	Encoding:Base64Decode(buffer.fromstring(source.Pixels.Value)),
+	Enum.CompressionAlgorithm.Zstd
+)
+assert(buffer.len(pixels) == 1024 * 640 * 4, "bundled Field Kit atlas is not 1024 by 640")
+local function packed(tile)
+	local index = tile.Y * 4 + tile.X
+	return Vector2.new(index % 8, index // 8) * 128
+end
+-- The real path: one EditableImage, every icon cut from its own tile.
+local real = source:Clone()
+real:SetAttribute("ImageId", nil)
+real.Parent = source.Parent
+local bundled = require(real)
+local shelf = Instance.new("Frame")
+for key, tile in tiles do
+	assert(bundled.draw(shelf, key))
+	local label = shelf["Field Kit"]
+	assert(label:IsA("ImageLabel"), key .. " fell back to GUI strips; the EditableImage did not load")
+	assert(label.ImageRectOffset == packed(tile) and label.ImageRectSize == Vector2.one * 128, key)
+	label:Destroy()
+end
+shelf:Destroy()
+real:Destroy()
 local probe = source:Clone()
 probe:SetAttribute("ImageId", nil)
 local replacement = [[
@@ -63,4 +89,4 @@ assert(probe:GetAttribute("Allocated") and probe:GetAttribute("Released"))
 assert(not renderer.draw(container, "No such icon"))
 container:Destroy()
 probe:Destroy()
-print("PASS published Field Kit write denial, all thirty-six icons and six aliases")
+print("PASS bundled 1024x640 Field Kit atlas loads, published write denial, all thirty-six icons and six aliases")

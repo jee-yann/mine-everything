@@ -114,8 +114,9 @@ function Map.new(parent, player, net, close)
 		local selection = diamond(b, "Selection", 42, 41, 76, W.aqua)
 		selection.BackgroundTransparency, selection.Visible = 1, false
 		local ring = W.stroke(selection, W.aqua, 5)
-		game:GetService("TweenService"):Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-			{ Transparency = 0.55 }):Play()
+		-- Only the selected skill breathes (refresh plays and cancels this), not all hundred-odd at once.
+		item.breath = game:GetService("TweenService"):Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ Transparency = 0.55 })
 		local arrow = W.title(b, "▼", 0, 0, 40, 30, 30, W.aqua)
 		arrow.Name, arrow.AnchorPoint, arrow.Position, arrow.Visible = "Selected arrow", Vector2.new(0.5, 1), UDim2.fromOffset(42, -2), false
 		W.outlineText(arrow, 2.4)
@@ -588,8 +589,12 @@ function Map:refresh()
 				end
 			end
 		end
-		item.selection.Visible = self.selected == id
-		item.arrow.Visible = self.selected == id
+		local chosen = self.selected == id
+		if item.selection.Visible ~= chosen then
+			if chosen then item.breath:Play() else item.breath:Cancel() end
+		end
+		item.selection.Visible = chosen
+		item.arrow.Visible = chosen
 		for parentId, line in item.lines do
 			local connected = parentId == "Origin" or owned[parentId]
 			line.BackgroundColor3 = if learned

@@ -2,10 +2,11 @@ local Assets = game:GetService("AssetService")
 local Encoding = game:GetService("EncodingService")
 local ContentProvider = game:GetService("ContentProvider")
 
--- Tile order matches art/hud/FieldKit.png (drawn in art/hud/field_kit.html). The bundled copy uses
--- 128px tiles. Set the ImageId attribute only to an upload of the current FieldKit.png; without it the
--- bundled pixels are used.
-local tileSize, atlasWidth, atlasHeight = 128, 512, 1152
+-- Tile order matches art/hud/FieldKit.png (drawn in art/hud/field_kit.html, four tiles per row).
+-- The bundled copy repacks the same tiles eight per row at 128px, because an EditableImage can be
+-- at most 1024 by 1024. Set the ImageId attribute only to an upload of the current FieldKit.png;
+-- without it the bundled pixels are used.
+local tileSize, atlasWidth, atlasHeight, bundledColumns = 128, 1024, 640, 8
 local tiles = {
 	Inventory = Vector2.new(0, 0),
 	Skills = Vector2.new(1, 0),
@@ -49,6 +50,12 @@ tiles.Pack, tiles.Capacity, tiles.Titles = tiles.Inventory, tiles.Inventory, til
 tiles.Gear, tiles.Crew = tiles.Power, tiles.Friends
 tiles.Crystal = tiles.Gems
 
+-- Where a source tile sits in the bundled eight-wide atlas.
+local function packed(tile)
+	local index = tile.Y * 4 + tile.X
+	return Vector2.new(index % bundledColumns, index // bundledColumns)
+end
+
 local pixels, atlasLabel
 local nativeTemplates = {}
 
@@ -90,9 +97,10 @@ local function nativeIcon(tile)
 	local icon = Instance.new("Frame")
 	icon.BackgroundTransparency, icon.Size = 1, UDim2.fromScale(1, 1)
 	local resolution = tileSize
+	local at = packed(tile)
 	local function pixel(x, y)
-		local sx = tile.X * tileSize + x
-		local sy = tile.Y * tileSize + y
+		local sx = at.X * tileSize + x
+		local sy = at.Y * tileSize + y
 		return buffer.readu32(pixels, (sy * atlasWidth + sx) * 4)
 	end
 	for y = 0, resolution - 1 do
@@ -150,7 +158,7 @@ local function bundledIcon(tile)
 		return nativeIcon(tile)
 	end
 	local icon = atlasLabel:Clone()
-	icon.ImageRectOffset, icon.ImageRectSize = tile * tileSize, Vector2.one * tileSize
+	icon.ImageRectOffset, icon.ImageRectSize = packed(tile) * tileSize, Vector2.one * tileSize
 	icon.BackgroundTransparency, icon.Size = 1, UDim2.fromScale(1, 1)
 	return icon
 end
