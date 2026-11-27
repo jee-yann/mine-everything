@@ -388,7 +388,7 @@ local list = {
 		flash = "Starfall",
 		gem = true,
 		secret = true,
-		hint = "The rarest thing that ever fell, at the very bottom",
+		hint = "The rarest thing that ever fell. Follow its trail from the Rebirth card",
 	},
 }
 -- The owner scanner filters ores with one bit each. Ores that existed before the expansion

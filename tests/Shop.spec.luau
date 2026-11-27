@@ -208,8 +208,9 @@ print("PASS luck math and stacking rules")
 do
 	local rebirth = require(Shared.Rebirth).goldMultiplier(2)
 	local state = B.make({ DoubleGold = true, VIP = true }, { boosts = { goldTonic = 200, gold2 = 200 } }, 2, 0, 100)
-	assert(near(B.gold(state), 2 * rebirth * 1.6 * 2))
-	assert(near(B.speed(B.make({ FastPick = true }, { boosts = { speedTonic = 200 } }, 0, 0, 100)), 0.35))
+	assert(near(B.gold(state), 2 * rebirth * 1.7 * 2))
+	assert(near(B.speed(B.make({ FastPick = true }, { boosts = { speedTonic = 200 } }, 0, 0, 100)), 0.5))
+	assert(B.xp(B.make({ VIP = true }, {}, 0, 0, 100)) == 1.2 and B.xp(B.make({}, {}, 0, 0, 100)) == 1, "VIP XP")
 	local miner = Profile.new()
 	miner.bag.Coal = 3
 	local sold = Profile.sell(miner, 1.1)
@@ -221,7 +222,7 @@ print("PASS gold and speed stacking")
 -- and no purchase ID is set until it is configured on the Creator Dashboard.
 do
 	assert(not S.passByKey.AutoSell, "Auto-Sell is no longer sold")
-	local prices = { BiggerPack = 79, DoubleGold = 249, FastPick = 229, VIP = 449, Lucky = 349, Everything = 599 }
+	local prices = { BiggerPack = 79, DoubleGold = 249, FastPick = 229, VIP = 449, Lucky = 349, Everything = 999 }
 	assert(S.passByKey.Everything.name == "All Passes Bundle")
 	for key, price in prices do assert(S.passByKey[key].price == price, key) end
 	assert(not S.passByKey.StarfallDrake and not S.passByKey.CelestialMiner)
@@ -237,7 +238,7 @@ do
 	end
 	assert(everything.was == sum and S.off(everything) > 0)
 	local products = { StarterPack = 49, FounderHalo = 249, Crate1 = 25, Crate3 = 65, Crate10 = 199, Gold2x15 = 39, Gold2x60 = 99,
-		ServerLuck = 79, Instamine10 = 49, AutoSell30 = 35, ResetSkills = 15, GoldPouch = 15, GoldBag = 35, GoldChest = 79, GoldVault = 199 }
+		ServerLuck = 79, Instamine10 = 99, AutoSell30 = 59, ResetSkills = 15, GoldPouch = 15, GoldBag = 35, GoldChest = 99, GoldVault = 349 }
 	for key, price in products do assert(S.productByKey[key].price == price, key) end
 	for _, gone in { "GemPouch", "GemBag", "GemChest", "GemVault", "GemHoard", "GemMountain", "Luck3x30", "StarCompass", "GoldCrate", "Luck2x15", "Luck2x60", "SellAnywhere" } do
 		assert(not S.productByKey[gone], gone .. " should be gone")
@@ -345,6 +346,16 @@ do
 	local veteran = Earnings.perHour(p)
 	assert(fresh >= Earnings.minimum and veteran > fresh, fresh .. " " .. veteran)
 	print(string.format("Gold per hour: new miner %d, veteran %d", fresh, veteran))
+	-- Gold gifts and packs are valued at what the pick can mine, not the deepest spot ever stood on:
+	-- a Power 1 miner who dropped down someone else's shaft (or just reborn) earns like a new miner.
+	local rider = Profile.new()
+	rider.bestDepth = 600 * 5
+	assert(Earnings.perHour(rider) == fresh, "a deep visit alone pays nothing extra: " .. Earnings.perHour(rider))
+	assert(Earnings.reach(1) == 26 and Earnings.reach(5) == 184 and Earnings.reach(14) == math.huge)
+	-- A strong pick that has not been deep yet is still valued where it has been.
+	local strong = Profile.new()
+	strong.levels.Power = 9
+	assert(Earnings.perHour(strong) < veteran)
 end
 print("PASS earnings scale with progress")
 

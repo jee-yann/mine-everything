@@ -6,8 +6,9 @@
 -- Studio test it is given for free instead. Double Gold and Prism Trail already exist: give them
 -- their existing pass IDs so current owners keep them.
 --
--- `was` is a real reference price, shown struck through: the same thing bought the expensive way
--- (single crates, the smallest gold pack's rate, the passes one by one, or the parts of a pack).
+-- `was` is what the same thing costs bought the expensive way (single crates, the smallest gold pack's
+-- rate, the passes one by one, or the parts of a pack). The Shop shows it as "Worth R$ …", never as a
+-- former price, since nothing was ever sold at it.
 local S = {}
 
 -- `grants` lists the benefit keys a pass turns on. The All Passes Bundle (key "Everything") includes every other pass.
@@ -17,8 +18,8 @@ S.passes = {
 	{ key = "BiggerPack", id = 0, price = 79, name = "Bigger Pack", detail = "+50% backpack capacity", grants = { "BiggerPack" }, icon = "Pack" },
 	{ key = "PrismTrail", id = 0, price = 99, name = "Prism Trail", detail = "A rainbow ribbon follows you as you walk", grants = { "PrismTrail" }, icon = "Trail", retired = true },
 	{ key = "DoubleGold", id = 0, price = 249, name = "Double Gold", detail = "2× gold on every sale. Stacks with rebirths", grants = { "DoubleGold" }, icon = "Coins" },
-	{ key = "FastPick", id = 0, price = 229, name = "Fast Pick", detail = "+15% mining speed", grants = { "FastPick" }, icon = "Speed" },
-	{ key = "VIP", id = 0, price = 449, name = "VIP", detail = "Gold VIP tag, +10% gold and a free Starfall Crate every day", grants = { "VIP" }, icon = "Achievements", tag = "POPULAR" },
+	{ key = "FastPick", id = 0, price = 229, name = "Fast Pick", detail = "+30% mining speed on every block", grants = { "FastPick" }, icon = "Speed" },
+	{ key = "VIP", id = 0, price = 449, name = "VIP", detail = "+20% gold, +20% XP, a free Starfall Crate every day and a gold VIP tag", grants = { "VIP" }, icon = "Achievements", tag = "POPULAR" },
 	{ key = "Lucky", id = 0, price = 349, name = "2× Lucky", detail = "Doubles the chance of every ore rarer than 1%, Starfall included", grants = { "Lucky" }, icon = "Crystal", luck = true },
 }
 local everything = { "Everything" }
@@ -27,7 +28,7 @@ for _, pass in S.passes do
 end
 -- Every pass in one, plus the Celestial title, the Celestial mining trail and the Prism Ribbon.
 table.insert(S.passes, 1, {
-	key = "Everything", id = 0, price = 599, name = "All Passes Bundle", icon = "Achievements", luck = true, tag = "BEST VALUE",
+	key = "Everything", id = 0, price = 999, name = "All Passes Bundle", icon = "Achievements", luck = true, tag = "BEST VALUE",
 	detail = "Every pass, the Celestial title, the Celestial mining trail and the Prism Ribbon", grants = everything, bundle = true,
 })
 
@@ -43,7 +44,7 @@ S.products = {
 	},
 	{
 		key = "FounderHalo", id = 0, price = 249, name = "Founder's Halo", group = "Featured", once = true, limited = 100,
-		detail = "Limited aura: only 100 will ever exist", cosmetic = { kind = "aura", id = "FounderHalo" },
+		detail = "Limited aura: on sale until 100 are sold, then retired", cosmetic = { kind = "aura", id = "FounderHalo" },
 	},
 	-- Crates
 	{ key = "Crate1", id = 0, price = 25, name = "1 Starfall Crate", group = "Crates", crates = 1, random = true },
@@ -53,14 +54,14 @@ S.products = {
 	{ key = "Gold2x15", id = 0, price = 39, name = "2× Gold · 15 min", detail = "Doubles sale value for 15 minutes", boost = "gold2", minutes = 15, group = "Boosts", icon = "Coins" },
 	{ key = "Gold2x60", id = 0, price = 99, was = 156, name = "2× Gold · 1 hour", detail = "Doubles sale value for an hour", boost = "gold2", minutes = 60, group = "Boosts", icon = "Coins", tag = "BEST VALUE" },
 	{ key = "ServerLuck", id = 0, price = 79, name = "2× Server Luck · 15 min", detail = "Doubles everyone's chance of rare ore, with your name on it", minutes = 15, group = "Boosts", luck = true, icon = "Friends", tag = "FOR EVERYONE" },
-	{ key = "Instamine10", id = 0, price = 49, name = "Instamine · 10 min", detail = "Every block you can mine breaks in one hit for 10 minutes", boost = "instamine", minutes = 10, group = "Boosts", icon = "Power", tag = "POPULAR" },
-	{ key = "AutoSell30", id = 0, price = 35, name = "Auto Sell · 30 min", detail = "Your pack sells itself the moment it fills, for 30 minutes", boost = "autosell", minutes = 30, group = "Boosts", icon = "Coins", tag = "POPULAR" },
+	{ key = "Instamine10", id = 0, price = 99, name = "Instamine · 10 min", detail = "Every block you can mine breaks in one hit for 10 minutes", boost = "instamine", minutes = 10, group = "Boosts", icon = "Power", tag = "POPULAR" },
+	{ key = "AutoSell30", id = 0, price = 59, name = "Auto Sell · 30 min", detail = "Your pack sells itself the moment it fills, for 30 minutes", boost = "autosell", minutes = 30, group = "Boosts", icon = "Coins", tag = "POPULAR" },
 	{ key = "ResetSkills", id = 0, price = 15, name = "Reset Skill Tree", detail = "Get every skill point back to spend again", group = "Boosts", icon = "Skills" },
 	-- Gold: minutes of the buyer's own earnings, from smallest to best value.
 	{ key = "GoldPouch", id = 0, price = 15, name = "Gold Pouch", minutes = 15, group = "Gold", art = "pouch" },
 	{ key = "GoldBag", id = 0, price = 35, was = 60, name = "Gold Bag", minutes = 60, group = "Gold", art = "bag" },
-	{ key = "GoldChest", id = 0, price = 79, was = 240, name = "Gold Chest", minutes = 240, group = "Gold", art = "chest", tag = "POPULAR" },
-	{ key = "GoldVault", id = 0, price = 199, was = 1440, name = "Gold Vault", minutes = 1440, group = "Gold", art = "vault", tag = "BEST VALUE" },
+	{ key = "GoldChest", id = 0, price = 99, was = 240, name = "Gold Chest", minutes = 240, group = "Gold", art = "chest", tag = "POPULAR" },
+	{ key = "GoldVault", id = 0, price = 349, was = 1440, name = "Gold Vault", minutes = 1440, group = "Gold", art = "vault", tag = "BEST VALUE" },
 }
 S.vipCrateHours = 20
 

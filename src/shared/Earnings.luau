@@ -1,5 +1,7 @@
--- About how much gold a miner earns in an hour of steady mining, without passes or boosts: their
--- deepest region's average sale value per block, times the blocks an hour at their Speed, Power and
+-- About how much gold a miner earns in an hour of steady mining, without passes or boosts: the
+-- average sale value per block of the deepest region they have reached AND their pick can mine
+-- (so a low-Power miner who rode down someone else's shaft, or one fresh from a rebirth, is valued at
+-- what they can actually dig, not at where they once stood), times the blocks an hour at their Speed, Power and
 -- skills at a relaxed pace (half the time spent cutting, and a 30-second trip to sell each full
 -- pack), times their rebirth bonus. Gold packs, gold rewards and duplicate crate rewards pay minutes
 -- of this, so they stay worth having at every stage.
@@ -10,8 +12,15 @@ local Earnings = {}
 Earnings.minimum = 250
 
 -- `p` needs bestDepth, levels, skills and rebirths (a profile, or a copy of one).
+-- The deepest block row a pick of Power `power` can cut: every stone grade up to its Power.
+function Earnings.reach(power)
+	local grades = Config.StoneGrades
+	return if power < #grades then grades[power + 1].depth - 1 else math.huge
+end
+
 function Earnings.perHour(p)
-	local depth = math.max(Config.DirtLayers + 1, math.floor((p.bestDepth or 0) / 5))
+	local reached = math.floor((p.bestDepth or 0) / 5)
+	local depth = math.max(Config.DirtLayers + 1, math.min(reached, Earnings.reach(Upgrades.items.Power.values[p.levels.Power or 1])))
 	local layer = Config.layer(depth * Config.Cell)
 	local strength = Config.strength(-depth * Config.Cell)
 	local stone, value = 100, 0

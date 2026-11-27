@@ -239,6 +239,14 @@ function Mining.start(world, net, sessions, sync, hooks)
 			net.Feedback:FireClient(player, "lucky", name, lucky, luck)
 			name = lucky
 		end
+		-- The Starfall trail: enough blocks along it and the next one holds the run's Starfall.
+		if name ~= "Starfall" and depthBlocks >= Config.DirtLayers and not world.grid:practice(world.grid:cellAt(center))
+			and Profile.followTrail(profile, depthBlocks) then
+			loot = { Starfall = 1 }
+			finds = { Starfall = center }
+			net.Feedback:FireClient(player, "trailEnd", name)
+			name = "Starfall"
+		end
 		local ore = Ores.byName[name]
 		local discovery = not ore.host and not profile.discoveries[name]
 		local oldLevel = Expeditions.level(profile.xp)

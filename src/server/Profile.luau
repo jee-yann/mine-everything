@@ -52,6 +52,7 @@ function Profile.new()
 		bestDepth = 0,
 		rebirths = 0,
 		runStarfalls = 0,
+		runTrail = 0,
 		jobs = 0,
 		claimedJobs = 0,
 		discoveries = {},
@@ -186,7 +187,7 @@ function Profile.valid(p)
 			return false
 		end
 	end
-	for _, n in { "rebirths", "runStarfalls" } do
+	for _, n in { "rebirths", "runStarfalls", "runTrail" } do
 		if p[n] ~= nil and not integer(p[n], 9e15) then
 			return false
 		end
@@ -390,6 +391,7 @@ function Profile.upgradeSave(p)
 	-- Saves from before rebirths: every Starfall so far belongs to the current run.
 	p.rebirths = p.rebirths or 0
 	if p.runStarfalls == nil then p.runStarfalls = p.counts.Starfall or 0 end
+	p.runTrail = p.runTrail or 0
 	p.preferences = p.preferences or {}
 	for key, value in Preferences.defaults do
 		if p.preferences[key] == nil then
@@ -515,6 +517,16 @@ function Profile.recordCut(p, name, depth, random, boost)
 	return unlocked, grade, units, record
 end
 
+-- The Starfall trail (Rebirth.trail): a block cut `depth` blocks down. Returns true when this block is
+-- the one that holds the run's guaranteed Starfall. Only counts while the run has none yet.
+function Profile.followTrail(p, depth)
+	if p.runStarfalls >= Rebirth.requirement.count then return false end
+	local trail = Rebirth.trail(p.rebirths)
+	if depth < trail.depth then return false end
+	p.runTrail = math.min(trail.blocks, p.runTrail + 1)
+	return p.runTrail >= trail.blocks
+end
+
 -- Starts a new run when the current one has met Rebirth.requirement. Resets gold, the pack,
 -- workshop levels and field supplies; keeps everything earned for the miner. Returns the new count.
 function Profile.rebirth(p)
@@ -522,7 +534,7 @@ function Profile.rebirth(p)
 		return nil
 	end
 	p.rebirths += 1
-	p.runStarfalls = 0
+	p.runStarfalls, p.runTrail = 0, 0
 	p.gold = 0
 	p.bag, p.grades = {}, {}
 	p.levels = { Speed = 1, Power = 1, Capacity = 1 }

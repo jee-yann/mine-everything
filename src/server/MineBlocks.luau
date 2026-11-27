@@ -221,6 +221,18 @@ function Blocks:take(p)
 	self:openNeighbours({ p })
 	return ore
 end
+-- Opens one buried (or shown) cell, as if it had been mined out, without giving its ore. Used to
+-- make room for a miner who goes back down after the mine renews.
+function Blocks:hollow(p)
+	if p.Y >= 0 then return end
+	local chunk, i = self:slot(p, true)
+	local part = chunk[i]
+	if part == false then return end
+	if part then part:Destroy() end
+	chunk[i] = false
+	if self.planted then self.planted[p] = nil end
+	self:openNeighbours({ p })
+end
 -- Only refill a shaft mouth above an occupied tunnel if there is still another
 -- connected exit to the hall. Unexplored cells are solid, including outside the island.
 function Blocks:otherExit(start, closing)

@@ -28,7 +28,7 @@ local offers = {
 		lines = {
 			{ "Gems", "Founder's Halo: a Limited aura" },
 			{ "Speed", W.colored("+16% movement speed", speedGreen) .. " while worn" },
-			{ "Achievements", "Only 100 will ever exist" },
+			{ "Achievements", "On sale until 100 are sold" },
 		},
 	},
 	{
@@ -133,6 +133,7 @@ function Offers:buildCard()
 	self.scale = W.scale(card)
 	self.card = card
 	local clip = W.frame(card, "Glow", 4, 4, 552, 372, W.white, 20)
+	self.clip = clip
 	clip.BackgroundTransparency, clip.ClipsDescendants = 1, true
 	local spin = W.frame(clip, "Rays", 140, 190, 0, 0, W.white)
 	spin.BackgroundTransparency = 1
@@ -192,6 +193,19 @@ function Offers:buildCard()
 		self:close()
 		self.hud.checkout:buy("product", offer.item)
 	end)
+	-- Offers with crates in them link to the crate's odds, before anyone pays.
+	local odds = W.clearButton(card, "Crate odds", 264, 362, 276, 28, "Select")
+	local oddsText = W.title(odds, "See the crate odds ▸", 0, 0, 276, 28, 18, rgb(255, 244, 170))
+	W.navyText(oddsText, 2)
+	odds.Activated:Connect(function()
+		self:close()
+		self.hud:openPage("Shop")
+		task.defer(function()
+			local shop = self.hud.menu.shop
+			if shop then shop:showOdds(require(Shared.Geodes).main) end
+		end)
+	end)
+	self.odds = odds
 	Run.RenderStepped:Connect(function()
 		if not gui.Enabled then return end
 		local t = os.clock()
@@ -252,7 +266,11 @@ function Offers:fill(offer)
 	self.title.Visible = not header
 	self.title.Text = offer.title
 	self.bandName.Text, self.bandSub.Text = item.name, offer.header or ""
-	self.card.Size = UDim2.fromOffset(560, if header then 420 else 380)
+	local extra = if item.random then 34 else 0
+	self.card.Size = UDim2.fromOffset(560, (if header then 420 else 380) + extra)
+	self.clip.Size = UDim2.fromOffset(552, (if header then 412 else 372) + extra)
+	self.odds.Visible = item.random == true
+	self.odds.Position = UDim2.fromOffset(264, if header then 390 else 360)
 	self.name.Visible = not header
 	self.name.Text = item.name
 	self.rays.Position = UDim2.fromOffset(140, 190 + top / 2)
@@ -286,7 +304,7 @@ function Offers:fill(offer)
 		self.stockText.Text = W.goldAmount(left) .. " / " .. W.goldAmount(item.limited) .. " left"
 	end
 	local off = S.off(item)
-	self.was.Text = if item.was then "Worth <s>" .. W.goldAmount(item.was) .. "</s>  " .. W.colored("-" .. off .. "%", speedGreen) else ""
+	self.was.Text = if item.was then "Worth " .. W.goldAmount(item.was) .. " Robux  " .. W.colored("-" .. off .. "%", speedGreen) else ""
 	self.amount.Text = tostring(item.price)
 end
 

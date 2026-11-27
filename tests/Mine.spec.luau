@@ -22,7 +22,7 @@ do
 	assert(Purity.roll(exact(31, 5432)) == 70.432 and Purity.roll(exact(1, 14999)) == 64.999)
 	assert(Purity.roll(exact(100, 999)) == 100 and Purity.valid(70.432) and not Purity.valid(70.4321))
 	assert(Purity.bonus(50) == 0 and Purity.bonus(65) == 10 and Purity.bonus(98) == 50 and Purity.bonus(100) == 100)
-	assert(math.abs(Purity.bonus(72.5) - 15) < 1e-9 and Purity.text(70.432) == "70.432%" and Purity.text(100) == "100%")
+	assert(math.abs(Purity.bonus(72.5) - 15) < 1e-9 and Purity.text(70.432) == "70.4%" and Purity.text(99.999) == "99.9%" and Purity.text(100) == "100%")
 	assert(Purity.multiplierText(65) == "×1.10" and Purity.validGrade("65") and Purity.validGrade("70.432"))
 	assert(not Purity.validGrade("70.4320") and not Purity.validGrade("49.999") and not Purity.validGrade("x"))
 	local mixed = Purity.decode(Purity.encode({ ["70.432"] = 2, ["65"] = 1 }))
@@ -763,7 +763,25 @@ do
 		Profile.upgradeSave(legacy)
 		assert(legacy.rebirths == 0 and legacy.runStarfalls == 2 and Profile.valid(legacy))
 		local saved = Data.snapshot(run)
-		assert(saved.rebirths == 1 and saved.runStarfalls == 0, "rebirth fields save")
+		assert(saved.rebirths == 1 and saved.runStarfalls == 0 and saved.runTrail == 0, "rebirth fields save")
+		-- The Starfall trail: the first rebirth's runs through Saltglass Sinks; it deepens to the crater.
+		local first, later = Rebirth.trail(0), Rebirth.trail(5)
+		assert(first.depth == 140 and first.blocks == 150 and later.depth == 550 and later.blocks == 700)
+		assert(Rebirth.trail(9).blocks == 1100 and Rebirth.trail(100).blocks == Rebirth.trailMost)
+		local walker = Profile.new()
+		assert(not Profile.followTrail(walker, first.depth - 1) and walker.runTrail == 0, "above the trail")
+		for i = 1, first.blocks - 1 do
+			assert(not Profile.followTrail(walker, first.depth + 3), "block " .. i)
+		end
+		assert(Profile.followTrail(walker, first.depth) and walker.runTrail == first.blocks, "the last block holds it")
+		Profile.recordCut(walker, "Starfall", first.depth, Random.new(4))
+		assert(Rebirth.ready(walker.runStarfalls) and not Profile.followTrail(walker, 300), "one per run")
+		assert(Profile.rebirth(walker) == 1 and walker.runTrail == 0 and Profile.valid(walker))
+		assert(not Profile.followTrail(walker, first.depth), "the second trail runs deeper")
+		local old = Profile.new()
+		old.runTrail = nil
+		Profile.upgradeSave(old)
+		assert(old.runTrail == 0 and Profile.valid(old))
 		print("PASS rebirth unlock, reset, kept progress, XP bonus and legacy saves")
 	end
 	-- A save from before the expansion still loads, with its picks, pack and discoveries.
@@ -791,6 +809,8 @@ assert(
 	Config.ResetAfter - Config.Layers[#Config.Layers].depthBlocks >= 2000,
 	"A renewal cycle should leave room to mine after a shaft to the crater"
 )
+assert(Config.ResetPerMiner > Config.Layers[#Config.Layers].depthBlocks and Config.ResetMost >= Config.ResetAfter
+	and Config.ResetSoonest >= 600 and Config.ResetSoonest < Config.ResetSeconds, "the budget grows with each miner and can't be rushed")
 print("PASS expansion regions, grade boundaries, ore reach, Starfall rarity, 32-bit precision, rare sampling and old saves")
 local surface = workspace.CitrineCove
 do

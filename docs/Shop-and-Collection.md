@@ -21,7 +21,7 @@ for release.
 |---|---|
 | Rarities, cosmetics, items, boosts, keyword colours | `src/shared/Collectibles.luau` |
 | The crate pool, odds, rarity mix and guarantee | `src/shared/Geodes.luau` (named Geodes for save compatibility) |
-| Pass and product IDs, prices, struck-through prices | `src/shared/StoreConfig.luau` |
+| Pass and product IDs, prices, "Worth" values | `src/shared/StoreConfig.luau` |
 | A miner's gold per hour (gold packs, gold rewards) | `src/shared/Earnings.luau` |
 | Daily card and playtime gifts | `src/shared/FieldRewards.luau` |
 | How passes and boosts combine | `src/shared/Bonuses.luau` |
@@ -45,7 +45,8 @@ for release.
   on the right.
 - **Featured offers** (`src/client/FeaturedOffers.luau`): animated tiles beside the right-hand rail,
   for now the Founder's Halo (with how many are left) and the Starter Pack (with its discount). Each
-  opens its own offer card: art, what's inside, the struck-through price and a big Robux button. The
+  opens its own offer card: art, what's inside, what it's worth bought separately and a big Robux
+  button; the Starter Pack card also links to the crate odds. The
   Founder's Halo card keeps its background calm (faint, slow rays, no shine) so the live aura stands
   out, and so does its Shop card; the Starter Pack card has a header band with its name. A tile goes
   away once its offer is bought or sold out. Add an entry to `offers` to feature something else.
@@ -79,8 +80,10 @@ for release.
 - **Shop size**: cards are compact so that after a tab jump at least two rows of a section show
   (the All Passes Bundle and the first row of passes; both rows of boosts; all the gold packs).
 
-Every price is a green button with the Robux icon. Where there's a real reference price, it shows
-struck through above the button with the percent off. Rarity names and **Starfall** are coloured
+Every price is a green button with the Robux icon. Where buying the same thing the expensive way
+costs more, "Worth R$ …" shows above the button with the percent off. It's a value, never shown as
+a former price, since nothing was sold at it. Anything holding crates (the Starfall Crate and the
+Starter Pack) has its odds one tap away before buying. Rarity names and **Starfall** are coloured
 wherever they appear in text.
 
 ## The player's path
@@ -171,7 +174,7 @@ the bottom right, and on what's sold directly; not on the crate or its odds.
 
 - One crate is R$25, a small impulse buy. About 1 in 22 is Legendary or better, and the guarantee
   caps the worst case at 10 crates, which is exactly the R$199 pack.
-- The 3- and 10-packs are struck through at 25 each (75 and 250), so bulk reads as 13% and 20% off.
+- The 3- and 10-packs are worth 25 a crate (75 and 250), so bulk reads as 13% and 20% off.
 - Most commons are worth wearing (a trail or an aura), and duplicates pay gold, so a bad roll still
   gives something.
 
@@ -232,9 +235,13 @@ would hide it. Your own name and title hide while you're zoomed in.
   `luck = (2 with 2× Lucky) × (2 while 2× Luck, Lucky Brew or Server Luck runs)`. Timed luck boosts
   don't stack with each other. A common cut can turn out to hold a rare ore ("Lucky find!"), so each
   rare ore turns up exactly `luck` times as often. The Ore Index shows the player's own odds.
-- **Gold:** `(2 with Double Gold) × (1 + rebirths) × (1 + VIP 10% + Gold Tonic 50%) × (2 with 2× Gold)`.
+- **Gold:** `(2 with Double Gold) × (1 + rebirths) × (1 + VIP 20% + Gold Tonic 50%) × (2 with 2× Gold)`.
   Sales are rounded to whole gold.
-- **Speed:** cut time is divided by `1 + Fast Pick 15% + Haste Tonic 20%`.
+- **Speed:** cut time is divided by `1 + Fast Pick 30% + Haste Tonic 20% + Mining FX`.
+- **XP:** VIP gives +20% XP, on top of rebirths and the friend bonus.
+- **Luck never buys a rebirth.** The run's Starfall is guaranteed by the Starfall trail (see the
+  README), a count of blocks cut that luck doesn't change. Luck only makes a chance Starfall in the
+  crater more likely.
 - Timed boosts of the same kind add their time, up to 4 hours.
 
 ## Game passes
@@ -243,14 +250,14 @@ An owned pass can't be bought again.
 
 | Pass | Robux | Benefit |
 |---|---|---|
-| All Passes Bundle | 599 (was 1,355) | Every pass below, plus the Celestial title, the Celestial Mining FX and the Prism Trail. "Best value" |
+| All Passes Bundle | 999 (worth 1,355) | Every pass below, plus the Celestial title, the Celestial Mining FX and the Prism Trail. "Best value" |
 | Bigger Pack | 79 | +50% backpack capacity |
 | Double Gold | 249 | 2× sale gold (existing pass) |
-| Fast Pick | 229 | +15% mining speed |
-| VIP | 449 | Gold VIP tag, +10% gold, a free Starfall Crate every 20 hours. "Popular" |
+| Fast Pick | 229 | +30% mining speed |
+| VIP | 449 | +20% gold, +20% XP, a free Starfall Crate every 20 hours and a gold VIP tag. "Popular" |
 | 2× Lucky | 349 | Doubles luck |
 
-The All Passes Bundle's struck-through price is the passes on sale added up, so it stays right if a
+The All Passes Bundle's "Worth" value is the passes on sale added up, so it stays right if a
 price changes.
 
 **Prism Trail** (the old 99 Robux pass) is retired: it isn't sold any more, but players who bought it
@@ -262,9 +269,9 @@ recognised.
 Each receipt is granted once: its `PurchaseId` is saved with the profile, and `PurchaseGranted` is
 only returned after the save succeeds.
 
-| Product | Robux | Was | Reward |
+| Product | Robux | Worth | Reward |
 |---|---|---|---|
-| Founder's Halo | 249 | — | Limited aura (+16% movement speed): the first 100 buyers across all servers, then off sale for good |
+| Founder's Halo | 249 | — | Limited aura (+16% movement speed): on sale until 100 are sold across all servers, then retired |
 | Starter Pack | 49 | 128 | 2 Starfall Crates, 30 min of 2× Gold, a Haste Tonic. Once per player |
 | 1 Starfall Crate | 25 | — | Goes to the Inventory |
 | 3 Starfall Crates | 65 | 75 | "Popular" |
@@ -272,29 +279,32 @@ only returned after the save succeeds.
 | 2× Gold · 15 min | 39 | — | Timed boost |
 | 2× Gold · 1 hour | 99 | 156 | Timed boost |
 | 2× Server Luck · 15 min | 79 | — | Doubles everyone's chance of rare ore, announced with the buyer's name (region-checked) |
-| Instamine · 10 min | 49 | — | Every block the pick can mine breaks in one quick hit (0.12 s); depth and Power limits still apply. "Popular" |
-| Auto Sell · 30 min | 35 | — | The pack sells itself the moment it fills, and a pack already full when it starts sells within a second. "Popular" |
+| Instamine · 10 min | 99 | — | Every block the pick can mine breaks in one quick hit (0.12 s); depth and Power limits still apply. "Popular" |
+| Auto Sell · 30 min | 59 | — | The pack sells itself the moment it fills, and a pack already full when it starts sells within a second. "Popular" |
 | Reset Skill Tree | 15 | — | Every skill point back to spend again |
 | Gold Pouch | 15 | — | 15 minutes of the miner's earnings |
 | Gold Bag | 35 | 60 | An hour of earnings |
-| Gold Chest | 79 | 240 | 4 hours of earnings. "Popular" |
-| Gold Vault | 199 | 1,440 | A whole day of earnings. "Best value" |
+| Gold Chest | 99 | 240 | 4 hours of earnings. "Popular" |
+| Gold Vault | 349 | 1,440 | A whole day of earnings. "Best value" |
 
-The Starter Pack's "was" is what its parts cost separately (2 crates for 50, plus 30 minutes of
-2× Gold at the 15-minute rate, 78). The 1-hour 2× Gold is struck through at 4× the 15-minute price.
+The Starter Pack's "Worth" is what its parts cost separately (2 crates for 50, plus 30 minutes of
+2× Gold at the 15-minute rate, 78). The 1-hour 2× Gold is worth 4× the 15-minute price.
 The only luck you can buy is Server Luck (and the 2× Lucky pass); Lucky Brews still come from crates
 and rewards.
-Gold packs are struck through at the Gold Pouch's rate (1 Robux per minute of earnings).
+Gold packs are worth the Gold Pouch's rate (1 Robux per minute of earnings).
 
-**Earnings formula** (gold packs, duplicate gold and the minutes-of-earnings rewards): the deepest
-region's average sale value per block (purity ×1.25), times the blocks an hour at the miner's Speed,
+**Earnings formula** (gold packs, duplicate gold and the minutes-of-earnings rewards): the average
+sale value per block (purity ×1.25) of the deepest region the miner has reached *and* their current
+pick can mine. A Power 1 miner who rode down someone else's shaft, or one fresh from a rebirth, is
+valued at what they can dig, so gold gifts can't jump them up the pick tree. That value is times the blocks an hour at the miner's Speed,
 Power and skills at a relaxed pace (half the time cutting, a 30-second trip per full pack), times the
 rebirth bonus. The minimum is 250 an hour. Passes and boosts are left out, so it can't be inflated.
 The Shop shows the exact amount each pack pays right now.
 
 **Limited stock** is counted in the DataStore `EndlessMining_v1_Limited`, one entry per item, and
 published to every server as `Limited<key>` on ReplicatedStorage (re-read every minute). A purchase
-that lands after the last one sold is still given, because it was paid for.
+that lands after the last one sold is still given, because it was paid for, so the wording is "on
+sale until 100 are sold", never "only 100 will ever exist".
 
 ## Removed
 

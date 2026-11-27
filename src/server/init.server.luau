@@ -10,6 +10,24 @@ local Field = require(Rep.Shared.FieldRewards)
 local Pulse = require(script.MinePulse)
 local Skills = require(Rep.Shared.Skills)
 local Flare = require(script.SurveyFlare)
+-- A live server says out loud when playtest switches are still on or purchases have no IDs yet, so
+-- it can't be missed before release (see the PR's "Before release" list).
+if not game:GetService("RunService"):IsStudio() then
+	local on = {}
+	for _, flag in { "AllFxForTesting", "FreeUnconfiguredItems", "AllowProgressReset" } do
+		if Config[flag] then table.insert(on, flag) end
+	end
+	local Shop, missing = require(Rep.Shared.StoreConfig), 0
+	for _, list in { Shop.passes, Shop.products } do
+		for _, item in list do
+			if item.id == 0 and not item.retired then missing += 1 end
+		end
+	end
+	if #on > 0 or missing > 0 then
+		warn(string.format("Mine EVERYTHING! playtest build: %s on, %d purchase%s without an ID", if #on > 0 then table.concat(on, ", ") else "no flags",
+			missing, if missing == 1 then "" else "s"))
+	end
+end
 local Preferences = require(Rep.Shared.Preferences)
 local Store, Collection, Cosmetics = require(script.Store), require(script.Collection), require(script.Cosmetics)
 local Bonuses, C = require(Rep.Shared.Bonuses), require(Rep.Shared.Collectibles)
@@ -94,63 +112,69 @@ local function applySkills(player, p)
 		lamp.Range = 25 + Skills.bonus(owned, "lamp")
 	end
 end
+-- Writes an attribute only when its value changed. sync runs after every cut and touches about 150
+-- attributes, nearly all unchanged, so this keeps the per-cut replication small.
+local function put(player, key, value)
+	if player:GetAttribute(key) ~= value then player:SetAttribute(key, value) end
+end
 local function sync(player, p, awardName)
-	player:SetAttribute("Level", E.level(p.xp))
-	player:SetAttribute("EquippedTitle", Guide.selectedTitle(p))
+	put(player, "Level", E.level(p.xp))
+	put(player, "EquippedTitle", Guide.selectedTitle(p))
 	local encoded = Collection.encode(p.col, os.time())
 	if player:GetAttribute("Collection") ~= encoded then
-		player:SetAttribute("Collection", encoded)
+		put(player, "Collection", encoded)
 	end
-	player:SetAttribute("Trail", p.col.trail or "")
-	player:SetAttribute("Ribbon", p.col.ribbon or "")
-	player:SetAttribute("Aura", p.col.aura or "")
+	put(player, "Trail", p.col.trail or "")
+	put(player, "Ribbon", p.col.ribbon or "")
+	put(player, "Aura", p.col.aura or "")
 	-- What a Gold Bundle would pay right now, for the Shop to show.
-	player:SetAttribute("GoldBundle", Store.goldCrate(p))
-	player:SetAttribute("StarterBought", p.store.starter == true)
-	player:SetAttribute("VipChestAt", p.store.vipAt or 0)
+	put(player, "GoldBundle", Store.goldCrate(p))
+	put(player, "StarterBought", p.store.starter == true)
+	put(player, "VipChestAt", p.store.vipAt or 0)
 	p.bigPack = Store.benefits(player).BiggerPack == true
-	player:SetAttribute("SkillPoints", Guide.points(p.xp, p.skills))
-	player:SetAttribute("Rebirths", p.rebirths)
-	player:SetAttribute("RunStarfalls", p.runStarfalls)
+	put(player, "SkillPoints", Guide.points(p.xp, p.skills))
+	put(player, "Rebirths", p.rebirths)
+	put(player, "RunStarfalls", p.runStarfalls)
+	put(player, "RunTrail", p.runTrail)
 	player.leaderstats.Level.Value = E.level(p.xp)
-	player:SetAttribute("Gold", p.gold)
-	player:SetAttribute("StampDay", p.stampDay)
-	player:SetAttribute("StampAt", p.stampAt)
-	player:SetAttribute("StampCount", p.stampCount)
-	player:SetAttribute("HasteCuts", p.hasteCuts)
-	player:SetAttribute("StoneChips", p.stoneChips)
-	player:SetAttribute("CavePulses", p.pulses)
-	player:SetAttribute("OreCompass", p.oreCompass == true)
-	player:SetAttribute("Used", Profile.used(p))
-	player:SetAttribute("PackSlots", Profile.stat(p, "Capacity"))
+	put(player, "Gold", p.gold)
+	put(player, "StampDay", p.stampDay)
+	put(player, "StampAt", p.stampAt)
+	put(player, "StampCount", p.stampCount)
+	put(player, "HasteCuts", p.hasteCuts)
+	put(player, "StoneChips", p.stoneChips)
+	put(player, "CavePulses", p.pulses)
+	put(player, "OreCompass", p.oreCompass == true)
+	put(player, "Used", Profile.used(p))
+	put(player, "PackSlots", Profile.stat(p, "Capacity"))
 	local trailSpeed = C.wornSpeed(p.col)
 	if p.skills.PackMule or p.skills.Rockhound or player:GetAttribute("TrailSpeed") ~= trailSpeed then
-		player:SetAttribute("TrailSpeed", trailSpeed)
+		put(player, "TrailSpeed", trailSpeed)
 		applySkills(player, p)
 	end
-	player:SetAttribute("BagValue", Profile.value(p.bag, p.grades, p.skills.Broker))
-	player:SetAttribute("Flares", p.flares)
-	player:SetAttribute("TemperCharges", p.temper)
-	player:SetAttribute("DailyClaim", p.dailyClaim)
-	player:SetAttribute("Mined", p.mined)
-	player:SetAttribute("ExpeditionStep", Profile.expeditionStep(p))
-	player:SetAttribute("MiningXP", p.xp)
-	player:SetAttribute("Jobs", p.jobs)
-	player:SetAttribute("ClaimedJobs", p.claimedJobs)
+	put(player, "BagValue", Profile.value(p.bag, p.grades, p.skills.Broker))
+	put(player, "Flares", p.flares)
+	put(player, "TemperCharges", p.temper)
+	put(player, "DailyClaim", p.dailyClaim)
+	put(player, "Mined", p.mined)
+	put(player, "ExpeditionStep", Profile.expeditionStep(p))
+	put(player, "MiningXP", p.xp)
+	put(player, "Jobs", p.jobs)
+	put(player, "ClaimedJobs", p.claimedJobs)
 	for _, award in Guide.achievements do
-		player:SetAttribute("Award" .. award.id, Guide.progress(p, award))
+		put(player, "Award" .. award.id, Guide.progress(p, award))
 	end
 	for _, ore in Ores.list do
-		player:SetAttribute("Lifetime" .. ore.name, p.counts[ore.name] or 0)
-		player:SetAttribute("Held" .. ore.name, p.bag[ore.name] or 0)
+		put(player, "Lifetime" .. ore.name, p.counts[ore.name] or 0)
+		put(player, "Held" .. ore.name, p.bag[ore.name] or 0)
 		if not ore.host then
-			player:SetAttribute("Grades" .. ore.name, Purity.encode(p.grades[ore.name]))
-			player:SetAttribute("BestPurity" .. ore.name, p.bestPurity[ore.name] or 0)
+			put(player, "Grades" .. ore.name, Purity.encode(p.grades[ore.name]))
+			put(player, "BestPurity" .. ore.name, p.bestPurity[ore.name] or 0)
 		end
-		player:SetAttribute("Found" .. ore.name, p.discoveries[ore.name] == true)
+		put(player, "Found" .. ore.name, p.discoveries[ore.name] == true)
 	end
 	for _, key in Upgrades.order do
-		player:SetAttribute(key, p.levels[key])
+		put(player, key, p.levels[key])
 	end
 	player.leaderstats.Gold.Value = p.gold
 	player.leaderstats.Depth.Value = Profile.depthRecord(p)
@@ -202,7 +226,8 @@ local function onCharacter(player, character)
 		mount.Position = if head then root.CFrame:PointToObjectSpace(head.Position) else Vector3.new(0, 1.5, 0)
 		local lamp = Instance.new("PointLight")
 		lamp.Name, lamp.Color, lamp.Range, lamp.Brightness = "Mining lamp", Color3.fromRGB(255, 236, 213), 25, 0.8
-		lamp.Shadows = true
+		-- No shadows from the server copy: each client turns on shadows for its own lamp only.
+		lamp.Shadows = false
 		lamp.Parent, mount.Parent = mount, root
 	end
 	if sessions[player] then
@@ -776,10 +801,32 @@ for _, player in Players:GetPlayers() do
 	task.spawn(join, player)
 end
 
+-- The mine's budget of removed blocks before it renews (Config.ResetAfter), for the miners here now.
+local function resetBudget()
+	return math.min(Config.ResetMost, Config.ResetAfter + Config.ResetPerMiner * math.max(0, #Players:GetPlayers() - 1))
+end
+-- Miners who were deep when the mine renewed, and the cell each one stood in.
+local returns = {}
+local function sendBack()
+	for player, spot in returns do
+		local char = player.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		if player.Parent == Players and char == spot.character and root and not Config.inMine(root.Position - world.origin) then
+			-- A pocket where they stood, and a step of floor if the new rock there is a cave.
+			world.grid:hollow(spot.cell)
+			mineFit(char, true)
+			moveCharacter(char, CFrame.new(world.grid:center(spot.cell)) * spot.facing)
+			net.Feedback:FireClient(player, "hint", string.format("Back at your spot · %d blocks down", spot.depth))
+		end
+	end
+	table.clear(returns)
+end
 task.spawn(function()
 	while true do
 		world:generate()
+		sendBack()
 		local renewAt = os.clock() + Config.ResetSeconds
+		local soonest = os.clock() + Config.ResetSoonest
 		net:SetAttribute("Ready", true)
 		repeat
 			task.wait(1)
@@ -793,7 +840,7 @@ task.spawn(function()
 				end
 				world.grid:refreshStarter(os.clock(), miners)
 			end
-		until world.removed >= Config.ResetAfter or os.clock() >= renewAt
+		until (world.removed >= resetBudget() and os.clock() >= soonest) or os.clock() >= renewAt
 		net.Feedback:FireAllClients("resetSoon", Config.ResetWarning)
 		task.wait(Config.ResetWarning)
 		world.ready = false
@@ -802,6 +849,11 @@ task.spawn(function()
 			local char = player.Character
 			local root = char and char:FindFirstChild("HumanoidRootPart")
 			if root and Config.inMine(root.Position - world.origin) then
+				local depth = Config.depthInBlocks(world.origin.Y + Config.FloorY - root.Position.Y)
+				if depth >= Config.ReturnDepth then
+					returns[player] = { character = char, cell = world.grid:cellAt(root.Position), depth = depth,
+						facing = root.CFrame.Rotation }
+				end
 				mineFit(char, false)
 				moveCharacter(char, CFrame.lookAt(entrance, entrance - Vector3.zAxis))
 			end

@@ -9,7 +9,7 @@
 -- Timed luck boosts never multiply each other. The total is capped at 12×.
 --
 -- Gold multiplies every sale:
---   gold = (2 with Double Gold) × (1 + rebirths) × (1 + VIP 10% + Gold Tonic 50%) × (2 with 2× Gold)
+--   gold = (2 with Double Gold) × (1 + rebirths) × (1 + VIP 20% + Gold Tonic 50%) × (2 with 2× Gold)
 -- Sales are rounded to whole gold.
 local Rebirth = require(script.Parent.Rebirth)
 local Collectibles = require(script.Parent.Collectibles)
@@ -78,7 +78,7 @@ function B.luck(state: State): number
 end
 
 function B.gold(state: State): number
-	local flat = 1 + (if state.passes.VIP then 0.1 else 0) + (if active(state, "goldTonic") then 0.5 else 0)
+	local flat = 1 + (if state.passes.VIP then 0.2 else 0) + (if active(state, "goldTonic") then 0.5 else 0)
 	return (if state.passes.DoubleGold then 2 else 1) * Rebirth.goldMultiplier(state.rebirths) * flat
 		* (if active(state, "gold2") then 2 else 1)
 end
@@ -86,7 +86,7 @@ end
 -- Extra mining speed as a fraction: cut time is divided by (1 + this). The worn Mining FX adds a
 -- little, by rarity (Collectibles.mineSpeeds).
 function B.speed(state: State): number
-	return (if state.passes.FastPick then 0.15 else 0) + (if active(state, "speedTonic") then 0.2 else 0)
+	return (if state.passes.FastPick then 0.3 else 0) + (if active(state, "speedTonic") then 0.2 else 0)
 		+ Collectibles.mineSpeed("trail", state.trail) / 100
 end
 
@@ -106,8 +106,9 @@ function B.autoSell(state: State): boolean
 	return active(state, "autosell")
 end
 
-function B.xp(_state: State): number
-	return 1
+-- XP from every cut: +20% with VIP.
+function B.xp(state: State): number
+	return if state.passes.VIP then 1.2 else 1
 end
 
 function B.gemChance(_state: State): number

@@ -187,7 +187,11 @@ function Panel:buyButton(parent, kind, item, x, y, w, h)
 	if item.was then
 		local holder = W.frame(parent, "Was", x, y - 24, w, 22, W.ink)
 		holder.BackgroundTransparency = 1
-		local _, label = W.robux(holder, "<s>" .. W.goldAmount(item.was) .. "</s>", 17, rgb(255, 205, 215))
+		-- What it costs bought the expensive way, as a value, not a struck-through former price.
+		local row, label = W.robux(holder, W.goldAmount(item.was), 17, rgb(255, 205, 215))
+		local worth = label:Clone()
+		worth.Name, worth.LayoutOrder, worth.Text = "Worth", 0, "Worth"
+		worth.Parent = row
 		local off = S.off(item)
 		if off then label.Text ..= '  <font color="#8CFF6E">-' .. off .. "%</font>" end
 		was = holder
@@ -254,7 +258,7 @@ function Panel:buildFeatured(y)
 	table.insert(self.tags, tag(hero, "LIMITED", "left", rgb(255, 70, 90)))
 	FxPreview.new(hero, "aura", "FounderHalo", 10, 44, 140)
 	words(hero, limited.name, 152, 14, 210, 34, 27, nil, true)
-	local detail = words(hero, W.rich("A Limited aura, " .. W.colored("+16% movement speed", speedGreen) .. ". Only 100 will ever exist."), 154, 50, 206, 60, 15, rgb(255, 250, 215), true)
+	local detail = words(hero, W.rich("A Limited aura, " .. W.colored("+16% movement speed", speedGreen) .. ". On sale until 100 are sold."), 154, 50, 206, 60, 15, rgb(255, 250, 215), true)
 	detail.TextWrapped = true
 	W.largest(detail, 15, 10)
 	local track = W.frame(hero, "Stock", 154, 132, 206, 24, W.navy, 12)
@@ -280,6 +284,11 @@ function Panel:buildFeatured(y)
 	contents.TextWrapped, contents.TextYAlignment = true, Enum.TextYAlignment.Top
 	W.largest(contents, 15, 9)
 	self:buyButton(pack, "product", starter, 230, 64, 140, 40)
+	-- It holds crates, so its odds are one tap away before buying.
+	local odds = W.clearButton(pack, "Crate odds", 230, 38, 140, 24, "Select")
+	local oddsText = words(odds, "Crate odds ▸", 0, 0, 140, 24, 15, rgb(255, 244, 170))
+	oddsText.ZIndex = 3
+	odds.Activated:Connect(function() self:showOdds(Geodes.main) end)
 	-- In the Starter Pack's place once it's bought: Instamine.
 	local instamine = S.productByKey.Instamine10
 	local swap = box(page, "Instamine offer", 384, y + 12, 380, 112, { rgb(166, 245, 154), rgb(40, 150, 70) })
@@ -308,14 +317,14 @@ function Panel:buildFeatured(y)
 		chest.Visible, vipBuy.Visible, popular.Visible = owned, not owned, not owned
 		if owned then
 			local wait = (self.player:GetAttribute("VipChestAt") or 0) + S.vipCrateHours * 3600 - workspace:GetServerTimeNow()
-			vipText.Text = W.rich("Gold tag · +10% gold · a free Starfall Crate daily")
+			vipText.Text = W.rich("+20% gold · +20% XP · a free Starfall Crate daily")
 			if wait > 0 then
 				set(chest, chestPaint, chestLabel, "Next VIP crate in " .. W.clock(wait), grey, false)
 			else
 				set(chest, chestPaint, chestLabel, "Claim your free crate!", buyGreen, true)
 			end
 		else
-			vipText.Text = W.rich("Gold tag, +10% gold and a free Starfall Crate daily")
+			vipText.Text = W.rich("+20% gold, +20% XP and a free Starfall Crate daily")
 		end
 		-- Once the Starter Pack is bought, Instamine takes its place.
 		pack.Visible = not self.player:GetAttribute("StarterBought")

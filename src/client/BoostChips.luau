@@ -20,9 +20,9 @@ local looks = {
 -- Lasting bonuses, as circles: the pass (or the worn effect), its icon, a short label and what it does.
 local circles = {
 	{ "DoubleGold", "Coins", "2×", "Double Gold: 2× gold on every sale" },
-	{ "VIP", "Achievements", "VIP", "VIP: +10% gold and a free Starfall Crate every day" },
+	{ "VIP", "Achievements", "VIP", "VIP: +20% gold, +20% XP and a free Starfall Crate every day" },
 	{ "Lucky", "Crystal", "2×", "2× Lucky: rare ore turns up twice as often" },
-	{ "FastPick", "Speed", "+15%", "Fast Pick: +15% mining speed" },
+	{ "FastPick", "Speed", "+30%", "Fast Pick: +30% mining speed" },
 	{ "BiggerPack", "Pack", "+50%", "Bigger Pack: +50% backpack capacity" },
 }
 

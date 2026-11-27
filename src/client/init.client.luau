@@ -371,7 +371,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		hud.unlocks:show("job", a, "+" .. W.number(point) .. " gold", nil, point)
 	elseif kind == "resetSoon" then
 		hud:milestone("MINE RENEWAL", "New ore in " .. a .. " seconds", W.aqua)
-		hud:notice("Mine renews in " .. a .. " seconds", "Your haul returns to the entrance with you", W.aqua)
+		hud:notice("Mine renews in " .. a .. " seconds", "Deep miners go straight back to their spot", W.aqua)
 	elseif kind == "progressReset" then
 		hud.menu.preferences.resetPending = false
 		if a then
@@ -436,6 +436,10 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		fx:chime(1.85)
 		local ore = Ores.byName[point]
 		hud:notice("Lucky find! " .. point .. " inside the " .. a, string.format("%g× luck", math.floor(spread * 100 + 0.5) / 100), ore and ore.color or W.green)
+	elseif kind == "trailEnd" then
+		-- a = what the block looked like: the end of the Starfall's trail (Rebirth.trail).
+		fx:chime(1.85)
+		hud:notice("The trail ends here! A Starfall inside the " .. a, "You can rebirth now", Ores.byName.Starfall.color)
 	elseif kind == "freeGeode" then
 		local item = Collectibles.itemById[a]
 		fx:chime(1.75)
@@ -596,7 +600,9 @@ local function sampleAim()
 		expedition:hide()
 	end
 	if not ready then
-		hud:guide("Opening the mine…", "Preparing your pack and the mine", true)
+		local status = player:GetAttribute("SaveStatus")
+		hud:guide("Opening the mine…", if type(status) == "string" and status:find("^Waiting") then status .. " (up to 3 minutes)"
+			else "Preparing your pack and the mine", true)
 	elseif packed then
 		hud:guide("Backpack full!", if mobile then "Tap ↑ Surface, then sell your haul" else "Press R to surface, then sell your haul", true, true)
 	elseif tooHard then
@@ -745,6 +751,16 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 end)
 
+-- Only your own mining lamp casts shadows. The server sends every lamp without them, so a busy
+-- server doesn't ask a low-end device for a shadow-casting light per miner.
+local function ownLamp(character)
+	local root = character:WaitForChild("HumanoidRootPart", 30)
+	local mount = root and root:WaitForChild("Lamp mount", 30)
+	local lamp = mount and mount:WaitForChild("Mining lamp", 30)
+	if lamp then lamp.Shadows = true end
+end
+player.CharacterAdded:Connect(function(character) task.spawn(ownLamp, character) end)
+if player.Character then task.spawn(ownLamp, player.Character) end
 hud.root.Parent:SetAttribute("ControllerReady", true)
 local Opening = require(script.Starfall)
 local function playOpening()
@@ -765,6 +781,12 @@ task.spawn(function()
 		repeat task.wait(.1) until player:GetAttribute("ProfileReady") and net:GetAttribute("Ready")
 			and player.Character and player.Character:GetAttribute("MiningViewReady")
 		local character = player.Character
+		-- The film plays on a miner's first visit only. Settings can replay it any time.
+		if player:GetAttribute("IntroSeen") then
+			joinOpeningPending = false
+			Audio.startHarborMusic()
+			return
+		end
 		playOpening()
 		if player.Character == character and character:IsDescendantOf(workspace) then
 			joinOpeningPending = false

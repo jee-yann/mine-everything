@@ -49,6 +49,7 @@ function Data.snapshot(p)
 		bestDepth = p.bestDepth,
 		rebirths = p.rebirths,
 		runStarfalls = p.runStarfalls,
+		runTrail = p.runTrail,
 		levels = table.clone(p.levels),
 		progression = p.progression,
 		preferences = table.clone(p.preferences),
@@ -181,11 +182,17 @@ function Data.open(player)
 		player:SetAttribute("SaveStatus", "Practice session")
 		return session
 	end
-	for attempt = 1, 3 do
+	-- A miner who rejoins soon after a server crash finds their save still held by that server. Rather
+	-- than play the whole visit unsaved, keep asking until its lease runs out (Config.LeaseSeconds).
+	local held = "Save open on another server"
+	local waitUntil = os.clock() + Config.LeaseSeconds + 20
+	local failures = 0
+	while player.Parent do
+		local reason
 		local ok, record = pcall(function()
 			return getStore():UpdateAsync(session.key, function(old)
-				local claimed, reason = Data.claim(old, session.token, os.time())
-				detail = reason or detail
+				local claimed, why = Data.claim(old, session.token, os.time())
+				reason = why
 				return claimed
 			end)
 		end)
@@ -194,12 +201,18 @@ function Data.open(player)
 			player:SetAttribute("SaveStatus", "Saving enabled")
 			return session
 		end
-		if ok then
+		if ok and reason == held and os.clock() < waitUntil then
+			detail = held
+			player:SetAttribute("SaveStatus", "Waiting for your last server to let go of your save")
+			task.wait(10)
+		elseif ok then
+			detail = reason or detail
 			break
-		end
-		detail = tostring(record)
-		if attempt < 3 then
-			task.wait(attempt)
+		else
+			detail = tostring(record)
+			failures += 1
+			if failures >= 3 then break end
+			task.wait(failures)
 		end
 	end
 	warn("Endless Mining opened a temporary session for", player.UserId, detail)

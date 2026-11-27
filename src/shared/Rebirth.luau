@@ -13,6 +13,30 @@ local Rebirth = {}
 -- What the current run must achieve before the miner can rebirth.
 Rebirth.requirement = { ore = "Starfall", count = 1 }
 
+-- The Starfall's trail. The star came down in the crater, but its shards scattered up through the
+-- mine, and a newer miner meets the trail shallower: the first rebirth's runs through Saltglass Sinks
+-- (Power 5, about an hour in), and from the sixth on it is the crater itself. Once a run has cut
+-- `blocks` blocks at or below the trail's depth without a Starfall, the next block cut there holds one.
+-- Luck never moves this count, so paid luck can't buy a rebirth; a Starfall found by chance (in the
+-- crater, where they occur naturally) still counts.
+Rebirth.trails = {
+	{ depth = 140, blocks = 150, region = "Saltglass Sinks" },
+	{ depth = 225, blocks = 250, region = "Glowcap Hollows" },
+	{ depth = 260, blocks = 350, region = "Midnight Fault" },
+	{ depth = 340, blocks = 450, region = "Frostglass Reach" },
+	{ depth = 400, blocks = 550, region = "Cinderheart Forge" },
+	{ depth = 550, blocks = 700, region = "Starfall Crater" },
+}
+Rebirth.trailGrowth = 100 -- more blocks for each rebirth past the last row
+Rebirth.trailMost = 2000
+
+-- The trail for a miner with `n` rebirths: { depth, blocks, region }.
+function Rebirth.trail(n: number): { depth: number, blocks: number, region: string }
+	local row = Rebirth.trails[math.min(n + 1, #Rebirth.trails)]
+	local past = math.max(0, n + 1 - #Rebirth.trails)
+	return { depth = row.depth, blocks = math.min(Rebirth.trailMost, row.blocks + past * Rebirth.trailGrowth), region = row.region }
+end
+
 Rebirth.cutCap = 0.25 -- the most cutting speed rebirths can add
 
 function Rebirth.goldMultiplier(n: number): number

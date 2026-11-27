@@ -45,8 +45,8 @@ function Panel.new(menu)
 	self.picture = Icons.draw(hero, "Rebirth", 57, 52, 136)
 	self.pictureScale = self.picture:FindFirstChildOfClass("UIScale")
 	self.pictureRest = self.pictureScale.Scale
-	local need = Rebirth.requirement
-	words(hero, "Mine " .. (if need.count == 1 then "a " .. need.ore else need.count .. " " .. need.ore) .. " this run", 4, 204, 242, 26, 20, rgb(255, 244, 170))
+	self.goal = words(hero, "", 4, 204, 242, 26, 20, rgb(255, 244, 170))
+	W.largest(self.goal, 20, 13)
 	local track = W.frame(hero, "Progress", 22, 238, 206, 28, W.navy, 14)
 	W.stroke(track, W.navy, 4)
 	self.fill = W.frame(track, "Fill", 0, 0, 0, 28, W.white, 14)
@@ -155,14 +155,20 @@ function Panel:refresh()
 	self.live = ready and not pending
 	self.card.sub.Text = if n > 0 then "You are on rebirth " .. n .. ". Start a new run for more." else "Start a new run with permanent bonuses."
 	self.nextName.Text = "Rebirth " .. n + 1
-	self.fill.Size = UDim2.new(math.clamp(found / need, 0, 1), 0, 1, 0)
-	self.fill.Visible = found > 0
-	self.progress.Text = math.min(found, need) .. " / " .. need
+	-- The run's Starfall: found, or how far along the trail (Rebirth.trail) this run has come.
+	local trail = Rebirth.trail(n)
+	local walked = math.min(trail.blocks, player:GetAttribute("RunTrail") or 0)
+	local share = if found >= need then 1 else walked / trail.blocks
+	self.goal.Text = if found >= need then "Starfall found this run ✓" else "Follow the Starfall's trail"
+	self.fill.Size = UDim2.new(math.clamp(share, 0, 1), 0, 1, 0)
+	self.fill.Visible = share > 0
+	self.progress.Text = if found >= need then "Found!" else walked .. " / " .. trail.blocks .. " blocks"
 	self.label.Text = if pending then "Rebirthing…" elseif self.confirming then "Confirm!" elseif ready then "Rebirth!" else "Locked"
 	self.paint.Color = if not self.live then grey elseif self.confirming then yellow else green
 	self.button.Interactable = self.live
 	self.note.Text = self.reply or (if self.confirming then "Gold, pack, gear and supplies reset. Press again to rebirth."
-		elseif ready then "Ready when you are." else Rebirth.requirement.ore .. " is found in the deepest region.")
+		elseif ready then "Ready when you are."
+		else "Cut blocks in " .. trail.region .. " or deeper. The last one holds a Starfall.")
 	for _, item in self.perks do
 		item.after.Text, item.now.Text = item.perk.text(n + 1), "Now " .. item.perk.text(n)
 	end
