@@ -5,7 +5,7 @@ local ContentProvider = game:GetService("ContentProvider")
 -- Tile order matches art/hud/FieldKit.png (drawn in art/hud/field_kit.html). The bundled copy uses
 -- 128px tiles. Set the ImageId attribute only to an upload of the current FieldKit.png; without it the
 -- bundled pixels are used.
-local tileSize, atlasWidth, atlasHeight = 128, 512, 640
+local tileSize, atlasWidth, atlasHeight = 128, 512, 768
 local tiles = {
 	Inventory = Vector2.new(0, 0),
 	Skills = Vector2.new(1, 0),
@@ -27,6 +27,10 @@ local tiles = {
 	Boosts = Vector2.new(1, 4),
 	Passes = Vector2.new(2, 4),
 	Trail = Vector2.new(3, 4),
+	GoldPouch = Vector2.new(0, 5),
+	GoldBag = Vector2.new(1, 5),
+	GoldChest = Vector2.new(2, 5),
+	GoldVault = Vector2.new(3, 5),
 }
 tiles.Pack, tiles.Capacity, tiles.Titles = tiles.Inventory, tiles.Inventory, tiles.Achievements
 tiles.Gear, tiles.Crew = tiles.Power, tiles.Friends

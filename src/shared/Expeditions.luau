@@ -18,7 +18,11 @@ E.ranks = {
 	{ name = "Tunnel Miner", level = 5 },
 	{ name = "Expert Miner", level = 10 },
 	{ name = "Crystal Prospector", level = 18 },
-	{ name = "Prismatic Excavator", level = 28 },
+	{ name = "Ore Whisperer", level = 28 },
+	{ name = "Deep Delver", level = 40 },
+	{ name = "Gem Baron", level = 55 },
+	{ name = "Magma Walker", level = 75 },
+	{ name = "Starfall Seeker", level = 100 },
 }
 function E.level(xp)
 	return math.floor((1 + math.sqrt(1 + 0.4 * xp)) / 2)

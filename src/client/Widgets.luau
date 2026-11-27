@@ -279,6 +279,55 @@ end
 function W.colored(text, color)
 	return string.format('<font color="#%s">%s</font>', color:ToHex(), text)
 end
+-- A Robux price: the Robux icon and the amount, centred in `parent`. Returns the holder and its label.
+W.robuxImage = "rbxasset://textures/ui/common/robux.png"
+function W.robux(parent, amount, size, color)
+	local holder = Instance.new("Frame")
+	holder.Name, holder.BackgroundTransparency, holder.Size, holder.ZIndex = "Robux price", 1, UDim2.fromScale(1, 1), 4
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection, layout.HorizontalAlignment = Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Center
+	layout.VerticalAlignment, layout.Padding = Enum.VerticalAlignment.Center, UDim.new(0, math.floor(size * 0.25))
+	layout.SortOrder, layout.Parent = Enum.SortOrder.LayoutOrder, holder
+	local icon = Instance.new("ImageLabel")
+	icon.Name, icon.BackgroundTransparency, icon.Image, icon.ZIndex = "Robux", 1, W.robuxImage, 4
+	icon.Size, icon.LayoutOrder, icon.ImageColor3 = UDim2.fromOffset(size, size), 1, color or W.white
+	icon.Parent = holder
+	local label = Instance.new("TextLabel")
+	label.Name, label.BackgroundTransparency, label.Font, label.TextSize = "Amount", 1, Enum.Font.FredokaOne, size
+	label.TextColor3, label.AutomaticSize, label.Size, label.ZIndex = color or W.white, Enum.AutomaticSize.X, UDim2.fromOffset(0, size), 4
+	label.LayoutOrder, label.Text, label.RichText = 2, tostring(amount), true
+	W.navyText(label, math.max(2, size / 10))
+	label.Parent = holder
+	holder.Parent = parent
+	return holder, label
+end
+-- Numbers worth noticing in guide lines: gold amounts ("30 G", "1,160 G", "3/8 G") in gold, and
+-- progress counts ("1/5") in aqua, green once complete. The label needs RichText on.
+function W.highlight(text)
+	local saved = {}
+	local function keep(piece, color)
+		table.insert(saved, W.colored(piece, color))
+		return "\1" .. #saved .. "\1"
+	end
+	text = string.gsub(text, "%d[%d,]*/%d[%d,]* G%f[%A]", function(piece) return keep(piece, W.gold) end)
+	text = string.gsub(text, "%d[%d,]* G%f[%A]", function(piece) return keep(piece, W.gold) end)
+	text = string.gsub(text, "(%d[%d,]*)/(%d[%d,]*)", function(a, b)
+		local done = (tonumber((string.gsub(a, ",", ""))) or 0) >= (tonumber((string.gsub(b, ",", ""))) or 1)
+		return keep(a .. "/" .. b, if done then W.green else W.aqua)
+	end)
+	return (string.gsub(text, "\1(%d+)\1", function(i) return saved[tonumber(i)] end))
+end
+
+-- Rich text with every rarity name and keywords like Starfall in their own colours. The label needs
+-- RichText on.
+local keywords
+function W.rich(text)
+	keywords = keywords or require(game:GetService("ReplicatedStorage").Shared.Collectibles).keywords
+	return (string.gsub(text, "%a+", function(word)
+		local color = keywords[word]
+		return if color then W.colored(word, color) else word
+	end))
+end
 function W.unitPrice(value)
 	return W.colored(W.number(value) .. " G each", W.gold)
 end

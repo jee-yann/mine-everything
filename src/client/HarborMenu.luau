@@ -13,7 +13,7 @@ local FieldPages = require(script.Parent.FieldPages)
 local Field = require(Shared.FieldRewards)
 local RewardsPanel, IndexPanel = require(script.Parent.RewardsPanel), require(script.Parent.IndexPanel)
 local RebirthPanel, ProfilePanel = require(script.Parent.RebirthPanel), require(script.Parent.ProfilePanel)
-local ShopPanel, InventoryPanel, PetsPanel = require(script.Parent.ShopPanel), require(script.Parent.InventoryPanel), require(script.Parent.PetsPanel)
+local ShopPanel, InventoryPanel = require(script.Parent.ShopPanel), require(script.Parent.InventoryPanel)
 local Guide = require(Shared.FieldGuide)
 local Purity = require(Shared.OrePurity)
 local Skills = require(Shared.Skills)
@@ -35,18 +35,17 @@ local inventoryTabs = {}
 Menu.pages = {
 	Menu = { name = "Menu", color = W.aqua },
 	Inventory = { name = "Inventory", color = W.gold },
-	Pets = { name = "Pets", color = W.violet },
-	PetStyles = { name = "Pet Styles", color = W.violet },
 	Items = { name = "Inventory", color = W.orange },
-	MiningTrails = { name = "Mining Trails", color = W.orange },
+	MiningTrails = { name = "Mining FX", color = W.orange },
 	PlayerFX = { name = "Player Effects", color = W.orange },
-	Forge = { name = "Forge", color = W.orange },
 	Shop = { name = "Shop", color = W.pink },
 	ShopGeodes = { name = "Crates", color = W.orange },
 	ShopCrates = { name = "Crates", color = W.orange },
 	ShopPasses = { name = "Game passes", color = W.gold },
 	ShopBoosts = { name = "Boosts", color = W.green },
-	ShopGems = { name = "Gems", color = W.aqua },
+	ShopGold = { name = "Gold", color = W.gold },
+	ShopPasses2 = { name = "Game passes", color = W.gold },
+	ShopFeatured = { name = "Shop", color = W.pink },
 	Kit = { name = "Supplies", color = W.aqua },
 	Supplies = { name = "Field Supplies", color = W.gold },
 	Skills = { name = "Skill tree", color = W.green },
@@ -205,12 +204,12 @@ function Menu:layout(width, height, touch)
 	-- Give landscape phones larger type and touch targets by scrolling the rows
 	-- inside the card. Keep the header, footer and close button within safe bounds.
 	self.touchLayout = touch
-	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory, self.pets } do
+	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory } do
 		panel.card:layout(Vector2.new(width, height), touch)
 	end
 	local shortLandscape = width > height and (touch or height < 470)
-	local maxScale = if shortLandscape then 1.38 else 1.76
-	local minHeight = if shortLandscape then 270 else 408
+	local maxScale = if shortLandscape then 1.1 else 1.76
+	local minHeight = if shortLandscape then 340 else 408
 	local scale = math.clamp(math.min((width - 18) / 480, (height - 18) / minHeight), 0.3, maxScale)
 	local designHeight = if shortLandscape then math.clamp(math.floor((height - 18) / scale), minHeight, 408) else 408
 	local resized = self.designHeight ~= designHeight
@@ -305,10 +304,17 @@ function Menu:gear()
 		b.Position, b.Size = UDim2.fromOffset(322, 19), UDim2.fromOffset(113, 48)
 		b.TextWrapped = true
 		b.TextSize = 19
+		local short = false
 		b.Activated:Connect(function()
+			-- Short of gold: go and get some (the Shop's gold packs) instead.
+			if short then
+				self.hud:openPage("ShopGold")
+				return
+			end
 			self.net.Action:FireServer("Buy", key)
 		end)
 		table.insert(self.updates, function()
+			short = false
 			local level = self.player:GetAttribute(key) or 1
 			local price = Upgrades.price(key, level)
 			local nextLevel = if price then level + 1 else level
@@ -331,8 +337,8 @@ function Menu:gear()
 			local ready = gold >= price
 			detail.Text = if ready then W.colored(W.goldAmount(price) .. " G", W.green)
 				else W.colored(W.goldAmount(gold), unmet) .. " / " .. W.colored(W.goldAmount(price) .. " G", W.gold)
-			local caption = if ready then "Upgrade" else "Need " .. W.goldAmount(price - gold) .. " G"
-			setButton(b, caption, if ready then W.green else unmet, ready)
+			short = not ready
+			setButton(b, if ready then "Upgrade" else "Get gold ▸", if ready then W.green else W.gold, true)
 		end)
 	end
 	return #Upgrades.order
@@ -357,7 +363,7 @@ function Menu:jobs()
 		summary.Text = ingredients(order.recipe, bag)
 			.. "\n"
 			.. order.gold
-			.. (if self.player:GetAttribute("SkillSupplyRunner") then " G + 2 gems + 2 flares" else " G + 2 gems + 1 flare")
+			.. (if self.player:GetAttribute("SkillSupplyRunner") then " G + 2 Gold Tonics" else " G + 1 Gold Tonic")
 		setButton(deliver, if done then "Delivered" else "Deliver", if ready then W.green else W.muted, ready)
 		self.jobRows[1].done, self.jobRows[1].ready = done, ready
 	end)
@@ -398,7 +404,8 @@ function Menu:jobs()
 			entry.wasReady = entry.ready
 		end
 		local button = self.claimJobs
-		button.Text = if count > 0 then string.format("Claim all (%d)\n+%s G", count, W.goldAmount(total)) else "Claim all"
+		button.Text = if count > 0 then string.format("Claim all (%d) · +%s G", count, W.goldAmount(total)) else "Claim all"
+		button.TextSize = if count > 0 then 15 else 19
 		button.Interactable, button.BackgroundColor3 = count > 0, if count > 0 then W.green else W.muted
 		self:arrangeJobs(changed)
 	end)
@@ -459,8 +466,6 @@ function Menu:supplies()
 		table.insert(self.updates, function()
 			local bag = held(self.player, item.recipe)
 			local missing, count = Materials.missing(item.recipe, bag)
-			local gems = self.player:GetAttribute("Gems") or 0
-			local gemCost = item.gems or 0
 			local active = (key == "Temper" and (self.player:GetAttribute("TemperCharges") or 0) > 0)
 				or (item.stock and (self.player:GetAttribute(item.stock) or 0) > 0)
 				or (key == "Compass" and self.player:GetAttribute("OreCompass"))
@@ -479,15 +484,11 @@ function Menu:supplies()
 			)
 				.. "\n"
 				.. ingredients(item.recipe, bag)
-			if gemCost > 0 then
-				detail.Text ..= "   " .. requirement(string.format("Gems %d/%d", gems, gemCost), gems >= gemCost)
-			end
-			local ready = not active and not missing and gems >= gemCost
+			local ready = not active and not missing
 			setButton(
 				button,
 				if active then (if key == "Temper" then "Tempered" elseif key == "Compass" then "Owned" else "In use")
-					elseif missing then string.format("Need %d %s", count, missing)
-					elseif gems < gemCost then string.format("Need %d gems", gemCost - gems) else "Craft",
+					elseif missing then string.format("Need %d %s", count, missing) else "Craft",
 				if ready then W.green else W.muted,
 				ready
 			)
@@ -597,7 +598,7 @@ function Menu:attention(key)
 		-- VIP's chest is ready.
 		local benefits = "," .. (p:GetAttribute("Passes") or "") .. ","
 		return benefits:find(",VIP,", 1, true) ~= nil
-			and (p:GetAttribute("VipChestAt") or 0) + StoreConfig.vipChest.cooldown <= workspace:GetServerTimeNow()
+			and (p:GetAttribute("VipChestAt") or 0) + StoreConfig.vipCrateHours * 3600 <= workspace:GetServerTimeNow()
 	elseif key == "Inventory" then
 		-- A crate waiting to be opened.
 		local col = Bonuses.decode(p:GetAttribute("Collection")) or {}
@@ -643,7 +644,7 @@ function Menu:observeRows(now)
 end
 
 local function shortcuts(self)
-	local destinations = { "Shop", "Pets", "Daily", "Playtime", "Inventory", "Skills", "Achievements", "Book", "Jobs", "Rebirth", "Profile", "Friends", "Settings", "Miners" }
+	local destinations = { "Shop", "Daily", "Playtime", "Inventory", "Skills", "Achievements", "Book", "Jobs", "Rebirth", "Profile", "Friends", "Settings", "Miners" }
 	for i, key in destinations do
 		local page = Menu.pages[key]
 		local color = if page then page.color else W.aqua
@@ -733,7 +734,7 @@ function Menu:open(key)
 	elseif key == "Passes" then
 		key = "ShopPasses"
 	elseif key == "Collection" then
-		key = "Pets"
+		key = "Inventory"
 	elseif key == "Trails" then
 		key = "MiningTrails"
 	end
@@ -778,14 +779,11 @@ function Menu:open(key)
 	elseif key:match("^Shop") then
 		self.shop = self.shop or ShopPanel.new(self)
 		wide = self.shop
-	elseif key == "Inventory" or key == "Items" or key == "MiningTrails" or key == "PlayerFX" or key == "Forge" or key == "Titles" then
+	elseif key == "Inventory" or key == "Items" or key == "MiningTrails" or key == "PlayerFX" or key == "Titles" then
 		self.inventory = self.inventory or InventoryPanel.new(self)
 		wide = self.inventory
-	elseif key == "Pets" or key == "PetStyles" then
-		self.pets = self.pets or PetsPanel.new(self)
-		wide = self.pets
 	end
-	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory, self.pets } do
+	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory } do
 		if panel ~= wide then panel.card.modal.Visible = false end
 	end
 	self.modal.Visible = key ~= "Skills" and not wide
@@ -973,8 +971,7 @@ function Menu:refresh()
 		return
 	elseif self.page == "Kit" or self.page == "Supplies" then
 		self.sub.Text = string.format(
-			"%d gems  ·  %d flares  ·  %d temper charges",
-			p:GetAttribute("Gems") or 0,
+			"%d flares  ·  %d temper charges",
 			p:GetAttribute("Flares") or 0,
 			p:GetAttribute("TemperCharges") or 0
 		)

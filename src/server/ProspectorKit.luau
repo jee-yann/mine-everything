@@ -54,7 +54,6 @@ local function equip(player, char)
 	nameplate.Name, nameplate.Adornee, nameplate.Size = "Miner title", torso, UDim2.new(2.4, 48, 0.55, 14)
 	nameplate.MaxDistance, nameplate.LightInfluence, nameplate.Parent = 95, 0, kit
 	nameplate.AlwaysOnTop = true
-	nameplate.PlayerToHideFrom = player
 	human.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	local title = Instance.new("TextLabel")
 	title.Size, title.BackgroundTransparency, title.Font = UDim2.fromScale(1, 1), 1, Enum.Font.FredokaOne
@@ -80,7 +79,7 @@ local function equip(player, char)
 		local passes = "," .. (player:GetAttribute("Passes") or "") .. ","
 		local vip = if passes:find(",VIP,", 1, true) then '<font color="#FFD25A">VIP</font> ' else ""
 		local rankName = (E.ranks[player:GetAttribute("EquippedTitle") or tier] or rank).name
-		if passes:find(",CelestialMiner,", 1, true) then
+		if passes:find(",Everything,", 1, true) then
 			rankName = '<font color="#7FF2E6">✦ Celestial Miner ✦</font>'
 		end
 		title.Text = vip .. player.DisplayName .. Rebirth.richBadge(player:GetAttribute("Rebirths") or 0) .. "\n" .. rankName
@@ -91,7 +90,11 @@ local function equip(player, char)
 			Color3.fromRGB(109, 72, 147),
 			Color3.fromRGB(51, 147, 134),
 			Color3.fromRGB(152, 108, 189),
-		})[tier]
+			Color3.fromRGB(70, 150, 200),
+			Color3.fromRGB(200, 150, 60),
+			Color3.fromRGB(190, 70, 70),
+			Color3.fromRGB(230, 190, 90),
+		})[tier] or fabric
 	end
 	fit()
 	local signals = { torso:GetPropertyChangedSignal("Size"):Connect(fit) }

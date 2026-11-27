@@ -1,94 +1,69 @@
 --!strict
 -- Crates: what each one holds and the exact odds. Weights are in hundredths of a percent, so every
 -- crate's pool adds up to exactly 100%. The Shop shows these same numbers. (The module keeps its old
--- name, Geodes, so saved crate items and counters stay valid.)
+-- name, Geodes, and the crate keeps the id "Starfall", so saved crate items and counters stay valid.)
 --
--- Stone    common pets, a first trail, ribbon and pet style, and tonics
--- Crystal  rare and epic pets and cosmetics
--- Starfall the legendary and mythic pets and cosmetics, with a guarantee (see `pity`)
+-- There is one crate, the Starfall Crate, bought with Robux or earned. Its mix by rarity:
+--   Common 40%  ·  Uncommon 28%  ·  Rare 18%  ·  Epic 9.5%  ·  Legendary 4%  ·  Mythic 0.5%
+-- and every 10th crate without a Legendary or better is guaranteed one. The Welcome Crate is the
+-- day-1 daily reward and always holds the Epic Comet Trail.
 local Collectibles = require(script.Parent.Collectibles)
 local G = {}
 
 G.list = {
 	{
-		id = "Pebble", name = "Stone Crate", price = 25, color = Color3.fromRGB(196, 150, 96),
-		blurb = "Common pets, a first trail and tonics",
-		pool = {
-			{ kind = "pet", id = "Bat", weight = 1200 },
-			{ kind = "pet", id = "Mole", weight = 1200 },
-			{ kind = "pet", id = "Frog", weight = 1200 },
-			{ kind = "pet", id = "Crab", weight = 700 },
-			{ kind = "pet", id = "Hedgehog", weight = 700 },
-			{ kind = "pet", id = "Turtle", weight = 700 },
-			{ kind = "pet", id = "Penguin", weight = 700 },
-			{ kind = "trail", id = "Ember", weight = 900 },
-			{ kind = "ribbon", id = "Mint", weight = 500 },
-			{ kind = "style", id = "Sparkle", weight = 500 },
-			{ kind = "item", id = "GoldTonic", weight = 600 },
-			{ kind = "item", id = "HasteTonic", weight = 600 },
-			{ kind = "pet", id = "Slime", weight = 200 },
-			{ kind = "pet", id = "Bunny", weight = 200 },
-			{ kind = "item", id = "LuckyBrew", weight = 100 },
-		},
-	},
-	{
-		id = "Crystal", name = "Crystal Crate", price = 75, color = Color3.fromRGB(176, 120, 255),
-		blurb = "Rare and epic pets and cosmetics",
-		pool = {
-			{ kind = "pet", id = "Slime", weight = 1000 },
-			{ kind = "pet", id = "Moth", weight = 1000 },
-			{ kind = "pet", id = "Bunny", weight = 1000 },
-			{ kind = "pet", id = "Golem", weight = 1000 },
-			{ kind = "trail", id = "Frost", weight = 800 },
-			{ kind = "trail", id = "Verdant", weight = 800 },
-			{ kind = "ribbon", id = "Sunset", weight = 600 },
-			{ kind = "style", id = "Wings", weight = 600 },
-			{ kind = "aura", id = "Sparks", weight = 600 },
-			{ kind = "item", id = "LuckyBrew", weight = 500 },
-			{ kind = "pet", id = "Drake", weight = 350 },
-			{ kind = "pet", id = "Fox", weight = 350 },
-			{ kind = "pet", id = "Jelly", weight = 350 },
-			{ kind = "trail", id = "Aurora", weight = 300 },
-			{ kind = "aura", id = "Embers", weight = 250 },
-			{ kind = "style", id = "Flames", weight = 200 },
-			{ kind = "pet", id = "Owl", weight = 100 },
-			{ kind = "trail", id = "Comet", weight = 100 },
-			{ kind = "pet", id = "Stag", weight = 100 },
-		},
-	},
-	{
-		id = "Starfall", name = "Starfall Crate", price = 220, color = Color3.fromRGB(150, 100, 255),
-		blurb = "Legendary and Mythic pets and effects",
+		id = "Starfall", name = "Starfall Crate", color = Color3.fromRGB(150, 100, 255),
+		blurb = "Mining trails, player trails, auras, tonics and gold",
 		-- After nine opens in a row without a Legendary or better, the tenth is one.
 		pity = { after = 9, rank = 5 },
 		pool = {
-			{ kind = "pet", id = "Drake", weight = 1600 },
-			{ kind = "pet", id = "Fox", weight = 1600 },
-			{ kind = "pet", id = "Jelly", weight = 1600 },
-			{ kind = "trail", id = "Aurora", weight = 1000 },
-			{ kind = "aura", id = "Embers", weight = 1000 },
-			{ kind = "style", id = "Flames", weight = 800 },
-			{ kind = "pet", id = "Salamander", weight = 300 },
-			{ kind = "pet", id = "Owl", weight = 300 },
-			{ kind = "pet", id = "Stag", weight = 300 },
-			{ kind = "trail", id = "Solar", weight = 250 },
-			{ kind = "trail", id = "Comet", weight = 250 },
-			{ kind = "aura", id = "Halo", weight = 250 },
-			{ kind = "ribbon", id = "Starlight", weight = 250 },
-			{ kind = "style", id = "Crown", weight = 200 },
-			{ kind = "style", id = "StarHalo", weight = 200 },
-			{ kind = "pet", id = "Wisp", weight = 30 },
-			{ kind = "pet", id = "Phoenix", weight = 30 },
-			{ kind = "trail", id = "Rift", weight = 20 },
+			-- Common 40%
+			{ kind = "trail", id = "Copper", weight = 900 },
+			{ kind = "trail", id = "Ember", weight = 900 },
+			{ kind = "ribbon", id = "Dust", weight = 800 },
+			{ kind = "aura", id = "Motes", weight = 700 },
+			{ kind = "item", id = "GoldPouch", weight = 700 },
+			-- Uncommon 28%
+			{ kind = "trail", id = "Frost", weight = 500 },
+			{ kind = "trail", id = "Moss", weight = 500 },
+			{ kind = "ribbon", id = "Mint", weight = 500 },
+			{ kind = "aura", id = "Leaves", weight = 500 },
+			{ kind = "item", id = "GoldSack", weight = 300 },
+			{ kind = "item", id = "GoldTonic", weight = 250 },
+			{ kind = "item", id = "HasteTonic", weight = 250 },
+			-- Rare 18%
+			{ kind = "trail", id = "Verdant", weight = 350 },
+			{ kind = "trail", id = "Sakura", weight = 350 },
+			{ kind = "ribbon", id = "Sunset", weight = 300 },
+			{ kind = "ribbon", id = "Candy", weight = 300 },
+			{ kind = "aura", id = "Sparks", weight = 150 },
+			{ kind = "aura", id = "Mist", weight = 150 },
+			{ kind = "item", id = "LuckyBrew", weight = 200 },
+			-- Epic 9.5%
+			{ kind = "trail", id = "Aurora", weight = 200 },
+			{ kind = "trail", id = "Thunder", weight = 200 },
+			{ kind = "trail", id = "Comet", weight = 150 },
+			{ kind = "ribbon", id = "EmberRibbon", weight = 150 },
+			{ kind = "aura", id = "Embers", weight = 150 },
+			{ kind = "item", id = "GoldChest", weight = 100 },
+			-- Legendary 4%
+			{ kind = "trail", id = "Solar", weight = 80 },
+			{ kind = "trail", id = "Inferno", weight = 80 },
+			{ kind = "ribbon", id = "Starlight", weight = 60 },
+			{ kind = "ribbon", id = "AuroraRibbon", weight = 60 },
+			{ kind = "aura", id = "Halo", weight = 60 },
+			{ kind = "aura", id = "Sunburst", weight = 60 },
+			-- Mythic 0.5%
+			{ kind = "trail", id = "Rift", weight = 15 },
+			{ kind = "trail", id = "Galaxy", weight = 15 },
 			{ kind = "ribbon", id = "Void", weight = 10 },
-			{ kind = "aura", id = "Nebula", weight = 5 },
-			{ kind = "style", id = "Cloak", weight = 5 },
+			{ kind = "aura", id = "Nebula", weight = 10 },
 		},
 	},
-	-- The Welcome Crate is the onboarding gift: one reward, shown as a 100% guarantee. It is never sold.
+	-- The Welcome Crate is the day-1 daily reward: one reward, shown as a 100% guarantee. It is never sold.
 	{
 		id = "Welcome", name = "Welcome Crate", color = Color3.fromRGB(255, 214, 120), gift = true,
-		blurb = "Your first crate: a guaranteed Legendary Comet Trail",
+		blurb = "Your first crate: a guaranteed Epic Comet Trail",
 		pool = { { kind = "trail", id = "Comet", weight = 10000 } },
 	},
 }
@@ -96,8 +71,9 @@ G.byId = {}
 for _, geode in G.list do
 	G.byId[geode.id] = geode
 end
+G.main = G.byId.Starfall
 
--- The entry's catalogue record (pet, cosmetic or item).
+-- The entry's catalogue record (cosmetic or item).
 function G.entry(reward: any): any
 	return Collectibles.find(reward.kind, reward.id)
 end
@@ -130,6 +106,20 @@ function G.odds(geode: any, pity: number?): { { reward: any, percent: number } }
 	return out
 end
 
+-- The chance of each rarity, in rarity order: { { rarity, percent } }. They add up to 100.
+function G.breakdown(geode: any, pity: number?): { { any } }
+	local sums = {}
+	for _, row in G.odds(geode, pity) do
+		local rarity = G.entry(row.reward).rarity
+		sums[rarity] = (sums[rarity] or 0) + row.percent
+	end
+	local out = {}
+	for _, rarity in Collectibles.rarityOrder do
+		if sums[rarity] then table.insert(out, { rarity, sums[rarity] }) end
+	end
+	return out
+end
+
 -- Draws one reward with `rng` (a Random). Server only.
 function G.roll(geode: any, rng: Random, pity: number?): any
 	local pool, total = G.pool(geode, pity), 0
@@ -144,7 +134,7 @@ function G.roll(geode: any, rng: Random, pity: number?): any
 	return pool[#pool]
 end
 
--- Percent with enough places that small odds still show (0.05%, 1.5%, 22%).
+-- Percent with enough places that small odds still show (0.1%, 1.5%, 22%).
 function G.percentText(percent: number): string
 	if percent >= 10 then return (string.format("%.1f%%", percent):gsub("%.0%%", "%%")) end
 	return (string.format("%.2f%%", percent):gsub("0+%%$", "%%"):gsub("%.%%", "%%"))

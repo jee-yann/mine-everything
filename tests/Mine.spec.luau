@@ -384,7 +384,7 @@ local order = Materials.daily(day)
 supplies.bag = table.clone(order.recipe)
 assert(not Profile.deliver(supplies, day, day - 1) and supplies.gold == 150)
 assert(Profile.deliver(supplies, day, day) and Profile.used(supplies) == 0)
-assert(supplies.gold == 150 + order.gold and supplies.flares == 2 and not Profile.deliver(supplies, day, day))
+assert(supplies.gold == 150 + order.gold and supplies.flares == 1 and supplies.col.items.GoldTonic == 1 and not Profile.deliver(supplies, day, day))
 assert(Materials.daily(day + 1) ~= order and Profile.valid(supplies))
 local neutral, spent = Ores.cutTime(0.8, Ores.byName.Stone, 1, 25)
 assert(not spent and neutral == Ores.cutTime(0.8, Ores.byName.Stone, 1))
@@ -449,7 +449,7 @@ do
 assert(Profile.buySupply(specialist, "Temper") and specialist.temper == 45)
 	specialist.bag = table.clone(Materials.daily(day).recipe)
 	assert(
-		Profile.deliver(specialist, day, day) and specialist.flares == 2 and not Profile.deliver(specialist, day, day)
+		Profile.deliver(specialist, day, day) and specialist.col.items.GoldTonic == 2 and not Profile.deliver(specialist, day, day)
 	)
 	assert(Profile.stat(specialist, "Capacity") == 35)
 	-- An old 36-slot bag could legally hold 70 with all hauling skills.

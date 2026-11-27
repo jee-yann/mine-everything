@@ -91,7 +91,7 @@ function Panel.new(menu)
 		y += 90
 	end
 	for i, info in {
-		{ "You keep", "Level, skills, gems, Index, achievements, titles, pets, quests and deepest descent.", "Book", leaf },
+		{ "You keep", "Level, skills, Index, achievements, titles, trails, auras, crates, quests and deepest descent.", "Book", leaf },
 		{ "Resets", "Gold, your pack, Power, Speed, Backpack and field supplies.", "Pack", slate },
 	} do
 		local box = tile(page, info[1], 264 + (i - 1) * 255, y, 245, 138, info[4])

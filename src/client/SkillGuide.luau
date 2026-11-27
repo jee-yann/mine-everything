@@ -93,7 +93,7 @@ function Guide.start(player, hud, busy)
 		local button = if not hud.edgeMode then tile else hud.levelRing.button
 		local points = player:GetAttribute("SkillPoints") or 0
 		local how = if button ~= tile then "Tap your level"
-			elseif Input.PreferredInput == Enum.PreferredInput.KeyboardAndMouse then "Click Skills or press K" else "Open Skills"
+			elseif Input.PreferredInput == Enum.PreferredInput.KeyboardAndMouse then "Click Skills or press Q" else "Open Skills"
 		outside:show(button, "You have " .. points .. " skill point" .. (if points == 1 then "!" else "s!"), how .. ".\nSpend them to get stronger for good.", motion)
 		ring:point(button, motion, "Spotlight")
 	end)

@@ -27,7 +27,7 @@ local function create(pad)
 	wave.Enabled, wave.Parent = false, center
 
 	local motes = Instance.new("ParticleEmitter")
-	motes.Name, motes.Texture = "Aura sparks", "rbxasset://textures/particles/sparkles_main.dds"
+	motes.Name, motes.Texture = "Aura sparks", "rbxassetid://4963436775" -- the VFX pack's four-point star
 	motes.Color, motes.LightEmission, motes.LightInfluence =
 		ColorSequence.new(color, color:Lerp(Color3.new(1, 1, 1), 0.45)), 0.75, 0
 	motes.Speed, motes.Lifetime, motes.SpreadAngle =

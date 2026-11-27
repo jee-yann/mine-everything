@@ -264,10 +264,14 @@ UIS:GetPropertyChangedSignal("PreferredInput"):Connect(function()
 end)
 
 local reveal = require(script.GeodeReveal).new(hud, net)
+hud.checkout = require(script.Checkout).new(hud, net, reveal)
+require(script.ShopSign)(hud)
 hud.reveal = reveal
 local Collectibles = require(shared.Collectibles)
 local function chime(pitch) fx:chime(pitch) end
 net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, normal)
+	-- A refusal right after asking to buy ends the checkout's waiting screen.
+	if kind == "hint" then hud.checkout:refused() end
 	if kind == "achievement" or kind == "titleUnlocked" or kind == "levelUp" then
 		hud.unlocks:show(kind, a)
 	elseif kind == "skillLearned" then
@@ -305,8 +309,8 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 	elseif kind == "caveCache" then
 		fx:chime(1.65)
 		hud:notice(
-			if point then "Cave drake hatched! Equip it in Pets" else "Survey cache found",
-			"+" .. a .. " G   ·   +1 survey flare",
+			if point then "Drake egg cracked: a Starfall Crate!" else "Survey cache found",
+			"+" .. a .. " G" .. (if point then "   ·   open the crate from your Inventory" else ""),
 			W.gold
 		)
 	elseif kind == "milestone" then
@@ -411,22 +415,22 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		-- a = geode, point = reward kind, spread = reward id, finds = count, normal = what happened
 		reveal:play(a, point, spread, finds, normal, chime)
 		hud.menu:refresh()
-	elseif kind == "welcomeGeode" then
-		-- The onboarding gift opens on its own once the upgrade has been celebrated.
-		task.delay(3, function()
-			if not reveal:busy() then net.Action:FireServer("OpenGeode", "Welcome", false) end
-		end)
-	elseif kind == "crafted" then
-		fx:chime(1.6)
-		local entry = Collectibles.find(a, point)
-		hud.unlocks:show("upgrade", "Forged: " .. entry.name, require(script.GeodeReveal).outcome(a, point, spread, finds))
+	elseif kind == "goldPack" then
+		-- a = gold, point = the pack's name. A pack bought from the Shop shows its gold in the thank-you.
+		fx:chime(1.8)
+		if hud.checkout:expecting() then
+			hud.checkout:gold(a)
+		else
+			hud.unlocks:show("upgrade", point, "+" .. W.goldAmount(a) .. " gold")
+		end
 	elseif kind == "itemUsed" then
 		fx:chime(1.4)
 		local item = Collectibles.itemById[a]
 		if item then hud:notice(item.name .. " used", item.detail, W.green) end
 	elseif kind == "purchase" then
+		-- a = name, point = "pass" or "product", spread = its key
 		fx:chime(1.8)
-		hud.unlocks:show("upgrade", "Thank you!", a .. (if point == "pass" then " is yours for good" else " delivered"))
+		hud.checkout:purchased(a, point, spread)
 	elseif kind == "lucky" then
 		-- a = what the block looked like, point = the rare ore inside, spread = luck
 		fx:chime(1.85)
@@ -436,9 +440,6 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		local item = Collectibles.itemById[a]
 		fx:chime(1.75)
 		hud:notice("Free " .. (if item then item.name else "crate") .. "!", "Open it from your Inventory", W.violet)
-	elseif kind == "gemFind" then
-		fx:chime(1.7)
-		hud:notice("+1 gem", "Found in the rock", W.aqua)
 	elseif kind == "serverLuck" then
 		fx:chime(1.9)
 		hud:milestone("SERVER LUCK", a .. " gave everyone 2× luck!", W.green)
@@ -471,7 +472,8 @@ for _, other in Players:GetPlayers() do
 	end
 end
 
-require(script.PetFollowers)(hud, origin)
+require(script.OreCompass)(hud, origin)
+require(script.FirstPersonPick)(player)
 require(script.BoostChips)(hud)
 local lastDepth, lastRegion
 local function targetName(ore, center)
@@ -537,8 +539,19 @@ local function sampleAim()
 	end
 	local ready = net:GetAttribute("Ready") and player:GetAttribute("ProfileReady")
 	local centerAim = mobile or UIS.PreferredInput == Enum.PreferredInput.Gamepad
-	local screen = if centerAim then camera.ViewportSize * 0.5 else UIS:GetMouseLocation()
-	local ray = camera:ViewportPointToRay(screen.X, screen.Y)
+	local screen, ray
+	if centerAim then
+		-- Aim exactly through the aim dot: the middle of its full-screen layer, in that layer's own
+		-- coordinates (where the dot, the mining cursor and its label are drawn) and on screen for the
+		-- ray. Using the camera's viewport centre instead could sit off the dot on screens with insets.
+		local layer = hud.reticle.Parent
+		screen = layer.AbsoluteSize * 0.5
+		local at = layer.AbsolutePosition + screen
+		ray = camera:ScreenPointToRay(at.X, at.Y)
+	else
+		screen = UIS:GetMouseLocation()
+		ray = camera:ViewportPointToRay(screen.X, screen.Y)
+	end
 	local reach = char:GetAttribute("PickReach") or Config.Reach
 	local hit = workspace:Raycast(ray.Origin, ray.Direction * (if inMine then math.max(reach + 48, minerFocus.range) else reach + 48), params)
 	local onControl = GuiService.MenuIsOpen or UIS:GetFocusedTextBox() or (hud.chatInput and hud.chatInput.IsFocused)
@@ -700,8 +713,8 @@ RunService.RenderStepped:Connect(function(dt)
 		player:GetAttribute("StoneChips"),
 		Upgrades.items.Power.values[player:GetAttribute("Power") or 1]
 	)
-	-- Pets, Fast Pick and Haste Tonic: the same speed the server uses.
-	duration /= 1 + require(shared.Bonuses).speed(require(shared.Bonuses).state(player))
+	-- Fast Pick and Haste Tonic: the same speed the server uses.
+	duration = require(shared.Bonuses).cut(require(shared.Bonuses).state(player), duration)
 	if rig and not rig.shoulder:IsDescendantOf(workspace) then
 		rig:destroy()
 		rig = nil

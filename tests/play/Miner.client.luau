@@ -567,8 +567,6 @@ local function test()
 			"Settings",
 			"Inventory",
 			"Titles",
-			"Pets",
-			"Forge",
 			"Skills",
 			"Achievements",
 			"Gear",
@@ -590,11 +588,9 @@ local function test()
 		local listing = ({
 			Menu = "Miners",
 			Settings = "Music volume",
-			Pets = "Rock",
-			Forge = "GoldTonic",
 			Shop = "Starter Pack",
-			ShopGeodes = "Crystal Crate",
-			Titles = "Prismatic Excavator",
+			ShopGeodes = "Starfall Crate",
+			Titles = "Starfall Seeker",
 			ShopPasses = "Double Gold",
 			Achievements = "Once Is Luck, Twice Is Skill",
 			Gear = "Speed",
@@ -608,14 +604,15 @@ local function test()
 				return map and map.Visible and not menu.Visible
 			end
 			-- The Shop, the Inventory and Pets are wide cards with a page per tab.
-			local cardName = if page:match("^Shop") then "Shop" elseif page == "Pets" then "Pets"
-				elseif page == "Inventory" or page == "Titles" or page == "Forge" then "Inventory" else nil
+			local cardName = if page:match("^Shop") then "Shop"
+				elseif page == "Inventory" or page == "Titles" then "Inventory" else nil
 			if cardName then
 				local wideCard = overlay:FindFirstChild(cardName)
-				local tab = ({ Shop = "Featured", ShopGeodes = "Crates", ShopPasses = "Passes", Pets = "Pets", Forge = "Forge",
-					Inventory = "Items", Titles = "Titles" })[page]
-				local body = wideCard and wideCard.Visible and wideCard.Body:FindFirstChild(tab)
-				return body and body.Visible and (listing == nil or body:FindFirstChild(listing, true) ~= nil) and not menu.Visible
+				if not (wideCard and wideCard.Visible) or menu.Visible then return false end
+				-- The Shop is one scrolling page; the Inventory has a page per tab.
+				if cardName == "Shop" then return wideCard.Body:FindFirstChild(listing, true) ~= nil end
+				local body = wideCard.Body:FindFirstChild(if page == "Titles" then "Titles" else "Items")
+				return body and body.Visible and (listing == nil or body:FindFirstChild(listing, true) ~= nil)
 			end
 			if page == "Book" or page == "Daily" or page == "Playtime" then
 				local card = overlay:FindFirstChild(if page == "Book" then "Ore index" else "Rewards")
@@ -629,8 +626,8 @@ local function test()
 			return overlay.Visible and menu.Listings:FindFirstChild(listing)
 		end, 5, "open " .. page)
 		local wide = if page == "Book" then overlay["Ore index"] elseif page == "Daily" or page == "Playtime" then overlay.Rewards
-			elseif page:match("^Shop") then overlay.Shop elseif page == "Pets" then overlay.Pets
-			elseif page == "Inventory" or page == "Titles" or page == "Forge" then overlay.Inventory else nil
+			elseif page:match("^Shop") then overlay.Shop
+			elseif page == "Inventory" or page == "Titles" then overlay.Inventory else nil
 		local close = if page == "Skills" then overlay["Skill map"]["Map header"].Close else (wide or menu).Marquee.Close
 		assert(close.Visible and close.Modal, page .. " must release the first-person pointer")
 		if page == "Gear" and r:GetAttribute("CheckSwing") then
@@ -638,7 +635,7 @@ local function test()
 				local row = menu.Listings[key]
 				waitFor(function()
 					return row.Requirements.ContentText == "0 / " .. price .. " G" and row.Requirements.TextFits
-						and row.Action.Text == "Need " .. price .. " G" and not row.Action.Interactable
+						and row.Action.Text == "Get gold ▸" and row.Action.Interactable
 				end, 2, "gold cost of " .. key .. " for a new miner")
 			end
 			local benefit = menu.Listings.Power.Benefit
@@ -657,28 +654,14 @@ local function test()
 		if page == "ShopGeodes" then
 			-- Odds come before buying: every geode has its odds button.
 			assert(not overlay.Shop["Odds sheet"].Visible)
-			local stone = overlay.Shop.Body.Crates:FindFirstChild("Stone Crate")
-			assert(stone and stone:FindFirstChild("Odds"), "each crate has an odds button")
+			local crate = overlay.Shop.Body:FindFirstChild("Starfall Crate", true)
+			assert(crate and crate:FindFirstChild("Odds") and crate:FindFirstChild("Rarity mix"), "the crate shows its odds and rarity mix")
 		end
 		if page == "Achievements" then
 			assert(not menu["Inventory tabs"].Visible)
 			assert(menu.Listings:FindFirstChild("Practicing My Scales"))
 		end
-		if page == "Pets" then
-			n.Action:FireServer("EquipPet", "Rock", true)
-			waitFor(function()
-				return workspace["Pet followers"]:FindFirstChild("Pocket Rock")
-			end, 4, "equipped follower")
-			n.Action:FireServer("PetName", "Flint")
-			waitFor(function()
-				return p:GetAttribute("PetName") == "Flint"
-			end, 3, "renamed rock")
-			task.wait(0.25)
-			n.Action:FireServer("EquipPet", "Rock", false)
-			waitFor(function()
-				return p:GetAttribute("Pet") == "" and not workspace["Pet followers"]:FindFirstChild("Pocket Rock")
-			end, 4, "put the rock away")
-		elseif page == "Inventory" then
+		if page == "Inventory" then
 			n.Action:FireServer("Title", 6)
 			task.wait(0.2)
 			assert(p:GetAttribute("EquippedTitle") == 1)
@@ -780,8 +763,8 @@ local function test()
 			game:GetService("RunService").Heartbeat:Wait()
 			assert(not overlay.Visible, "O is reserved for the camera")
 			for _, slot in {
-				{ "Inventory", Enum.KeyCode.B }, { "Skills", Enum.KeyCode.K }, { "Achievements", Enum.KeyCode.H },
-				{ "Book", Enum.KeyCode.J }, { "Settings", Enum.KeyCode.P },
+				{ "Inventory", Enum.KeyCode.B }, { "Skills", Enum.KeyCode.Q }, { "Achievements", Enum.KeyCode.H },
+				{ "Book", Enum.KeyCode.C }, { "Settings", Enum.KeyCode.P },
 			} do
 				local page, code = slot[1], slot[2]
 				tapKey(code)
@@ -800,24 +783,6 @@ local function test()
 			end
 			tapKey(Enum.KeyCode.P)
 			waitFor(function() return not overlay.Visible end, 2, "toggle Settings closed")
-			-- The pet name box shows for the lead pet; typing in it doesn't trigger hotkeys.
-			n.Action:FireServer("EquipPet", "Rock", true)
-			waitFor(function() return p:GetAttribute("Pet") == "Rock" end, 3, "lead pet")
-			r:FireServer("openPage", "Pets")
-			local pets = overlay:WaitForChild("Pets")
-			waitFor(function() return overlay.Visible and pets.Visible and pets.Body.Pets.Detail["Pet name"].Visible end, 3, "pets card")
-			local name = pets.Body.Pets.Detail["Pet name"]
-			name:CaptureFocus()
-			waitFor(function() return name:IsFocused() end, 2, "typing pet name")
-			tapKey(Enum.KeyCode.T)
-			task.wait(0.2)
-			assert(overlay.Visible and name:IsFocused() and pets.Visible, "T while typing")
-			name:ReleaseFocus()
-			waitFor(function() return not game.UserInputService:GetFocusedTextBox() end, 2, "pet name focus released")
-			game:GetService("RunService").Heartbeat:Wait()
-			tapKey(Enum.KeyCode.T)
-			waitFor(function() return not overlay.Visible end, 2, "T closes Pets")
-			n.Action:FireServer("EquipPet", "Rock", false)
 		end
 		tapKey(Enum.KeyCode.P)
 		waitFor(function()
@@ -1469,7 +1434,7 @@ local function test()
 			local gear = menu.Listings:FindFirstChild(key)
 			local affordable = saleGold >= price
 			return gear and gear.Requirements.ContentText == (if affordable then price .. " G" else saleGold .. " / " .. price .. " G")
-				and gear.Action.Interactable == affordable
+				and gear.Action.Interactable and gear.Action.Text == (if affordable then "Upgrade" else "Get gold ▸")
 		end, 3, "correct cost of " .. key .. " after selling")
 	end
 	do
@@ -1489,20 +1454,6 @@ local function test()
 	assert(p:GetAttribute("Used") == 0)
 	assert(kit["Field pack"].Size.Magnitude > packSize.Magnitude, "pack grew after capacity upgrade")
 	assert(p:GetAttribute("ExpeditionStep") == "Return", "any workshop upgrade counts")
-	-- The first upgrade earns the Welcome Geode, which opens by itself and always holds the Comet Trail.
-	local reveal = p.PlayerGui:WaitForChild("GeodeReveal")
-	waitFor(function()
-		return reveal.Enabled and reveal.Stage.Reward.Visible and reveal.Stage.Reward.Name ~= nil
-			and reveal.Stage.Caption.Text == "WELCOME CRATE"
-	end, 8, "welcome geode opens")
-	local shown = false
-	for _, label in reveal.Stage.Reward:GetDescendants() do
-		if label:IsA("TextLabel") and label.Text == "Comet Trail" then shown = true end
-	end
-	assert(shown, "the Welcome Geode holds the Comet Trail")
-	n.Action:FireServer("Wear", "trail", "Comet")
-	waitFor(function() return p:GetAttribute("Trail") == "Comet" end, 3, "wear the Comet Trail")
-	reveal.Enabled = false
 	expectGuideArrow(menu.Marquee.Close)
 	r:FireServer("position")
 	waitFor(function()
@@ -1536,17 +1487,38 @@ local function test()
 		return p:GetAttribute("Jobs") == 2 and p:GetAttribute("ClaimedJobs") == 3
 	end, 5, "two eligible jobs claimed back to back in reverse order")
 	do
-		local gold, reward = p:GetAttribute("Gold"), require(rep.Shared.FieldRewards).daily[1]
+		local gold = p:GetAttribute("Gold")
+		local Bonuses = require(rep.Shared.Bonuses)
+		local function held(id)
+			return ((Bonuses.decode(p:GetAttribute("Collection")) or {}).items or {})[id] or 0
+		end
 		r:FireServer("openPage", "Daily")
 		waitFor(function() return overlay.Rewards.Visible end, 4, "daily rewards")
 		n.Action:FireServer("Stamp")
 		waitFor(function()
-			return p:GetAttribute("StampCount") == 1 and p:GetAttribute("Gold") == gold + reward.gold
-				and overlay.Rewards.Body.Daily["Day 1"].Collected.Visible
-		end, 4, "claim the daily reward")
+			return p:GetAttribute("StampCount") == 1 and held("WelcomeGeode") == 1 and overlay.Rewards.Body.Daily["Day 1"].Collected.Visible
+		end, 4, "day 1 gives the Welcome Crate")
 		n.Action:FireServer("Stamp")
 		task.wait(0.4)
-		assert(p:GetAttribute("StampCount") == 1 and p:GetAttribute("Gold") == gold + reward.gold, "a day was claimed twice")
+		assert(p:GetAttribute("StampCount") == 1 and held("WelcomeGeode") == 1 and p:GetAttribute("Gold") == gold, "a day was claimed twice")
+		-- A crate bought (free while playtesting) goes to the inventory unopened, then opens with a reel.
+		n.Action:FireServer("BuyProduct", "Crate1")
+		waitFor(function() return held("StarfallGeode") >= 1 end, 4, "a bought crate waits in the inventory")
+		n.Action:FireServer("OpenGeode", "Starfall")
+		local reveal = p.PlayerGui:WaitForChild("GeodeReveal")
+		-- A reel of rewards scrolls past the marker first, then the reward card opens.
+		waitFor(function()
+			return reveal.Enabled and reveal.Stage.Reel.Visible and #reveal.Stage.Reel.Clip.Strip:GetChildren() >= 8
+		end, 4, "the crate reel spins")
+		waitFor(function()
+			return reveal.Enabled and reveal.Stage.Caption.Text == "STARFALL CRATE" and reveal.Stage.Reward.Visible
+				and not reveal.Stage.Reel.Visible
+		end, 9, "the Starfall Crate opens")
+		assert(reveal.Stage.Reward["Reward name"].Text ~= "" and held("StarfallGeode") == 0, "the crate gave its reward")
+		-- Every effect can be worn while playtesting.
+		n.Action:FireServer("Wear", "trail", "Comet")
+		waitFor(function() return p:GetAttribute("Trail") == "Comet" end, 3, "wear the Comet Trail")
+		reveal.Enabled = false
 	end
 	r:FireServer("openPage", "Book")
 	waitFor(function()
@@ -1558,20 +1530,20 @@ local function test()
 	end, 4, "seen ore stays read on return")
 	r:FireServer("openPage", "Achievements")
 	waitFor(function()
-		return menu.Visible and menu.Listings:FindFirstChild("Pet Rock, Proper Noun")
+		return menu.Visible and menu.Listings:FindFirstChild("Crack It Open")
 	end, 4, "achievement list")
 	task.wait(0.55)
-	assert(not p:GetAttribute("SeenAchievementsPetName"), "offscreen achievement incorrectly marked read")
-	local petAward = menu.Listings["Pet Rock, Proper Noun"]
+	assert(not p:GetAttribute("SeenAchievementsFirstCrate"), "offscreen achievement incorrectly marked read")
+	local petAward = menu.Listings["Crack It Open"]
 	menu.Listings.CanvasPosition = Vector2.new(
 		0,
 		petAward.AbsolutePosition.Y - menu.Listings.AbsolutePosition.Y - menu.Listings.AbsoluteWindowSize.Y * 0.4
 	)
 	waitFor(function()
-		return p:GetAttribute("SeenAchievementsPetName")
+		return p:GetAttribute("SeenAchievementsFirstCrate")
 	end, 5, "scroll reads new achievement")
 	local afterJob = p:GetAttribute("Gold")
-	assert(afterJob == saleGold - 8 + secondSale + 80 + 25 + require(rep.Shared.FieldRewards).daily[1].gold)
+	assert(afterJob == saleGold - 8 + secondSale + 80 + 25)
 	task.wait(0.25)
 	n.Action:FireServer("Job", 2)
 	task.wait(0.3)
@@ -1593,9 +1565,15 @@ local function test()
 		tostring(p:GetAttribute("Pet")), tostring(gui.SafeArea:FindFirstChild("Sale receipt") ~= nil)))
 	assert(p:GetAttribute("Used") == 0 and not overlay.Visible, "hold quick-sell empties the pack")
 	n.Action:FireServer("BuyPass", "PrismTrail")
-	waitFor(function()
+	task.wait(1.1) -- purchases have a one-second cooldown
+	assert(p:GetAttribute("Ribbon") ~= "Prism", "the retired Prism Trail pass isn't sold")
+	n.Action:FireServer("BuyPass", "Everything")
+	local everything = pcall(waitFor, function()
 		return p:GetAttribute("Ribbon") == "Prism" and p.Character.HumanoidRootPart:FindFirstChild("Trail ribbon")
-	end, 5, "the Prism Trail pass equips its trail and ribbon")
+	end, 5, "everything")
+	assert(everything, string.format("the Everything Pass includes the Prism Ribbon and wears it: ribbon %s, passes %s, restricted %s, trail %s",
+		tostring(p:GetAttribute("Ribbon")), tostring(p:GetAttribute("Passes")), tostring(p:GetAttribute("PaidRandomRestricted")),
+		tostring(p:GetAttribute("Trail"))))
 	n.Action:FireServer("Wear", "ribbon", nil)
 	waitFor(function()
 		return p:GetAttribute("Ribbon") == "" and not p.Character.HumanoidRootPart:FindFirstChild("Trail ribbon")
@@ -1643,15 +1621,14 @@ local function test()
 			waitFor(function()
 				return p:GetAttribute("ProgressResets") == 1 and p:GetAttribute("Capacity") == 1
 					and p.leaderstats.Depth.Value == 0 and p:GetAttribute("Jobs") == 0
-					and not p:GetAttribute("SeenBookDirt") and p:GetAttribute("AwardPetName") == 0
+					and not p:GetAttribute("SeenBookDirt") and p:GetAttribute("AwardFirstCrate") == 0
 			end, 4, "reset clears gear, depth, jobs, achievements and read markers")
-			assert(p:GetAttribute("PetName") == "Pebble" and p:GetAttribute("Pet") == "")
 			assert(p:GetAttribute("PrismTrail") and p:GetAttribute("DoubleGold"), "passes survive reset")
-			n.Action:FireServer("EquipPet", "Rock", true)
+			n.Action:FireServer("Preference", "SfxVolume", 79)
 			n.Action:FireServer("ResetProgress", 0)
-			waitFor(function() return p:GetAttribute("Pet") == "Rock" end, 2, "fresh miner can equip a pet")
+			waitFor(function() return p:GetAttribute("SfxVolume") == 79 end, 2, "fresh miner can change a setting")
 			task.wait(0.3)
-			assert(p:GetAttribute("Pet") == "Rock" and p:GetAttribute("ProgressResets") == 1, "stale confirmation")
+			assert(p:GetAttribute("SfxVolume") == 79 and p:GetAttribute("ProgressResets") == 1, "stale confirmation")
 		else
 			waitFor(function() return other:GetAttribute("ProgressResets") == 1 end, 5, "peer reset")
 			assert(p:GetAttribute("Gold") == afterJob + double and p:GetAttribute("Capacity") == 2 and p:GetAttribute("Jobs") == 2)

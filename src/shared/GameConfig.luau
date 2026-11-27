@@ -26,6 +26,13 @@ local Config = {
 	Reach = 34,
 	StoreName = "EndlessMining_v1",
 	AllowProgressReset = true, -- Prototype Settings option. Set false to retire it for release.
+	-- Playtesting: every miner can wear every Mining FX and Player FX, even in the published game.
+	-- Crates still roll and grant as normal. Set false for release.
+	AllFxForTesting = true,
+	-- Playtesting: anything in the Shop without a Robux ID yet (StoreConfig id = 0) is given free when
+	-- bought, even in the published game, so crates, boosts and passes can be tried. Items with an ID
+	-- always go through Roblox's checkout. Set false for release.
+	FreeUnconfiguredItems = true,
 	LeaseSeconds = 180,
 	AutosaveSeconds = 45,
 	-- Maximum pattern faces checked per second across all players.

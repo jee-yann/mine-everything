@@ -17,7 +17,7 @@ function Effects.new()
 	local sparkOrigin = Instance.new("Attachment")
 	sparkOrigin.Name, sparkOrigin.Parent = "Ore discovery", workspace.Terrain
 	local glints = Instance.new("ParticleEmitter")
-	glints.Texture, glints.Rate, glints.LightEmission = "rbxasset://textures/particles/sparkles_main.dds", 0, 1
+	glints.Texture, glints.Rate, glints.LightEmission = "rbxassetid://4963436775", 0, 1 -- the VFX pack's star
 	glints.Lifetime, glints.Speed = NumberRange.new(0.28, 0.48), NumberRange.new(2, 8)
 	glints.SpreadAngle, glints.Size = Vector2.new(120, 120), NumberSequence.new(0.75, 0)
 	glints.Parent = sparkOrigin

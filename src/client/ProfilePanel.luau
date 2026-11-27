@@ -60,6 +60,14 @@ function Panel.new(menu)
 	card:useTabs()
 	card:tab("Profile", "Profile", "Profile", function() menu:open("Profile") end)
 	card:tab("Friends", "Friends", "Friends", function() menu:open("Friends") end)
+	-- Mining with a friend in the server gives more XP: say so on the tab.
+	local friendsTab = card.tabs.Friends.button
+	local perk = W.frame(friendsTab, "Perk", 108, -12, 80, 24, Color3.fromRGB(60, 190, 90), 12)
+	perk.ZIndex, perk.Rotation = 6, 6
+	W.stroke(perk, W.navy, 2.5)
+	local perkText = W.title(perk, require(game:GetService("ReplicatedStorage").Shared.FriendBonus).text, 0, 0, 80, 23, 15, W.white)
+	perkText.ZIndex = 7
+	W.navyText(perkText, 1.8)
 	self:buildProfile()
 	self:buildFriends()
 	menu.player:GetAttributeChangedSignal("FriendsHere"):Connect(function()

@@ -106,7 +106,7 @@ function Card:layout(area, touch)
 	local short = area.X > area.Y and (touch or area.Y < 470)
 	local margin = if short then 8 else 34
 	-- On a phone held sideways the card keeps readable type and its body scrolls.
-	local least = if short then 390 else self.size.Y
+	local least = if short then 470 else self.size.Y
 	local scale = math.clamp(math.min((area.X - margin) / self.size.X, (area.Y - margin) / least), 0.3, 1.45)
 	local height = math.min(self.size.Y, math.floor((area.Y - margin) / scale))
 	self.scale.Scale = scale

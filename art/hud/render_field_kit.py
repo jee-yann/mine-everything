@@ -18,7 +18,7 @@ def main():
             "--hide-scrollbars",
             "--default-background-color=00000000",
             "--force-device-scale-factor=1",
-            "--window-size=1024,1280",
+            "--window-size=1024,1536",
             "--virtual-time-budget=2000",
             f"--screenshot={folder / 'FieldKit.png'}",
             (folder / "field_kit.html").as_uri(),

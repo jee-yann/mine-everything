@@ -140,8 +140,8 @@ function Settings:build(menu)
 	end
 	local index = if Config.AllowProgressReset then 6 else 5
 	-- Fewer effects from other miners: their auras, trail ribbons and all but their lead pet.
-	local _, effectsDetail, effects = menu:row(index - 1, "Reduce effects", "Pets", W.green)
-	effectsDetail.Text = "Hide other miners' auras, ribbons and extra pets"
+	local _, effectsDetail, effects = menu:row(index - 1, "Reduce effects", "Trail", W.green)
+	effectsDetail.Text = "Hide other miners' auras and trails"
 	table.insert(menu.updates, function()
 		effects.Text = if self.values.ReduceEffects then "On" else "Off"
 		effects.Interactable = self.player:GetAttribute("ProfileReady") == true and not self.resetPending

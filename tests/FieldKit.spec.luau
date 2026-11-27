@@ -7,6 +7,7 @@ local tiles = {
 	Power = Vector2.new(0, 2), Speed = Vector2.new(1, 2), Profile = Vector2.new(2, 2), Friends = Vector2.new(3, 2),
 	Shop = Vector2.new(0, 3), Pets = Vector2.new(1, 3), Geode = Vector2.new(2, 3), Gems = Vector2.new(3, 3),
 	Forge = Vector2.new(0, 4), Boosts = Vector2.new(1, 4), Passes = Vector2.new(2, 4), Trail = Vector2.new(3, 4),
+	GoldPouch = Vector2.new(0, 5), GoldBag = Vector2.new(1, 5), GoldChest = Vector2.new(2, 5), GoldVault = Vector2.new(3, 5),
 }
 local imageId = source:GetAttribute("ImageId")
 if imageId then
@@ -58,4 +59,4 @@ assert(probe:GetAttribute("Allocated") and probe:GetAttribute("Released"))
 assert(not renderer.draw(container, "Hook"))
 container:Destroy()
 probe:Destroy()
-print("PASS published Field Kit write denial, all twenty icons and five aliases")
+print("PASS published Field Kit write denial, all twenty-four icons and five aliases")

@@ -110,6 +110,21 @@ function Map.new(parent, player, net, close)
 		item.selection = selection
 		item.title = W.title(b, node.name, -38, 79, 160, 26, 20, W.white)
 		W.outlineText(item.title, 2.2)
+		-- Hover: a gold glow round the gem, the gem lifts a little and its name turns gold.
+		local hover = diamond(b, "Hover", 42, 41, 70, W.gold)
+		hover.BackgroundTransparency, hover.Visible = 1, false
+		W.stroke(hover, W.gold, 4)
+		local lift = W.scale(b)
+		b.MouseEnter:Connect(function()
+			hover.Visible = true
+			item.title.TextColor3 = W.gold
+			W.tween(lift, 0.12, { Scale = 1.12 })
+		end)
+		b.MouseLeave:Connect(function()
+			hover.Visible = false
+			item.title.TextColor3 = W.white
+			W.tween(lift, 0.12, { Scale = 1 })
+		end)
 		if #node.requires == 0 then
 			W.outlineText(W.text(b, node.branch, -38, 103, 160, 20, 16, colors[node.branch]), 1.8)
 		end
@@ -197,7 +212,22 @@ function Map.new(parent, player, net, close)
 	end
 	local exit = W.closeButton(header, 0, 10, 60)
 	exit.TextSize = 38
-	self.controls = { exit, home, header["Zoom in"], header["Zoom out"] }
+	-- A Robux reset that gives every skill point back to spend again.
+	local reset = W.button(header, "Reset skills", 0, 10, 98, 60, Color3.fromRGB(80, 200, 90), "", "Select")
+	local resetContent = W.frame(reset, "Content", 0, 0, 0, 0, W.white)
+	resetContent.BackgroundTransparency, resetContent.Size = 1, UDim2.fromScale(1, 1)
+	local resetWord = W.title(resetContent, "Reset", 0, 2, 98, 26, 18, W.white)
+	resetWord.Size = UDim2.new(1, 0, 0.45, 0)
+	W.navyText(resetWord, 2)
+	local priceHolder = W.frame(resetContent, "Price", 0, 0, 0, 0, W.white)
+	priceHolder.BackgroundTransparency, priceHolder.Position, priceHolder.Size = 1, UDim2.fromScale(0, 0.42), UDim2.fromScale(1, 0.55)
+	W.robux(priceHolder, require(game:GetService("ReplicatedStorage").Shared.StoreConfig).productByKey.ResetSkills.price, 20)
+	reset.Activated:Connect(function()
+		local checkout = require(script.Parent.Checkout).current
+		local item = require(game:GetService("ReplicatedStorage").Shared.StoreConfig).productByKey.ResetSkills
+		if checkout then checkout:buy("product", item) else self.net.Action:FireServer("BuyProduct", "ResetSkills") end
+	end)
+	self.controls = { exit, reset, home, header["Zoom in"], header["Zoom out"] }
 	exit.Activated:Connect(close)
 	local footer = W.frame(screen, "Skill details", 0, 0, 500, 112, W.panel, 12)
 	W.anchor(footer, 0.5, 1, UDim2.new(0.5, 0, 1, -6))
@@ -234,8 +264,27 @@ function Map.new(parent, player, net, close)
 			drag, start, initial = input, Vector2.new(input.Position.X, input.Position.Y), self.pan
 		end
 	end)
+	-- Pinch to zoom on touch screens, from the zoom the pinch started at. A pinch stops the drag.
+	local pinchFrom
+	Input.TouchPinch:Connect(function(_, scale, _, state)
+		if not screen.Visible then
+			return
+		end
+		if state == Enum.UserInputState.Begin then
+			pinchFrom, drag = self.zoom, nil
+		elseif state == Enum.UserInputState.Change and pinchFrom then
+			self.suppressClickUntil = math.huge
+			self:zoomBy(pinchFrom * scale / self.zoom)
+		else
+			pinchFrom = nil
+			self.suppressClickUntil = os.clock() + 0.25
+		end
+	end)
 	Input.InputChanged:Connect(function(input)
 		if not screen.Visible then
+			return
+		end
+		if pinchFrom then
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseWheel and inside(input.Position, view) then
@@ -314,8 +363,9 @@ function Map:position()
 	local control = if wide then 60 else 48
 	local right = -8
 	for i, button in self.controls do
-		local w = if i == 2 then control * 1.62 else control
-		button.Size, button.TextSize = UDim2.fromOffset(w, control), if i == 2 then control * 0.42 else control * 0.9
+		-- The reset and Center buttons are wider than the square ones.
+		local w = if i == 2 or i == 3 then control * 1.62 else control
+		button.Size, button.TextSize = UDim2.fromOffset(w, control), if i == 3 then control * 0.42 elseif i == 2 then 1 else control * 0.9
 		right -= w
 		button.Position = UDim2.new(1, right, 0, if wide then 11 else 3)
 		right -= 7

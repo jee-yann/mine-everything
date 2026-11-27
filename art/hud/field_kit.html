@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 1280, 256 px tiles, on a clear
+<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 1536, 256 px tiles, on a clear
      background. Tile order must match the tiles table in src/client/FieldKit/init.luau.
      Render with render_field_kit.py, then bake with bake_field_kit.py.
      Style: one navy outline around each icon's silhouette (the #ol filter), nothing dark
      inside, flat colours with soft shade shapes, white glints and a soft cast shadow. -->
 <html><head><meta charset="utf-8"><style>
-  html, body { margin: 0; width: 1024px; height: 1280px; background: transparent; overflow: hidden; }
+  html, body { margin: 0; width: 1024px; height: 1536px; background: transparent; overflow: hidden; }
   .ico { position: absolute; width: 208px; height: 208px; overflow: visible; filter: drop-shadow(7px 11px 0 #29264a38); }
 </style></head><body>
 <svg width="0" height="0" style="position:absolute">
@@ -463,6 +463,79 @@
         <use href="#spark" transform="translate(90 70) scale(.55)" fill="#fff"/>
       </g>
     </symbol>
+
+    <!-- Gold Pouch: a small drawstring pouch with coins -->
+    <clipPath id="c-pouch"><path d="M30 44 C14 54 14 84 28 90 C40 96 60 96 72 90 C86 84 86 54 70 44 Z"/></clipPath>
+    <symbol id="i-gpouch" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M30 44 C14 54 14 84 28 90 C40 96 60 96 72 90 C86 84 86 54 70 44 Z" fill="#c9824a"/>
+        <g clip-path="url(#c-pouch)"><ellipse cx="94" cy="76" rx="26" ry="34" fill="#a8652f"/></g>
+        <path d="M34 36 Q50 46 66 36 L68 46 Q50 54 32 46 Z" fill="#9a5a2a"/>
+        <path d="M32 42 Q50 50 68 42" stroke="#ffd23f" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <circle cx="40" cy="26" r="10" fill="#ffc83a"/><circle cx="40" cy="26" r="6" fill="#f5a31e"/>
+        <circle cx="58" cy="22" r="11" fill="#ffd23f"/><circle cx="58" cy="22" r="6.5" fill="#f5a31e"/>
+        <circle cx="74" cy="84" r="9" fill="#ffc83a"/><circle cx="74" cy="84" r="5" fill="#f5a31e"/>
+        <path d="M26 64 C26 56 30 52 34 50" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none" opacity=".85"/>
+        <use href="#spark" transform="translate(84 18) scale(.7)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Gold Bag: a big money sack with a coin emblem and coins spilling out -->
+    <clipPath id="c-gbag"><path d="M34 34 C10 46 8 82 24 92 C40 100 60 100 76 92 C92 82 90 46 66 34 Z"/></clipPath>
+    <symbol id="i-gbag" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M34 34 C10 46 8 82 24 92 C40 100 60 100 76 92 C92 82 90 46 66 34 Z" fill="#e0b070"/>
+        <g clip-path="url(#c-gbag)"><ellipse cx="96" cy="74" rx="28" ry="40" fill="#c08a48"/></g>
+        <path d="M38 20 L50 30 L62 20 L66 34 Q50 42 34 34 Z" fill="#c08a48"/>
+        <path d="M34 34 Q50 42 66 34" stroke="#7a4a20" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <circle cx="50" cy="66" r="17" fill="#ffd23f"/>
+        <circle cx="50" cy="66" r="12" fill="#f5a31e"/>
+        <path d="M50 57 V75 M45 61 Q50 57 55 61 Q50 66 45 70 Q50 75 55 71" stroke="#ffe680" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+        <circle cx="16" cy="88" r="8" fill="#ffc83a"/><circle cx="84" cy="90" r="8" fill="#ffd23f"/>
+        <path d="M22 64 C22 54 26 48 32 44" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none" opacity=".85"/>
+        <use href="#spark" transform="translate(84 20) scale(.75)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Gold Chest: a wooden chest overflowing with gold -->
+    <clipPath id="c-gchest"><rect x="12" y="46" width="76" height="44" rx="7"/></clipPath>
+    <symbol id="i-gchest" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <circle cx="30" cy="38" r="11" fill="#ffd23f"/><circle cx="50" cy="32" r="12" fill="#ffc83a"/>
+        <circle cx="70" cy="38" r="11" fill="#ffd23f"/>
+        <rect x="34" y="20" width="20" height="10" rx="3" fill="#ffd23f" transform="rotate(-12 44 25)"/>
+        <rect x="12" y="46" width="76" height="44" rx="7" fill="#b86e36"/>
+        <g clip-path="url(#c-gchest)"><ellipse cx="96" cy="74" rx="24" ry="36" fill="#96582a"/>
+          <path d="M12 68 H88" stroke="#96582a" stroke-width="3"/></g>
+        <rect x="8" y="42" width="84" height="12" rx="5" fill="#d98a48"/>
+        <rect x="22" y="42" width="9" height="48" rx="3" fill="#ffc83a"/>
+        <rect x="69" y="42" width="9" height="48" rx="3" fill="#f5a31e"/>
+        <rect x="42" y="56" width="16" height="16" rx="4" fill="#ffd23f"/>
+        <circle cx="50" cy="64" r="3" fill="#7a4a20"/>
+        <path d="M30 32 Q34 26 40 26" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <use href="#spark" transform="translate(86 20) scale(.8)" fill="#fff"/>
+        <use href="#spark" transform="translate(12 26) scale(.55)" fill="#fff"/>
+      </g>
+    </symbol>
+
+    <!-- Gold Vault: a round steel vault door swung open on stacked gold bars -->
+    <symbol id="i-gvault" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <circle cx="54" cy="52" r="40" fill="#8a96b0"/>
+        <circle cx="54" cy="52" r="32" fill="#2f3550"/>
+        <path d="M30 80 H78 L74 66 H34 Z" fill="#f5a31e"/>
+        <path d="M34 66 H74 L70 54 H38 Z" fill="#ffd23f"/>
+        <path d="M40 54 H68 L64 42 H44 Z" fill="#ffc83a"/>
+        <circle cx="62" cy="30" r="5" fill="#ffd23f"/><circle cx="46" cy="34" r="4" fill="#ffc83a"/>
+        <path d="M4 22 C4 14 12 10 20 12 L34 18 L34 86 L20 92 C12 94 4 90 4 82 Z" fill="#c6cde0"/>
+        <path d="M20 12 L34 18 L34 86 L20 92 Z" fill="#a3adc4"/>
+        <circle cx="16" cy="52" r="10" fill="#ffd23f"/>
+        <path d="M16 42 V62 M6 52 H26 M9 45 L23 59 M23 45 L9 59" stroke="#f5a31e" stroke-width="3" stroke-linecap="round"/>
+        <path d="M44 62 H64" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".85"/>
+        <use href="#spark" transform="translate(86 14) scale(.85)" fill="#fff"/>
+        <use href="#spark" transform="translate(90 70) scale(.55)" fill="#fff"/>
+      </g>
+    </symbol>
   </defs>
 </svg>
   <!-- Inventory -->
@@ -505,4 +578,12 @@
   <svg class="ico" style="left:532px;top:1038px"><use href="#i-ticket"/></svg>
   <!-- Trail -->
   <svg class="ico" style="left:788px;top:1038px"><use href="#i-trail"/></svg>
+  <!-- GoldPouch -->
+  <svg class="ico" style="left:20px;top:1294px"><use href="#i-gpouch"/></svg>
+  <!-- GoldBag -->
+  <svg class="ico" style="left:276px;top:1294px"><use href="#i-gbag"/></svg>
+  <!-- GoldChest -->
+  <svg class="ico" style="left:532px;top:1294px"><use href="#i-gchest"/></svg>
+  <!-- GoldVault -->
+  <svg class="ico" style="left:788px;top:1294px"><use href="#i-gvault"/></svg>
 </body></html>

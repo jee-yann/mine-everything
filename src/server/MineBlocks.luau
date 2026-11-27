@@ -130,10 +130,10 @@ local function brick(self, p, material)
 	end
 	local grain = (p.X * 7 + p.Y * 3 + p.Z * 11) % 5
 	part.Color = tint:Lerp(if grain < 2 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1), math.abs(grain - 2) * 0.016)
-	-- Stone keeps its grade's material, which shows if the drawn faces can't load. The drawings
-	-- cover the faces otherwise, so every block stays smooth (no studs).
-	local grade = if ore and ore.name == "Stone" then Config.StoneGrades[strength] else nil
-	part.Material = if grade then grade.material else Enum.Material.SmoothPlastic
+	-- Every block is smooth plastic in its cartoon colour. If the drawn faces are slow to load (or
+	-- can't, on a device short of memory), the client's own ink outline, raised ore pieces and
+	-- crystals carry the look until they do, never Roblox's realistic rock textures.
+	part.Material = Enum.Material.SmoothPlastic
 	local face = Enum.SurfaceType.Smooth
 	part.TopSurface, part.BottomSurface, part.LeftSurface, part.RightSurface, part.FrontSurface, part.BackSurface =
 		face, face, face, face, face, face

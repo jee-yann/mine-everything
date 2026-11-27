@@ -87,7 +87,7 @@ function Guide.start(player, hud, busy)
 		end
 		hud.guidingRebirth = true
 		local tile = hud.rebirthTile.button
-		local button = if hud.edgeMode then hud.menuShortcut else tile
+		local button = if hud.edgeMode and not hud.railsOnEdge then hud.menuShortcut else tile
 		local how = if button ~= tile then "Open Menu, then Rebirth"
 			elseif Input.PreferredInput == Enum.PreferredInput.KeyboardAndMouse then "Click Rebirth or press U" else "Tap Rebirth"
 		outside:show(button, "You found Starfall!", how .. " to start a new run\nwith bonuses that last. Only if you want to.", motion)

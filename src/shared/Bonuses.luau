@@ -12,6 +12,7 @@
 --   gold = (2 with Double Gold) × (1 + rebirths) × (1 + VIP 10% + Gold Tonic 50%) × (2 with 2× Gold)
 -- Sales are rounded to whole gold.
 local Rebirth = require(script.Parent.Rebirth)
+local Collectibles = require(script.Parent.Collectibles)
 local Http = game:GetService("HttpService")
 local B = {}
 B.maxLuck = 12
@@ -23,6 +24,7 @@ export type State = {
 	pets: { [string]: any },
 	equipped: { string },
 	boosts: { [string]: number },
+	trail: string?,
 	rebirths: number,
 	serverLuckUntil: number,
 	now: number,
@@ -45,6 +47,7 @@ function B.make(passes: { [string]: boolean }, col: any, rebirths: number, serve
 		pets = col.pets or {},
 		equipped = col.eq or {},
 		boosts = col.boosts or {},
+		trail = col.trail,
 		rebirths = rebirths or 0,
 		serverLuckUntil = serverLuckUntil or game:GetService("ReplicatedStorage"):GetAttribute("ServerLuckUntil") or 0,
 		now = now or workspace:GetServerTimeNow(),
@@ -80,9 +83,27 @@ function B.gold(state: State): number
 		* (if active(state, "gold2") then 2 else 1)
 end
 
--- Extra mining speed as a fraction: cut time is divided by (1 + this).
+-- Extra mining speed as a fraction: cut time is divided by (1 + this). The worn Mining FX adds a
+-- little, by rarity (Collectibles.mineSpeeds).
 function B.speed(state: State): number
 	return (if state.passes.FastPick then 0.15 else 0) + (if active(state, "speedTonic") then 0.2 else 0)
+		+ Collectibles.mineSpeed("trail", state.trail) / 100
+end
+
+-- Instamine: while it runs, every block the pick can mine breaks in one quick hit.
+B.instantSeconds = 0.12
+function B.instant(state: State): boolean
+	return active(state, "instamine")
+end
+-- A cut's time with Fast Pick, Haste Tonic and Instamine applied (the server and the client agree).
+function B.cut(state: State, seconds: number): number
+	seconds /= 1 + B.speed(state)
+	if B.instant(state) and seconds < math.huge then seconds = math.min(seconds, B.instantSeconds) end
+	return seconds
+end
+-- Auto Sell (the timed boost): the pack sells itself whenever it fills.
+function B.autoSell(state: State): boolean
+	return active(state, "autosell")
 end
 
 function B.xp(_state: State): number

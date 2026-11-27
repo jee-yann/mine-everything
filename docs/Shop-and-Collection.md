@@ -1,184 +1,230 @@
-# Shop, crates, pets and cosmetics
+# Shop, crates and cosmetics
 
-The Shop sells game passes, developer products, timed boosts and gems. Gems open crates. Crates
-hold pets and cosmetics, which are only for looks. The Forge crafts any of them for certain. The
-server decides every result; the client only asks.
+Everything in the Shop costs Robux. There are no gems, pets or Forge. The one crate, the
+**Starfall Crate**, holds Mining FX, Player FX (trails and auras), tonics and gold. Effects make you a
+little faster (see below); otherwise they're for looks. The server decides every result; the client
+only asks.
+
+**Playtesting:** while `AllFxForTesting` is true in `src/shared/GameConfig.luau`, every miner can wear
+every Mining FX and Player FX, even in the published game (the Inventory says "Unlocked for
+playtesting"). Crates still roll and grant normally, and duplicates still count against what you
+really own. Set it to false for release.
+
+**Free purchases while playtesting:** while `FreeUnconfiguredItems` is true (same file), anything in
+the Shop without a Robux ID yet is given free when bought, even in the published game, so crates,
+boosts and passes can be tried. Items with an ID always go through Roblox's checkout. Set it to false
+for release.
 
 ## Where things live
 
 | What | File |
 |---|---|
-| Rarities, pets, cosmetics, items, boosts | `src/shared/Collectibles.luau` |
-| Crate pools, odds and guarantee | `src/shared/Geodes.luau` (named Geodes for save compatibility) |
-| Forge recipes | `src/shared/Recipes.luau` |
-| Pass and product IDs, prices, rewards | `src/shared/StoreConfig.luau` |
+| Rarities, cosmetics, items, boosts, keyword colours | `src/shared/Collectibles.luau` |
+| The crate pool, odds, rarity mix and guarantee | `src/shared/Geodes.luau` (named Geodes for save compatibility) |
+| Pass and product IDs, prices, struck-through prices | `src/shared/StoreConfig.luau` |
+| A miner's gold per hour (gold packs, gold rewards) | `src/shared/Earnings.luau` |
+| Daily card and playtime gifts | `src/shared/FieldRewards.luau` |
 | How passes and boosts combine | `src/shared/Bonuses.luau` |
 | Aura and player-trail looks (server and previews) | `src/shared/CosmeticLooks.luau` |
 | The collection in the save | `src/server/Collection.luau` |
-| Purchases, receipts, region check, limited stock, VIP chest | `src/server/Store.luau` |
-| Shop, Inventory and Pets cards | `src/client/ShopPanel.luau`, `InventoryPanel.luau`, `PetsPanel.luau`, `CollectionGrid.luau` |
+| Purchases, receipts, region check, limited stock, VIP crate | `src/server/Store.luau` |
+| Shop and Inventory cards | `src/client/ShopPanel.luau`, `InventoryPanel.luau`, `CollectionGrid.luau` |
 | Crate reveal, try-on previews | `src/client/GeodeReveal.luau`, `TryOn.luau` |
-| Pet models, pet styles and followers | `src/client/PetModels.luau`, `PetFollowers.luau` |
+| Ore compass over the miner's head | `src/client/OreCompass.luau` |
 | Status chips | `src/client/BoostChips.luau` |
-| Tests | `tests/Shop.spec.luau` and the play test |
+| Tests | `tests/Shop.spec.luau`, `tests/FieldRewards.spec.luau` and the play test |
 
 ## Where players find it
 
-- **Shop** (side button or **N**, or the Outfitters counter): Featured, Crates, Passes, Boosts and
-  Gems. The gem purse in the header, and the gem counter above the gold in the HUD, both open the
-  gem packs.
-- **Inventory** (side button or **B**): Items (crates, tonics and field supplies), Mining trails,
-  Player effects (player trails and auras), the Forge and Titles.
-- **Pets** (side button or **T**): Pets and Pet Styles.
-- **Statuses**: running boosts show as chips in the bottom right corner (higher up on phones), each
-  with a countdown. Tapping one opens the boosts.
+- **Shop** (top of the right-hand rail, **N**, or the Outfitters counter): one scrolling page with
+  Featured, Crate, Passes, Boosts and Gold sections. The tabs along the top jump to a section and
+  light up as the page scrolls past it. A jump puts the section's header at the top; when the whole
+  section can't fit but its cards can, it scrolls on until every card shows. Positions are measured
+  from the screen, so jumps land the same at any resolution.
+- **Gold**: the Gold Pouch and Gold Bag top left, the Gold Chest under them, and the Gold Vault large
+  on the right.
+- **Featured offers** (`src/client/FeaturedOffers.luau`): animated tiles beside the right-hand rail,
+  for now the Founder's Halo (with how many are left) and the Starter Pack (with its discount). Each
+  opens its own offer card: art, what's inside, the struck-through price and a big Robux button. The
+  Founder's Halo card keeps its background calm (faint, slow rays, no shine) so the live aura stands
+  out, and so does its Shop card; the Starter Pack card has a header band with its name. A tile goes
+  away once its offer is bought or sold out. Add an entry to `offers` to feature something else.
+- **Checkout** (`src/client/Checkout.luau`): every Robux button shows a waiting screen while Roblox's
+  checkout is open and while the server delivers, then a thank-you saying what arrived, with a button
+  straight to it (the Inventory tab to see an effect, "Open a crate" for crates, the skill tree after a
+  reset). Closing Roblox's window without buying, or the server refusing (including "one moment" for a
+  purchase asked for again within a second), ends the wait. It can't get stuck: a Close button shows
+  after 4 seconds, a free playtest purchase gives up after 8 seconds without an answer, and any
+  purchase after two minutes (if it still goes through, the thank-you shows when it arrives). Bought
+  crates go to the Inventory unopened. A purchase that didn't start from a Robux button (a pass bought
+  on the website, say) gets a short notice instead.
+- **Inventory** (side button or **B**): Items (crates and tonics), Mining FX, Player FX and Titles.
+  Every tile is a live preview of the effect.
+- **Skill tree** (**Q**): the green **Reset** button (15 Robux) gives every skill point back. The skill
+  under the pointer lifts and glows gold.
+- **Keys**: Inventory B, Skills Q, Index C, Awards H, Rebirth U, Profile F, Settings P, Shop N, Daily L,
+  Gift G.
+- **Outfitters stall** (`src/client/ShopSign.luau`): a FEATURED sign floats over it with the featured
+  offers (the Founder's Halo with a live aura and how many are left, the Starter Pack and its
+  discount); tap one to open it. Once both are gone it points to the Shop.
+- **Featured slot**: once the Starter Pack is bought, Instamine takes its place in the Shop.
+- **Gold**: a small + on the gold coin opens the gold packs; an upgrade you can't afford says
+  **Get gold ▸** and opens them too.
+- **Profile**: the Friends tab carries a "+25% XP" badge, the real bonus for mining with a friend in
+  the server.
+- **Bottom right corner** (higher up on phones): chips for running boosts, each counting down, and
+  under them a row of circles for lasting bonuses: rebirths (×gold, with XP and cutting in the tap),
+  your Player FX movement speed (green), your Mining FX mining speed (orange), Double Gold, VIP,
+  2× Lucky, Fast Pick and Bigger Pack. Tap a circle to see what it does.
+- **Shop size**: cards are compact so that after a tab jump at least two rows of a section show
+  (the All Passes Bundle and the first row of passes; both rows of boosts; all the gold packs).
+
+Every price is a green button with the Robux icon. Where there's a real reference price, it shows
+struck through above the button with the percent off. Rarity names and **Starfall** are coloured
+wherever they appear in text.
 
 ## The player's path
 
-1. Every miner owns a **Pocket Rock** pet and can equip it from Pets.
-2. The first workshop upgrade gives a **Welcome Crate**. It opens by itself a few seconds later and
-   says **Guaranteed: Comet Trail (Legendary)**. Its odds list shows that one reward at 100%.
-3. Gems come from mining (see below), daily rewards and orders. **Free crates** come every 5th level
-   (a Stone Crate), every 25th level (a Crystal Crate instead) and with every Starfall mined (a
-   Starfall Crate).
-4. When a crate costs more gems than the miner has, its button reads "Get N more gems" and takes
-   them to the gem packs, with the pack that covers it glowing.
+1. **Day 1** of the daily card is the **Welcome Crate**: it holds the Epic Comet Trail (the game
+   itself doesn't say what's inside; it's a gift). A miner who already had it gets a Starfall Crate on
+   a later day 1.
+2. **Free Starfall Crates** come from day 4 and day 7 of the daily card, the last playtime gift,
+   every 5th level (2 every 25th), every Starfall mined, a Cave Egg, and VIP once every 20 hours.
+3. More crates cost Robux: 1 for 25, 3 for 65, 10 for 199.
 
-## Crates
+## Daily card and gifts
 
-Weights are stored in hundredths of a percent, so each pool adds up to exactly 100.00%. The Shop's
-**Odds & preview** sheet shows these numbers before anything is bought, marks what the player
-already owns, and has **Try on** for cosmetics and **View** for pets.
+| Day | Reward |
+|---|---|
+| 1 | Welcome Crate |
+| 2 | 2 Gold Tonics |
+| 3 | 2 Haste Tonics |
+| 4 | 1 Starfall Crate |
+| 5 | 2 Lucky Brews |
+| 6 | Pickaxe Bounty: half the price of the miner's next Power upgrade in gold (at least 100) |
+| 7 | Starfall Haul: 3 Starfall Crates |
 
-### Stone Crate: 25 gems
+Playtime gifts at 5, 10, 20, 30, 40, 50 and 60 minutes: 3 minutes of earnings, a Haste Tonic, 6
+minutes of earnings, a Gold Tonic, 10 minutes of earnings, a Lucky Brew, and a Starfall Crate. No
+reward is a survey flare or a field supply.
 
-| Reward | Kind · rarity | Chance |
-|---|---|---|
-| Coal Bat, Tunnel Mole, Moss Frog | Pet · Common | 12% each |
-| Ember Trail | Mining trail · Common | 9% |
-| Copper Crab, Quartz Hedgehog, Pebble Turtle, Frost Penguin | Pet · Uncommon | 7% each |
-| Gold Tonic, Haste Tonic | Item · Uncommon | 6% each |
-| Mint Ribbon | Player trail · Uncommon | 5% |
-| Sparkle Trail | Pet style · Uncommon | 5% |
-| Gem Slime, Opal Bunny | Pet · Rare | 2% each |
-| Lucky Brew | Item · Rare | 1% |
+## The Starfall Crate
 
-### Crystal Crate: 75 gems
+Weights are stored in hundredths of a percent, so the pool adds up to exactly 100.00%.
 
-| Reward | Kind · rarity | Chance |
-|---|---|---|
-| Gem Slime, Glow Moth, Opal Bunny, Mini Golem | Pet · Rare | 10% each |
-| Frost Trail | Mining trail · Uncommon | 8% |
-| Verdant Trail | Mining trail · Rare | 8% |
-| Sunset Ribbon | Player trail · Rare | 6% |
-| Fairy Wings | Pet style · Rare | 6% |
-| Spark Ring | Player aura · Rare | 6% |
-| Lucky Brew | Item · Rare | 5% |
-| Cave Drake, Crystal Fox, Glow Jelly | Pet · Epic | 3.5% each |
-| Aurora Trail | Mining trail · Epic | 3% |
-| Ember Halo | Player aura · Epic | 2.5% |
-| Pet Flames | Pet style · Epic | 2% |
-| Prism Owl, Aurora Stag | Pet · Legendary | 1% each |
-| Comet Trail | Mining trail · Legendary | 1% |
+**Rarity mix** (shown on the crate as a coloured bar and as numbers, before anything is bought):
 
-### Starfall Crate: 220 gems
+| Common | Uncommon | Rare | Epic | Legendary | Mythic |
+|---|---|---|---|---|---|
+| 40% | 28% | 18% | 9.5% | 4% | 0.5% |
+
+The **Odds & preview** sheet lists every item with its own chance and a live preview of each effect,
+and marks what the player owns:
 
 | Reward | Kind · rarity | Chance | With the guarantee due |
 |---|---|---|---|
-| Cave Drake, Crystal Fox, Glow Jelly | Pet · Epic | 16% each | — |
-| Aurora Trail | Mining trail · Epic | 10% | — |
-| Ember Halo | Player aura · Epic | 10% | — |
-| Pet Flames | Pet style · Epic | 8% | — |
-| Magma Salamander, Prism Owl, Aurora Stag | Pet · Legendary | 3% each | 12.5% each |
-| Solar Flare, Comet Trail | Mining trail · Legendary | 2.5% each | 10.42% each |
-| Celestial Halo | Player aura · Legendary | 2.5% | 10.42% |
-| Starlight Ribbon | Player trail · Legendary | 2.5% | 10.42% |
-| Golden Crown, Star Halo | Pet style · Legendary | 2% each | 8.33% each |
-| Star Wisp, Ember Phoenix | Pet · Mythic | 0.3% each | 1.25% each |
-| Starfall Rift | Mining trail · Mythic | 0.2% | 0.83% |
-| Void Ribbon | Player trail · Mythic | 0.1% | 0.42% |
-| Nebula | Player aura · Mythic | 0.05% | 0.21% |
-| Nebula Cloak | Pet style · Mythic | 0.05% | 0.21% |
+| Copper Spark, Ember Trail | Mining FX · Common | 9% each | — |
+| Dust Trail | Player FX · Common | 8% | — |
+| Dust Motes | Player FX · Common | 7% | — |
+| Gold Pouch (10 min of earnings) | Item · Common | 7% | — |
+| Frost Trail, Moss Trail | Mining FX · Uncommon | 5% each | — |
+| Mint Trail | Player FX · Uncommon | 5% | — |
+| Leaf Swirl | Player FX · Uncommon | 5% | — |
+| Gold Sack (30 min of earnings) | Item · Uncommon | 3% | — |
+| Gold Tonic, Haste Tonic | Item · Uncommon | 2.5% each | — |
+| Verdant Trail, Sakura Trail | Mining FX · Rare | 3.5% each | — |
+| Sunset Trail, Candy Trail | Player FX · Rare | 3% each | — |
+| Lucky Brew | Item · Rare | 2% | — |
+| Spark Ring, Frost Mist | Player FX · Rare | 1.5% each | — |
+| Aurora Trail, Thunder Trail | Mining FX · Epic | 2% each | — |
+| Comet Trail | Mining FX · Epic | 1.5% | — |
+| Blaze Trail | Player FX · Epic | 1.5% | — |
+| Ember Halo | Player FX · Epic | 1.5% | — |
+| Gold Chest (an hour of earnings) | Item · Epic | 1% | — |
+| Solar Flare, Inferno Trail | Mining FX · Legendary | 0.8% each | 17.78% each |
+| Starlight Trail, Borealis Trail | Player FX · Legendary | 0.6% each | 13.33% each |
+| Celestial Halo, Sunburst | Player FX · Legendary | 0.6% each | 13.33% each |
+| Starfall Rift, Galaxy Trail | Mining FX · Mythic | 0.15% each | 3.33% each |
+| Void Trail | Player FX · Mythic | 0.1% | 2.22% |
+| Nebula | Player FX · Mythic | 0.1% | 2.22% |
 
 **Guarantee:** after 9 Starfall Crates in a row with nothing Legendary or better, the 10th draws only
-from the right-hand column. The counter is saved, shown on the crate and resets on any Legendary or
-better.
+from the right-hand column. The counter is saved, shown on the crate ("Legendary or better
+guaranteed within N crates") and resets on any Legendary or better. So the 10-crate pack always holds
+at least one Legendary.
 
-**Duplicates:** a pet or cosmetic already owned becomes Crate Dust (Common 3, Uncommon 8, Rare 20,
-Epic 50, Legendary 150, Mythic 500). Dust only crafts at the Forge.
+**Opening:** a reel of rewards scrolls past a marker and slows to a stop on what the server rolled,
+then the reward card opens. The tiles going past are drawn from the crate's pool by its real
+weights. Tap or **Skip** to jump to the reward; with menu motion off there's no reel.
+
+**Effects give a small bonus, by rarity.** Player FX give movement speed: Common +2%, Uncommon +4%,
+Rare +6%, Epic +9%, Legendary +12%, Mythic, Exclusive and Limited +16%. Mining FX give mining speed (a
+cut takes less time): Common +1%, Uncommon +2%, Rare +3%, Epic +5%, Legendary +7%, Mythic, Exclusive
+and Limited +10%, added to Fast Pick and the Haste Tonic. Badges are colour-coded: green for movement,
+orange for mining. They show on Inventory tiles, each effect's detail, the reward card, the circles in
+the bottom right, and on what's sold directly; not on the crate or its odds.
+
+**Duplicates:** an effect already owned turns into gold: minutes of the miner's own earnings
+(Common 2, Uncommon 4, Rare 8, Epic 15, Legendary 30, Mythic 60).
+
+### Why these prices and odds
+
+- One crate is R$25, a small impulse buy. About 1 in 22 is Legendary or better, and the guarantee
+  caps the worst case at 10 crates, which is exactly the R$199 pack.
+- The 3- and 10-packs are struck through at 25 each (75 and 250), so bulk reads as 13% and 20% off.
+- Most commons are worth wearing (a trail or an aura), and duplicates pay gold, so a bad roll still
+  gives something.
 
 ## Paid random items policy
 
-Gems can be bought with Robux, so a crate bought with gems is a paid random item.
+The Starfall Crate is bought with Robux, so it is a paid random item.
 
-- **Odds before buying:** every crate has an **Odds & preview** button listing all outcomes with
-  percentages that add up to 100%, the guarantee with the player's own count (and the guaranteed odds
-  when it's due), and the duplicate rules.
+- **Odds before buying:** the crate shows its rarity mix, and **Odds & preview** lists all outcomes
+  with percentages that add up to 100%, the guarantee with the player's own count (and the guaranteed
+  odds when it's due), and the duplicate rule.
 - **Modifiers:** luck boosts change ore in the mine, not crates, and the sheet says so.
 - **Region check:** the server asks `PolicyService:GetPolicyInfoForPlayerAsync` on join. Until it
-  answers, and wherever `ArePaidRandomItemsRestricted` is true, paid crates and luck products are
-  refused, and the Shop says so and points to the Forge. Free crates still open. Set
+  answers, and wherever `ArePaidRandomItemsRestricted` is true, crate products, the Starter Pack and
+  luck products are refused, and the Shop says so. Free crates still open. Set
   `TestPaidRandomRestricted` on ReplicatedStorage to try this in Studio.
-
-## Pets
-
-Pets are only for looks. One follows at a time; equipping another swaps it. Each species moves its
-own way (hop, fly, scuttle, bounce, trot, crawl, float) and wears its pet style.
-
-| Rarity | Pets |
-|---|---|
-| Common | Pocket Rock (everyone's first), Coal Bat, Tunnel Mole, Moss Frog |
-| Uncommon | Copper Crab, Quartz Hedgehog, Pebble Turtle, Frost Penguin |
-| Rare | Gem Slime, Glow Moth, Opal Bunny, Mini Golem |
-| Epic | Cave Drake (also from drake eggs), Crystal Fox, Glow Jelly |
-| Legendary | Magma Salamander, Prism Owl, Aurora Stag |
-| Mythic | Star Wisp, Ember Phoenix |
-| Exclusive | Starfall Drake (pass) |
-| Limited | Founder's Griffin (the first 1,000 buyers) |
-
-**Pet styles** are worn by the pet: Sparkle Trail, Fairy Wings, Pet Flames, Golden Crown, Star Halo
-and Nebula Cloak.
-
-All pet models are built from parts, so there are no meshes to upload. Pets far from the camera
-aren't drawn, and every pet moves in one `BulkMoveTo` a frame.
 
 ## Cosmetics
 
-Each kind has its own slot:
+Two slots:
 
-- **Mining trails** colour the pickaxe's swing and sparks: Ember, Frost, Verdant, Aurora, Comet
-  (the Welcome Crate reward), Solar Flare, Starfall Rift, and Celestial (Celestial Miner pass).
-- **Player trails** are a ribbon as the miner walks: Mint, Sunset, Starlight, Void, and Prism (the
-  Prism Trail pass, which was always a walking ribbon).
-- **Player auras** glow around the miner: Spark Ring, Frost Mist, Ember Halo, Celestial Halo, Nebula.
-- **Pet styles**, above.
+- **Mining FX** colour the pickaxe's swing and sparks: Copper Spark, Ember, Frost, Moss, Verdant,
+  Sakura, Aurora, Comet (the Welcome Crate), Thunder, Solar Flare, Inferno, Starfall Rift, Galaxy,
+  and Celestial (All Passes Bundle).
+- **Player FX**, one at a time (wearing one takes the other off), listed by rarity like Mining FX: trails that follow the miner (Dust,
+  Mint, Sunset, Candy, Blaze, Starlight, Borealis, Void, and Prism from the All Passes Bundle) and auras
+  that glow around them (Dust Motes, Leaf Swirl, Spark Ring, Frost Mist, Ember Halo, Celestial Halo,
+  Sunburst, Nebula, and Founder's Halo, limited). An older save wearing both keeps the trail.
 
-**Try on** shows any cosmetic on the player's own miner or pet for 8 seconds, owned or not, from the
-Inventory, Pets and the crate odds sheet. A mining trail is shown as a spark circling the miner.
-Only the player sees it.
+**Effects by rarity** (`src/shared/CosmeticLooks.luau`, textures from the VFX pack in
+`build/Shop-Pets-VFX.rbxlx`: its four-point star, glint, sparkle, glow, lens flare, light rays, swirl,
+rings, ice shard and hot spark; the old Roblox sparkle is gone):
+every trail is a streak in its full palette (Prism runs the whole rainbow); Uncommon and up shed
+sparkles; Rare and up add a themed layer (embers, frost, petals, sparks or star twinkles); Epic and up
+a bright core; Legendary and up a soft glow; Mythic and up a turning vortex and shockwave rings.
+Auras gain motes, a glow and a vortex the same way. Colours are kept saturated so they don't wash out
+to white against the sky.
 
-**Reduce effects** (Settings) hides other miners' auras, ribbons and pet styles on that player's
-screen.
+**Previews** (`src/client/FxPreview.luau`): particles can't be drawn inside UI, so each effect is
+redrawn there with the same pack textures, palette, lifetime, taper and fade: Mining FX as a small
+pick chopping fast, its head sweeping a wide band (the trail runs between the two ends of the head,
+so it's a surface, not a line; white-hot core for Epic and up); player trails as a miner on the left
+with the ribbon streaming from their back, fluttering and fading, as if running; auras as a pulsing
+glow with a turning ring and circling stars; plus the rarity layers. They animate only while on screen, and
+the crate reel uses still frames. There's no Try on any more.
 
-## Forge
+**Reduce effects** (Settings) hides other miners' auras and trails on that player's screen.
 
-| Group | Recipe |
-|---|---|
-| Tonics | Gold Tonic (2 Gold, 4 Coal, 4 gems), Haste Tonic (4 Copper, 1 Quartz, 4 gems), Lucky Brew (2 Garnet, 2 Quartz, 12 gems) |
-| Pets | Copper Crab (20 Copper, 40 dust), Mini Golem (20 Iron, 6 Quartz, 120 dust), Crystal Fox (16 Quartz, 3 Diamond, 350 dust, 40 gems), Prism Owl (6 Opal, 6 Diamond, 1,100 dust, 120 gems) |
-| Mining trails | Frost (4 Quartz, 30 dust), Aurora (3 Opal, 1 Emerald, 450 dust, 60 gems) |
-| Player effects | Sunset Ribbon (3 Garnet, 3 Gold, 120 dust), Celestial Halo (4 Platinum, 4 Diamond, 1,300 dust, 150 gems) |
-| Pet styles | Fairy Wings (6 Quartz, 3 Silver, 120 dust), Golden Crown (12 Gold, 2 Diamond, 900 dust, 100 gems) |
-
-## Gems
-
-Without paying, gems come from:
-- the daily card, playtime gifts and the daily order;
-- +3 per level gained and +5 per new ore discovered;
-- a 3% chance per ore cut to find one.
-
-In an unpublished Studio session every miner starts with 1,000 gems for trying the Shop (not in
-automated tests). The game's owner also gets 1,000 once in the live game.
+**First person** (`src/client/FirstPersonPick.luau`): Roblox hides your own character when the camera
+is in your head, and your real arm doesn't follow the camera up and down. So while you're zoomed all
+the way in, a smaller copy of your pickaxe is held in the bottom right of the view wherever you look,
+swings in time with your mining and carries your Mining FX. Only you see it. It also counts as
+zoomed in when the mine nudges the camera, and moves closer when a block you're mining at your feet
+would hide it. Your own name and title hide while you're zoomed in.
 
 ## Boosts and stacking
 
@@ -193,75 +239,88 @@ automated tests). The game's owner also gets 1,000 once in the live game.
 
 ## Game passes
 
-The Shop always shows the Robux price. An owned pass can't be bought again.
+An owned pass can't be bought again.
 
-| Pass | R$ | Benefit |
+| Pass | Robux | Benefit |
 |---|---|---|
-| Bigger Pack | 49 | +50% backpack capacity |
-| Prism Trail | 99 | Prism Ribbon player trail (existing pass) |
-| Auto-Sell | 149 | Sells the pack the moment it fills |
-| Double Gold | 199 | 2× sale gold (existing pass) |
-| Fast Pick | 199 | +15% mining speed |
-| VIP | 249 | Gold VIP tag, +10% gold, 15-gem chest every 20 hours |
-| 2× Lucky | 299 | Doubles luck |
-| Starfall Drake | 799 | Exclusive pet with glowing gold wings |
-| Celestial Miner | 999 | Double Gold, 2× Lucky, Auto-Sell, VIP, the Celestial title and Celestial mining trail |
+| All Passes Bundle | 599 (was 1,355) | Every pass below, plus the Celestial title, the Celestial Mining FX and the Prism Trail. "Best value" |
+| Bigger Pack | 79 | +50% backpack capacity |
+| Double Gold | 249 | 2× sale gold (existing pass) |
+| Fast Pick | 229 | +15% mining speed |
+| VIP | 449 | Gold VIP tag, +10% gold, a free Starfall Crate every 20 hours. "Popular" |
+| 2× Lucky | 349 | Doubles luck |
+
+The All Passes Bundle's struck-through price is the passes on sale added up, so it stays right if a
+price changes.
+
+**Prism Trail** (the old 99 Robux pass) is retired: it isn't sold any more, but players who bought it
+keep the Prism Trail effect, and the All Passes Bundle includes it. Give it its existing pass ID so owners are
+recognised.
 
 ## Developer products
 
 Each receipt is granted once: its `PurchaseId` is saved with the profile, and `PurchaseGranted` is
 only returned after the save succeeds.
 
-| Product | R$ | Reward |
-|---|---|---|
-| Sell Anywhere | 15 | Sells the whole pack where the miner stands |
-| Gem Pouch | 25 | 25 gems |
-| Starter Pack | 49 | 60 gems, 3 survey flares, 30 min of 2× gold. Once per player, hidden after |
-| 2× Gold · 15 min | 39 | Timed boost |
-| 2× Luck · 15 min | 59 | Timed boost (region-checked) |
-| Gem Bag | 99 | 120 gems |
-| Gold Bundle | 149 | About an hour of the miner's own gold. The Shop shows the exact amount right now |
-| Gem Chest | 199 | 300 gems ("Most popular") |
-| Server Luck · 15 min | 349 | 2× luck for everyone in the server, announced with the buyer's name (region-checked) |
-| Gem Vault | 499 | 900 gems |
-| Gem Hoard | 999 | 2,000 gems |
-| Gem Mountain | 1,999 | 4,500 gems ("Best value") |
-| Founder's Griffin | 399 | Limited pet: the first 1,000 buyers across all servers, then off sale for good |
+| Product | Robux | Was | Reward |
+|---|---|---|---|
+| Founder's Halo | 249 | — | Limited aura (+16% movement speed): the first 100 buyers across all servers, then off sale for good |
+| Starter Pack | 49 | 128 | 2 Starfall Crates, 30 min of 2× Gold, a Haste Tonic. Once per player |
+| 1 Starfall Crate | 25 | — | Goes to the Inventory |
+| 3 Starfall Crates | 65 | 75 | "Popular" |
+| 10 Starfall Crates | 199 | 250 | "Best value" |
+| 2× Gold · 15 min | 39 | — | Timed boost |
+| 2× Gold · 1 hour | 99 | 156 | Timed boost |
+| 2× Server Luck · 15 min | 79 | — | Doubles everyone's chance of rare ore, announced with the buyer's name (region-checked) |
+| Instamine · 10 min | 49 | — | Every block the pick can mine breaks in one quick hit (0.12 s); depth and Power limits still apply. "Popular" |
+| Auto Sell · 30 min | 35 | — | The pack sells itself the moment it fills, and a pack already full when it starts sells within a second. "Popular" |
+| Reset Skill Tree | 15 | — | Every skill point back to spend again |
+| Gold Pouch | 15 | — | 15 minutes of the miner's earnings |
+| Gold Bag | 35 | 60 | An hour of earnings |
+| Gold Chest | 79 | 240 | 4 hours of earnings. "Popular" |
+| Gold Vault | 199 | 1,440 | A whole day of earnings. "Best value" |
 
-3× Luck and the Star Compass were removed.
+The Starter Pack's "was" is what its parts cost separately (2 crates for 50, plus 30 minutes of
+2× Gold at the 15-minute rate, 78). The 1-hour 2× Gold is struck through at 4× the 15-minute price.
+The only luck you can buy is Server Luck (and the 2× Lucky pass); Lucky Brews still come from crates
+and rewards.
+Gold packs are struck through at the Gold Pouch's rate (1 Robux per minute of earnings).
 
-**Gold Bundle formula:** the deepest region's average sale value per block (purity ×1.25), times the
-blocks an hour at the miner's Speed, Power and skills at a relaxed pace (half the time cutting, a
-30-second trip per full pack), times the rebirth bonus. The minimum is 250. Passes and boosts are left
-out, so it can't be inflated.
+**Earnings formula** (gold packs, duplicate gold and the minutes-of-earnings rewards): the deepest
+region's average sale value per block (purity ×1.25), times the blocks an hour at the miner's Speed,
+Power and skills at a relaxed pace (half the time cutting, a 30-second trip per full pack), times the
+rebirth bonus. The minimum is 250 an hour. Passes and boosts are left out, so it can't be inflated.
+The Shop shows the exact amount each pack pays right now.
 
 **Limited stock** is counted in the DataStore `EndlessMining_v1_Limited`, one entry per item, and
 published to every server as `Limited<key>` on ReplicatedStorage (re-read every minute). A purchase
 that lands after the last one sold is still given, because it was paid for.
 
-### Gem packs
+## Removed
 
-Each pack shows its gems, the price the same gems would cost at the Gem Pouch's rate (1 gem per
-Robux) struck through, and its real price.
-
-| Pack | Gems | Was | Price | Bonus |
-|---|---|---|---|---|
-| Gem Pouch | 25 | — | R$ 25 | — |
-| Gem Bag | 120 | R$ 120 | R$ 99 | +21% |
-| Gem Chest | 300 | R$ 300 | R$ 199 | +51% |
-| Gem Vault | 900 | R$ 900 | R$ 499 | +80% |
-| Gem Hoard | 2,000 | R$ 2,000 | R$ 999 | +100% |
-| Gem Mountain | 4,500 | R$ 4,500 | R$ 1,999 | +125% |
+- **Gems:** gem packs, gem prices and gem finds are gone. Old saves keep their gem count, but it
+  isn't shown or used.
+- **Pets** and pet styles: old pets, styles and names are dropped from saves. The ore compass that
+  pets used to carry now floats over the miner's head.
+- **The Forge**, its recipes and Crate Dust.
+- **Stone and Crystal Crates:** any left in a save become Starfall Crates.
+- **Starfall Drake and Celestial Miner** passes: replaced by the All Passes Bundle.
+- **2× Luck boosts** (15 minutes and an hour): Server Luck is the luck boost on sale.
+- **Sell Anywhere** (Auto Sell replaces it).
+- **Try on**, replaced by live previews.
+- The **STATUS** and **RARE ORE** tags.
+- **Auto-Sell** pass (never sold live).
 
 ## Before publishing: IDs to configure
 
 Every pass and product in `src/shared/StoreConfig.luau` has `id = 0` and can't be bought live yet. In
 an unpublished Studio test, pressing a price grants the item without Robux.
 
-- **Double Gold and Prism Trail already exist:** give them their current pass IDs so owners keep them.
-- **Create the other 7 passes** (Monetization → Passes) at the listed prices.
-- **Create the 13 developer products** (Monetization → Developer Products) at the listed prices,
-  including Founder's Griffin.
+- **Double Gold and Prism Trail already exist:** give them their current pass IDs so owners keep them
+  (Prism Trail stays off sale).
+- **Create the other 5 passes** (Monetization → Passes) at the listed prices, including the
+  All Passes Bundle.
+- **Create the 15 developer products** (Monetization → Developer Products) at the listed prices.
 
 ## Leaderboards
 

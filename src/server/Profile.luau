@@ -627,16 +627,13 @@ function Profile.buySupply(p, key)
 	if (key == "Haste" and p.hasteCuts > 0) or (key == "Chips" and p.stoneChips > 0) then
 		return false, "Finish the charges on your pick first"
 	elseif key == "Compass" and p.oreCompass then
-		return false, "Your pet already has a compass"
-	elseif item.gems and p.gems < item.gems then
-		return false, string.format("Need %d more gems", item.gems - p.gems)
+		return false, "You already have an ore compass"
 	end
 	local name, count = Materials.missing(item.recipe, p.bag)
 	if name then
 		return false, string.format("Bring %d more %s to Field Supplies", count, name)
 	end
 	Profile.consume(p, item.recipe)
-	p.gems -= item.gems or 0
 	if key == "Haste" then
 		p.hasteCuts = Field.hasteCuts
 		return true, "Quick-cut wax ready for 12 cuts"
@@ -648,7 +645,7 @@ function Profile.buySupply(p, key)
 		return true, "Cave pulse packed. Use it underground from Supplies."
 	elseif key == "Compass" then
 		p.oreCompass = true
-		return true, "Ore compass crafted. Equip a pet and follow its gaze."
+		return true, "Ore compass crafted. Its marker over your head points to nearby ore."
 	end
 	if key == "Flare" then
 		p.flares += 1
@@ -668,8 +665,8 @@ function Profile.deliver(p, day, requestedDay)
 	Profile.consume(p, order.recipe)
 	p.dailyClaim = day
 	p.gold += order.gold
-	p.gems += 2
-	p.flares += if p.skills.SupplyRunner then 2 else 1
+	-- And Gold Tonics: two with the Supply Runner skill.
+	p.col.items.GoldTonic = (p.col.items.GoldTonic or 0) + (if p.skills.SupplyRunner then 2 else 1)
 	return true
 end
 return Profile
