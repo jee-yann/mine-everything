@@ -521,7 +521,9 @@ local function test()
 		-- Touch screens keep the side buttons as compact rails (no Menu button); small keyboard
 		-- windows fold them into Menu.
 		local rails = game.UserInputService.TouchEnabled
-		assert(not safe.Haul.Visible and not safe["Current job"].Visible, "compact HUD hides the cards")
+		-- The haul card stays on touch screens (in place of the Pack shortcut); the job card never shows.
+		assert(safe.Haul.Visible == rails and not safe["Current job"].Visible, "compact HUD cards")
+		assert(safe["Edge shortcuts"].Pack.Visible ~= rails, "Pack only without the haul card")
 		assert(safe["Menu buttons"].Visible == rails and safe["Reward buttons"].Visible == rails, "side buttons on touch only")
 		local pack = safe["Edge shortcuts"].Pack
 		local menuButton = safe["Edge shortcuts"].Menu
@@ -665,12 +667,7 @@ local function test()
 		local shown = wide or menu
 		local left, top = shown.AbsolutePosition.X, shown.AbsolutePosition.Y
 		local safe = gui.SafeArea
-		-- On a phone held sideways the big cards may reach up into Roblox's top bar (beside its
-		-- buttons); they still stay on screen.
-		local Gui = game:GetService("GuiService")
-		local raise = if wide and game.UserInputService.TouchEnabled
-			then math.max(0, Gui:GetInsetArea(Enum.ScreenInsets.CoreUISafeInsets).Min.Y - Gui:GetInsetArea(Enum.ScreenInsets.None).Min.Y)
-			else 0
+		local raise = 0
 		assert(left >= safe.AbsolutePosition.X - 1 and top >= safe.AbsolutePosition.Y - raise - 1, "menu origin")
 		assert(
 			shown.AbsoluteSize.X <= safe.AbsoluteSize.X + 1 and shown.AbsoluteSize.Y <= safe.AbsoluteSize.Y + raise + 1,
@@ -1237,7 +1234,7 @@ local function test()
 			waitFor(function()
 				return p:GetAttribute("HeldDirt") == 2 and p:GetAttribute("Gold") == gold + 2 and row["Sell quantity"].Text == "Sell 1 Dirt\n+1 gold"
 			end, 3, "sell two and reset quantity")
-			assert(menu.Status["Sell all"].ContentText == string.format("Sell all · +%d G", worth - 2))
+			assert(menu.Status["Sell all"].ContentText == string.format("Sell all  +%d G", worth - 2))
 			task.wait(0.25)
 			clickButton(menu.Status["Sell all"])
 			waitFor(function()

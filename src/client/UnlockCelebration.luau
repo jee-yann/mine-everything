@@ -88,10 +88,12 @@ function Celebration:present(item)
 	local quick = #self.queue > 0
 	local group = W.fadeGroup(root, "Unlock celebration", 470, 170)
 	group.ZIndex = 35
-	local center = UDim2.fromScale(0.5, 0.3)
+	-- On a phone (the compact HUD) the card is small and high, so it never covers the mine.
+	local phone = self.hud.edgeMode == true and root.AbsoluteSize.Y < 500
+	local center = UDim2.fromScale(0.5, if phone then 0.2 else 0.3)
 	W.anchor(group, 0.5, 0.5, center)
 	local scale = W.scale(group)
-	local fit = math.min(1.1, (root.AbsoluteSize.X - 16) / 470, (root.AbsoluteSize.Y - 10) / 340)
+	local fit = math.min(if phone then 0.6 else 1.1, (root.AbsoluteSize.X - 16) / 470, (root.AbsoluteSize.Y - 10) / 340)
 	scale.Scale = fit
 	local body = W.frame(group, "Plaque", 12, 22, 446, 124, W.white, 22)
 	W.enamelPanel(body, top, bottom, 22)

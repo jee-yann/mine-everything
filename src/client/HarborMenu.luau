@@ -204,15 +204,18 @@ function Menu:layout(width, height, touch)
 	-- Give landscape phones larger type and touch targets by scrolling the rows
 	-- inside the card. Keep the header, footer and close button within safe bounds.
 	self.touchLayout = touch
-	-- A phone held sideways: the big cards and the skill tree may use Roblox's top bar beside its
-	-- buttons, which is empty space there.
+	-- A phone held sideways: the big cards fit whole in the safe area, and the skill tree's map reaches
+	-- every edge of the screen (behind Roblox's buttons and the notch) while its controls stay inside.
+	-- `room` holds how far the full screen reaches past the safe area on each side.
 	local room = nil
 	if touch and width > height and height < 470 then
 		local Gui = game:GetService("GuiService")
 		local full = Gui:GetInsetArea(Enum.ScreenInsets.None)
 		local core = Gui:GetInsetArea(Enum.ScreenInsets.CoreUISafeInsets)
 		local bar = Gui:GetInsetArea(Enum.ScreenInsets.TopbarSafeInsets)
-		room = { raise = math.max(0, core.Min.Y - full.Min.Y), left = math.max(0, bar.Min.X - core.Min.X) + 6 }
+		local _ = bar
+		room = { raise = math.max(0, core.Min.Y - full.Min.Y), left = math.max(0, core.Min.X - full.Min.X),
+			right = math.max(0, full.Max.X - core.Max.X), bottom = math.max(0, full.Max.Y - core.Max.Y) }
 	end
 	self.room = room
 	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory } do
@@ -417,7 +420,7 @@ function Menu:jobs()
 		end
 		local button = self.claimJobs
 		button.RichText = true
-		button.Text = if count > 0 then "Claim all · " .. W.colored("+" .. W.goldAmount(total) .. " G", W.gold) else "Claim all"
+		button.Text = if count > 0 then "Claim all  " .. W.colored("+" .. W.goldAmount(total) .. " G", W.gold) else "Claim all"
 		button.TextSize = 19
 		button.Interactable, button.BackgroundColor3 = count > 0, if count > 0 then W.green else W.muted
 		self:arrangeJobs(changed)

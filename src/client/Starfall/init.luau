@@ -352,6 +352,11 @@ function Opening.play(player, net, hud)
 	-- After a skip, the game fades in from the black.
 	if skipCurtain and skipCurtain.Parent then
 		if fade then fade.BackgroundTransparency = 1 end
+		-- The black bars go with the film, under the black, so they never trail the fade-in.
+		for _, name in { "Top matte", "Bottom matte" } do
+			local matte = screen:FindFirstChild(name)
+			if matte then matte.Visible = false end
+		end
 		W.tween(skipCurtain, 0.5, { BackgroundTransparency = 1 }).Completed:Wait()
 	end
 	screen:Destroy()

@@ -423,7 +423,8 @@ function Hud.new(player, net, mobile)
 		local freeRight = if bar.Max.X >= core.Max.X - 1 then outerRight else width + bar.Max.X - core.Max.X - 5
 		local top = math.max(full.Min.Y + 11, device.Min.Y + 8)
 		-- The top right row: Pack and Menu, or on touch screens Pack and the Shop / Daily / Gift row.
-		local pairWidth = if edge and rosterOnDemand then 84 + 162 else 172
+		-- Phones drop the Pack shortcut (the haul card shows the bag), so the row is Shop / Daily / Gift.
+		local pairWidth = if edge and rosterOnDemand then 162 else 172
 		local topActions = edge and width >= height and freeRight - freeLeft >= pairWidth + 189
 		local titleRight = freeRight - (if topActions then pairWidth + 8 else 0)
 		local inTopbar = titleRight - freeLeft >= 148
@@ -458,7 +459,7 @@ function Hud.new(player, net, mobile)
 		menuRail.Visible = playing and (not edge or (railsOnEdge and not typing))
 		rewardRail.Visible = playing and (not edge or (railsOnEdge and not typing and not (browsing and narrow)))
 		taskCard.Visible = playing and not edge and not browsing
-		haul.Visible = playing and not edge and not browsing
+		haul.Visible = playing and (not edge or railsOnEdge) and not browsing
 		wallet.Visible = playing and not (edge and (typing or (browsing and narrow)))
 		loc.Visible = playing and not (edge and browsing)
 		tools.Visible = wallet.Visible
@@ -547,9 +548,13 @@ function Hud.new(player, net, mobile)
 			shortcuts.Position = UDim2.fromOffset(right - pairWidth, rowY)
 			menuButton.Position = UDim2.fromOffset(88, 0)
 			W.anchor(tools, 1, 0, UDim2.fromOffset(right, gearY))
+			packButton.Visible = not railsOnEdge
 			if railsOnEdge then
-				-- Pack at the right end of the row, Shop / Daily / Gift before it.
-				packButton.Position = UDim2.fromOffset(pairWidth - 84, 0)
+				-- The haul card, small, under the equipment and level on the right (as on desktop, in
+				-- place of the Pack shortcut). The bonus circles sit beside the equipment.
+				haulScale.Scale = 0.62
+				W.anchor(haul, 1, 0, UDim2.fromOffset(right, toolsBottom + 4))
+				self.bonusSpot = Vector2.new(right - 156, toolsBottom)
 				local rowScale = 150 / (3 * tileStep - 18)
 				rewardRailScale.Scale = rowScale
 				W.anchor(rewardRail, 0, 0, UDim2.fromOffset(right - pairWidth, rowY + 1))
@@ -558,18 +563,18 @@ function Hud.new(player, net, mobile)
 				-- A clear gap under Roblox's own buttons (and its chat), so the rail never touches them.
 				local railTop = belowChat(leftEdge, top + 50, 2 * tileStep * 0.4, 40)
 				local menuHeight = menuRail.Size.Y.Offset
-				local railScale = math.clamp((height * 0.62 - railTop) / menuHeight, 0.3, 0.55)
+				local railScale = math.clamp((height * 0.7 - railTop) / menuHeight, 0.3, 0.62)
 				menuRailScale.Scale = railScale
 				W.anchor(menuRail, 0, 0, UDim2.fromOffset(leftEdge + 2, railTop))
 				local railRight = leftEdge + 2 + menuRail.Size.X.Offset * railScale + 8
 				local room = math.max(minimumWallet, math.min(220, titleX - titleHalf - railRight - 6))
 				wallet.Size = UDim2.fromOffset(room, 52)
-				local goldTop = railTop
-				if railRight < titleX + titleHalf and railRight + room > titleX - titleHalf then
-					goldTop = math.max(goldTop, depthY + 24)
-				end
-				W.anchor(wallet, 0, 0, UDim2.fromOffset(railRight, goldTop))
+				-- The gold sits in the bottom left corner on phones.
+				wallet.Size = UDim2.fromOffset(220, 52)
+				W.anchor(wallet, 0, 1, UDim2.fromOffset(leftEdge + 4, height - 4))
+				local _ = railRight
 			else
+				self.bonusSpot = nil
 				packButton.Position = UDim2.fromOffset(0, 0)
 			end
 		else
@@ -816,6 +821,10 @@ function Hud:refresh()
 	local held = Ores.carried(p)
 	for _, row in self.rows do
 		row.Visible = false
+	end
+	-- A phone shows the four rarest ores carried; the sell value still counts everything.
+	if self.railsOnEdge and #held > 4 then
+		held = table.move(held, 1, 4, 1, {})
 	end
 	for i, entry in held do
 		local ore = entry.ore

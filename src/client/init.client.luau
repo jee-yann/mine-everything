@@ -200,6 +200,33 @@ end)
 -- Ending a manual hold must leave the first tap available for the second.
 hud.mine.TouchLongPress:Connect(clearMineTap)
 hud.mine.TouchPan:Connect(clearMineTap)
+-- Sliding the finger that holds Mine turns the camera, like a shooter's fire button: the other thumb
+-- is on the move stick, so this is the only way to look around while mining. The default camera
+-- picks the turned view up from the camera itself on its next update.
+local mineLook = Vector2.zero
+UIS.InputChanged:Connect(function(input)
+	if input == held and input.UserInputType == Enum.UserInputType.Touch then
+		mineLook += Vector2.new(input.Delta.X, input.Delta.Y)
+	end
+end)
+RunService:BindToRenderStep("Mine button look", Enum.RenderPriority.Camera.Value - 1, function()
+	if mineLook == Vector2.zero then return end
+	local turn = mineLook
+	mineLook = Vector2.zero
+	local camera = workspace.CurrentCamera
+	if camera.CameraType ~= Enum.CameraType.Custom or not held then return end
+	local perPixel = math.rad(0.4) * UserSettings():GetService("UserGameSettings").MouseSensitivity
+	local look = camera.CFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	if flat.Magnitude < 1e-3 then return end
+	flat = (CFrame.Angles(0, -turn.X * perPixel, 0) * flat).Unit
+	local pitch = math.clamp(math.asin(math.clamp(look.Y, -1, 1)) - turn.Y * perPixel, math.rad(-80), math.rad(80))
+	local direction = flat * math.cos(pitch) + Vector3.yAxis * math.sin(pitch)
+	local focus = camera.Focus.Position
+	local distance = (camera.CFrame.Position - focus).Magnitude
+	camera.CFrame = if distance < 0.6 then CFrame.lookAt(camera.CFrame.Position, camera.CFrame.Position + direction)
+		else CFrame.lookAt(focus - direction * distance, focus)
+end)
 hud.mine.TouchTap:Connect(function(positions)
 	if
 		#positions ~= 1
@@ -447,7 +474,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 	elseif kind == "serverLuck" then
 		fx:chime(1.9)
 		hud:milestone("SERVER LUCK", a .. " gave everyone 2× luck!", W.green)
-		hud:chatLine("🍀 " .. a .. " turned on Server Luck!", "Everyone here has 2× luck for " .. point .. " minutes.", W.green)
+		hud:chatLine("🍀 " .. a .. " redeemed 2× Luck for the server!", "Everyone here has 2× luck for " .. point .. " minutes.", W.green)
 	elseif kind == "geodeAnnounce" then
 		local rarity = Collectibles.rarities[spread]
 		hud:chatLine("◆ " .. a .. " opened a " .. spread .. " " .. point .. "!", "", rarity and rarity.color or W.gold)

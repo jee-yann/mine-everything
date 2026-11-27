@@ -30,6 +30,7 @@ return function(hud)
 	local player = hud.player
 	local holder = W.frame(hud.root, "Boosts", 0, 0, 320, 200, W.ink)
 	holder.BackgroundTransparency = 1
+	local fit = W.scale(holder)
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection, layout.HorizontalAlignment = Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Right
 	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
@@ -145,9 +146,13 @@ return function(hud)
 			end
 			row.Visible = next(kept) ~= nil
 			if row.Visible then seen.row = true end
-			-- The bottom right corner; on phones above the touch buttons.
+			-- The bottom right corner; on phones much smaller, against the right edge above the touch buttons.
 			local size = hud.root.AbsoluteSize
-			W.anchor(holder, 1, 1, UDim2.fromOffset(size.X - 14, if hud.edgeMode then size.Y * 0.62 else size.Y - 14))
+			local phone = hud.edgeMode == true and size.Y < 500
+			fit.Scale = if phone then 0.6 else 1
+			local spot = if phone then hud.bonusSpot else nil
+			W.anchor(holder, 1, 1, if spot then UDim2.fromOffset(spot.X, spot.Y)
+				else UDim2.fromOffset(size.X - 14, if hud.edgeMode then size.Y * 0.62 else size.Y - 14))
 			holder.Visible = hud.layer.Parent.Visible and next(seen) ~= nil
 			task.wait(0.5)
 		end

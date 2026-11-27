@@ -102,9 +102,9 @@ function Card:select(key)
 	end
 end
 
--- `room` (phones held sideways): how far up the card may reach into Roblox's top bar, and the left edge
--- clear of Roblox's own buttons there. The whole card then fits, nothing scrolls out of sight, and it
--- is as large as that space allows.
+-- `room` is set on phones held sideways (see Menu:layout). The card then stays inside the safe area,
+-- clear of Roblox's top bar and chat, centred, and scaled so the whole of it fits: nothing scrolls out
+-- of sight.
 function Card:layout(area, touch, room)
 	local short = area.X > area.Y and (touch or area.Y < 470)
 	if short and room and self.scrolls then
@@ -120,18 +120,15 @@ function Card:layout(area, touch, room)
 		if self.modal.Visible then self.modal.Position = self.center end
 		return
 	end
-	if short and room and room.raise > 0 then
-		local w, h = area.X - room.left - 6, area.Y + room.raise - 8
-		local scale = math.clamp(math.min(w / self.size.X, h / self.size.Y), 0.3, 1.45)
-		local half = self.size.X * scale / 2
+	if short and room then
+		local scale = math.clamp(math.min((area.X - 16) / self.size.X, (area.Y - 8) / self.size.Y), 0.3, 1.45)
 		self.scale.Scale = scale
 		self.modal.Size = UDim2.fromOffset(self.size.X, self.size.Y)
 		local top = self.body.Position.Y.Offset
 		self.body.Size = UDim2.fromOffset(self.size.X - 22, self.size.Y - top - 11)
 		self.body.ScrollingEnabled, self.body.ScrollBarThickness = false, 0
 		self.body.CanvasPosition = Vector2.zero
-		local x = math.clamp(area.X / 2, room.left + half, area.X - half - 2)
-		self.center = UDim2.new(0, x, 0.5, -room.raise / 2)
+		self.center = UDim2.fromScale(0.5, 0.5)
 		if self.modal.Visible then self.modal.Position = self.center end
 		return
 	end

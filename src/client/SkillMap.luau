@@ -261,7 +261,8 @@ function Map.new(parent, player, net, close)
 		return d.X >= 0 and d.Y >= 0 and d.X < box.AbsoluteSize.X and d.Y < box.AbsoluteSize.Y
 	end
 	Input.InputBegan:Connect(function(input)
-		if not screen.Visible or drag or not inside(input.Position, view) or inside(input.Position, footer) then
+		if not screen.Visible or drag or not inside(input.Position, view) or inside(input.Position, footer)
+			or inside(input.Position, self.header) then
 			return
 		end
 		if
@@ -344,12 +345,16 @@ function Map.new(parent, player, net, close)
 	return self
 end
 
--- On a phone held sideways (`room` from the menu): the map fills the whole screen, reaching up into
--- Roblox's top bar, with one slim row of controls there beside Roblox's buttons and a slim footer.
+-- On a phone held sideways (`room` from the menu): the map fills the whole screen, to every edge, so
+-- more of the tree shows; one slim row of controls and a slim footer stay inside the safe area.
 function Map:fit(room)
 	self.room = room
-	local raise = if room then room.raise else 0
-	self.screen.Position, self.screen.Size = UDim2.fromOffset(0, -raise), UDim2.new(1, 0, 1, raise)
+	if room then
+		self.screen.Position = UDim2.fromOffset(-room.left, -room.raise)
+		self.screen.Size = UDim2.new(1, room.left + room.right, 1, room.raise + room.bottom)
+	else
+		self.screen.Position, self.screen.Size = UDim2.new(), UDim2.fromScale(1, 1)
+	end
 	self.layoutSize = nil
 	if self.screen.Visible then self:position() end
 end
@@ -363,7 +368,7 @@ function Map:position()
 	self.scale.Scale = scale
 	local bounds = self.extent * scale + Vector2.new(75, 95)
 	self.pan = Vector2.new(math.clamp(self.pan.X, -bounds.X, bounds.X), math.clamp(self.pan.Y, -bounds.Y, bounds.Y))
-	self.canvas.Position = UDim2.new(0.5, self.pan.X, 0.5, self.pan.Y - 54)
+	self.canvas.Position = UDim2.new(0.5, self.pan.X, 0.5, self.pan.Y + (self.centerShift or -54))
 	if self.layoutSize == size then
 		return
 	end
@@ -373,6 +378,8 @@ function Map:position()
 		return
 	end
 	self.header.Position = UDim2.fromOffset(0, 0)
+	self.footer.Position = UDim2.new(0.5, 0, 1, -6)
+	self.centerShift = -54
 	self.path.Visible, self.summary.Visible, self.summary.TextWrapped = true, true, true
 	self.learn.Size, self.learn.Position, self.learn.TextSize = UDim2.fromOffset(144, 56), UDim2.new(1, -156, 0, 12), 20
 	self.title.Position, self.title.TextSize, self.detail.Position, self.detail.TextSize = UDim2.fromOffset(16, 6), 26, UDim2.fromOffset(16, 38), 18
@@ -418,13 +425,17 @@ function Map:position()
 			UDim2.fromOffset(x, if narrow then 85 else 57), UDim2.new(1, -x - 12, 0, if narrow then 20 else 26)
 	end
 end
--- The phone layout (see Map:fit): one 50-pixel row of controls in the top bar beside Roblox's
--- buttons, and a 76-pixel footer, so the tree gets nearly the whole screen.
+-- The phone layout (see Map:fit): the map under the whole screen, one 50-pixel row of controls at the
+-- top of the safe area and a 76-pixel footer at its bottom.
 function Map:compact(size)
-	local left = self.room.left
-	local rowW = size.X - left
-	self.header.Position, self.header.Size = UDim2.fromOffset(left, 0), UDim2.new(1, -left, 0, 50)
-	self.view.Position, self.view.Size = UDim2.fromOffset(0, 50), UDim2.new(1, 0, 1, -50)
+	local room = self.room
+	local rowW = size.X - room.left - room.right
+	self.header.Position = UDim2.fromOffset(room.left, room.raise)
+	self.header.Size = UDim2.new(1, -room.left - room.right, 0, 50)
+	self.view.Position, self.view.Size = UDim2.new(), UDim2.fromScale(1, 1)
+	-- The tree centres in the open space between the control row and the footer.
+	local top, bottom = room.raise + 50, size.Y - room.bottom - 82
+	self.centerShift = (top + bottom) / 2 - size.Y / 2
 	local control, right = 40, -6
 	for i, button in self.controls do
 		local w = if i == 2 or i == 3 then control * 1.62 else control
@@ -443,12 +454,14 @@ function Map:compact(size)
 	self.summary.Visible = rowW + right - summaryX > 80
 	self.summary.TextWrapped = false
 	self.footerScale.Scale = 1
-	local width = math.clamp(size.X - 16, 190, 600)
+	local width = math.clamp(rowW - 16, 190, 600)
 	self.footer.Size = UDim2.fromOffset(width, 76)
+	self.footer.Position = UDim2.new(0.5, 0, 1, -6 - room.bottom)
 	self.title.Position, self.title.Size, self.title.TextSize = UDim2.fromOffset(14, 4), UDim2.fromOffset(width - 150, 28), 22
 	self.detail.Position, self.detail.Size, self.detail.TextSize = UDim2.fromOffset(14, 32), UDim2.fromOffset(width - 150, 40), 15
 	self.path.Visible = false
 	self.learn.Size, self.learn.Position, self.learn.TextSize = UDim2.fromOffset(124, 48), UDim2.new(1, -134, 0, 14), 18
+	self.canvas.Position = UDim2.new(0.5, self.pan.X, 0.5, self.pan.Y + self.centerShift)
 end
 
 function Map:zoomBy(factor)

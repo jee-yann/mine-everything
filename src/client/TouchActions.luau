@@ -67,14 +67,15 @@ function TouchActions:layout(root, jump, visible, toolsBottom)
 	self.label.Position, self.hint.Position = UDim2.fromOffset(0, disc + 2), UDim2.fromOffset(0, disc + 16)
 	self.label.Size, self.hint.Size = UDim2.fromOffset(disc + 40, 15), UDim2.fromOffset(disc + 40, 13)
 	local extent = Vector2.new(disc + 40, disc + 30)
-	local x, y = pos.X - disc - 34, pos.Y + (size.Y - disc) / 2
+	-- A little higher than the jump button's centre, so the mode text never meets the screen's edge.
+	local x, y = pos.X - disc - 34, pos.Y + (size.Y - disc) / 2 - 14
 	if x < 0 then
 		x, y = pos.X + (size.X - extent.X) / 2, pos.Y - extent.Y - 8
 	end
 	if y < toolsBottom then
 		y = math.max(toolsBottom, y)
 	end
-	local corner = Vector2.new(math.clamp(x, 0, math.max(0, width - extent.X)), math.clamp(y, 0, height - extent.Y))
+	local corner = Vector2.new(math.clamp(x, 0, math.max(0, width - extent.X)), math.clamp(y, 0, height - extent.Y - 8))
 	W.anchor(self.hold, 0.5, 0.5, UDim2.fromOffset(corner.X + extent.X / 2, corner.Y + extent.Y / 2))
 	local bounds = { Rect.new(pos, pos + size), Rect.new(corner, corner + extent) }
 	table.sort(bounds, function(a, b)
