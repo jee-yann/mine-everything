@@ -32,9 +32,10 @@ local upgrades = {
 	},
 	Power = {
 		values = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 },
-		-- Cheaper from Power 3 up than they were (the top pick was 6.8M): tuned so a focused free player
-		-- reaches the Starcaller Pick, and the crater's Starfall, in about five hours.
-		prices = { 110, 400, 1500, 2500, 3800, 6500, 11000, 19000, 30000, 85000, 160000, 230000, 560000 },
+		-- Tuned with the crater's Starfall odds so a focused free player reaches the Starcaller Pick in
+		-- about an hour and a half and finds their first Starfall in about two (a casual one in about
+		-- three). The top pick was 6.8M before Starfall moved to the crater.
+		prices = { 110, 400, 450, 750, 1150, 1950, 3300, 5700, 9000, 25500, 48000, 69000, 168000 },
 		icon = "◆",
 		color = rgb(255, 147, 100),
 	},

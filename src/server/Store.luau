@@ -185,6 +185,8 @@ local function deliver(player, session, product, context)
 		p.skills = {}
 		if context.resetSkills then context.resetSkills(player) end
 		context.feedback(player, "hint", "Skill tree reset: every skill point is yours to spend again")
+	elseif product.key == "Fling" then
+		if context.fling then context.fling(player) end
 	elseif product.key == "ServerLuck" then
 		local from = math.max(Rep:GetAttribute("ServerLuckUntil") or 0, now)
 		Rep:SetAttribute("ServerLuckUntil", from + product.minutes * 60)

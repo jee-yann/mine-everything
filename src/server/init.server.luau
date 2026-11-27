@@ -79,7 +79,7 @@ local shuttingDown = false
 local geodeRandom = Random.new()
 -- What a miner's passes and boosts add up to right now (see Shared.Bonuses).
 local function bonusState(player, p)
-	return Bonuses.make(Store.benefits(player), p.col, p.rebirths, nil, os.time())
+	return Bonuses.make(Store.benefits(player), p.col, p.rebirths, nil, os.time(), p.skills, player:GetAttribute("NearMiner") == true)
 end
 -- GiftClock is the moment today's play time counted from. It only moves when the clock is capped or reset.
 local function updateGifts(player, session, now)
@@ -413,7 +413,35 @@ local function resetSkills(player)
 	applySkills(player, s.profile)
 end
 
+-- The Fling product: who the buyer pointed at (their FlingTarget action), and the fling itself. The
+-- target is sent flying by their own client (it owns their character); the server only picks who.
+local flingTargets = {}
+local function fling(player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local wanted = flingTargets[player]
+	flingTargets[player] = nil
+	local target, best = nil, 22
+	for _, other in Players:GetPlayers() do
+		local there = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if there then
+			local gap = (there.Position - root.Position).Magnitude
+			-- The miner they chose, if still close; otherwise whoever is nearest.
+			if wanted and other.UserId == wanted.id and gap <= 22 then target, best = other, -1 end
+			if gap < best then target, best = other, gap end
+		end
+	end
+	if not target then
+		net.Feedback:FireClient(player, "hint", "Nobody close enough to fling")
+		return
+	end
+	local away = (target.Character.HumanoidRootPart.Position - root.Position) * Vector3.new(1, 0, 1)
+	away = if away.Magnitude > 0.1 then away.Unit else Vector3.zAxis
+	net.Feedback:FireClient(target, "flung", player.DisplayName, away)
+	net.Feedback:FireClient(player, "hint", "You flung " .. target.DisplayName .. "!")
+end
 local storeContext = {
+	fling = fling,
 	openCrate = openCrate,
 	resetSkills = resetSkills,
 	sessions = sessions,
@@ -631,7 +659,7 @@ local function action(player, key, option, value)
 			sync(player, p)
 		end
 	elseif key == "UseItem" and type(option) == "string" then
-		local item, why = Collection.use(p.col, option, os.time())
+		local item, why = Collection.use(p.col, option, os.time(), p.skills)
 		if not item then
 			net.Feedback:FireClient(player, "hint", why)
 			return
@@ -641,6 +669,8 @@ local function action(player, key, option, value)
 	elseif (key == "BuyPass" or key == "BuyProduct") and type(option) == "string" then
 		times[actionKey] = now + 1
 		Store.prompt(player, s, if key == "BuyPass" then "pass" else "product", option, storeContext)
+	elseif key == "FlingTarget" and type(option) == "number" then
+		flingTargets[player] = { id = option, at = os.clock() }
 	elseif key == "VipChest" then
 		local given, why = Store.vipChest(player, s)
 		if given then
@@ -774,6 +804,25 @@ for name, prompt in site.stations do
 		end
 	end)
 end
+-- NearMiner: another miner within 30 studs, for the Show Off, Crowd Pleaser and Cash Out Crew skills.
+-- Checked once a second; the client reads the same attribute, so both sides time cuts alike.
+task.spawn(function()
+	while true do
+		task.wait(1)
+		local roots = {}
+		for player in sessions do
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root then roots[player] = root.Position end
+		end
+		for player, at in roots do
+			local near = false
+			for other, there in roots do
+				if other ~= player and (there - at).Magnitude <= 30 then near = true break end
+			end
+			if (player:GetAttribute("NearMiner") == true) ~= near then player:SetAttribute("NearMiner", near or nil) end
+		end
+	end
+end)
 -- The Starfall Compass pass: every StoreConfig.compassEvery seconds underground, look through the rock
 -- within compassRadius blocks (buried cells too) and point the owner to the nearest Starfall there
 -- (the StarfallAt attribute, a world position; StarfallPing counts the pings).

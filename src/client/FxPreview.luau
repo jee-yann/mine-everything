@@ -74,7 +74,9 @@ function Preview.new(parent, kind, id, x, y, size, animate)
 	local rank = Looks.rank(entry)
 	local theme = Looks.theme(entry)
 	local s = size / 100
-	local parts = { frame = frame, kind = kind, palette = palette, rank = rank, size = size, s = s }
+	-- Each preview its own place in the swing and a slightly different tempo, so they never move in step.
+	local parts = { frame = frame, kind = kind, palette = palette, rank = rank, size = size, s = s,
+		seed = math.random() * 100, tempo = 0.9 + 0.2 * math.random() }
 	if rank >= 6 then
 		parts.swirl = image(frame, "Swirl", textures.swirl, 96 * s, palette[#palette], 2)
 		parts.swirl.Position, parts.swirl.ImageTransparency = UDim2.fromScale(0.5, 0.5), 0.35
@@ -171,20 +173,46 @@ local function random(n, salt)
 	return (math.sin(n * 12.9898 + salt * 78.233) * 43758.5453) % 1
 end
 
--- Where the pick's head is at time `t`, as fractions of the frame, and which stroke it's on. About
--- three strokes a second, each a fast chop round an arc and a quick lift back. Every stroke turns the
--- arc to a new angle on screen and tilts it towards or away from you (squashing the circle), and some
--- swing the other way round, the way a real swing looks from a moving camera.
-local function path(_kind, t)
-	local n = math.floor(t * 3)
-	local cycle = t * 3 - n
-	local swing = if cycle < 0.55 then 1 - (1 - cycle / 0.55) ^ 2 else 1 - (cycle - 0.55) / 0.45
-	local turn = math.rad(-75 + 150 * random(n, 1))
-	local squash = 0.3 + 0.7 * random(n, 2)
-	local way = if random(n, 3) < 0.5 then 1 else -1
-	local a = math.rad(-120 + 210 * swing) * way
-	local x, y = 0.36 * math.cos(a), 0.36 * squash * math.sin(a)
-	return 0.5 + x * math.cos(turn) - y * math.sin(turn), 0.55 + x * math.sin(turn) + y * math.cos(turn), n
+-- The pick swung in 3D, seen in perspective from a little in front, to the side and above, the way the
+-- game's own swing looks (PickSwing): lifted slowly back over the shoulder, then snapped down and
+-- forward through the strike, and settled. Each stroke turns the swing a little left or right and
+-- rolls it a little, so strokes differ. `parts.seed` puts every preview at its own place in its own
+-- rhythm, so a grid of them never swings in step. Returns the head's place as fractions of the frame,
+-- the stroke number and how near it is (1 at the pivot's distance; nearer is bigger).
+local camYaw, camPitch, distance, lens = math.rad(32), math.rad(14), 3.2, 1.25
+local function path(parts, t)
+	local seed = parts.seed or 0
+	local rate = 1.55 * (parts.tempo or 1)
+	local clock = t * rate + seed
+	local n = math.floor(clock)
+	local cycle = clock - n
+	-- 0 is the strike (down and forward), 1 the top of the lift (up and back over the shoulder).
+	local up
+	if cycle < 0.62 then
+		local u = cycle / 0.62
+		up = u * u * (3 - 2 * u) -- the slow lift
+	elseif cycle < 0.8 then
+		local u = (cycle - 0.62) / 0.18
+		up = 1 - u ^ 2.2 -- the snap
+	else
+		up = 0.06 * math.sin((cycle - 0.8) / 0.2 * math.pi) -- the settle after contact
+	end
+	local a = math.rad(-35 + 175 * up)
+	-- In the swing's own plane: forward is +Z, up is +Y.
+	local px, py, pz = 0, math.sin(a), math.cos(a)
+	-- This stroke's turn (left or right) and roll.
+	local yaw = math.rad(-48 + 96 * random(n + seed * 7, 1))
+	local roll = math.rad(-18 + 36 * random(n + seed * 7, 2))
+	px, py = px * math.cos(roll) - py * math.sin(roll), px * math.sin(roll) + py * math.cos(roll)
+	px, pz = px * math.cos(yaw) + pz * math.sin(yaw), -px * math.sin(yaw) + pz * math.cos(yaw)
+	-- The camera's view: turned to the side and looking down a little.
+	local vx = px * math.cos(camYaw) - pz * math.sin(camYaw)
+	local vz = px * math.sin(camYaw) + pz * math.cos(camYaw)
+	local vy = py * math.cos(camPitch) - vz * math.sin(camPitch)
+	vz = py * math.sin(camPitch) + vz * math.cos(camPitch)
+	local depth = distance - vz
+	local scale = distance / depth
+	return 0.5 + lens * vx / depth * 0.32, 0.56 - lens * vy / depth * 0.32, n, scale
 end
 
 -- Lays one segment between two points (fractions of the frame), `width` pixels thick.
@@ -223,22 +251,25 @@ function Preview.draw(parts, t)
 		end
 		-- A pick: its head's path over the last moments of its strokes.
 		local step = parts.lifetime / count
-		local x0, y0, stroke = path(parts.kind, t)
+		local x0, y0, stroke = path(parts, t)
 		local previous = if ribbon then along(0) else Vector2.new(x0, y0)
+		local depthScale = 1
 		for i = 1, count do
 			local fade = (i - 1) / (count - 1)
 			local at, gap = nil, false
 			if ribbon then
 				at = along(i / count)
 			else
-				local x, y, n = path(parts.kind, t - i * step)
+				local x, y, n, near = path(parts, t - i * step)
 				-- A new stroke starts somewhere else: no band across the jump.
 				at, gap, stroke = Vector2.new(x, y), n ~= stroke, n
+				depthScale = near
 			end
 			-- The world's trail: nearly solid at the start, fading out by the end, tapering.
 			local clear = if fade < 0.55 then 0.02 + 0.6 * fade else 0.35 + 0.65 * (fade - 0.55) / 0.45
 			if ribbon then clear += 0.1 * (0.5 + 0.5 * math.sin(t * 7 - fade * 9)) end
-			local width = if ribbon then (30 - 20 * fade) * s else (26 - 12 * fade) * s
+			-- Nearer parts of the swing are wider, as in perspective.
+			local width = if ribbon then (30 - 20 * fade) * s else (26 - 12 * fade) * s * depthScale
 			lay(parts.band[i], size, previous, at, width, if gap then 1 else math.min(1, clear + (if ribbon then 0.04 else 0.1)))
 			local core = parts.core[i]
 			if core then
@@ -258,12 +289,12 @@ function Preview.draw(parts, t)
 				glint.Rotation = (t * 160 + k * 40) % 360
 			end
 		else
-			local x, y = path(parts.kind, t)
-			local tip, hand = Vector2.new(x, y), Vector2.new(0.5, 0.55)
+			local x, y, _, near = path(parts, t)
+			local tip, hand = Vector2.new(x, y), Vector2.new(0.5, 0.56)
 			lay(parts.handle, size, hand, tip, 4.5 * s, 0)
 			local across = (tip - hand).Unit
 			local side = Vector2.new(-across.Y, across.X) * 0.12
-			lay(parts.pickHead, size, tip - side, tip + side, 7 * s, 0)
+			lay(parts.pickHead, size, tip - side * near, tip + side * near, 7 * s * near, 0)
 			place(parts.head, x, y)
 			parts.head.Rotation = (t * 200) % 360
 			parts.head.ImageColor3 = white:Lerp(palette[1], 0.2)

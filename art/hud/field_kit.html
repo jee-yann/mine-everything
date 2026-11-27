@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 1536, 256 px tiles, on a clear
+<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 2304, 256 px tiles, on a clear
      background. Tile order must match the tiles table in src/client/FieldKit/init.luau.
      Render with render_field_kit.py, then bake with bake_field_kit.py.
      Style: one navy outline around each icon's silhouette (the #ol filter), nothing dark
      inside, flat colours with soft shade shapes, white glints and a soft cast shadow. -->
 <html><head><meta charset="utf-8"><style>
-  html, body { margin: 0; width: 1024px; height: 1536px; background: transparent; overflow: hidden; }
+  html, body { margin: 0; width: 1024px; height: 2304px; background: transparent; overflow: hidden; }
   .ico { position: absolute; width: 208px; height: 208px; overflow: visible; filter: drop-shadow(7px 11px 0 #29264a38); }
 </style></head><body>
 <svg width="0" height="0" style="position:absolute">
@@ -536,6 +536,156 @@
         <use href="#spark" transform="translate(90 70) scale(.55)" fill="#fff"/>
       </g>
     </symbol>
+
+    <!-- Skill icons (rows 7-9). Same rules: one navy outline from #ol, flat colours, white glints. -->
+    <!-- Long Arm: a pick reaching out along a blue arrow -->
+    <symbol id="i-hook" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M14 74 H66" stroke="#56c8f5" stroke-width="12" stroke-linecap="round"/>
+        <path d="M60 56 L86 74 L60 92 Z" fill="#56c8f5"/>
+        <path d="M18 70 H58" stroke="#a8e6ff" stroke-width="4" stroke-linecap="round"/>
+        <path d="M30 60 L52 24" stroke="#c27a44" stroke-width="10" stroke-linecap="round"/>
+        <path d="M24 22 Q48 4 74 30 Q62 28 52 26 Q38 24 24 22 Z" fill="#cfdbea"/>
+        <path d="M30 18 Q44 12 56 14" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <use href="#spark" transform="translate(86 20) scale(.75)" fill="#fff"/>
+      </g>
+    </symbol>
+    <!-- Steady Hands: a stopwatch -->
+    <symbol id="i-tempo" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <rect x="42" y="8" width="16" height="12" rx="4" fill="#f5a31e"/>
+        <rect x="68" y="18" width="12" height="9" rx="3" fill="#f5a31e" transform="rotate(40 74 22)"/>
+        <circle cx="50" cy="56" r="34" fill="#ffd23f"/>
+        <circle cx="50" cy="56" r="26" fill="#fff8e1"/>
+        <path d="M50 56 L50 36" stroke="#f5a31e" stroke-width="6" stroke-linecap="round"/>
+        <path d="M50 56 L64 64" stroke="#8b5cf6" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="50" cy="56" r="4.5" fill="#8b5cf6"/>
+        <path d="M30 36 Q38 28 48 26" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/>
+        <use href="#spark" transform="translate(86 76) scale(.6)" fill="#fff"/>
+      </g>
+    </symbol>
+    <!-- Lantern Wick: a brass lantern with a warm flame -->
+    <symbol id="i-lamp" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M38 14 Q50 2 62 14" stroke="#c27a44" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <rect x="30" y="16" width="40" height="12" rx="5" fill="#f5a31e"/>
+        <rect x="32" y="28" width="36" height="46" rx="10" fill="#fff1b8"/>
+        <path d="M50 38 C60 50 58 64 50 66 C42 64 40 50 50 38 Z" fill="#ffb627"/>
+        <path d="M50 48 C55 55 54 62 50 63 C46 62 45 55 50 48 Z" fill="#fff"/>
+        <rect x="26" y="74" width="48" height="12" rx="5" fill="#f5a31e"/>
+        <path d="M36 34 V64" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+        <use href="#spark" transform="translate(84 30) scale(.75)" fill="#fff6c8"/>
+        <use href="#spark" transform="translate(16 46) scale(.5)" fill="#fff6c8"/>
+      </g>
+    </symbol>
+    <!-- Survey optics: a lens throwing a beam -->
+    <symbol id="i-beacon" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M44 36 L94 14 L94 86 L44 64 Z" fill="#fff1b8"/>
+        <path d="M44 50 L94 50 L94 86 L44 64 Z" fill="#ffe27a"/>
+        <rect x="10" y="30" width="38" height="40" rx="10" fill="#56c8f5"/>
+        <circle cx="34" cy="50" r="13" fill="#a8e6ff"/>
+        <circle cx="34" cy="50" r="6" fill="#fff"/>
+        <path d="M16 38 Q22 32 30 32" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <use href="#spark" transform="translate(84 30) scale(.6)" fill="#fff"/>
+      </g>
+    </symbol>
+    <!-- Footwork: a sturdy boot -->
+    <symbol id="i-boot" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M28 12 H58 V54 L84 62 C92 64 94 72 92 80 H16 V20 C16 16 20 12 28 12 Z" fill="#c27a44"/>
+        <path d="M16 70 H92 V84 H16 Z" fill="#7a4a2c"/>
+        <path d="M58 54 L84 62 C90 64 92 70 92 74 L58 66 Z" fill="#d99358"/>
+        <path d="M28 26 H50 M28 38 H50" stroke="#ffd23f" stroke-width="5" stroke-linecap="round"/>
+        <path d="M22 20 V60" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+        <use href="#spark" transform="translate(84 26) scale(.7)" fill="#fff"/>
+      </g>
+    </symbol>
+    <!-- Spring Step: a bouncy coil -->
+    <symbol id="i-spring" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <rect x="16" y="78" width="68" height="12" rx="5" fill="#93a6c2"/>
+        <rect x="16" y="12" width="68" height="12" rx="5" fill="#8b5cf6"/>
+        <path d="M30 70 Q70 64 70 58 Q70 52 30 50 Q30 44 70 40 Q70 34 30 30" stroke="#7ee3f5" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <path d="M34 68 Q60 64 64 60" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M22 16 H52" stroke="#c9b3ff" stroke-width="3.5" stroke-linecap="round"/>
+        <use href="#spark" transform="translate(88 46) scale(.7)" fill="#fff"/>
+      </g>
+    </symbol>
+    <!-- Jobs: a rolled order with a seal -->
+    <symbol id="i-scroll" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <rect x="22" y="16" width="56" height="68" rx="8" fill="#fff1d6"/>
+        <rect x="14" y="10" width="72" height="14" rx="7" fill="#e0b97a"/>
+        <rect x="14" y="78" width="72" height="14" rx="7" fill="#e0b97a"/>
+        <path d="M32 36 H68 M32 48 H68 M32 60 H56" stroke="#c9a46a" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="66" cy="64" r="10" fill="#f0506e"/>
+        <path d="M20 14 H52" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+        <use href="#spark" transform="translate(88 40) scale(.6)" fill="#fff"/>
+      </g>
+    </symbol>
+    <!-- Gold: a stack of coins -->
+    <symbol id="i-coins" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <ellipse cx="44" cy="76" rx="30" ry="12" fill="#f5a31e"/>
+        <rect x="14" y="62" width="60" height="14" fill="#f5a31e"/>
+        <ellipse cx="44" cy="62" rx="30" ry="12" fill="#ffd23f"/>
+        <ellipse cx="56" cy="46" rx="30" ry="12" fill="#f5a31e"/>
+        <rect x="26" y="32" width="60" height="14" fill="#f5a31e"/>
+        <ellipse cx="56" cy="32" rx="30" ry="12" fill="#ffe27a"/>
+        <ellipse cx="56" cy="32" rx="17" ry="6" fill="#ffd23f"/>
+        <path d="M34 28 Q42 22 54 22" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <use href="#spark" transform="translate(88 14) scale(.7)" fill="#fff"/>
+      </g>
+    </symbol>
+    <!-- Hot Streak: a flame -->
+    <symbol id="i-flame" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M50 6 C64 26 84 38 80 64 C77 84 62 94 50 94 C36 94 20 84 20 64 C20 46 34 40 36 24 C44 34 46 40 50 6 Z" fill="#ff7a3c"/>
+        <path d="M50 38 C60 52 70 60 66 74 C63 86 56 90 50 90 C42 90 34 84 34 74 C34 62 44 58 50 38 Z" fill="#ffb627"/>
+        <path d="M50 60 C56 68 58 74 56 80 C54 86 46 86 44 80 C42 74 46 70 50 60 Z" fill="#fff1b8"/>
+        <path d="M30 56 Q28 46 34 38" stroke="#ffd9a8" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <use href="#spark" transform="translate(84 24) scale(.7)" fill="#fff6c8"/>
+      </g>
+    </symbol>
+    <!-- Lucky Strike: a four-leaf clover -->
+    <symbol id="i-clover" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M50 62 Q56 80 68 92" stroke="#3fae5a" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <circle cx="36" cy="34" r="17" fill="#5fd17a"/>
+        <circle cx="64" cy="34" r="17" fill="#6fe08a"/>
+        <circle cx="36" cy="60" r="17" fill="#4cc069"/>
+        <circle cx="64" cy="60" r="17" fill="#5fd17a"/>
+        <circle cx="50" cy="47" r="7" fill="#3fae5a"/>
+        <path d="M26 28 Q30 20 38 20" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <use href="#spark" transform="translate(88 16) scale(.7)" fill="#fff"/>
+      </g>
+    </symbol>
+    <!-- Assaying: a lens over a cut gem -->
+    <symbol id="i-assay" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M14 46 L30 28 H58 L74 46 L44 82 Z" fill="#7ee3f5"/>
+        <path d="M14 46 H74 L44 82 Z" fill="#56c8f5"/>
+        <path d="M30 28 L36 46 L44 82 L52 46 L58 28" fill="none" stroke="#a8e6ff" stroke-width="3"/>
+        <path d="M70 70 L90 90" stroke="#c27a44" stroke-width="11" stroke-linecap="round"/>
+        <circle cx="62" cy="58" r="17" fill="#fff8e1" fill-opacity=".85"/>
+        <circle cx="62" cy="58" r="17" fill="none" stroke="#f5a31e" stroke-width="6"/>
+        <path d="M54 52 Q58 46 64 46" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <use href="#spark" transform="translate(84 18) scale(.7)" fill="#fff"/>
+      </g>
+    </symbol>
+    <!-- Show Off: a star under a spotlight -->
+    <symbol id="i-showoff" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <path d="M50 8 L84 92 H16 Z" fill="#fff1b8" fill-opacity=".9"/>
+        <ellipse cx="50" cy="86" rx="34" ry="8" fill="#ffe27a"/>
+        <use href="#star5" transform="translate(50 56) scale(1.7)" fill="#ffd23f"/>
+        <use href="#star5r" transform="translate(50 56) scale(1.7)" fill="#f5a31e"/>
+        <rect x="40" y="4" width="20" height="12" rx="4" fill="#8b5cf6"/>
+        <use href="#spark" transform="translate(84 26) scale(.7)" fill="#fff"/>
+        <use href="#spark" transform="translate(16 34) scale(.55)" fill="#fff"/>
+      </g>
+    </symbol>
   </defs>
 </svg>
   <!-- Inventory -->
@@ -586,4 +736,28 @@
   <svg class="ico" style="left:532px;top:1294px"><use href="#i-gchest"/></svg>
   <!-- GoldVault -->
   <svg class="ico" style="left:788px;top:1294px"><use href="#i-gvault"/></svg>
+  <!-- Hook -->
+  <svg class="ico" style="left:20px;top:1550px"><use href="#i-hook"/></svg>
+  <!-- Tempo -->
+  <svg class="ico" style="left:276px;top:1550px"><use href="#i-tempo"/></svg>
+  <!-- Lamp -->
+  <svg class="ico" style="left:532px;top:1550px"><use href="#i-lamp"/></svg>
+  <!-- Beacon -->
+  <svg class="ico" style="left:788px;top:1550px"><use href="#i-beacon"/></svg>
+  <!-- Boot -->
+  <svg class="ico" style="left:20px;top:1806px"><use href="#i-boot"/></svg>
+  <!-- Spring -->
+  <svg class="ico" style="left:276px;top:1806px"><use href="#i-spring"/></svg>
+  <!-- Jobs -->
+  <svg class="ico" style="left:532px;top:1806px"><use href="#i-scroll"/></svg>
+  <!-- Coins -->
+  <svg class="ico" style="left:788px;top:1806px"><use href="#i-coins"/></svg>
+  <!-- Flame -->
+  <svg class="ico" style="left:20px;top:2062px"><use href="#i-flame"/></svg>
+  <!-- Clover -->
+  <svg class="ico" style="left:276px;top:2062px"><use href="#i-clover"/></svg>
+  <!-- Assay -->
+  <svg class="ico" style="left:532px;top:2062px"><use href="#i-assay"/></svg>
+  <!-- Showoff -->
+  <svg class="ico" style="left:788px;top:2062px"><use href="#i-showoff"/></svg>
 </body></html>

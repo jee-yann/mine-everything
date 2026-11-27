@@ -209,12 +209,20 @@ function Col.passRewards(col, benefits, wearNew)
 	return added
 end
 
--- Uses one item: a tonic starts its boost. Crates open with Col.open.
-function Col.use(col, id, now)
+-- Uses one item: a tonic starts its boost. Crates open with Col.open. With the miner's `skills`,
+-- Brewmaster makes tonics last longer and Double Dose sometimes keeps the bottle.
+function Col.use(col, id, now, skills)
 	local item = C.itemById[id]
 	if not item or (col.items[id] or 0) < 1 then return nil, "You have none" end
 	if item.kind ~= "boost" then return nil, "Open it from your inventory" end
-	Col.boost(col, item.boost, item.minutes, now)
+	local brew = 0
+	if skills then
+		for key, amount in { Brewmaster = 25, BrewmasterII = 25 } do
+			if skills[key] then brew += amount end
+		end
+	end
+	Col.boost(col, item.boost, item.minutes * (1 + brew / 100), now)
+	if skills and skills.DoubleDose and math.random(1, 10) == 1 then return item end
 	col.items[id] -= 1
 	if col.items[id] == 0 then col.items[id] = nil end
 	return item

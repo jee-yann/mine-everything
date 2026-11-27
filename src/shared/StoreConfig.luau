@@ -63,6 +63,9 @@ S.products = {
 	{ key = "ServerLuck", id = 0, price = 79, name = "2× Server Luck · 15 min", detail = "Doubles everyone's chance of rare ore, with your name on it", minutes = 15, group = "Boosts", luck = true, icon = "Friends", tag = "FOR EVERYONE" },
 	{ key = "Instamine10", id = 0, price = 99, name = "Instamine · 10 min", detail = "Every block you can mine breaks in one hit for 10 minutes", boost = "instamine", minutes = 10, group = "Boosts", icon = "Power", tag = "POPULAR" },
 	{ key = "AutoSell30", id = 0, price = 59, name = "Auto Sell · 30 min", detail = "Your pack sells itself the moment it fills, for 30 minutes", boost = "autosell", minutes = 30, group = "Boosts", icon = "Coins", tag = "POPULAR" },
+	-- The classic troll: walk up to another miner and press E (or tap the prompt) to send them flying.
+	-- Not in the Shop's pages; the prompt over each miner sells it.
+	{ key = "Fling", id = 0, price = 3, name = "Fling", detail = "Send a nearby miner flying", group = "Troll", icon = "Boosts" },
 	{ key = "ResetSkills", id = 0, price = 15, name = "Reset Skill Tree", detail = "Get every skill point back to spend again", group = "Boosts", icon = "Skills" },
 	-- Gold: minutes of the buyer's own earnings, from smallest to best value.
 	{ key = "GoldPouch", id = 0, price = 15, name = "Gold Pouch", minutes = 15, group = "Gold", art = "pouch" },

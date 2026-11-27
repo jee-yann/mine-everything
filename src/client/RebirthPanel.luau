@@ -91,13 +91,21 @@ function Panel.new(menu)
 		y += 90
 	end
 	for i, info in {
-		{ "You keep", "Level, skills, Index, titles, effects, crates and some gold. Plus a Starfall Crate.", "Book", leaf },
+		{ "You keep", "Level, skills, Index, titles, effects and crates, plus a Starfall Crate.", "Book", leaf },
 		{ "Resets", "Your pack, Power, Speed, Backpack, field supplies and the rest of your gold.", "Pack", slate },
 	} do
 		local box = tile(page, info[1], 264 + (i - 1) * 255, y, 245, 138, info[4])
 		Icons.draw(box, info[3], 12, 9, 34)
 		words(box, info[1], 54, 10, 180, 32, 25, nil, true)
 		local list = words(box, info[2], 14, 48, 217, 82, 18, nil, true)
+		if i == 1 then
+			-- Under "You keep": the gold this rebirth would keep, live.
+			list.Size = UDim2.fromOffset(217, 44)
+			self.keepGold = words(box, "", 14, 90, 217, 44, 15, rgb(255, 244, 170), true)
+			self.keepGold.TextWrapped, self.keepGold.RichText = true, true
+			self.keepGold.TextYAlignment = Enum.TextYAlignment.Top
+			W.largest(self.keepGold, 15, 10)
+		end
 		list.TextYAlignment = Enum.TextYAlignment.Top
 		W.largest(list, 18, 13)
 	end
@@ -165,7 +173,13 @@ function Panel:refresh()
 	self.label.Text = if pending then "Rebirthing…" elseif self.confirming then "Confirm!" elseif ready then "Rebirth!" else "Locked"
 	self.paint.Color = if not self.live then grey elseif self.confirming then yellow else green
 	self.button.Interactable = self.live
-	self.note.Text = self.reply or (if self.confirming then "Gold, pack, gear and supplies reset. Press again to rebirth."
+	-- What they'd keep: a share of the gold that gets smaller as the pile gets bigger.
+	local gold = player:GetAttribute("Gold") or 0
+	local kept = Rebirth.keptGold(gold, n)
+	self.keepGold.Text = W.rich(if gold > 0
+		then string.format("You keep %s G of your %s G. The more gold you have, the smaller the share you keep.", W.goldAmount(kept), W.goldAmount(gold))
+		else "You keep some of your gold: the more you have, the smaller the share.")
+	self.note.Text = self.reply or (if self.confirming then "Pack, gear and supplies reset. Press again to rebirth."
 		elseif ready then "Ready when you are."
 		else "Starfall lies only in the Starfall Crater, for the Starcaller Pick.")
 	for _, item in self.perks do

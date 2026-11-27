@@ -89,8 +89,10 @@ function Field.context(player)
 end
 
 -- Gives a reward to a profile. `perHour` is the miner's hourly earnings.
-function Field.grant(p, reward, perHour)
+function Field.grant(p, reward, perHour, daily)
 	local gold, items = Field.amounts(reward, { perHour = perHour, power = p.levels and p.levels.Power, intro = p.col and p.col.intro })
+	-- Early Bird: gold from the daily card is 25% bigger.
+	if daily and p.skills and p.skills.EarlyBird then gold = math.floor(gold * 1.25) end
 	p.gold += gold
 	if p.col then
 		for id, n in items do
@@ -116,7 +118,7 @@ function Field.claim(p, now, perHour)
 	if not day then return nil end
 	-- The day number is kept for older servers that read the same save.
 	p.stampCount, p.stampAt, p.stampDay = day, now, math.floor(now / 86400)
-	Field.grant(p, Field.daily[day], perHour)
+	Field.grant(p, Field.daily[day], perHour, true)
 	return day, Field.daily[day]
 end
 

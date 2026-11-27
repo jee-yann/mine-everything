@@ -13,6 +13,7 @@
 -- Sales are rounded to whole gold.
 local Rebirth = require(script.Parent.Rebirth)
 local Collectibles = require(script.Parent.Collectibles)
+local Skills = require(script.Parent.Skills)
 local Http = game:GetService("HttpService")
 local B = {}
 B.maxLuck = 12
@@ -28,6 +29,8 @@ export type State = {
 	rebirths: number,
 	serverLuckUntil: number,
 	now: number,
+	skills: { [string]: boolean },
+	crowd: boolean,
 }
 
 local cache = { text = nil :: any, value = nil :: any }
@@ -40,7 +43,10 @@ function B.decode(text: any): any
 end
 
 -- A state from its parts: the benefit keys a miner's passes grant, their collection table, rebirths.
-function B.make(passes: { [string]: boolean }, col: any, rebirths: number, serverLuckUntil: number?, now: number?): State
+-- `skills` (owned skill ids) and `crowd` (another miner within 30 studs, the NearMiner attribute) feed
+-- the skills that add gold, XP and luck.
+function B.make(passes: { [string]: boolean }, col: any, rebirths: number, serverLuckUntil: number?, now: number?,
+	skills: { [string]: boolean }?, crowd: boolean?): State
 	col = col or {}
 	return {
 		passes = passes,
@@ -51,6 +57,8 @@ function B.make(passes: { [string]: boolean }, col: any, rebirths: number, serve
 		rebirths = rebirths or 0,
 		serverLuckUntil = serverLuckUntil or game:GetService("ReplicatedStorage"):GetAttribute("ServerLuckUntil") or 0,
 		now = now or workspace:GetServerTimeNow(),
+		skills = skills or {},
+		crowd = crowd == true,
 	}
 end
 
@@ -60,7 +68,8 @@ function B.state(player: any): State
 	for key in string.gmatch(player:GetAttribute("Passes") or "", "[^,]+") do
 		passes[key] = true
 	end
-	return B.make(passes, B.decode(player:GetAttribute("Collection")), player:GetAttribute("Rebirths") or 0)
+	return B.make(passes, B.decode(player:GetAttribute("Collection")), player:GetAttribute("Rebirths") or 0, nil, nil,
+		Skills.read(player), player:GetAttribute("NearMiner") == true)
 end
 
 local function active(state: State, key: string): boolean
@@ -74,11 +83,16 @@ end
 
 function B.luck(state: State): number
 	local timed = if active(state, "luck2") or state.serverLuckUntil > state.now then 2 else 1
-	return math.min(B.maxLuck, (if state.passes.Lucky then 2 else 1) * timed)
+	local skill = 1 + Skills.bonus(state.skills, "luck") / 100
+	return math.min(B.maxLuck, (if state.passes.Lucky then 2 else 1) * timed * skill)
 end
 
 function B.gold(state: State): number
 	local flat = 1 + (if state.passes.VIP then 0.2 else 0) + (if active(state, "goldTonic") then 0.5 else 0)
+	-- Skills: Haggler, Cash Out Crew (near another miner) and Reborn Trader.
+	flat += Skills.bonus(state.skills, "gold") / 100
+	if state.crowd then flat += Skills.bonus(state.skills, "crowdGold") / 100 end
+	if state.skills.RebornTrader then flat += math.min(10, state.rebirths) / 100 end
 	return (if state.passes.DoubleGold then 2 else 1) * Rebirth.goldMultiplier(state.rebirths) * flat
 		* (if active(state, "gold2") then 2 else 1)
 end
@@ -106,9 +120,10 @@ function B.autoSell(state: State): boolean
 	return active(state, "autosell")
 end
 
--- XP from every cut: +20% with VIP.
+-- XP from every cut: +20% with VIP, plus Scholar and Crowd Pleaser (near another miner).
 function B.xp(state: State): number
-	return if state.passes.VIP then 1.2 else 1
+	local skill = Skills.bonus(state.skills, "xpPercent") + (if state.crowd then Skills.bonus(state.skills, "crowdXP") else 0)
+	return (if state.passes.VIP then 1.2 else 1) * (1 + skill / 100)
 end
 
 function B.gemChance(_state: State): number

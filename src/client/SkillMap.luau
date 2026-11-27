@@ -13,6 +13,11 @@ local colors = {
 	Footwork = W.green,
 	Hauling = W.pink,
 	Geology = W.violet,
+	Momentum = Color3.fromRGB(255, 120, 80),
+	Showmanship = Color3.fromRGB(255, 150, 220),
+	Scholar = Color3.fromRGB(120, 200, 255),
+	Assaying = Color3.fromRGB(120, 240, 190),
+	Trade = Color3.fromRGB(255, 210, 90),
 }
 local states = {
 	owned = { label = "Owned", symbol = "✓", tint = W.green },
@@ -564,19 +569,24 @@ function Map:refresh()
 		local color = colors[item.node.branch]
 		local state = if learned then states.owned elseif ready then nextState else states.locked
 		if item.state ~= state then
+			-- A skill that lights up (a level earned while mining, a point spent) fades into its new look
+			-- instead of flashing; the very first drawing is instant.
+			local fade = item.state ~= nil
 			item.state = state
 			item.setBadge(state)
-			item.face.BackgroundColor3 = if learned then color elseif state == states.available then W.gold else W.card
-			item.shade.BackgroundTransparency = if state == states.locked
-				then 0.42
-				elseif state == states.unfunded then 0.75
-				else 1
-			item.title.TextColor3 = if state == states.locked
-				then states.locked.tint
-				elseif state == states.available then W.gold
-				else W.white
-			item.rim.Color = if state == states.locked then W.line else state.tint
-			item.rim.Thickness = if learned or state == states.available then 4 else 2
+			local look = {
+				face = { BackgroundColor3 = if learned then color elseif state == states.available then W.gold else W.card },
+				shade = { BackgroundTransparency = if state == states.locked then 0.42 elseif state == states.unfunded then 0.75 else 1 },
+				title = { TextColor3 = if state == states.locked then states.locked.tint elseif state == states.available then W.gold else W.white },
+				rim = { Color = if state == states.locked then W.line else state.tint, Thickness = if learned or state == states.available then 4 else 2 },
+			}
+			for part, goal in look do
+				if fade then
+					W.tween(item[part], 0.7, goal)
+				else
+					for key, value in goal do item[part][key] = value end
+				end
+			end
 		end
 		item.selection.Visible = self.selected == id
 		item.arrow.Visible = self.selected == id

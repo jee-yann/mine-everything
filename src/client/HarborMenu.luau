@@ -367,7 +367,9 @@ function Menu:gear()
 			detail.Text = if ready then W.colored(W.goldAmount(price) .. " G", W.green)
 				else W.colored(W.goldAmount(gold), unmet) .. " / " .. W.colored(W.goldAmount(price) .. " G", W.gold)
 			short = not ready
-			setButton(b, if ready then "Upgrade" else "Get gold ▸", if ready then W.green else W.gold, true)
+			-- Short of gold: how much is missing, on red. A tap still goes to the Shop's gold.
+			setButton(b, if ready then "Upgrade" else "Need " .. W.goldAmount(price - gold) .. " G",
+				if ready then W.green else Color3.fromRGB(225, 70, 80), true)
 		end)
 	end
 	return #Upgrades.order

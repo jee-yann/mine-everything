@@ -223,6 +223,10 @@ print("PASS gold and speed stacking")
 do
 	assert(not S.passByKey.AutoSell, "Auto-Sell is no longer sold")
 	local prices = { BiggerPack = 79, DoubleGold = 249, FastPick = 229, VIP = 449, Lucky = 349, StarfallCompass = 449, Everything = 1199 }
+	assert(S.productByKey.Fling.price == 3 and S.productByKey.Fling.group == "Troll", "the R$3 fling, sold from its prompt")
+	-- Skills feed gold, XP and luck: Haggler, Cash Out Crew near a miner, Scholar, Lucky Strike.
+	local skilled = B.make({}, {}, 0, 0, 100, { Haggler = true, HagglerII = true, CashOut = true, Scholar = true, LuckyStrike = true }, true)
+	assert(near(B.gold(skilled), 1.1) and near(B.xp(skilled), 1.03) and near(B.luck(skilled), 1.05))
 	assert(S.compassRadius == 2 and S.compassEvery == 180 and table.find(S.passByKey.Everything.grants, "StarfallCompass"), "the compass and the bundle")
 	assert(S.passByKey.Everything.name == "All Passes Bundle")
 	for key, price in prices do assert(S.passByKey[key].price == price, key) end

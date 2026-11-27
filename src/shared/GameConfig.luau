@@ -46,9 +46,10 @@ local Config = {
 -- Regions: each has its own ore table (percent of solid blocks; the rest is plain stone).
 -- Some ores span many regions, some peak in one and fade below it, and some are found in only
 -- one region. Starfall is found only in the bottom region, the Starfall Crater, and only with the top
--- pick: 0.1% of blocks on its first row (the listed chance), rising very slowly with every row deeper
+-- pick: 0.15% of blocks on its first row (the listed chance), rising very slowly with every row deeper
 -- (StarfallDeeper) with no limit, as the mine goes down for ever. Tuned with the pick prices so a
--- focused free player finds their first in about five to six hours (rebirth N needs N of them).
+-- focused free player finds their first in about two hours and a casual one in about three (rebirth N
+-- needs N of them).
 Config.Layers = {
 	{
 		depthBlocks = 0,
@@ -238,7 +239,7 @@ Config.Layers = {
 			Meteorite = 6,
 			Adamantite = 1.6,
 			Voidshard = 0.085,
-			Starfall = 0.1,
+			Starfall = 0.15,
 		},
 		material = Enum.Material.Basalt,
 		color = Color3.fromRGB(66, 54, 98),

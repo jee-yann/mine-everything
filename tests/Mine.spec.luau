@@ -423,44 +423,55 @@ do
 	local owned = specialist.skills
 	assert(points() == 0 and specialist.earned.Branch)
 	assert(
-		Skills.bonus(owned, "reach") == 20 and Skills.bonus(owned, "lamp") == 24 and Skills.bonus(owned, "focus") == 15
+		Skills.bonus(owned, "reach") == 25 and Skills.bonus(owned, "lamp") == 32 and Skills.bonus(owned, "focus") == 15
 	)
-	assert(Skills.walkSpeed(owned, { Stone = 74, Diamond = 0 }, 74, 100) == 28)
-	assert(Skills.walkSpeed(owned, { Stone = 74, Diamond = 1 }, 75, 100) == 34)
-	assert(Skills.walkSpeed(owned, { Diamond = 1, Emerald = 1 }, 2, 100) == 31)
+	assert(Skills.walkSpeed(owned, { Stone = 74, Diamond = 0 }, 74, 100) == 32)
+	assert(Skills.walkSpeed(owned, { Stone = 74, Diamond = 1 }, 75, 100) == 38)
+	assert(Skills.walkSpeed(owned, { Diamond = 1, Emerald = 1 }, 2, 100) == 35)
 	local gem = Ores.byName.Diamond
 	local before = specialist.xp
 	Profile.recordCut(specialist, "Dirt", 200)
 	Profile.recordCut(specialist, "Stone", 200)
 	assert(specialist.xp == before)
-	Profile.recordCut(specialist, "Diamond", 184)
-	assert(specialist.xp - before == gem.xp + 3 + 4 + 25)
+	-- Fresh Find pays when none is carried; Gem Journal I and II, Field Notes and Clean Cut (90%+).
+	local _, grade = Profile.recordCut(specialist, "Diamond", 184)
+	assert(specialist.xp - before == gem.xp + 3 + 4 + 4 + 25 + (if grade >= 90 then 5 else 0), "fresh diamond XP")
 	before = specialist.xp
-	Profile.recordCut(specialist, "Diamond", 185)
-	assert(specialist.xp - before == gem.xp + 3 + 4 + 3)
+	_, grade = Profile.recordCut(specialist, "Diamond", 185)
+	assert(specialist.xp - before == gem.xp + 3 + 4 + 4 + 3 + (if grade >= 90 then 5 else 0), "carried diamond XP")
+	assert(grade >= 55, "Polish keeps purity at 55% or more")
+	-- Diamond is a gem and Epic: Facet Cutter I and II and Rare Touch, on top of Steady Hands and Hot Steel.
 	local cut, used = Skills.cutTime(1, gem, 3, 1, owned)
-	assert(used and math.abs(cut - Ores.cutTime(1, gem, 3) * 0.7 * 0.8 * 0.7) < 1e-6)
+	assert(used and math.abs(cut - Ores.cutTime(1, gem, 3) * 0.7 * 0.8 * 0.9 * 0.9 * 0.7) < 1e-6)
+	-- Stone: Fault Splitter and Stone Breaker I and II.
 	assert(
-		math.abs(Skills.cutTime(1, Ores.byName.Stone, 1, 0, owned) - Ores.cutTime(1, Ores.byName.Stone, 1) * 0.7 * 0.85)
+		math.abs(Skills.cutTime(1, Ores.byName.Stone, 1, 0, owned) - Ores.cutTime(1, Ores.byName.Stone, 1) * 0.7 * 0.85 * 0.84)
 			< 1e-6
 	)
+	-- The context skills: crater and depth, a nearby miner, and a streak capped at 8 ores, 6% each.
+	local plain = Skills.cutTime(1, Ores.byName.Coal, 1, 0, owned)
+	local busy = Skills.cutTime(1, Ores.byName.Coal, 1, 0, owned, 0, 0, nil, { row = 600, crowd = true, streak = 20 })
+	assert(math.abs(busy - plain * 0.92 * 0.9 * 0.85 / 1.48) < 1e-6, "crater, crowd and streak skills")
+	assert(Skills.streakDivisor(owned, 3) == 1.18 and Skills.streakDivisor({}, 9) == 1)
+	assert(#Skills.nodes >= 100, "at least 100 skills")
 	Profile.consume(specialist, table.clone(specialist.bag))
 	specialist.bag = table.clone(Materials.supplies.Temper.recipe)
-assert(Profile.buySupply(specialist, "Temper") and specialist.temper == 45)
+assert(Profile.buySupply(specialist, "Temper") and specialist.temper == 55)
 	specialist.bag = table.clone(Materials.daily(day).recipe)
 	assert(
 		Profile.deliver(specialist, day, day) and specialist.col.items.GoldTonic == 2 and not Profile.deliver(specialist, day, day)
 	)
-	assert(Profile.stat(specialist, "Capacity") == 35)
+	assert(Profile.stat(specialist, "Capacity") == 61)
 	-- An old 36-slot bag could legally hold 70 with all hauling skills.
 	specialist.bag = { Stone = 70 }
 	local record = Data.commit({ owner = "skills" }, "skills", specialist, 100, true)
 	local rejoined = Data.claim(record, "next", 101).profile
-	assert(rejoined.skills.Constellation and rejoined.temper == 45 and Profile.valid(rejoined))
-	-- Up to half again for Bigger Pack, and no more.
-	rejoined.bag.Stone = 105
+	assert(rejoined.skills.Constellation and rejoined.temper == 55 and Profile.valid(rejoined))
+	-- Up to half again for Bigger Pack, and no more (the old 36-slot bag with every hauling skill).
+	local most = math.floor(Skills.capacity(36, rejoined.skills) * 1.5)
+	rejoined.bag.Stone = most
 	assert(Profile.valid(rejoined))
-	rejoined.bag.Stone = 106
+	rejoined.bag.Stone = most + 1
 	assert(not Profile.valid(rejoined))
 	local legacySkills = {
 		Reach = true,

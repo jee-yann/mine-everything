@@ -336,11 +336,13 @@ end
 -- movement speed and Auto Sell in green, luck in mint. Text already coloured is left alone.
 local orange, green, mint = Color3.fromRGB(255, 180, 90), Color3.fromRGB(150, 255, 120), Color3.fromRGB(120, 255, 200)
 local perks = {
-	{ "%d+× Gold", W.gold }, { "%+%d+%% gold", W.gold }, { "%+[%d,]+ gold", W.gold }, { "Gold Tonics?", W.gold },
+	{ "%d+× [Gg]old", W.gold }, { "%+%d+%% gold", W.gold }, { "%+[%d,]+ gold", W.gold }, { "Gold Tonics?", W.gold },
+	{ "Mining FX", orange }, { "Player FX", green },
+	{ "rebirths?", Color3.fromRGB(255, 150, 190) }, { "%f[%a]gold%f[%A]", W.gold },
 	{ "[%d,]+ G%f[%A]", W.gold }, { "%+%d+%% XP", W.aqua }, { "%+%d+%% mining speed", orange },
 	{ "Haste Tonics?", orange }, { "Instamine", orange }, { "%+%d+%% movement speed", green }, { "Auto Sell", green },
 	{ "%d+× Server Luck", mint }, { "%d+× Lucky", mint }, { "rare ore", mint }, { "Lucky Brews?", mint },
-	{ "%+%d+%% backpack capacity", W.aqua },
+	{ "%+%d+%% backpack capacity", W.aqua }, { "[Tt]onics", Color3.fromRGB(150, 230, 255) },
 }
 function W.perks(text)
 	local saved = {}

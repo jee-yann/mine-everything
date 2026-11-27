@@ -453,6 +453,10 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 		fx:chime(1.85)
 		local ore = Ores.byName[point]
 		hud:notice("Lucky find! " .. point .. " inside the " .. a, string.format("%g× luck", math.floor(spread * 100 + 0.5) / 100), ore and ore.color or W.green)
+	elseif kind == "flung" then
+		-- a = who bought the fling, point = the way to fly.
+		require(script.TrollFling).throw(point)
+		hud:notice(a .. " flung you!", "Walk up to a miner and press E (or tap) to return the favour", W.pink)
 	elseif kind == "freeGeode" then
 		local item = Collectibles.itemById[a]
 		fx:chime(1.75)
@@ -491,6 +495,7 @@ end
 
 require(script.OreCompass)(hud, origin)
 require(script.StarfallCompass)(hud)
+require(script.TrollFling).start(hud, net)
 require(script.FirstPersonPick)(player)
 require(script.BoostChips)(hud)
 local lastDepth, lastRegion
@@ -733,7 +738,12 @@ RunService.RenderStepped:Connect(function(dt)
 		owned,
 		player:GetAttribute("HasteCuts"),
 		player:GetAttribute("StoneChips"),
-		Upgrades.items.Power.values[player:GetAttribute("Power") or 1]
+		Upgrades.items.Power.values[player:GetAttribute("Power") or 1],
+		{
+			row = Config.depthInBlocks(Config.FloorY - (target.Y - origin.Y)),
+			crowd = player:GetAttribute("NearMiner") == true,
+			streak = player:GetAttribute("OreStreak") or 0,
+		}
 	)
 	-- Fast Pick and Haste Tonic: the same speed the server uses.
 	duration = require(shared.Bonuses).cut(require(shared.Bonuses).state(player), duration)

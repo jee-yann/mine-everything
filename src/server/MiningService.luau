@@ -129,6 +129,12 @@ function Mining.start(world, net, sessions, sync, hooks)
 			return
 		end
 		local ore = world:oreAt(point)
+		-- Where and how they mine, for the depth, crowd and streak skills (the client reads the same).
+		local ctx = {
+			row = Config.depthInBlocks(Config.FloorY + world.origin.Y - point.Y),
+			crowd = player:GetAttribute("NearMiner") == true,
+			streak = player:GetAttribute("OreStreak") or 0,
+		}
 		local duration, tempered = Skills.cutTime(
 			Profile.stat(p, "Speed") * Rebirth.cutMultiplier(p.rebirths),
 			ore,
@@ -137,7 +143,8 @@ function Mining.start(world, net, sessions, sync, hooks)
 			p.skills,
 			p.hasteCuts,
 			p.stoneChips,
-			Profile.stat(p, "Power")
+			Profile.stat(p, "Power"),
+			ctx
 		)
 		duration = Bonuses.cut(state(player, p), duration)
 		strokes[player] = {
@@ -242,6 +249,17 @@ function Mining.start(world, net, sessions, sync, hooks)
 			name = lucky
 		end
 		local ore = Ores.byName[name]
+		-- Hot Streak: ores mined in a row. Stone breaks it (Streak Keeper forgives one stone).
+		local streak = player:GetAttribute("OreStreak") or 0
+		if not ore.host and name ~= "Stone" then
+			streak += 1
+			player:SetAttribute("StreakSpared", nil)
+		elseif profile.skills.StreakKeeper and streak > 0 and not player:GetAttribute("StreakSpared") then
+			player:SetAttribute("StreakSpared", true)
+		else
+			streak = 0
+		end
+		if streak ~= (player:GetAttribute("OreStreak") or 0) then player:SetAttribute("OreStreak", streak) end
 		local discovery = not ore.host and not profile.discoveries[name]
 		local oldLevel = Expeditions.level(profile.xp)
 		local awards, purity, units, record = Profile.recordCut(profile, name, depthBlocks, nil,

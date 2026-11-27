@@ -8,6 +8,9 @@ local tiles = {
 	Shop = Vector2.new(0, 3), Pets = Vector2.new(1, 3), Geode = Vector2.new(2, 3), Gems = Vector2.new(3, 3),
 	Forge = Vector2.new(0, 4), Boosts = Vector2.new(1, 4), Passes = Vector2.new(2, 4), Trail = Vector2.new(3, 4),
 	GoldPouch = Vector2.new(0, 5), GoldBag = Vector2.new(1, 5), GoldChest = Vector2.new(2, 5), GoldVault = Vector2.new(3, 5),
+	Hook = Vector2.new(0, 6), Tempo = Vector2.new(1, 6), Lamp = Vector2.new(2, 6), Beacon = Vector2.new(3, 6),
+	Boot = Vector2.new(0, 7), Spring = Vector2.new(1, 7), Jobs = Vector2.new(2, 7), Coins = Vector2.new(3, 7),
+	Flame = Vector2.new(0, 8), Clover = Vector2.new(1, 8), Assay = Vector2.new(2, 8), Showoff = Vector2.new(3, 8),
 }
 local imageId = source:GetAttribute("ImageId")
 if imageId then
@@ -40,7 +43,8 @@ assert(edits == 1)
 probe.Source = instrumented
 local renderer = require(probe)
 local container = Instance.new("Frame")
-for _, key in { "Inventory", "Skills", "Achievements", "Book", "Settings", "Daily", "Playtime", "Rebirth", "Power", "Speed", "Profile", "Friends", "Pack", "Capacity", "Titles", "Gear", "Crew" } do
+for _, key in { "Inventory", "Skills", "Achievements", "Book", "Settings", "Daily", "Playtime", "Rebirth", "Power", "Speed", "Profile", "Friends", "Pack", "Capacity", "Titles", "Gear", "Crew",
+	"Hook", "Tempo", "Lamp", "Beacon", "Boot", "Spring", "Jobs", "Coins", "Flame", "Clover", "Assay", "Showoff", "Crystal" } do
 	assert(renderer.draw(container, key))
 	local icon = container["Field Kit"]
 	assert(icon:IsA("Frame") and #icon:GetChildren() > 25 and icon:FindFirstChildWhichIsA("UIGradient", true), key)
@@ -56,7 +60,7 @@ for _, key in { "Inventory", "Skills", "Achievements", "Book", "Settings", "Dail
 	icon:Destroy()
 end
 assert(probe:GetAttribute("Allocated") and probe:GetAttribute("Released"))
-assert(not renderer.draw(container, "Hook"))
+assert(not renderer.draw(container, "No such icon"))
 container:Destroy()
 probe:Destroy()
-print("PASS published Field Kit write denial, all twenty-four icons and five aliases")
+print("PASS published Field Kit write denial, all thirty-six icons and six aliases")

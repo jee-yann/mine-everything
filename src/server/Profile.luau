@@ -496,7 +496,14 @@ function Profile.recordCut(p, name, depth, random, boost)
 	if not ore.host then
 		random = random or miningRandom
 		grade = Purity.roll(random)
-		if p.skills.Fortune and Profile.used(p) + 1 < Profile.stat(p, "Capacity") and random:NextInteger(1, 10) == 1 then
+		-- Assayer: some finds roll twice and keep the better. Polish: never under 55%.
+		local assay = Skills.bonus(p.skills, "assay")
+		if assay > 0 and random:NextInteger(1, 100) <= assay then
+			grade = math.max(grade, Purity.roll(random))
+		end
+		if p.skills.Polish then grade = math.max(grade, 55) end
+		local odds = if p.skills.FortuneII then 7 else 10
+		if p.skills.Fortune and Profile.used(p) + 1 < Profile.stat(p, "Capacity") and random:NextInteger(1, odds) == 1 then
 			units = 2
 		end
 		local stock = p.grades[name] or {}
@@ -506,7 +513,7 @@ function Profile.recordCut(p, name, depth, random, boost)
 		record = grade > (p.bestPurity[name] or 0)
 		if record then p.bestPurity[name] = grade end
 	end
-	local xp = math.floor(Skills.oreXP(ore, p.skills, not p.discoveries[name], depth or 0) * Rebirth.xpMultiplier(p.rebirths) * (boost or 1) + 0.5)
+	local xp = math.floor(Skills.oreXP(ore, p.skills, (p.bag[name] or 0) == 0, depth or 0, grade) * Rebirth.xpMultiplier(p.rebirths) * (boost or 1) + 0.5)
 	if name == Rebirth.requirement.ore then p.runStarfalls += 1 end
 	p.discoveries[name] = true
 	p.bag[name] = (p.bag[name] or 0) + units
@@ -613,6 +620,8 @@ function Profile.sell(p, multiplier, selectedOre, portion)
 			end
 		end
 	end
+	-- Bulk Seller: a big sale at once pays 5% more.
+	if p.skills.BulkSeller and quantity >= 50 then multiplier = (multiplier or 1) * 1.05 end
 	-- Gold is always whole: passes and boosts can make fractions.
 	local amount = math.floor(value * (multiplier or 1) + 0.5)
 	if quantity > 0 then p.firstTrip.sold = true end

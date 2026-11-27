@@ -631,7 +631,7 @@ local function test()
 				local row = menu.Listings[key]
 				waitFor(function()
 					return row.Requirements.ContentText == "0 / " .. price .. " G" and row.Requirements.TextFits
-						and row.Action.Text == "Get gold ▸" and row.Action.Interactable
+						and row.Action.Text == "Need " .. price .. " G" and row.Action.Interactable
 				end, 2, "gold cost of " .. key .. " for a new miner")
 			end
 			local benefit = menu.Listings.Power.Benefit
@@ -1437,7 +1437,7 @@ local function test()
 			local gear = menu.Listings:FindFirstChild(key)
 			local affordable = saleGold >= price
 			return gear and gear.Requirements.ContentText == (if affordable then price .. " G" else saleGold .. " / " .. price .. " G")
-				and gear.Action.Interactable and gear.Action.Text == (if affordable then "Upgrade" else "Get gold ▸")
+				and gear.Action.Interactable and (if affordable then gear.Action.Text == "Upgrade" else gear.Action.Text:sub(1, 5) == "Need ")
 		end, 3, "correct cost of " .. key .. " after selling")
 	end
 	do
