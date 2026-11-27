@@ -54,6 +54,7 @@ return function(hud)
 		W.enamelPanel(disc, rgb(110, 100, 190), rgb(52, 46, 110), 20)
 		Icons.draw(disc, icon, 7, 6, 26)
 		local label = W.title(b, short, -6, 38, 58, 18, 13, tone or rgb(255, 244, 170))
+		label.Name = "Short"
 		W.navyText(label, 1.8)
 		b.Activated:Connect(function() hud:notice(about, "", W.gold) end)
 		entry = { button = b, label = label }
@@ -72,14 +73,18 @@ return function(hud)
 		local label = W.title(b, "", 32, 0, 96, 30, 15, look[2], true)
 		W.navyText(label, 2)
 		label.ZIndex = 3
-		b.Activated:Connect(function() hud:openPage("ShopBoosts") end)
 		entry = { button = b, label = label }
+		-- On a phone the chip is just its icon: a tap says what it is and how long it has left.
+		b.Activated:Connect(function()
+			if entry.tiny then hud:notice(entry.label.Text, "", look[2]) else hud:openPage("ShopBoosts") end
+		end)
 		chips[key] = entry
 		return entry
 	end
 	task.spawn(function()
 		while holder.Parent do
 			local state = Bonuses.state(player)
+			local tiny = hud.edgeMode == true and hud.root.AbsoluteSize.Y < 500
 			local seen = {}
 			local order = 0
 			for key, boost in C.boosts do
@@ -89,7 +94,8 @@ return function(hud)
 					seen[key] = true
 					local entry = chip(key, order)
 					entry.label.Text = boost.name .. " " .. W.clock(left)
-					local width = math.clamp(#entry.label.Text * 8 + 40, 110, 190)
+					local width = if tiny then 32 else math.clamp(#entry.label.Text * 8 + 40, 110, 190)
+					entry.tiny, entry.label.Visible = tiny, not tiny
 					entry.button.Size = UDim2.fromOffset(width, 32)
 					entry.label.Size = UDim2.fromOffset(width - 36, 30)
 				end
@@ -99,7 +105,8 @@ return function(hud)
 				seen.server = true
 				local entry = chip("server", 0)
 				entry.label.Text = "Server Luck 2× " .. W.clock(serverLeft) .. " · " .. (Rep:GetAttribute("ServerLuckBy") or "")
-				local width = math.clamp(#entry.label.Text * 7.5 + 40, 150, 300)
+				local width = if tiny then 32 else math.clamp(#entry.label.Text * 7.5 + 40, 150, 300)
+				entry.tiny, entry.label.Visible = tiny, not tiny
 				entry.button.Size = UDim2.fromOffset(width, 32)
 				entry.label.Size = UDim2.fromOffset(width - 36, 30)
 			end
@@ -139,6 +146,7 @@ return function(hud)
 					reborn, Rebirth.goldMultiplier(reborn), math.round((Rebirth.xpMultiplier(reborn) - 1) * 100), cut), -3, rgb(255, 160, 170))
 			end
 			for key, entry in rings do
+				entry.label.Visible = not tiny
 				if not kept[key] then
 					entry.button:Destroy()
 					rings[key] = nil

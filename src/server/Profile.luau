@@ -518,19 +518,22 @@ function Profile.recordCut(p, name, depth, random, boost)
 end
 
 -- The Starfall trail (Rebirth.trail): a block cut `depth` blocks down. Returns true when this block is
--- the one that holds the run's guaranteed Starfall. Only counts while the run has none yet.
+-- the one that holds the next guaranteed Starfall. Counts only while the run still needs Starfalls;
+-- `runTrail` is the blocks walked toward the next one.
 function Profile.followTrail(p, depth)
-	if p.runStarfalls >= Rebirth.requirement.count then return false end
+	if Rebirth.ready(p.runStarfalls, p.rebirths) then return false end
 	local trail = Rebirth.trail(p.rebirths)
 	if depth < trail.depth then return false end
-	p.runTrail = math.min(trail.blocks, p.runTrail + 1)
-	return p.runTrail >= trail.blocks
+	p.runTrail += 1
+	if p.runTrail < trail.blocks then return false end
+	p.runTrail = 0
+	return true
 end
 
 -- Starts a new run when the current one has met Rebirth.requirement. Resets gold, the pack,
 -- workshop levels and field supplies; keeps everything earned for the miner. Returns the new count.
 function Profile.rebirth(p)
-	if not Rebirth.ready(p.runStarfalls) then
+	if not Rebirth.ready(p.runStarfalls, p.rebirths) then
 		return nil
 	end
 	p.rebirths += 1

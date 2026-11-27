@@ -728,6 +728,7 @@ do
 		run.skills.Reach, run.gems, run.bestDepth, run.title = true, 40, 900, 2
 		Profile.recordCut(run, "Coal", 10, Random.new(1))
 		assert(Profile.rebirth(run) == nil and run.gold == 5000, "no rebirth before a Starfall")
+		assert(not Rebirth.ready(0, 0) and Rebirth.ready(1, 0) and not Rebirth.ready(1, 1) and Rebirth.ready(2, 1))
 		Profile.recordCut(run, "Starfall", 600, Random.new(2))
 		assert(run.runStarfalls == 1 and Profile.valid(run))
 		local xpBefore = run.xp
@@ -766,18 +767,27 @@ do
 		assert(saved.rebirths == 1 and saved.runStarfalls == 0 and saved.runTrail == 0, "rebirth fields save")
 		-- The Starfall trail: the first rebirth's runs through Saltglass Sinks; it deepens to the crater.
 		local first, later = Rebirth.trail(0), Rebirth.trail(5)
-		assert(first.depth == 140 and first.blocks == 150 and later.depth == 550 and later.blocks == 700)
-		assert(Rebirth.trail(9).blocks == 1100 and Rebirth.trail(100).blocks == Rebirth.trailMost)
+		assert(first.depth == 140 and first.blocks == 150 and later.depth == 550 and later.blocks == 400)
+		assert(Rebirth.trail(100).blocks == later.blocks and Rebirth.need(0) == 1 and Rebirth.need(4) == 5)
 		local walker = Profile.new()
 		assert(not Profile.followTrail(walker, first.depth - 1) and walker.runTrail == 0, "above the trail")
 		for i = 1, first.blocks - 1 do
 			assert(not Profile.followTrail(walker, first.depth + 3), "block " .. i)
 		end
-		assert(Profile.followTrail(walker, first.depth) and walker.runTrail == first.blocks, "the last block holds it")
+		assert(Profile.followTrail(walker, first.depth) and walker.runTrail == 0, "the last block holds it")
 		Profile.recordCut(walker, "Starfall", first.depth, Random.new(4))
-		assert(Rebirth.ready(walker.runStarfalls) and not Profile.followTrail(walker, 300), "one per run")
+		assert(Rebirth.ready(walker.runStarfalls, 0) and not Profile.followTrail(walker, 300), "enough for this rebirth")
 		assert(Profile.rebirth(walker) == 1 and walker.runTrail == 0 and Profile.valid(walker))
+		-- The second rebirth needs two Starfalls, deeper, each a trail's length apart.
+		local second = Rebirth.trail(1)
 		assert(not Profile.followTrail(walker, first.depth), "the second trail runs deeper")
+		for found = 1, 2 do
+			for _ = 1, second.blocks - 1 do assert(not Profile.followTrail(walker, second.depth)) end
+			assert(Profile.followTrail(walker, second.depth), "Starfall " .. found)
+			Profile.recordCut(walker, "Starfall", second.depth, Random.new(found))
+			assert(Rebirth.ready(walker.runStarfalls, 1) == (found == 2), "two for the second rebirth")
+		end
+		assert(not Profile.followTrail(walker, second.depth) and Profile.rebirth(walker) == 2)
 		local old = Profile.new()
 		old.runTrail = nil
 		Profile.upgradeSave(old)

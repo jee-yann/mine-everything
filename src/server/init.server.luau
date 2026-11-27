@@ -482,7 +482,7 @@ local function action(player, key, option, value)
 		end
 		local count = Profile.rebirth(s.profile)
 		if not count then
-			net.Feedback:FireClient(player, "rebirth", false, "Mine a Starfall this run to rebirth.")
+			net.Feedback:FireClient(player, "rebirth", false, "Find this rebirth's Starfalls first. The Rebirth card shows where.")
 			return
 		end
 		local char = player.Character

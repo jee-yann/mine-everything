@@ -91,6 +91,7 @@ function Checkout.new(hud, net, reveal)
 	Burst.rays(rays, 230, 120, 340, 12, W.white, 0.82)
 	self.rays = rays
 	local heading = W.title(thanks, "THANK YOU!", 0, 12, 460, 40, 34, rgb(255, 244, 170))
+	self.thanksHeading = heading
 	W.navyText(heading, 3.4)
 	self.art = W.frame(thanks, "Art", 170, 56, 120, 120, W.ink)
 	self.art.BackgroundTransparency = 1
@@ -108,7 +109,10 @@ function Checkout.new(hud, net, reveal)
 		local page = self.goPage
 		self:close()
 		if page == "crate" then
-			self.net.Action:FireServer("OpenGeode", "Starfall")
+			-- A Welcome Crate waiting opens first; otherwise a Starfall Crate.
+			local col = require(Shared.Bonuses).decode(self.player:GetAttribute("Collection")) or {}
+			local items = col.items or {}
+			self.net.Action:FireServer("OpenGeode", if (items.WelcomeGeode or 0) > 0 then "Welcome" else "Starfall")
 		elseif page then
 			self.hud:openPage(page)
 		end
@@ -139,6 +143,22 @@ function Checkout:show(which)
 	self.gui.Enabled = true
 	self.wait.Visible = which == "wait"
 	self.thanks.Visible = which == "thanks"
+end
+
+-- A crate won from a daily or playtime reward (or VIP): the same card as after buying one, with the
+-- choice to open it now or later from the Inventory.
+function Checkout:crateWon(title, text)
+	if self.pending or self.gui.Enabled then return end
+	self.thanksHeading.Text = "A CRATE FOR YOU!"
+	self.thanksName.Text = W.rich(title)
+	self.thanksText.Text = W.rich(text .. ". It's in your Inventory, or open it now.")
+	self.art:ClearAllChildren()
+	Icons.draw(self.art, "Geode", 0, 0, 120)
+	self.goPage = "crate"
+	self.go.Visible, self.goLabel.Text = true, "Open it now"
+	self.done.Position = UDim2.fromOffset(286, 286)
+	self.thanksPaint.Color = ColorSequence.new(rgb(196, 160, 255), rgb(110, 70, 200))
+	self:show("thanks")
 end
 
 -- Is a purchase on its way?
@@ -244,6 +264,7 @@ function Checkout:purchased(name, kind, key)
 	task.spawn(function()
 		while self.reveal and self.reveal:busy() do task.wait(0.25) end
 		local text, go, page = describe(kind, item, goldGiven)
+		self.thanksHeading.Text = "THANK YOU!"
 		self.thanksName.Text = W.rich(item.name)
 		self.thanksText.Text = W.rich(text)
 		self.art:ClearAllChildren()

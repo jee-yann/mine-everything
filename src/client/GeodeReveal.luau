@@ -297,7 +297,7 @@ function Reveal:show()
 	local freeLeft = self:freeCount(geode.id)
 	local canBuy = geode.id == "Starfall" and self.player:GetAttribute("PaidRandomRestricted") == false
 	self.again.Visible = freeLeft > 0 or canBuy
-	self.againLabel.Text = if freeLeft > 0 then "Open (" .. freeLeft .. ")" else "Buy another"
+	self.againLabel.Text = if freeLeft > 0 then "Open (" .. freeLeft .. " left)" else "Buy another"
 	if self.chime then self.chime(1.5 + rarity.rank * 0.08) end
 	self.cardScale.Scale = 0.6
 	W.tween(self.cardScale, 0.25, { Scale = 1 })

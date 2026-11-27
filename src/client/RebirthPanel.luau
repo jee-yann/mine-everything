@@ -119,7 +119,7 @@ end
 
 function Panel:press()
 	local menu, player = self.menu, self.menu.player
-	if menu.rebirthPending or not Rebirth.ready(player:GetAttribute("RunStarfalls") or 0) then return end
+	if menu.rebirthPending or not Rebirth.ready(player:GetAttribute("RunStarfalls") or 0, player:GetAttribute("Rebirths") or 0) then return end
 	self.reply = nil
 	if not self.confirming then
 		self.confirming = true
@@ -148,27 +148,29 @@ end
 function Panel:refresh()
 	local player = self.menu.player
 	local n, found = player:GetAttribute("Rebirths") or 0, player:GetAttribute("RunStarfalls") or 0
-	local need = Rebirth.requirement.count
-	local ready = Rebirth.ready(found) and player:GetAttribute("ProfileReady") == true
+	local need = Rebirth.need(n)
+	local ready = Rebirth.ready(found, n) and player:GetAttribute("ProfileReady") == true
 	if not ready then self.confirming = false end
 	local pending = self.menu.rebirthPending
 	self.live = ready and not pending
 	self.card.sub.Text = if n > 0 then "You are on rebirth " .. n .. ". Start a new run for more." else "Start a new run with permanent bonuses."
 	self.nextName.Text = "Rebirth " .. n + 1
-	-- The run's Starfall: found, or how far along the trail (Rebirth.trail) this run has come.
+	-- The run's Starfalls: how many are found of the ones this rebirth needs, and how far along the
+	-- trail (Rebirth.trail) the next one is.
 	local trail = Rebirth.trail(n)
 	local walked = math.min(trail.blocks, player:GetAttribute("RunTrail") or 0)
-	local share = if found >= need then 1 else walked / trail.blocks
-	self.goal.Text = if found >= need then "Starfall found this run ✓" else "Follow the Starfall's trail"
+	local have = math.min(found, need)
+	local share = if found >= need then 1 else (have + walked / trail.blocks) / need
+	self.goal.Text = if found >= need then "Starfalls found ✓" else "Find " .. need .. " Starfall" .. (if need == 1 then "" else "s")
 	self.fill.Size = UDim2.new(math.clamp(share, 0, 1), 0, 1, 0)
 	self.fill.Visible = share > 0
-	self.progress.Text = if found >= need then "Found!" else walked .. " / " .. trail.blocks .. " blocks"
+	self.progress.Text = have .. " / " .. need .. " Starfall" .. (if need == 1 then "" else "s")
 	self.label.Text = if pending then "Rebirthing…" elseif self.confirming then "Confirm!" elseif ready then "Rebirth!" else "Locked"
 	self.paint.Color = if not self.live then grey elseif self.confirming then yellow else green
 	self.button.Interactable = self.live
 	self.note.Text = self.reply or (if self.confirming then "Gold, pack, gear and supplies reset. Press again to rebirth."
 		elseif ready then "Ready when you are."
-		else "Cut blocks in " .. trail.region .. " or deeper. The last one holds a Starfall.")
+		else string.format("Cut blocks in %s or deeper: every %d holds a Starfall (%d to go).", trail.region, trail.blocks, trail.blocks - walked))
 	for _, item in self.perks do
 		item.after.Text, item.now.Text = item.perk.text(n + 1), "Now " .. item.perk.text(n)
 	end

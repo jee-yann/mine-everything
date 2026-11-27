@@ -21,7 +21,8 @@ function Pages.titles(menu)
 end
 function Pages.achievements(menu)
 	for i, award in Guide.achievements do
-		local tint = if award.ore then W.orange else W.aqua
+		-- One colour for every achievement (for now).
+		local tint = W.orange
 		local title, detail, badge = menu:row(i, award.name, "Achievements", tint)
 		menu:watchRow(title.Parent, award.id, function()
 			return (menu.player:GetAttribute("Award" .. award.id) or 0) >= award.goal

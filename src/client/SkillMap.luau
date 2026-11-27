@@ -426,15 +426,17 @@ function Map:position()
 	end
 end
 -- The phone layout (see Map:fit): the map under the whole screen, one 50-pixel row of controls at the
--- top of the safe area and a 76-pixel footer at its bottom.
+-- very top, right after Roblox's menu and chat buttons in the top bar, and a 76-pixel footer at the
+-- bottom of the safe area.
 function Map:compact(size)
 	local room = self.room
-	local rowW = size.X - room.left - room.right
-	self.header.Position = UDim2.fromOffset(room.left, room.raise)
-	self.header.Size = UDim2.new(1, -room.left - room.right, 0, 50)
+	local headerX, headerY = room.bar + 4, math.max(0, room.raise - 54)
+	local rowW = size.X - headerX - room.right
+	self.header.Position = UDim2.fromOffset(headerX, headerY)
+	self.header.Size = UDim2.new(1, -headerX - room.right, 0, 50)
 	self.view.Position, self.view.Size = UDim2.new(), UDim2.fromScale(1, 1)
 	-- The tree centres in the open space between the control row and the footer.
-	local top, bottom = room.raise + 50, size.Y - room.bottom - 82
+	local top, bottom = headerY + 50, size.Y - room.bottom - 82
 	self.centerShift = (top + bottom) / 2 - size.Y / 2
 	local control, right = 40, -6
 	for i, button in self.controls do
@@ -454,7 +456,7 @@ function Map:compact(size)
 	self.summary.Visible = rowW + right - summaryX > 80
 	self.summary.TextWrapped = false
 	self.footerScale.Scale = 1
-	local width = math.clamp(rowW - 16, 190, 600)
+	local width = math.clamp(size.X - room.left - room.right - 16, 190, 600)
 	self.footer.Size = UDim2.fromOffset(width, 76)
 	self.footer.Position = UDim2.new(0.5, 0, 1, -6 - room.bottom)
 	self.title.Position, self.title.Size, self.title.TextSize = UDim2.fromOffset(14, 4), UDim2.fromOffset(width - 150, 28), 22

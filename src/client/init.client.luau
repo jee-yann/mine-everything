@@ -393,6 +393,13 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			hud.menu.rewards:claimed(a, point)
 		end
 		if not hud.overlay.Visible then hud:notice(spread, finds, W.gold) end
+		-- A crate: offer to open it now, as after buying one (after the claim's own burst).
+		if type(spread) == "string" and (spread:find("Crate") or spread:find("Haul")) then
+			task.delay(if hud.overlay.Visible then 1.3 else 0.2, function()
+				local checkout = hud.checkout
+				if checkout then checkout:crateWon(spread, finds or spread) end
+			end)
+		end
 	elseif kind == "job" then
 		fx:chime(1.65)
 		hud.unlocks:show("job", a, "+" .. W.number(point) .. " gold", nil, point)
@@ -466,7 +473,7 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 	elseif kind == "trailEnd" then
 		-- a = what the block looked like: the end of the Starfall's trail (Rebirth.trail).
 		fx:chime(1.85)
-		hud:notice("The trail ends here! A Starfall inside the " .. a, "You can rebirth now", Ores.byName.Starfall.color)
+		hud:notice("A Starfall on the trail, inside the " .. a .. "!", "The Rebirth card counts your Starfalls", Ores.byName.Starfall.color)
 	elseif kind == "freeGeode" then
 		local item = Collectibles.itemById[a]
 		fx:chime(1.75)

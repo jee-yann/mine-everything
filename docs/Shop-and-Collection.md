@@ -239,7 +239,7 @@ would hide it. Your own name and title hide while you're zoomed in.
   Sales are rounded to whole gold.
 - **Speed:** cut time is divided by `1 + Fast Pick 30% + Haste Tonic 20% + Mining FX`.
 - **XP:** VIP gives +20% XP, on top of rebirths and the friend bonus.
-- **Luck never buys a rebirth.** The run's Starfall is guaranteed by the Starfall trail (see the
+- **Luck never buys a rebirth.** The run's Starfalls are guaranteed by the Starfall trail (see the
   README), a count of blocks cut that luck doesn't change. Luck only makes a chance Starfall in the
   crater more likely.
 - Timed boosts of the same kind add their time, up to 4 hours.

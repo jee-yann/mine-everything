@@ -172,7 +172,9 @@ function Panel:buildOdds()
 			W.stroke(swatch, W.navy, 2)
 			local name = fit(W.title(chip, "", 36, 1, 98, 20, 16, W.white, true), 16)
 			local odds = W.title(chip, string.format("%g%%", entry.chance), 36, 19, 98, 19, 16, W.gold, true)
-			odds.Name = "Chance"
+			odds.Name, odds.TextScaled = "Chance", true
+			local oddsFont = Instance.new("UITextSizeConstraint")
+			oddsFont.MinTextSize, oddsFont.MaxTextSize, oddsFont.Parent = 9, 16, odds
 			table.insert(chips, { ore = entry.ore, name = name, swatch = swatch, odds = odds, chance = entry.chance })
 		end
 		local chances = { Stone = math.max(0, 100 - total) }
@@ -312,7 +314,11 @@ function Panel:refresh()
 			for _, chip in chips do
 				local value = shown[chip.ore.name] or chip.chance
 				local boosted = luck > 1 and chip.chance < Bonuses.rareBelow
-				chip.odds.Text = if luck > 1 then string.format("%.3g%%", value) else string.format("%g%%", chip.chance)
+				-- A boosted chance shows the usual one struck through beside it: "0.05% → 0.1%".
+				chip.odds.RichText = true
+				chip.odds.Text = if boosted then string.format('<font color="#C8C8DC"><s>%g%%</s></font> %.3g%%', chip.chance, value)
+					elseif luck > 1 then string.format("%.3g%%", value)
+					else string.format("%g%%", chip.chance)
 				chip.odds.TextColor3 = if boosted then W.green else W.gold
 				local hidden = chip.ore.secret and not player:GetAttribute("Found" .. chip.ore.name)
 				chip.name.Text = if hidden then "???" else chip.ore.name

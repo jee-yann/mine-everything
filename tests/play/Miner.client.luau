@@ -1493,6 +1493,16 @@ local function test()
 		n.Action:FireServer("Stamp")
 		task.wait(0.4)
 		assert(p:GetAttribute("StampCount") == 1 and held("WelcomeGeode") == 1 and p:GetAttribute("Gold") == gold, "a day was claimed twice")
+		-- A crate won from the daily card offers to open it now, like a bought one. Put it away.
+		local checkoutGui = p.PlayerGui:WaitForChild("Checkout", 4)
+		waitFor(function()
+			if not checkoutGui.Enabled then return false end
+			for _, label in checkoutGui:GetDescendants() do
+				if label:IsA("TextLabel") and label.Text == "Open it now" and label.Visible then return true end
+			end
+			return false
+		end, 4, "a won crate offers to open now")
+		checkoutGui.Enabled = false
 		-- A crate bought (free while playtesting) goes to the inventory unopened, then opens with a reel.
 		n.Action:FireServer("BuyProduct", "Crate1")
 		waitFor(function() return held("StarfallGeode") >= 1 end, 4, "a bought crate waits in the inventory")

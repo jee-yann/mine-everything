@@ -229,15 +229,21 @@ function Offers:available(offer)
 	return true
 end
 
+-- A column (beside the right-hand rail), or on phones a row running left from the Shop button.
 function Offers:refresh()
-	local y = 0
+	local y, x = 0, 0
 	for _, offer in offers do
 		local tile = self.tiles[offer.key]
 		local shown = self:available(offer)
 		tile.button.Visible = shown
 		if shown then
-			tile.button.Position = UDim2.fromOffset(0, y)
-			y += tile.button.Size.Y.Offset + 14
+			if self.horizontal then
+				x -= tile.button.Size.X.Offset + 14
+				tile.button.Position = UDim2.fromOffset(x, 0)
+			else
+				tile.button.Position = UDim2.fromOffset(0, y)
+				y += tile.button.Size.Y.Offset + 14
+			end
 		end
 		local item = offer.item
 		tile.pill.Text = if item.limited then W.goldAmount(Rep:GetAttribute("Limited" .. item.key) or item.limited) .. " LEFT" else offer.ribbon

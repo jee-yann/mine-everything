@@ -26,7 +26,7 @@ function Guide.start(player, hud, busy)
 		showing, hud.guidingRebirth = nil, false
 	end
 	game:GetService("RunService").RenderStepped:Connect(function()
-		local ready = player:GetAttribute("ProfileReady") == true and Rebirth.ready(player:GetAttribute("RunStarfalls") or 0)
+		local ready = player:GetAttribute("ProfileReady") == true and Rebirth.ready(player:GetAttribute("RunStarfalls") or 0, player:GetAttribute("Rebirths") or 0)
 		local now = os.clock()
 		local panel = hud.menu.rebirth
 		local cardOpen = panel ~= nil and panel.card.modal.Visible and hud.overlay.Visible

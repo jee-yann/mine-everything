@@ -213,9 +213,11 @@ function Menu:layout(width, height, touch)
 		local full = Gui:GetInsetArea(Enum.ScreenInsets.None)
 		local core = Gui:GetInsetArea(Enum.ScreenInsets.CoreUISafeInsets)
 		local bar = Gui:GetInsetArea(Enum.ScreenInsets.TopbarSafeInsets)
-		local _ = bar
+		-- `bar`: where the top bar's free space starts (after Roblox's menu and chat buttons), from the
+		-- screen's left edge.
 		room = { raise = math.max(0, core.Min.Y - full.Min.Y), left = math.max(0, core.Min.X - full.Min.X),
-			right = math.max(0, full.Max.X - core.Max.X), bottom = math.max(0, full.Max.Y - core.Max.Y) }
+			right = math.max(0, full.Max.X - core.Max.X), bottom = math.max(0, full.Max.Y - core.Max.Y),
+			bar = math.max(0, bar.Min.X - full.Min.X) }
 	end
 	self.room = room
 	for _, panel in { self.rewards, self.index, self.rebirth, self.profile, self.shop, self.inventory } do
@@ -609,7 +611,7 @@ function Menu:attention(key)
 			end
 		end
 	elseif key == "Rebirth" then
-		return Rebirth.ready(p:GetAttribute("RunStarfalls") or 0)
+		return Rebirth.ready(p:GetAttribute("RunStarfalls") or 0, p:GetAttribute("Rebirths") or 0)
 	elseif key == "Shop" then
 		-- VIP's chest is ready.
 		local benefits = "," .. (p:GetAttribute("Passes") or "") .. ","

@@ -252,13 +252,15 @@ function Hud.new(player, net, mobile)
 	end)
 	local gift = SideButtons.tile(rewardRail, "Playtime", "Gift", shortcutLetters.Playtime)
 	gift.button.Position = UDim2.fromOffset(tileStep, 6 + 2 * tileStep)
-	-- On phones the reward rail is a row (Shop, Daily, Gift) beside the Pack shortcut, without the
-	-- featured column (the offers are in the Shop and over the Outfitters stall).
+	-- On phones the reward rail is a row (Shop, Daily, Gift) with the featured offers to the left of
+	-- the Shop.
 	local rewardTiles = { shop.button, daily.button, gift.button }
 	local function arrangeRewards(row)
 		if self.rewardRow == row then return end
 		self.rewardRow = row
-		offerColumn.Visible = not row
+		offerColumn.Position = if row then UDim2.fromOffset(0, -2) else UDim2.fromOffset(0, 16)
+		self.offers.horizontal = row
+		self.offers:refresh()
 		for i, button in rewardTiles do
 			button.Position = if row then UDim2.fromOffset((i - 1) * tileStep, 0) else UDim2.fromOffset(tileStep, 6 + (i - 1) * tileStep)
 		end
@@ -519,9 +521,21 @@ function Hud.new(player, net, mobile)
 			rowY = belowChat(right - pairWidth, rowY, pairWidth, 48)
 			local gearY = belowChat(right - 150, rowY + 51, 150, 46)
 			local levelY = belowChat(right - 46, gearY + 48, 46, 46)
-			toolsBottom = levelY + 46
-			tools.Size = UDim2.fromOffset(150, toolsBottom - gearY)
-			self.levelRing.button.Position = UDim2.fromOffset(104, levelY - gearY)
+			if railsOnEdge then
+				-- Phones: the haul card under the Shop row, then Power, Speed, Bag and the level ring in
+				-- one row under it.
+				local haulY = rowY + 54
+				gearY = haulY + math.ceil(haul.Size.Y.Offset * 0.62) + 6
+				levelY = gearY
+				toolsBottom = gearY + 46
+				tools.Size = UDim2.fromOffset(200, 46)
+				self.levelRing.button.Position = UDim2.fromOffset(154, 0)
+				self.haulY = haulY
+			else
+				toolsBottom = levelY + 46
+				tools.Size = UDim2.fromOffset(150, toolsBottom - gearY)
+				self.levelRing.button.Position = UDim2.fromOffset(104, levelY - gearY)
+			end
 			local walletTop = belowChat(leftEdge, math.floor(height * (if width > height then 0.36 else 0.42)), walletWidth, 52)
 			if narrow and leftEdge + walletWidth > right - 150 and walletTop < gearY + 46 and walletTop + 52 > rowY then
 				walletTop = gearY + 50
@@ -550,11 +564,10 @@ function Hud.new(player, net, mobile)
 			W.anchor(tools, 1, 0, UDim2.fromOffset(right, gearY))
 			packButton.Visible = not railsOnEdge
 			if railsOnEdge then
-				-- The haul card, small, under the equipment and level on the right (as on desktop, in
-				-- place of the Pack shortcut). The bonus circles sit beside the equipment.
+				-- The haul card, small, under the Shop row on the right (as on desktop, in place of the
+				-- Pack shortcut).
 				haulScale.Scale = 0.62
-				W.anchor(haul, 1, 0, UDim2.fromOffset(right, toolsBottom + 4))
-				self.bonusSpot = Vector2.new(right - 156, toolsBottom)
+				W.anchor(haul, 1, 0, UDim2.fromOffset(right, self.haulY or rowY + 54))
 				local rowScale = 150 / (3 * tileStep - 18)
 				rewardRailScale.Scale = rowScale
 				W.anchor(rewardRail, 0, 0, UDim2.fromOffset(right - pairWidth, rowY + 1))
@@ -574,7 +587,6 @@ function Hud.new(player, net, mobile)
 				W.anchor(wallet, 0, 1, UDim2.fromOffset(leftEdge + 4, height - 4))
 				local _ = railRight
 			else
-				self.bonusSpot = nil
 				packButton.Position = UDim2.fromOffset(0, 0)
 			end
 		else
@@ -643,6 +655,13 @@ function Hud.new(player, net, mobile)
 			self.mobile and playing and not browsing and not typing,
 			toolsBottom
 		)
+		-- Phones: the boost and bonus icons sit along the bottom edge, just left of Mine and jump.
+		self.bonusSpot = nil
+		if edge and rosterOnDemand and touchBounds then
+			local leftmost = width
+			for _, box in touchBounds do leftmost = math.min(leftmost, box.Min.X) end
+			self.bonusSpot = Vector2.new(leftmost - 8, height - 6)
+		end
 		local speechWidth = if edge then math.clamp(width - 175, 144, 290) else 460
 		speechScale.Scale = s
 		self.blockedScale.Scale = if edge then math.min(1, width / 560) else s

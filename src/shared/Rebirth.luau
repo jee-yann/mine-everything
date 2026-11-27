@@ -10,31 +10,32 @@
 -- `milestones` for a one-off unlock at a given rebirth count.
 local Rebirth = {}
 
--- What the current run must achieve before the miner can rebirth.
-Rebirth.requirement = { ore = "Starfall", count = 1 }
+-- Rebirths are about finding Starfall: rebirth N needs N Starfalls found in the run (the first needs
+-- one, the fifth needs five).
+Rebirth.requirement = { ore = "Starfall" }
+function Rebirth.need(n: number): number
+	return n + 1
+end
 
 -- The Starfall's trail. The star came down in the crater, but its shards scattered up through the
 -- mine, and a newer miner meets the trail shallower: the first rebirth's runs through Saltglass Sinks
--- (Power 5, about an hour in), and from the sixth on it is the crater itself. Once a run has cut
--- `blocks` blocks at or below the trail's depth without a Starfall, the next block cut there holds one.
--- Luck never moves this count, so paid luck can't buy a rebirth; a Starfall found by chance (in the
--- crater, where they occur naturally) still counts.
+-- (Power 5, about an hour of play), and from the sixth on it is the crater itself. Every `blocks`
+-- blocks cut at or below the trail's depth, the next block there holds a Starfall, until the run has
+-- as many as its rebirth needs. Luck never moves this count, so paid luck can't buy a rebirth; a
+-- Starfall found by chance (in the crater, where they occur naturally) still counts.
 Rebirth.trails = {
 	{ depth = 140, blocks = 150, region = "Saltglass Sinks" },
-	{ depth = 225, blocks = 250, region = "Glowcap Hollows" },
-	{ depth = 260, blocks = 350, region = "Midnight Fault" },
-	{ depth = 340, blocks = 450, region = "Frostglass Reach" },
-	{ depth = 400, blocks = 550, region = "Cinderheart Forge" },
-	{ depth = 550, blocks = 700, region = "Starfall Crater" },
+	{ depth = 225, blocks = 200, region = "Glowcap Hollows" },
+	{ depth = 260, blocks = 250, region = "Midnight Fault" },
+	{ depth = 340, blocks = 300, region = "Frostglass Reach" },
+	{ depth = 400, blocks = 350, region = "Cinderheart Forge" },
+	{ depth = 550, blocks = 400, region = "Starfall Crater" },
 }
-Rebirth.trailGrowth = 100 -- more blocks for each rebirth past the last row
-Rebirth.trailMost = 2000
 
--- The trail for a miner with `n` rebirths: { depth, blocks, region }.
+-- The trail for a miner with `n` rebirths: { depth, blocks (per Starfall), region }.
 function Rebirth.trail(n: number): { depth: number, blocks: number, region: string }
 	local row = Rebirth.trails[math.min(n + 1, #Rebirth.trails)]
-	local past = math.max(0, n + 1 - #Rebirth.trails)
-	return { depth = row.depth, blocks = math.min(Rebirth.trailMost, row.blocks + past * Rebirth.trailGrowth), region = row.region }
+	return { depth = row.depth, blocks = row.blocks, region = row.region }
 end
 
 Rebirth.cutCap = 0.25 -- the most cutting speed rebirths can add
@@ -82,8 +83,9 @@ Rebirth.milestones = {
 	{ at = 1, name = "Reborn", detail = "Your rebirth count shows beside your name on the Server miners board" },
 }
 
-function Rebirth.ready(found: number): boolean
-	return found >= Rebirth.requirement.count
+-- Whether a run with `found` Starfalls can rebirth, for a miner with `n` rebirths.
+function Rebirth.ready(found: number, n: number): boolean
+	return found >= Rebirth.need(n or 0)
 end
 
 -- The badge beside a miner's name: one star in the colour of their tier, with the count on it, so
