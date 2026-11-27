@@ -58,7 +58,7 @@ local function compose(screen, safe)
 	limit.MinTextSize, limit.MaxTextSize, limit.Parent = 13, 39, caption
 	-- Skip: a pill in the bottom right corner, in the lower matte, clear of the captions.
 	local skip = Instance.new("TextButton")
-	skip.Name, skip.Text, skip.Font, skip.TextSize = "Skip", "Skip  ▸▸", Enum.Font.FredokaOne, 21
+	skip.Name, skip.Text, skip.Font, skip.TextSize = "Skip", "Skip", Enum.Font.FredokaOne, 21
 	skip.AnchorPoint, skip.Position, skip.Size = Vector2.new(1, 1), UDim2.new(1, -18, 1, -12), UDim2.fromOffset(136, 46)
 	skip.BackgroundColor3, skip.BackgroundTransparency, skip.TextColor3 = ink, 0.18, Color3.fromHex("FFF5DF")
 	skip.BorderSizePixel, skip.AutoButtonColor, skip.Parent = 0, false, safe

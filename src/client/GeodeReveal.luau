@@ -160,7 +160,7 @@ function Reveal.new(hud, net)
 	self.equip.Activated:Connect(function() self:wear() end)
 	self.again.Activated:Connect(function() self:openAgain() end)
 	self.done.Activated:Connect(function() self:close() end)
-	self.skipButton = button(stage, "Skip", 220, 470, 120, 48, slate, "Skip ▸▸")
+	self.skipButton = button(stage, "Skip", 220, 470, 120, 48, slate, "Skip")
 	self.skipButton.Activated:Connect(function() self:skip() end)
 	return self
 end

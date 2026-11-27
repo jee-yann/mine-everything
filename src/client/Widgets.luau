@@ -288,10 +288,23 @@ function W.robux(parent, amount, size, color)
 	layout.FillDirection, layout.HorizontalAlignment = Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Center
 	layout.VerticalAlignment, layout.Padding = Enum.VerticalAlignment.Center, UDim.new(0, math.floor(size * 0.25))
 	layout.SortOrder, layout.Parent = Enum.SortOrder.LayoutOrder, holder
+	-- The icon has the same dark outline as the number beside it: eight dark copies just behind it.
+	local mark = Instance.new("Frame")
+	mark.Name, mark.BackgroundTransparency, mark.Size, mark.LayoutOrder = "Robux", 1, UDim2.fromOffset(size, size), 1
+	mark.Parent = holder
+	local edge = math.max(1.5, size / 14)
+	for i = 0, 7 do
+		local angle = i * math.pi / 4
+		local back = Instance.new("ImageLabel")
+		back.Name, back.BackgroundTransparency, back.Image, back.ZIndex = "Outline", 1, W.robuxImage, 3
+		back.Size, back.ImageColor3 = UDim2.fromOffset(size, size), W.navy
+		back.Position = UDim2.fromOffset(math.cos(angle) * edge, math.sin(angle) * edge)
+		back.Parent = mark
+	end
 	local icon = Instance.new("ImageLabel")
-	icon.Name, icon.BackgroundTransparency, icon.Image, icon.ZIndex = "Robux", 1, W.robuxImage, 4
-	icon.Size, icon.LayoutOrder, icon.ImageColor3 = UDim2.fromOffset(size, size), 1, color or W.white
-	icon.Parent = holder
+	icon.Name, icon.BackgroundTransparency, icon.Image, icon.ZIndex = "Icon", 1, W.robuxImage, 4
+	icon.Size, icon.ImageColor3 = UDim2.fromOffset(size, size), color or W.white
+	icon.Parent = mark
 	local label = Instance.new("TextLabel")
 	label.Name, label.BackgroundTransparency, label.Font, label.TextSize = "Amount", 1, Enum.Font.FredokaOne, size
 	label.TextColor3, label.AutomaticSize, label.Size, label.ZIndex = color or W.white, Enum.AutomaticSize.X, UDim2.fromOffset(0, size), 4

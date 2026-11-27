@@ -534,7 +534,12 @@ local function test()
 			local right = menuButton.AbsolutePosition.X + menuButton.AbsoluteSize.X
 			assert(math.abs(equipment.AbsolutePosition.X + equipment.AbsoluteSize.X - right) <= 1, "stats align with Menu")
 		end
-		assert(ring.AbsolutePosition.Y >= equipment.AbsolutePosition.Y + equipment.AbsoluteSize.Y, "separate level row")
+		if rails then
+			-- Phones: Power, Speed, Bag and the level ring share one row.
+			assert(math.abs(ring.AbsolutePosition.Y - equipment.AbsolutePosition.Y) <= 2, "level in the stats row")
+		else
+			assert(ring.AbsolutePosition.Y >= equipment.AbsolutePosition.Y + equipment.AbsoluteSize.Y, "separate level row")
+		end
 		waitFor(function()
 			local a, b = wallet.AbsolutePosition, safe.Location.AbsolutePosition
 			local aEnd, bEnd = a + wallet.AbsoluteSize, b + safe.Location.AbsoluteSize

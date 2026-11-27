@@ -574,7 +574,7 @@ function Hud.new(player, net, mobile)
 				-- The menu buttons: a small two-column rail at the top left, under Roblox's own buttons
 				-- and above where the thumbstick sits. The gold sits beside it.
 				-- A clear gap under Roblox's own buttons (and its chat), so the rail never touches them.
-				local railTop = belowChat(leftEdge, top + 50, 2 * tileStep * 0.4, 40)
+				local railTop = belowChat(leftEdge, top + 62, 2 * tileStep * 0.4, 40)
 				local menuHeight = menuRail.Size.Y.Offset
 				local railScale = math.clamp((height * 0.7 - railTop) / menuHeight, 0.3, 0.62)
 				menuRailScale.Scale = railScale
