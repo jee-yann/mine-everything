@@ -367,7 +367,7 @@ local function test()
 	end
 	-- The owner-only X-ray tool was removed; nobody gets its controls or its scan remote.
 	assert(not p.PlayerGui:FindFirstChild("OwnerOreVision"), "no X-ray tool")
-	assert(not gui.SafeArea.Location:FindFirstChild("X-ray controls") and not n:FindFirstChild("Scan", true))
+	assert(not gui.SafeArea.HUD.Location:FindFirstChild("X-ray controls") and not n:FindFirstChild("Scan", true))
 	waitFor(function()
 		local mount = p.Character.HumanoidRootPart:FindFirstChild("Lamp mount")
 		return mount and mount:FindFirstChildOfClass("PointLight") and p.Character:GetAttribute("MiningViewReady")
@@ -465,34 +465,36 @@ local function test()
 	end, 5, "open the Ore Index at its stall")
 	r:FireServer("closePage")
 	waitFor(function() return not overlay.Visible end, 5, "leave the Ore Index stall")
-	local roster = gui.SafeArea["Server leaderboard"]
+	local roster = gui.SafeArea.HUD["Server leaderboard"]
 	assert(not game.StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.PlayerList))
 	if game.UserInputService.PreferredInput == Enum.PreferredInput.Touch then
 		assert(not roster.Visible and not roster.Miners.Visible, "phone roster starts in Menu")
 	else
 		local size = gui.SafeArea.AbsoluteSize
-		local touchLayout = game.UserInputService.TouchEnabled and math.min(size.X, size.Y) < 640
+		-- The HUD says whether the roster waits in Menu: on any touch-capable screen it does (the play
+		-- test can run under Studio's device emulator, phone or tablet).
+		local touchLayout = gui:GetAttribute("RosterOnDemand") == true
 		assert(roster.Visible == (not touchLayout) and roster.Miners.Visible == (not touchLayout)
 			and roster.Columns.Visible == (not touchLayout), string.format("desktop roster initial layout: size %s, touch %s, overlay %s, visible %s/%s/%s", tostring(size), tostring(touchLayout), tostring(overlay.Visible), tostring(roster.Visible), tostring(roster.Miners.Visible), tostring(roster.Columns.Visible)))
 	end
 	local me = roster.Miners:WaitForChild(tostring(p.UserId), 3)
 	assert(me and me.Level.Text == "1" and me.Gold.Text == "0" and me.Title.Text == "Noob Miner")
-	local wallet = gui.SafeArea.Wallet
-	local controls = gui.SafeArea["Equipment and level"]
+	local wallet = gui.SafeArea.HUD.Wallet
+	local controls = gui.SafeArea.HUD["Equipment and level"]
 	local ring = controls["Level progress"]
 	assert(ring:IsA("GuiButton") and ring:FindFirstChild("XP segment"), "interactive XP ring")
-	assert(wallet.BackgroundTransparency == 1 and gui.SafeArea.Location.BackgroundTransparency == 1)
+	assert(wallet.BackgroundTransparency == 1 and gui.SafeArea.HUD.Location.BackgroundTransparency == 1)
 	for _, key in { "Power", "Speed", "Capacity" } do
 		assert(controls.Equipment[key]:FindFirstChild(key .. " icon"), "equipment icon " .. key)
 	end
-	assert(gui.SafeArea["Menu buttons"]:FindFirstChild("Achievements") and gui.SafeArea["Reward buttons"]:FindFirstChild("Playtime"))
+	assert(gui.SafeArea.HUD["Menu buttons"]:FindFirstChild("Achievements") and gui.SafeArea.HUD["Reward buttons"]:FindFirstChild("Playtime"))
 	local safe = gui.SafeArea
 	assert(
 		safe.Mine.BackgroundTransparency == 1 and not safe:FindFirstChild("Auto mine"),
 		"single clear mining control"
 	)
 	assert(safe.Mine["Mining mode"].Text == "Hold to mine" and safe.Mine["Gesture hint"].Text == "Double-tap for auto")
-	local jobButton = safe["Current job"].OpenJob
+	local jobButton = safe.HUD["Current job"].OpenJob
 	assert(jobButton:IsA("GuiButton") and jobButton.BackgroundTransparency == 0 and jobButton:FindFirstChild("Rim"), "solid jobs button")
 	assert(roster:FindFirstChild("Rim"), "leaderboard and job card share a look")
 	for _, b in gui:GetDescendants() do
@@ -525,17 +527,17 @@ local function test()
 		safe.Size = UDim2.fromOffset(size.X, size.Y)
 		game:GetService("RunService").PreRender:Wait()
 		waitFor(function()
-			return safe.AbsoluteSize == size and safe["Edge shortcuts"].Visible
+			return safe.AbsoluteSize == size and safe.HUD["Edge shortcuts"].Visible
 		end, 3, "compact HUD")
 		-- Touch screens keep the side buttons as compact rails (no Menu button); small keyboard
 		-- windows fold them into Menu.
 		local rails = game.UserInputService.TouchEnabled
 		-- The haul card stays on touch screens (in place of the Pack shortcut); the job card never shows.
-		assert(safe.Haul.Visible == rails and not safe["Current job"].Visible, "compact HUD cards")
-		assert(safe["Edge shortcuts"].Pack.Visible ~= rails, "Pack only without the haul card")
-		assert(safe["Menu buttons"].Visible == rails and safe["Reward buttons"].Visible == rails, "side buttons on touch only")
-		local pack = safe["Edge shortcuts"].Pack
-		local menuButton = safe["Edge shortcuts"].Menu
+		assert(safe.HUD.Haul.Visible == rails and not safe.HUD["Current job"].Visible, "compact HUD cards")
+		assert(safe.HUD["Edge shortcuts"].Pack.Visible ~= rails, "Pack only without the haul card")
+		assert(safe.HUD["Menu buttons"].Visible == rails and safe.HUD["Reward buttons"].Visible == rails, "side buttons on touch only")
+		local pack = safe.HUD["Edge shortcuts"].Pack
+		local menuButton = safe.HUD["Edge shortcuts"].Menu
 		assert(menuButton.Visible ~= rails, "Menu replaces the rails on small keyboard windows")
 		local equipment = controls.Equipment
 		if not rails then
@@ -550,10 +552,12 @@ local function test()
 			assert(ring.AbsolutePosition.Y >= equipment.AbsolutePosition.Y + equipment.AbsoluteSize.Y, "separate level row")
 		end
 		waitFor(function()
-			local a, b = wallet.AbsolutePosition, safe.Location.AbsolutePosition
-			local aEnd, bEnd = a + wallet.AbsoluteSize, b + safe.Location.AbsoluteSize
+			local a, b = wallet.AbsolutePosition, safe.HUD.Location.AbsolutePosition
+			local aEnd, bEnd = a + wallet.AbsoluteSize, b + safe.HUD.Location.AbsoluteSize
 			return aEnd.X <= b.X + 1 or bEnd.X <= a.X + 1 or aEnd.Y <= b.Y + 1 or bEnd.Y <= a.Y + 1
-		end, 2, "corner stats overlap at " .. tostring(size))
+		end, 2, string.format("corner stats overlap at %s: wallet %s+%s, location %s+%s, roster %s+%s", tostring(size),
+			tostring(wallet.AbsolutePosition), tostring(wallet.AbsoluteSize), tostring(safe.HUD.Location.AbsolutePosition),
+			tostring(safe.HUD.Location.AbsoluteSize), tostring(roster.AbsolutePosition), tostring(roster.AbsoluteSize)))
 	end
 	safe.Size = originalSize
 	assert(not menu["Inventory tabs"]:FindFirstChild("Achievements"))
@@ -700,7 +704,7 @@ local function test()
 	end, 5, "close")
 	if not r:GetAttribute("CheckSwing") then
 		r:FireServer("depthSample")
-		local location = gui.SafeArea.Location
+		local location = gui.SafeArea.HUD.Location
 		waitFor(function()
 			return location.Depth.Text == "Mine entrance"
 				and location.Region.Text == "SUNSTONE HOLLOW"
@@ -769,7 +773,7 @@ local function test()
 		tapKey(Enum.KeyCode.Tab)
 		waitFor(function() return roster.Miners.Visible end, 2, "reopen roster")
 		do
-			local rail = safe["Menu buttons"]
+			local rail = safe.HUD["Menu buttons"]
 			assert(rail.Inventory.Face.Key.Text == "[B]" and rail.Settings.Face.Key.Text == "[P]" and rail.Book.Face.Key.Visible, "letters on the side buttons")
 			tapKey(Enum.KeyCode.O)
 			game:GetService("RunService").Heartbeat:Wait()
@@ -1023,7 +1027,7 @@ local function test()
 		camera.CFrame = CFrame.lookAt(head.Position, aim + aimNormal * (config.Cell / 2))
 		local xy = camera.ViewportSize * 0.5
 		input:SendMousePosition(xy)
-		local meter = gui.SafeArea.Feedback["Mining progress"]
+		local meter = gui.SafeArea.HUD.Feedback["Mining progress"]
 		local function outlined()
 			local marker = workspace.MiningSelection:FindFirstChild("Selected block")
 			return marker and (marker.Position - aim).Magnitude <= 0.02
@@ -1190,9 +1194,9 @@ local function test()
 		task.wait(0.85)
 		do
 			-- The reason shows where the player is aiming, and grows there.
-			local reason = safe.Blocked
+			local reason = safe.HUD.Blocked
 			local middle = reason.AbsolutePosition + reason.AbsoluteSize / 2
-			assert(reason.Visible and reason.ContentText:find("Needs Power 2!") and not safe.Feedback.Visible, "no reason shown for a locked block")
+			assert(reason.Visible and reason.ContentText:find("Needs Power 2!") and not safe.HUD.Feedback.Visible, "no reason shown for a locked block")
 			assert((middle - (cursor.AbsolutePosition + cursor.AbsoluteSize / 2)).Magnitude < 190, "the reason left the cursor")
 		end
 		assert(not lamp.Enabled, "locked ore lit up while holding mine")
@@ -1361,7 +1365,7 @@ local function test()
 	for _, side in { "Top", "Bottom", "Left", "Right" } do
 		assert(not spotlight[side].Active, "the shade must leave Surface usable")
 	end
-	assert(spotlight["Return arrow"].Visible and safe.Location.Surface.Interactable)
+	assert(spotlight["Return arrow"].Visible and safe.HUD.Location.Surface.Interactable)
 	local value = p:GetAttribute("BagValue")
 	assert(value >= starterSlots, "material valuation")
 	local purity = require(rep.Shared.OrePurity)
@@ -1370,7 +1374,7 @@ local function test()
 		local held = p:GetAttribute("Held" .. ore.name)
 		if held > 0 then
 			assert(
-				gui.SafeArea.Haul[ore.name].Visible and gui.SafeArea.Haul[ore.name].Quantity.Text == "×" .. held,
+				gui.SafeArea.HUD.Haul[ore.name].Visible and gui.SafeArea.HUD.Haul[ore.name].Quantity.Text == "×" .. held,
 				"live haul row"
 			)
 		end
@@ -1500,6 +1504,8 @@ local function test()
 	waitFor(function()
 		return p:GetAttribute("Jobs") == 2 and p:GetAttribute("ClaimedJobs") == 3
 	end, 5, "two eligible jobs claimed back to back in reverse order")
+	-- A crate can hold gold (a Gold Pouch, Sack or Chest), so whatever it paid is counted below.
+	local crateGold = 0
 	do
 		local gold = p:GetAttribute("Gold")
 		local Bonuses = require(rep.Shared.Bonuses)
@@ -1528,6 +1534,7 @@ local function test()
 		-- A crate bought (free while playtesting) goes to the inventory unopened, then opens with a reel.
 		n.Action:FireServer("BuyProduct", "Crate1")
 		waitFor(function() return held("StarfallGeode") >= 1 end, 4, "a bought crate waits in the inventory")
+		local beforeCrate = p:GetAttribute("Gold")
 		n.Action:FireServer("OpenGeode", "Starfall")
 		local reveal = p.PlayerGui:WaitForChild("GeodeReveal")
 		-- A reel of rewards scrolls past the marker first, then the reward card opens.
@@ -1539,6 +1546,8 @@ local function test()
 				and not reveal.Stage.Reel.Visible
 		end, 9, "the Starfall Crate opens")
 		assert(reveal.Stage.Reward["Reward name"].Text ~= "" and held("StarfallGeode") == 0, "the crate gave its reward")
+		task.wait(0.3)
+		crateGold = p:GetAttribute("Gold") - beforeCrate
 		-- Every effect can be worn while playtesting.
 		n.Action:FireServer("Wear", "trail", "Comet")
 		waitFor(function() return p:GetAttribute("Trail") == "Comet" end, 3, "wear the Comet Trail")
@@ -1567,8 +1576,9 @@ local function test()
 		return p:GetAttribute("SeenAchievementsFirstCrate")
 	end, 5, "scroll reads new achievement")
 	local afterJob = p:GetAttribute("Gold")
-	assert(afterJob == saleGold - 8 + secondSale + 80 + 25,
-		string.format("gold after jobs %d, expected %d (sales %d and %d)", afterJob, saleGold - 8 + secondSale + 105, saleGold, secondSale))
+	assert(afterJob == saleGold - 8 + secondSale + 80 + 25 + crateGold,
+		string.format("gold after jobs %d, expected %d (sales %d and %d, crate %d)", afterJob,
+			saleGold - 8 + secondSale + 105 + crateGold, saleGold, secondSale, crateGold))
 	task.wait(0.25)
 	n.Action:FireServer("Job", 2)
 	task.wait(0.3)
@@ -1611,7 +1621,7 @@ local function test()
 		local blocks = p:GetAttribute("TestShaftDepth")
 		return blocks
 			and blocks >= 1
-			and gui.SafeArea.Location.Depth.Text
+			and gui.SafeArea.HUD.Location.Depth.Text
 				== (if blocks == 1 then "1 block deep" else blocks .. " blocks deep")
 	end, 4, "return starts inside the mined shaft")
 	waitFor(function()

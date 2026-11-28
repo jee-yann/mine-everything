@@ -32,7 +32,7 @@ Dashboard are in [Store-listings.md](Store-listings.md).
 | Shop and Inventory cards | `src/client/ShopPanel.luau`, `InventoryPanel.luau`, `CollectionGrid.luau` |
 | Crate reveal, try-on previews | `src/client/GeodeReveal.luau`, `TryOn.luau` |
 | Ore compass over the miner's head | `src/client/OreCompass.luau` |
-| Status chips | `src/client/BoostChips.luau` |
+| Boost groups | `src/client/BoostChips.luau` |
 | Tests | `tests/Shop.spec.luau`, `tests/FieldRewards.spec.luau` and the play test |
 
 ## Where players find it
@@ -74,10 +74,14 @@ Dashboard are in [Store-listings.md](Store-listings.md).
   **Get gold ▸** and opens them too.
 - **Profile**: the Friends tab carries a "+25% XP" badge, the real bonus for mining with a friend in
   the server.
-- **Bottom right corner** (higher up on phones): chips for running boosts, each counting down, and
-  under them a row of circles for lasting bonuses: rebirths (×gold, with XP and cutting in the tap),
-  your Player FX movement speed (green), your Mining FX mining speed (orange), Double Gold, VIP,
-  2× Lucky, Fast Pick and Bigger Pack. Tap a circle to see what it does.
+- **Bottom right corner**: at most six icons, one per kind of boost: Mining speed, Movement speed,
+  Backpack, Gold, Luck and XP (VIP, rebirths, mining with a friend and the XP skills). A group shows only while something feeds it, with a count when several
+  do and its combined total under it on desktop (×2.4 gold, +30% mining). A running timed boost
+  turns its rim green. Tap one and the message at the bottom middle lists every source for a few
+  seconds: passes, timed boosts with the time left, Server Luck and who bought it, the worn Player
+  and Mining FX, rebirths and skills. On phones and tablets the icons sit in the very bottom right
+  corner of the screen, and Roblox's jump button (with Mine beside it) moves up just enough to clear
+  them.
 - **Shop size**: cards are compact so that after a tab jump at least two rows of a section show
   (the All Passes Bundle and the first row of passes; both rows of boosts; all the gold packs).
 
@@ -165,7 +169,7 @@ weights. Tap or **Skip** to jump to the reward; with menu motion off there's no 
 Rare +6%, Epic +9%, Legendary +12%, Mythic, Exclusive and Limited +16%. Mining FX give mining speed (a
 cut takes less time): Common +1%, Uncommon +2%, Rare +3%, Epic +5%, Legendary +7%, Mythic, Exclusive
 and Limited +10%, added to Fast Pick and the Haste Tonic. Badges are colour-coded: green for movement,
-orange for mining. They show on Inventory tiles, each effect's detail, the reward card, the circles in
+orange for mining. They show on Inventory tiles, each effect's detail, the reward card, the boost groups in
 the bottom right, and on what's sold directly; not on the crate or its odds.
 
 **Duplicates:** an effect already owned turns into gold: minutes of the miner's own earnings
@@ -290,7 +294,7 @@ only returned after the save succeeds.
 | Product | Robux | Worth | Reward |
 |---|---|---|---|
 | Founder's Halo | 249 | — | Limited aura (+16% movement speed): on sale until 100 are sold across all servers, then retired |
-| Starter Pack | 49 | 128 | 2 Starfall Crates, 30 min of 2× Gold, a Haste Tonic. Once per player |
+| Starter Pack | 49 | 153 | 3 Starfall Crates, 30 min of 2× Gold, a Haste Tonic. Once per player |
 | 1 Starfall Crate | 25 | — | Goes to the Inventory |
 | 3 Starfall Crates | 65 | 75 | "Popular" |
 | 10 Starfall Crates | 199 | 250 | "Best value" |
@@ -305,7 +309,7 @@ only returned after the save succeeds.
 | Gold Chest | 99 | 240 | 4 hours of earnings. "Popular" |
 | Gold Vault | 349 | 1,440 | A whole day of earnings. "Best value" |
 
-The Starter Pack's "Worth" is what its parts cost separately (2 crates for 50, plus 30 minutes of
+The Starter Pack's "Worth" is what its parts cost separately (3 crates for 75, plus 30 minutes of
 2× Gold at the 15-minute rate, 78). The 1-hour 2× Gold is worth 4× the 15-minute price.
 The only luck you can buy is Server Luck (and the 2× Lucky pass); Lucky Brews still come from crates
 and rewards.

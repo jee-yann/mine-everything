@@ -67,7 +67,7 @@ owners keep them. Prism Trail is retired (off sale); owners keep it and the bund
 | `GoldVault` | Gold Vault | 349 | `GoldVault.png` |
 
 **Starter Pack**
-> One time only: 2 Starfall Crates, 30 minutes of 2× Gold and a Haste Tonic (+20% mining speed for 10 minutes). Crates hold a random effect, tonic or gold; the odds are shown in the game before you buy.
+> One time only: 3 Starfall Crates, 30 minutes of 2× Gold and a Haste Tonic (+20% mining speed for 10 minutes). Crates hold a random effect, tonic or gold; the odds are shown in the game before you buy.
 
 **Founder's Halo**
 > A Limited aura: only 100 will ever be sold, across every server. A gold crown inside a rose ring, wings of light and a pulse at your feet, plus +16% movement speed while you wear it.

@@ -56,9 +56,19 @@ function Hud.new(player, net, mobile)
 	backdrop.Enabled, backdrop.Parent = false, gui.Parent
 	local dim = W.frame(backdrop, "Dim", 0, 0, 1, 1, W.ink)
 	dim.Size, dim.BackgroundTransparency, dim.Active = UDim2.fromScale(1, 1), 0.23, true
-	local root = W.frame(gui, "SafeArea", 0, 0, 1, 1, W.ink)
+	-- `safe` is the screen in real pixels: menus, the Mine button and anything drawn from a screen
+	-- position (thrown coins, XP orbs, friend markers, spotlights) live there. The HUD's own widgets
+	-- live in `root`, a layer laid out for a phone-sized screen and scaled up on tablets (hudScale), so a
+	-- tablet shows the same HUD as a phone, just bigger.
+	local safe = W.frame(gui, "SafeArea", 0, 0, 1, 1, W.ink)
+	safe.Size, safe.BackgroundTransparency = UDim2.fromScale(1, 1), 1
+	self.root = safe
+	local root = W.frame(safe, "HUD", 0, 0, 1, 1, W.ink)
 	root.Size, root.BackgroundTransparency = UDim2.fromScale(1, 1), 1
-	self.root = root
+	self.hudFrame = root
+	self.hudScale = 1
+	local hudScale = Instance.new("UIScale")
+	hudScale.Name, hudScale.Parent = "Device scale", root
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 	local wallet = clearFrame(root, "Wallet", 0, 0, 220, 52)
 	self.wallet = wallet
@@ -93,6 +103,9 @@ function Hud.new(player, net, mobile)
 	self.status = W.text(wallet, "", 0, 52, 210, 17, 13, W.gold, true)
 	W.outlineText(self.status, 1.5)
 	local haul = clearFrame(root, "Haul", 0, 0, 250, 79)
+	-- The stats row draws over the haul card, so the level ring's skill-point tag (which pokes up
+	-- into the card on touch screens) stays in front.
+	tools.ZIndex = haul.ZIndex + 1
 	local haulFace = W.frame(haul, "Face", 0, 0, 0, 0, W.white, 15)
 	haulFace.Size = UDim2.fromScale(1, 1)
 	W.enamelPanel(haulFace, Color3.fromRGB(94, 88, 160), Color3.fromRGB(62, 57, 112), 15)
@@ -172,13 +185,20 @@ function Hud.new(player, net, mobile)
 	end)
 	local gear = clearFrame(tools, "Equipment", 0, 0, 150, 46)
 	self.gearChips = {}
-	for i, key in { "Power", "Speed", "Capacity" } do
+	local gearOrder, gearButtons = { "Power", "Speed", "Capacity" }, {}
+	for i, key in gearOrder do
 		local chip = W.clearButton(gear, key, (i - 1) * 50, 0, 49, 46, "Select")
 		local tint = Upgrades.items[key].color
-		Icons.draw(chip, key, 0, 9, 28, tint)
-		local value = W.title(chip, "1", 28, 5, 21, 34, 21, W.white, true)
+		-- The pick is drawn on the diagonal, so at the same size it reads smaller than the others.
+		if key == "Power" then
+			Icons.draw(chip, key, -2, 6, 33, tint)
+		else
+			Icons.draw(chip, key, 0, 9, 28, tint)
+		end
+		local value = W.title(chip, "1", 29, 5, 21, 34, 21, W.white, true)
 		W.outlineText(value, 2)
 		self.gearChips[key] = value
+		gearButtons[key] = chip
 		chip.Activated:Connect(function()
 			local level = player:GetAttribute(key) or 1
 			self:notice(
@@ -188,6 +208,27 @@ function Hud.new(player, net, mobile)
 			)
 		end)
 	end
+	-- Each stat is as wide as its icon and number, with an even gap: "1" doesn't leave the hole that
+	-- room for "14" would.
+	self.gearWidth = 150
+	self.packGear = function()
+		local x = 0
+		for _, key in gearOrder do
+			local digits = #self.gearChips[key].Text
+			local w = 30 + math.max(1, digits) * 12
+			gearButtons[key].Size = UDim2.fromOffset(w, 46)
+			gearButtons[key].Position = UDim2.fromOffset(x, 0)
+			self.gearChips[key].Size = UDim2.fromOffset(w - 29, 34)
+			x += w + 7
+		end
+		local width = x - 7
+		if width ~= self.gearWidth then
+			self.gearWidth = width
+			gear.Size = UDim2.fromOffset(width, 46)
+			if self.layout then self.layout() end
+		end
+	end
+	self.packGear()
 	-- Side buttons (desktop): menus in a rail on the left with a round Settings button above them,
 	-- rewards in a rail on the right. Touch and small screens use the Pack and Menu shortcuts instead.
 	self.hotbarPages = {}
@@ -202,6 +243,7 @@ function Hud.new(player, net, mobile)
 	-- The right rail: the Shop on top, then the daily card and playtime gifts, with the featured offers
 	-- in a column beside them.
 	local rewardRail = clearFrame(root, "Reward buttons", 0, 0, tileStep + SideButtons.size + 18, 3 * tileStep)
+	self.rewardRail = rewardRail
 	self.sideKeys = {}
 	local settingsButton = SideButtons.round(menuRail, "Settings", shortcutLetters.Settings)
 	settingsButton.button.Activated:Connect(function()
@@ -224,11 +266,15 @@ function Hud.new(player, net, mobile)
 		end)
 	end
 	-- Two columns, never more. A short screen makes the buttons smaller instead.
-	local function arrangeRail(columns)
-		if self.railColumns == columns then return end
+	local function arrangeRail(columns, force)
+		if self.railColumns == columns and not force then return end
 		self.railColumns = columns
 		for i, button in railTiles do
-			button.Position = UDim2.fromOffset((i - 1) % columns * tileStep, math.floor((i - 1) / columns) * tileStep)
+			local column, row = (i - 1) % columns, math.floor((i - 1) / columns)
+			button.Position = UDim2.fromOffset(column * tileStep, row * tileStep)
+			-- A tile's tag (OPEN, a count) pokes out of its top right corner, over the tile to its right
+			-- and the one above: lower rows, then left columns, draw on top so the tag is never hidden.
+			button.ZIndex = 2 + row * columns + (columns - 1 - column)
 		end
 		local rows = math.ceil(#railTiles / columns)
 		settingsButton.button.Position = UDim2.fromOffset(0, rows * tileStep)
@@ -255,18 +301,31 @@ function Hud.new(player, net, mobile)
 	-- On phones the reward rail is a row (Shop, Daily, Gift) with the featured offers to the left of
 	-- the Shop.
 	local rewardTiles = { shop.button, daily.button, gift.button }
-	local function arrangeRewards(row)
-		if self.rewardRow == row then return end
+	local function arrangeRewards(row, force)
+		if self.rewardRow == row and not force then return end
 		self.rewardRow = row
 		offerColumn.Position = if row then UDim2.fromOffset(0, -2) else UDim2.fromOffset(0, 16)
+		offerColumn.Size = UDim2.fromOffset(SideButtons.size, 3 * tileStep)
 		self.offers.horizontal = row
+		self.offers.gap = math.floor((tileStep - SideButtons.size) * 0.6)
 		self.offers:refresh()
 		for i, button in rewardTiles do
 			button.Position = if row then UDim2.fromOffset((i - 1) * tileStep, 0) else UDim2.fromOffset(tileStep, 6 + (i - 1) * tileStep)
+			-- Tags in front of the next tile: in a row the left one draws on top, in a column the lower one.
+			button.ZIndex = if row then 2 + #rewardTiles - i else 2 + i
 		end
-		rewardRail.Size = if row then UDim2.fromOffset(3 * tileStep - 18, tileStep) else UDim2.fromOffset(tileStep + SideButtons.size + 18, 3 * tileStep)
+		rewardRail.Size = if row then UDim2.fromOffset(2 * tileStep + SideButtons.size + 6, tileStep) else UDim2.fromOffset(tileStep + SideButtons.size + 18, 3 * tileStep)
 	end
 	self.arrangeRewards = arrangeRewards
+	-- Keyboards get a letter on each button's corner, so the buttons leave room for it. Touch screens
+	-- have no letters: the buttons sit closer (the gap still grows with the screen, see hudScale).
+	self.arrangeTiles = function(touch)
+		local gap = if touch then 15 else 24
+		if tileStep == SideButtons.size + gap then return end
+		tileStep = SideButtons.size + gap
+		arrangeRail(self.railColumns or 2, true)
+		if self.rewardRow ~= nil then arrangeRewards(self.rewardRow, true) end
+	end
 	gift.button.Activated:Connect(function()
 		self:toggleHotbarPage("Playtime")
 	end)
@@ -295,7 +354,7 @@ function Hud.new(player, net, mobile)
 	local menuButton = shortcut("Menu", W.aqua, "Menu")
 	self.menuShortcut = menuButton
 	self.edgeAlert = W.dot(menuButton, -13, 2)
-	self.touchActions = TouchActions.new(root)
+	self.touchActions = TouchActions.new(safe)
 	self.mine = self.touchActions.hold
 	local speech = clearFrame(root, "Feedback", 0, 0, 460, 62)
 	self.message = W.title(speech, "", 5, 1, 450, 34, 27, W.white)
@@ -338,7 +397,7 @@ function Hud.new(player, net, mobile)
 	self.cursorPick = Icons.draw(badge, "Power", 2, 2, 24, W.gold)
 	self.denied = W.frame(badge, "No entry", 4, 12, 20, 4, Color3.fromRGB(255, 100, 108), 2)
 	badge.Visible = false
-	self.menu = Menu.new(root, player, net, function()
+	self.menu = Menu.new(safe, player, net, function()
 		self:setShop(false)
 	end)
 	self.menu.hud = self
@@ -392,28 +451,59 @@ function Hud.new(player, net, mobile)
 	local chatInput = game:GetService("TextChatService"):FindFirstChildOfClass("ChatInputBarConfiguration")
 	self.chatInput = chatInput
 	self.layout = function()
-		local width, height = root.AbsoluteSize.X, root.AbsoluteSize.Y
-		if width < 90 or height < 90 then
+		local screenW, screenH = safe.AbsoluteSize.X, safe.AbsoluteSize.Y
+		if screenW < 90 or screenH < 90 then
 			return
 		end
-		-- A keyboard connected to a phone changes its controls, not its HUD footprint.
+		-- A keyboard connected to a phone or a tablet changes its controls, not its HUD: once a screen has
+		-- been played by touch, or it is a touch screen without a mouse (phones, tablets) or a small one,
+		-- it keeps the touch layout and the Mine button however it was last used. A touchscreen laptop
+		-- played with its mouse keeps the desktop HUD.
 		local rosterOnDemand = self.sawTouch or Input.TouchEnabled
-		local touchLayout = self.mobile or (rosterOnDemand and math.min(width, height) < 640)
+		local touchLayout = self.mobile or self.sawTouch
+			or (rosterOnDemand and (math.min(screenW, screenH) < 640 or not Input.MouseEnabled))
+		-- Touch screens use the phone layout. On a bigger screen (a large phone, a tablet) the whole layer
+		-- grows with the screen, so buttons and the gaps between them keep their share of it. Everything
+		-- below works in the layer's units: the screen divided by k.
+		local k = if touchLayout then math.clamp(math.min(screenW / 740, screenH / 340), 1, 1.8) else 1
+		k = math.floor(k * 20 + 0.5) / 20
+		if self.hudScale ~= k then
+			self.hudScale = k
+			hudScale.Scale = k
+			root.Size = UDim2.fromScale(1 / k, 1 / k)
+		end
+		local width, height = screenW / k, screenH / k
+		local function toLayer(rect: Rect): Rect
+			return Rect.new(rect.Min / k, rect.Max / k)
+		end
+		self.arrangeTiles(rosterOnDemand)
+		gui:SetAttribute("TouchLayout", touchLayout)
+		gui:SetAttribute("RosterOnDemand", rosterOnDemand)
 		local edge = touchLayout or width < 850 or height < 470
 		self.edgeMode = edge
 		local playing = not self.overlay.Visible
 		local typing = chatInput and chatInput.IsFocused
 		local s = if edge then 1 else math.clamp(math.min(width / 1150, height / 750), 0.90, 1.32)
 		local margin = if edge then 4 else 10
-		self.menu:layout(width, height, touchLayout)
-		walletScale.Scale, taskScale.Scale, haulScale.Scale = s, s, s
-		toolScale.Scale = s
+		-- The menus sit on the real screen, not in the scaled layer.
+		self.menu:layout(screenW, screenH, touchLayout)
+		-- On desktop the gold and the stats in the bottom corner sit a size up from the cards, so they read
+		-- next to the side buttons.
+		local corner = if edge then s else s * 1.05
+		-- Touch screens: Power, Speed, Bag and the level ring a size down, so they don't crowd the
+		-- haul card and the right wall (tablets scale them up with the rest of the layer).
+		local statScale = if edge and rosterOnDemand then 0.8 else corner
+		walletScale.Scale, taskScale.Scale, haulScale.Scale = corner, s, s
+		toolScale.Scale = statScale
+		self.deskScale = s
 		locScale.Scale = s
 		local full = GuiService:GetInsetArea(Enum.ScreenInsets.None)
+		-- In real pixels: things thrown from a screen position land in `safe`, which is not scaled.
 		self.viewportOffset = full.Min
-		local core = GuiService:GetInsetArea(Enum.ScreenInsets.CoreUISafeInsets)
-		local device = GuiService:GetInsetArea(Enum.ScreenInsets.DeviceSafeInsets)
-		local bar = GuiService:GetInsetArea(Enum.ScreenInsets.TopbarSafeInsets)
+		full = toLayer(full)
+		local core = toLayer(GuiService:GetInsetArea(Enum.ScreenInsets.CoreUISafeInsets))
+		local device = toLayer(GuiService:GetInsetArea(Enum.ScreenInsets.DeviceSafeInsets))
+		local bar = toLayer(GuiService:GetInsetArea(Enum.ScreenInsets.TopbarSafeInsets))
 		-- These rectangles all use the core-safe origin, including negative top/left offsets.
 		local leftEdge = math.max(margin, device.Min.X + 3)
 		local outerRight = math.max(width - margin, width + full.Max.X - core.Max.X - 12)
@@ -423,7 +513,10 @@ function Hud.new(player, net, mobile)
 		-- the same row. Reserve the wallet's minimum width in that case.
 		local freeLeft = math.max(math.max(0, bar.Min.X) + 5, if narrow then leftEdge + minimumWallet + 6 else 0)
 		local freeRight = if bar.Max.X >= core.Max.X - 1 then outerRight else width + bar.Max.X - core.Max.X - 5
-		local top = math.max(full.Min.Y + 11, device.Min.Y + 8)
+		-- The top row (the depth line and ↑ Surface on touch screens, the Shop row): right at the top of
+		-- the screen, level with Roblox's own buttons. Held sideways nothing sits above it (a tablet's
+		-- top inset is a status bar Roblox hides), so it keeps the same small gap on every device.
+		local top = if width > height then full.Min.Y + 10 / k else math.max(full.Min.Y + 11, device.Min.Y + 8)
 		-- The top right row: Pack and Menu, or on touch screens Pack and the Shop / Daily / Gift row.
 		-- Phones drop the Pack shortcut (the haul card shows the bag), so the row is Shop / Daily / Gift.
 		local pairWidth = if edge and rosterOnDemand then 162 else 172
@@ -470,8 +563,8 @@ function Hud.new(player, net, mobile)
 			local chatRects = {}
 			local function addBounds(chat)
 				if chat.AbsoluteSize.X > 0 and chat.AbsoluteSize.Y > 0 then
-					local pos = chat.AbsolutePosition - root.AbsolutePosition
-					table.insert(chatRects, Rect.new(pos, pos + chat.AbsoluteSize))
+					local pos = (chat.AbsolutePosition - safe.AbsolutePosition) / k
+					table.insert(chatRects, Rect.new(pos, pos + chat.AbsoluteSize / k))
 				end
 			end
 			for _, chat in { chatWindow, chatInput } do
@@ -485,6 +578,9 @@ function Hud.new(player, net, mobile)
 			table.sort(chatRects, function(a, b)
 				return a.Min.Y < b.Min.Y
 			end)
+			-- Touch screens keep the depth line, ↑ Surface and the rest at the top: Roblox's chat window
+			-- draws over them while it's open (on a tablet it reaches across the top and pushed them down).
+			if railsOnEdge then table.clear(chatRects) end
 			local function belowChat(x, y, w, h)
 				for _, rect in chatRects do
 					if x < rect.Max.X and x + w > rect.Min.X and y < rect.Max.Y and y + h > rect.Min.Y then
@@ -528,14 +624,17 @@ function Hud.new(player, net, mobile)
 				local haulY = rowY + 54
 				gearY = haulY + math.ceil(haul.Size.Y.Offset * 0.62) + 6
 				levelY = gearY
-				toolsBottom = gearY + 46
-				tools.Size = UDim2.fromOffset(200, 46)
-				self.levelRing.button.Position = UDim2.fromOffset(154, 0)
+				toolsBottom = gearY + math.ceil(46 * statScale)
+				tools.Size = UDim2.fromOffset(self.gearWidth + 52, 46)
+				self.levelRing.button.Position = UDim2.fromOffset(self.gearWidth + 6, 0)
+				gear.Position = UDim2.fromOffset(0, 0)
 				self.haulY = haulY
 			else
 				toolsBottom = levelY + 46
 				tools.Size = UDim2.fromOffset(150, toolsBottom - gearY)
 				self.levelRing.button.Position = UDim2.fromOffset(104, levelY - gearY)
+				-- The stats line up with the Menu button's right edge above them.
+				gear.Position = UDim2.fromOffset(150 - self.gearWidth, 0)
 			end
 			local walletTop = belowChat(leftEdge, math.floor(height * (if width > height then 0.36 else 0.42)), walletWidth, 52)
 			if narrow and leftEdge + walletWidth > right - 150 and walletTop < gearY + 46 and walletTop + 52 > rowY then
@@ -551,7 +650,8 @@ function Hud.new(player, net, mobile)
 				walletTop = math.min(walletTop, height - margin - rosterHeight - walletHeight - 6)
 			end
 			local walletLeft = if walletTop + 52 > height - 100 then leftEdge + 92 else leftEdge
-			if narrow and walletLeft < titleX + titleHalf and walletLeft + walletWidth > titleX - titleHalf then
+			-- Never under the region name: on a short window the gold can be pushed up into it.
+			if walletLeft < titleX + titleHalf and walletLeft + walletWidth > titleX - titleHalf then
 				local regionBottom = math.max(locationY + loc.Size.Y.Offset, depthY + 21)
 				if self.surface.Visible then regionBottom = math.max(regionBottom, surfaceY + 50) end
 				if walletTop < regionBottom + 4 and walletTop + 52 > locationY then
@@ -569,7 +669,7 @@ function Hud.new(player, net, mobile)
 				-- Pack shortcut).
 				haulScale.Scale = 0.62
 				W.anchor(haul, 1, 0, UDim2.fromOffset(right, self.haulY or rowY + 54))
-				local rowScale = 150 / (3 * tileStep - 18)
+				local rowScale = 150 / rewardRail.Size.X.Offset
 				rewardRailScale.Scale = rowScale
 				W.anchor(rewardRail, 0, 0, UDim2.fromOffset(right - pairWidth, rowY + 1))
 				-- The menu buttons: a small two-column rail at the top left, under Roblox's own buttons
@@ -592,9 +692,10 @@ function Hud.new(player, net, mobile)
 				packButton.Position = UDim2.fromOffset(0, 0)
 			end
 		else
-			tools.Size = UDim2.fromOffset(200, 46)
+			tools.Size = UDim2.fromOffset(self.gearWidth + 52, 46)
 			self.layer.Visible, self.depth.Visible = true, true
-			self.levelRing.button.Position = UDim2.fromOffset(154, 0)
+			self.levelRing.button.Position = UDim2.fromOffset(self.gearWidth + 6, 0)
+			gear.Position = UDim2.fromOffset(0, 0)
 			self.depth.Position = UDim2.fromOffset(0, 37)
 			self.surface.Position = UDim2.new(0.5, 0, 1, 3)
 			local bottom = margin
@@ -603,7 +704,7 @@ function Hud.new(player, net, mobile)
 				wallet,
 				0,
 				1,
-				UDim2.new(0, margin, 1, -bottom - 46 * s - (if self.status.Text == "" then 0 else 18 * s))
+				UDim2.new(0, margin, 1, -bottom - 46 * corner - (if self.status.Text == "" then 0 else 18 * corner))
 			)
 			local rightY = margin + rosterHeight + 9
 			W.anchor(taskCard, 1, 0, UDim2.new(1, -margin - 2, 0, rightY))
@@ -614,13 +715,13 @@ function Hud.new(player, net, mobile)
 				cap.Visible = keyboard
 			end
 			local railScale = math.clamp(math.min(width / 1400, height / 780), 0.78, 1.15)
-			local walletTop = height - margin - (46 + 52) * s - (if self.status.Text == "" then 0 else 18 * s)
+			local walletTop = height - margin - (46 + 52) * corner - (if self.status.Text == "" then 0 else 18 * corner)
 			local topLimit = margin + 6
 			if StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.Chat) and chatWindow and chatWindow.Enabled then
 				for _, chat in { chatWindow, chatInput } do
 					if chat and chat.Enabled and chat.AbsoluteSize.Y > 0 then
-						local pos = chat.AbsolutePosition - root.AbsolutePosition
-						topLimit = math.max(topLimit, pos.Y + chat.AbsoluteSize.Y + 12)
+						local pos = (chat.AbsolutePosition - safe.AbsolutePosition) / k
+						topLimit = math.max(topLimit, pos.Y + chat.AbsoluteSize.Y / k + 12)
 					end
 				end
 				-- The window reports no size until it is drawn, and while it is folded away. Keep its
@@ -651,35 +752,108 @@ function Hud.new(player, net, mobile)
 		local touchGui = gui.Parent:FindFirstChild("TouchGui")
 		local jump = touchGui and touchGui:FindFirstChild("JumpButton", true)
 		local validJump = jump and jump:IsA("ImageButton") and jump.Visible and jump.AbsoluteSize.Y > 0
-		-- Phones: a row of bonus icons sits on the right wall under the stats, so Mine starts below it.
-		local bonusRow = edge and rosterOnDemand
-		local touchBounds = self.touchActions:layout(
-			root,
-			if validJump then jump else nil,
-			self.mobile and playing and not browsing and not typing,
-			toolsBottom + (if bonusRow then 40 else 0)
-		)
-		-- Phones: the boost and bonus icons, grouped by kind, in a row against the right wall under the
-		-- stats (BoostChips).
-		self.bonusSpot = if bonusRow then Vector2.new(width - 2, toolsBottom + 5) else nil
-		local speechWidth = if edge then math.clamp(width - 175, 144, 290) else 460
+		-- Touch screens: the boost groups (BoostChips) sit in the very bottom right corner of the screen.
+		-- Roblox's jump button, and the Mine button beside it, move up just enough to clear them.
+		-- The status line in the bottom middle stays centred on touch screens; the row shrinks (down to a
+		-- size that's still easy to tap) so it fits to the right of it.
+		local speechWidth = if edge then math.clamp(width - 175, 144, if touchLayout then 260 else 290) else 460
+		self.bonusCorner = nil
+		self.bonusPitch = 45
+		local bonusCount = self.bonusCount or 0
+		local rowRect
+		if railsOnEdge and bonusCount > 0 then
+			local right, bottom = math.max(width, device.Max.X) - 3, math.max(height, device.Max.Y) - 2
+			local room = right - (width / 2 + speechWidth / 2 + 6)
+			local pitch = math.clamp(math.floor(room / bonusCount), 32, 45)
+			self.bonusPitch = pitch
+			local rowW, rowH = bonusCount * pitch, 38 * pitch / 45
+			self.bonusCorner = Vector2.new(right, bottom)
+			rowRect = Rect.new(Vector2.new(right - rowW, bottom - rowH), Vector2.new(right, bottom))
+		end
+		-- Where Roblox put the jump button, before any lift of ours (it may move it on a resize).
+		local jumpRect
+		if validJump then
+			local expected = self.jumpSet
+			if expected == nil or jump.Position ~= expected then
+				self.jumpBase = jump.Position
+			end
+			local base, parent = self.jumpBase, jump.Parent
+			local size = jump.AbsoluteSize
+			local at = parent.AbsolutePosition + Vector2.new(
+				base.X.Scale * parent.AbsoluteSize.X + base.X.Offset,
+				base.Y.Scale * parent.AbsoluteSize.Y + base.Y.Offset
+			) - jump.AnchorPoint * size
+			jumpRect = { pos = at - safe.AbsolutePosition, size = size }
+		end
+		-- The Mine button is on the real screen (it matches Roblox's jump button), so convert both ways.
+		local mineShown = touchLayout and playing and not browsing and not typing
+		local function placeTouch(lift)
+			local rect = if jumpRect then { pos = jumpRect.pos - Vector2.new(0, lift * k), size = jumpRect.size } else nil
+			local bounds = self.touchActions:layout(safe, rect, mineShown, toolsBottom * k, k) or {}
+			for i, box in bounds do
+				bounds[i] = toLayer(box)
+			end
+			if rect and #bounds == 0 then
+				local pos = rect.pos / k
+				table.insert(bounds, Rect.new(pos, pos + rect.size / k))
+			end
+			return bounds
+		end
+		local touchBounds = placeTouch(0)
+		local lift = 0
+		if rowRect then
+			for _, box in touchBounds do
+				if box.Max.X > rowRect.Min.X and box.Min.X < rowRect.Max.X then
+					lift = math.max(lift, box.Max.Y - rowRect.Min.Y + 4)
+				end
+			end
+			if lift > 0 then
+				touchBounds = placeTouch(lift)
+			end
+			table.insert(touchBounds, rowRect)
+		end
+		if validJump then
+			local wanted = self.jumpBase - UDim2.fromOffset(0, math.round(lift * k))
+			self.jumpSet = wanted
+			if jump.Position ~= wanted then
+				jump.Position = wanted
+			end
+		end
+		if touchLayout then
+			-- Centred, the status line is only as wide as the space between the middle of the screen and
+			-- the nearest button on the right at its height (the Mine button on a small phone).
+			local half = speechWidth / 2
+			for _, box in touchBounds do
+				if box ~= rowRect and box.Min.X > width / 2 and box.Max.Y > height - 90 then
+					half = math.min(half, box.Min.X - 8 - width / 2)
+				end
+			end
+			speechWidth = math.max(144, math.floor(half * 2))
+		end
+		if #touchBounds == 0 then touchBounds = nil end
 		speechScale.Scale = s
 		self.blockedScale.Scale = if edge then math.min(1, width / 560) else s
 		self.speechBase = self.blockedScale.Scale
-		speech.Size = UDim2.fromOffset(speechWidth, if edge then 46 else 62)
-		self.message.Size = UDim2.fromOffset(speechWidth - 10, if edge then 25 else 34)
-		self.detail.Position = UDim2.fromOffset(5, if edge then 25 else 35)
-		self.detail.Size = UDim2.fromOffset(speechWidth - 10, if edge then 19 else 24)
+		-- A notice with several lines (a boost group's sources) makes the box taller, upward.
+		-- Phones read a size smaller than desktop (tablets scale it up with the layer, see hudScale).
+		self.speechHeight, self.detailHeight, self.noticeLine = if edge then 40 else 62, if edge then 17 else 24, if edge then 15 else 21
+		local extra = self.noticeExtra or 0
+		speech.Size = UDim2.fromOffset(speechWidth, self.speechHeight + extra)
+		self.message.Size = UDim2.fromOffset(speechWidth - 10, if edge then 21 else 34)
+		self.detail.Position = UDim2.fromOffset(5, if edge then 22 else 35)
+		self.detail.Size = UDim2.fromOffset(speechWidth - 10, self.detailHeight + extra)
 		meter.Size = UDim2.new(1, -20, 0, 7)
 		self.meterHeadroom = -meter.Position.Y.Offset * speechScale.Scale
 		local footer = if touchLayout and width < height then 136 else margin
-		local speechBottom = if edge then footer else margin + 24
+		-- Clear of the bottom of the screen the device keeps for itself (the iPhone's home indicator).
+		local homeBar = math.max(0, height - device.Max.Y)
+		local speechBottom = if edge then footer + homeBar + (if touchLayout then 6 else 0) else margin + 24
 		local speechSize = Vector2.new(speechWidth, speech.Size.Y.Offset)
 		W.anchor(
 			speech,
 			0.5,
 			1,
-			TouchActions.feedbackPosition(root.AbsoluteSize, speechSize, speechBottom, touchBounds)
+			TouchActions.feedbackPosition(Vector2.new(width, height), speechSize, speechBottom, touchBounds, touchLayout)
 		)
 		self.speechHome = speech.Position
 	end
@@ -727,8 +901,8 @@ function Hud.new(player, net, mobile)
 	self.surface:GetPropertyChangedSignal("Visible"):Connect(self.layout)
 	self.status:GetPropertyChangedSignal("Text"):Connect(self.layout)
 	GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(self.layout)
-	root:GetPropertyChangedSignal("AbsolutePosition"):Connect(self.layout)
-	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(self.layout)
+	safe:GetPropertyChangedSignal("AbsolutePosition"):Connect(self.layout)
+	safe:GetPropertyChangedSignal("AbsoluteSize"):Connect(self.layout)
 	self.layout()
 	local refreshPending = false
 	player.AttributeChanged:Connect(function()
@@ -914,6 +1088,7 @@ function Hud:refresh()
 	for _, key in Upgrades.order do
 		self.gearChips[key].Text = tostring(level(key))
 	end
+	self.packGear()
 	self.menu:refresh()
 end
 function Hud:pickup(ore, amount, point)
@@ -963,8 +1138,9 @@ function Hud:pickup(ore, amount, point)
 	end)
 end
 -- XP gained since the last look, thrown from `point`.
-function Hud:showXP(point)
-	local amount = self.levelRing.gained or 0
+-- `earned` is what the server says this block gave; without it, what the ring saw arrive.
+function Hud:showXP(point, earned)
+	local amount = if type(earned) == "number" then earned else self.levelRing.gained or 0
 	self.levelRing.gained = 0
 	XpOrbs.show(self, amount, point)
 end
@@ -984,12 +1160,16 @@ function Hud:aimAt(screen, valid, blocked)
 	end
 	self.aimScreen = screen
 	if self.speechHome then
-		local showingNotice = os.clock() < (self.untilTime or 0)
-		if screen and (valid or blocked) and (self.meter.Visible or not showingNotice) then
-			local at = screen + self.viewportOffset
-			local bounds, size = self.root.AbsoluteSize, self.speech.AbsoluteSize
+		-- The status line goes wherever the miner is aiming, whatever it says: a notice (a tapped boost
+		-- group, for one) replaces the text in place instead of jumping to the bottom and back. When the
+		-- big red reason is at the pointer (Backpack full!, a block the pick can't cut yet), the line waits
+		-- at the bottom so the two never overlap.
+		if screen and (valid or blocked) and not self.blocked.Visible then
+			local k = self.hudScale
+			local at = self:toLayer(screen)
+			local bounds, size = self:layerSize(), self.speech.AbsoluteSize / k
 			local x = math.clamp(at.X, size.X / 2, math.max(size.X / 2, bounds.X - size.X / 2))
-			local cursorBottom = at.Y + self.cursor.AbsoluteSize.Y / 2
+			local cursorBottom = at.Y + self.cursor.AbsoluteSize.Y / k / 2
 			local bottom = cursorBottom + 8 + self.meterHeadroom + size.Y
 			self.speech.Position =
 				UDim2.fromOffset(x, if bottom <= bounds.Y then bottom else math.max(size.Y + self.meterHeadroom, at.Y - 20))
@@ -1078,8 +1258,20 @@ function Hud:chatLine(lead, rest, tint)
 		end
 	end)
 end
-function Hud:notice(title, detail, color)
-	self.untilTime = os.clock() + 2.1
+-- A message in the bottom middle that fades back to the guide after `hold` seconds (2.1 by default).
+-- `detail` may hold several lines; the box grows upward to fit them.
+function Hud:notice(title, detail, color, hold)
+	hold = hold or 2.1
+	self.untilTime = os.clock() + hold
+	local _, breaks = string.gsub(detail or "", "\n", "")
+	self:sizeNotice(breaks * (self.noticeLine or 17))
+	local token = {}
+	self.noticeToken = token
+	if breaks > 0 then
+		task.delay(hold, function()
+			if self.noticeToken == token then self:sizeNotice(0) end
+		end)
+	end
 	-- Notices can carry any text. Only the guide's own lines use colour tags.
 	self.detail.RichText, self.message.RichText = false, false
 	self.message.Text, self.message.TextColor3, self.detail.Text = title, color or W.white, detail or ""
@@ -1090,11 +1282,27 @@ function Hud:notice(title, detail, color)
 	self.message.TextTransparency = 0.35
 	W.tween(self.message, 0.16, { TextTransparency = 0 })
 end
+function Hud:sizeNotice(extra)
+	if (self.noticeExtra or 0) == extra or not self.speechHeight then
+		self.noticeExtra = extra
+		return
+	end
+	self.noticeExtra = extra
+	self.speech.Size = UDim2.fromOffset(self.speech.Size.X.Offset, self.speechHeight + extra)
+	self.detail.Size = UDim2.fromOffset(self.detail.Size.X.Offset, self.detailHeight + extra)
+end
 -- Keeps the reason beside the cursor, or beside the aim dot without a mouse.
+-- The HUD layer's size, and a screen (viewport) point in the layer's units. See hudScale.
+function Hud:layerSize()
+	return self.root.AbsoluteSize / self.hudScale
+end
+function Hud:toLayer(screen)
+	return (screen + self.viewportOffset) / self.hudScale
+end
 function Hud:placeBlocked(screen)
-	local bounds = self.root.AbsoluteSize
-	local half = self.blocked.AbsoluteSize / 2
-	local at = screen + self.viewportOffset
+	local bounds = self:layerSize()
+	local half = self.blocked.AbsoluteSize / self.hudScale / 2
+	local at = self:toLayer(screen)
 	local width = math.min(half.X, 260 * self.speechBase)
 	local below = at.Y + 26 + half.Y
 	if below + half.Y * 0.7 > bounds.Y then below = at.Y - 26 - half.Y end

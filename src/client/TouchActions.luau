@@ -20,8 +20,9 @@ function TouchActions.new(root)
 	ring.ApplyStrokeMode, ring.Color, ring.Thickness, ring.Transparency = Enum.ApplyStrokeMode.Border, Color3.new(1, 1, 1), 3, 0.1
 	ring.Parent = disc
 	self.disc, self.ring = disc, ring
-	local icon = Icons.draw(disc, "Power", size * 0.22, size * 0.2, size * 0.56, Color3.new(1, 1, 1))
-	local _ = icon
+	-- Sized with the disc in layout (a tablet's jump button, and so the disc, is much bigger).
+	self.icon = Icons.draw(disc, "Power", size * 0.22, size * 0.2, size * 0.56, Color3.new(1, 1, 1))
+	self.iconScale = self.icon:FindFirstChildOfClass("UIScale")
 	self.label = W.title(self.hold, "", 0, size + 2, size + 40, 15, 13, W.white)
 	self.hint = W.text(self.hold, "", 0, size + 16, size + 40, 13, 11, W.white)
 	self.label.Name, self.hint.Name = "Mining mode", "Gesture hint"
@@ -68,23 +69,30 @@ function TouchActions.skinJump(jump)
 	end
 end
 
-function TouchActions:layout(root, jump, visible, toolsBottom)
+-- `jump` is where Roblox's jump button sits ({ pos, size } in `root`'s pixels), or nil without one.
+function TouchActions:layout(root, jump, visible, toolsBottom, scale)
 	self.hold.Visible = visible
 	if not visible then
 		return
 	end
+	scale = scale or 1
 	local width, height = root.AbsoluteSize.X, root.AbsoluteSize.Y
-	local size = if jump then jump.AbsoluteSize else Vector2.new(70, 70)
-	local pos = if jump then jump.AbsolutePosition - root.AbsolutePosition else Vector2.new(width - 88, height - 90)
+	local size = if jump then jump.size else Vector2.new(70, 70) * scale
+	local pos = if jump then jump.pos else Vector2.new(width - 88 * scale, height - 90 * scale)
 	-- The disc matches the jump button's size and sits to its left, centres level, like Roblox's own
-	-- action buttons; the mode text hangs under it.
-	local disc = math.max(56, math.min(size.X, size.Y))
-	self.hold.Size = UDim2.fromOffset(disc + 40, disc + 30)
+	-- action buttons; the mode text hangs under it, sized with the disc (tablets have bigger buttons).
+	local disc = math.max(56 * scale, math.min(size.X, size.Y))
+	local text = math.max(1, disc / 70)
+	local labelH, hintH = math.round(15 * text), math.round(13 * text)
+	self.label.TextSize, self.hint.TextSize = math.round(13 * text), math.round(11 * text)
+	self.hold.Size = UDim2.fromOffset(disc + 40, disc + labelH + hintH + 2)
 	self.disc.Size, self.disc.Position = UDim2.fromOffset(disc, disc), UDim2.fromOffset(20, 0)
 	self.disc:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0.5, 0)
-	self.label.Position, self.hint.Position = UDim2.fromOffset(0, disc + 2), UDim2.fromOffset(0, disc + 16)
-	self.label.Size, self.hint.Size = UDim2.fromOffset(disc + 40, 15), UDim2.fromOffset(disc + 40, 13)
-	local extent = Vector2.new(disc + 40, disc + 30)
+	self.icon.Position = UDim2.fromOffset(disc * 0.22, disc * 0.2)
+	if self.iconScale then self.iconScale.Scale = disc * 0.56 / 32 end
+	self.label.Position, self.hint.Position = UDim2.fromOffset(0, disc + 2), UDim2.fromOffset(0, disc + 2 + labelH - 1)
+	self.label.Size, self.hint.Size = UDim2.fromOffset(disc + 40, labelH), UDim2.fromOffset(disc + 40, hintH)
+	local extent = Vector2.new(disc + 40, disc + labelH + hintH + 2)
 	-- A little higher than the jump button's centre, so the mode text never meets the screen's edge.
 	local x, y = pos.X - disc - 34, pos.Y + (size.Y - disc) / 2 - 14
 	if x < 0 then
@@ -102,7 +110,9 @@ function TouchActions:layout(root, jump, visible, toolsBottom)
 	return bounds
 end
 
-function TouchActions.feedbackPosition(screen, size, footer, bounds)
+-- `centred`: touch screens keep the status line in the middle, moving it up (never sideways) if a
+-- button is in the way.
+function TouchActions.feedbackPosition(screen, size, footer, bounds, centred)
 	local x, y = screen.X / 2, screen.Y - footer
 	if bounds then
 		local left = screen.X
@@ -111,7 +121,7 @@ function TouchActions.feedbackPosition(screen, size, footer, bounds)
 				left = math.min(left, box.Min.X - 8)
 			end
 		end
-		if screen.X >= screen.Y and left - size.X >= 100 then
+		if not centred and screen.X >= screen.Y and left - size.X >= 100 then
 			x = math.min(x, left - size.X / 2)
 		else
 			for _, box in bounds do
