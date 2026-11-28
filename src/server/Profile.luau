@@ -11,6 +11,9 @@ local Guide = require(Shared.FieldGuide)
 local Skills = require(Shared.Skills)
 local Rebirth = require(Shared.Rebirth)
 local Collection = require(script.Parent.Collection)
+local Analytics = require(script.Parent.Analytics)
+local Config = require(Shared.GameConfig)
+local craterRow = Config.Layers[#Config.Layers].depthBlocks
 local Profile = {}
 
 function Profile.new()
@@ -19,6 +22,7 @@ function Profile.new()
 		progression = 4,
 		introSeen = false,
 		firstTrip = {},
+		analytics = Analytics.record(true),
 		gold = 0,
 		gems = 0,
 		stampDay = 0,
@@ -108,6 +112,11 @@ function Profile.hasUpgrade(p)
 	return p.levels.Speed > 1 or p.levels.Power > 1 or p.levels.Capacity > 1 or (p.rebirths or 0) > 0
 end
 
+-- What Analytics needs worked out from the profile.
+function Profile.facts(p)
+	return { upgrade = Profile.hasUpgrade(p), crater = Profile.depthRecord(p) >= craterRow }
+end
+
 function Profile.expeditionStep(p)
 	local trip = p.firstTrip
 	if trip.skipped then return "Skipped" end
@@ -175,6 +184,7 @@ function Profile.valid(p)
 	if type(p) ~= "table" or p.version ~= 1 or type(p.levels) ~= "table" or type(p.bag) ~= "table" then
 		return false
 	end
+	if p.analytics ~= nil and not Analytics.valid(p.analytics) then return false end
 	if p.firstTrip ~= nil then
 		if type(p.firstTrip) ~= "table" then return false end
 		for _, key in { "sold", "tried", "skipped" } do
@@ -393,6 +403,8 @@ function Profile.upgradeSave(p)
 	end
 	p.viewed = p.viewed or {}
 	p.skills = p.skills or {}
+	-- Saves from before analytics count as already logged: only new miners make the funnels.
+	p.analytics = p.analytics or Analytics.record(false)
 	p.refunded = Skills.prune(p.skills)
 	if #p.refunded == 0 then p.refunded = nil end
 	if p.counts == nil then

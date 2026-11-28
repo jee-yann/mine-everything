@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 2304, 256 px tiles, on a clear
+<!-- Source art for FieldKit.png, the HUD button atlas: 1024 x 2560, 256 px tiles, on a clear
      background. Tile order must match the tiles table in src/client/FieldKit/init.luau.
      Render with render_field_kit.py, then bake with bake_field_kit.py.
      Style: one navy outline around each icon's silhouette (the #ol filter), nothing dark
      inside, flat colours with soft shade shapes, white glints and a soft cast shadow. -->
 <html><head><meta charset="utf-8"><style>
-  html, body { margin: 0; width: 1024px; height: 2304px; background: transparent; overflow: hidden; }
+  html, body { margin: 0; width: 1024px; height: 2560px; background: transparent; overflow: hidden; }
   .ico { position: absolute; width: 208px; height: 208px; overflow: visible; filter: drop-shadow(7px 11px 0 #29264a38); }
 </style></head><body>
 <svg width="0" height="0" style="position:absolute">
@@ -686,6 +686,32 @@
         <use href="#spark" transform="translate(16 34) scale(.55)" fill="#fff"/>
       </g>
     </symbol>
+    <!-- Starfall Compass: a brass compass whose star-shaped needle points north in Starfall violet,
+         with a violet star at its rim (the Starfall it has found). -->
+    <symbol id="i-compass" viewBox="0 0 100 100">
+      <g filter="url(#ol)">
+        <rect x="42" y="4" width="16" height="13" rx="5" fill="#f5a31e"/>
+        <rect x="46" y="8" width="8" height="5" rx="2.5" fill="#ffe27a"/>
+        <circle cx="50" cy="57" r="38" fill="#f5a31e"/>
+        <circle cx="50" cy="54" r="38" fill="#ffc83a"/>
+        <circle cx="50" cy="54" r="29" fill="#fff6dc"/>
+        <path d="M21 58 A29 29 0 0 0 79 58 A29 24 0 0 1 21 58 Z" fill="#f3e3bc"/>
+        <rect x="47.5" y="27" width="5" height="7" rx="2" fill="#e6c27a"/>
+        <rect x="47.5" y="74" width="5" height="7" rx="2" fill="#e6c27a"/>
+        <rect x="23" y="51.5" width="7" height="5" rx="2" fill="#e6c27a"/>
+        <rect x="70" y="51.5" width="7" height="5" rx="2" fill="#e6c27a"/>
+        <path d="M50 30 L58 54 L42 54 Z" fill="#b98cff"/>
+        <path d="M50 30 L58 54 L50 54 Z" fill="#8f5cf0"/>
+        <path d="M50 78 L58 54 L42 54 Z" fill="#e4e8f4"/>
+        <path d="M50 78 L58 54 L50 54 Z" fill="#b7bed3"/>
+        <circle cx="50" cy="54" r="5.5" fill="#ffd23f"/>
+        <circle cx="48.5" cy="52.5" r="1.8" fill="#fff"/>
+        <path d="M22 38 Q27 26 39 20" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+        <use href="#star5" transform="translate(84 22) scale(.95)" fill="#c79bff"/>
+        <use href="#star5r" transform="translate(84 22) scale(.95)" fill="#9b6bff"/>
+        <use href="#spark" transform="translate(14 86) scale(.6)" fill="#fff"/>
+      </g>
+    </symbol>
   </defs>
 </svg>
   <!-- Inventory -->
@@ -760,4 +786,5 @@
   <svg class="ico" style="left:532px;top:2062px"><use href="#i-assay"/></svg>
   <!-- Showoff -->
   <svg class="ico" style="left:788px;top:2062px"><use href="#i-showoff"/></svg>
+  <svg class="ico" style="left:20px;top:2318px"><use href="#i-compass"/></svg>
 </body></html>

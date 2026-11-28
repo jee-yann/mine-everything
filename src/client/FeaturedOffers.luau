@@ -316,6 +316,8 @@ end
 
 function Offers:open(offer)
 	self.offer = offer
+	-- An offer card is a Shop visit too (server/Analytics).
+	self.net.Action:FireServer("ShopOpened")
 	self:fill(offer)
 	local area = workspace.CurrentCamera.ViewportSize
 	self.scale.Scale = math.clamp(math.min(area.X / 640, area.Y / 470), 0.5, 1.3)

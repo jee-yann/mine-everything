@@ -40,7 +40,7 @@ local circles = {
 	{ "Lucky", "Crystal", "2×", "2× Lucky: rare ore turns up twice as often" },
 	{ "FastPick", "Speed", "+30%", "Fast Pick: +30% mining speed" },
 	{ "BiggerPack", "Pack", "+50%", "Bigger Pack: +50% backpack capacity" },
-	{ "StarfallCompass", "Crystal", "★", "Starfall Compass: every 3 minutes underground, points to any Starfall within 2 blocks" },
+	{ "StarfallCompass", "Compass", "★", "Starfall Compass: every 3 minutes underground, points to any Starfall within 2 blocks" },
 }
 
 return function(hud)

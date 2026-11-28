@@ -14,6 +14,7 @@ local Rep = game:GetService("ReplicatedStorage")
 local Shared = Rep.Shared
 local S, C = require(Shared.StoreConfig), require(Shared.Collectibles)
 local Collection = require(script.Parent.Collection)
+local Analytics = require(script.Parent.Analytics)
 local Earnings, Geodes = require(Shared.Earnings), require(Shared.Geodes)
 local Config = require(Shared.GameConfig)
 local DSS = game:GetService("DataStoreService")
@@ -83,8 +84,10 @@ function Store.join(player)
 		if practice(player) then restricted = Rep:GetAttribute("TestPaidRandomRestricted") == true end
 		player:SetAttribute("PaidRandomRestricted", restricted)
 	end)
+	-- An unpublished Studio test plays as a fresh miner: Roblox counts the experience's creator as owning
+	-- every pass, so asking would hand the tester all of them. Passes there are tried by "buying" them.
 	for _, pass in S.passes do
-		if pass.id <= 0 then continue end
+		if pass.id <= 0 or practice(player) then continue end
 		task.spawn(function()
 			for attempt = 1, 3 do
 				if player.Parent ~= Players then return end
@@ -106,7 +109,7 @@ end
 -- Limited stock is counted across every server in one DataStore entry per item. An unpublished Studio
 -- test counts in memory instead.
 local function limitedStore()
-	return DSS:GetDataStore("EndlessMining_v1_Limited", if Run:IsStudio() then "studio" else "live")
+	return DSS:GetDataStore(Config.StoreName .. "_Limited", if Run:IsStudio() then "studio" else "live")
 end
 local function unpublished()
 	return Run:IsStudio() and game.GameId == 0
@@ -180,6 +183,7 @@ local function deliver(player, session, product, context)
 	elseif product.group == "Gold" then
 		local gold = Earnings.minutes(p, product.minutes)
 		p.gold += gold
+		Analytics.gold(player, p, "Source", gold, "IAP", product.key)
 		context.feedback(player, "goldPack", gold, product.name)
 	elseif product.key == "ResetSkills" then
 		p.skills = {}
@@ -215,6 +219,7 @@ function Store.receipt(info, sessions, context, save)
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		deliver(player, session, product, context)
+		Analytics.shopStep(player, 3, product.key)
 		if context.feedback then context.feedback(player, "purchase", product.name, "product", product.key) end
 		done[info.PurchaseId] = true
 		table.insert(p.store.order, info.PurchaseId)
@@ -228,8 +233,9 @@ function Store.receipt(info, sessions, context, save)
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
--- A client asks to buy a pass or product. An item without an ID is given for free in an unpublished
--- Studio test, and anywhere while GameConfig.FreeUnconfiguredItems is on (playtesting).
+-- A client asks to buy a pass or product. In an unpublished Studio test (where Roblox's checkout can't
+-- run) everything is given free; so is an item without an ID while GameConfig.FreeUnconfiguredItems is
+-- on. Everywhere else an item with an ID goes through Roblox's checkout.
 function Store.prompt(player, session, kind, key, context)
 	local item = if kind == "pass" then S.passByKey[key] else S.productByKey[key]
 	if not item then return end
@@ -254,7 +260,7 @@ function Store.prompt(player, session, kind, key, context)
 		context.feedback(player, "hint", item.name .. " has sold out")
 		return
 	end
-	if item.id > 0 then
+	if item.id > 0 and not practice(player) then
 		local sent = pcall(if kind == "pass" then Market.PromptGamePassPurchase else Market.PromptProductPurchase, Market, player, item.id)
 		if not sent then context.feedback(player, "hint", "Checkout is unavailable") end
 	elseif practice(player) or Config.FreeUnconfiguredItems then
@@ -263,6 +269,7 @@ function Store.prompt(player, session, kind, key, context)
 		else
 			deliver(player, session, item, context)
 		end
+		Analytics.shopStep(player, 3, key)
 		context.feedback(player, "purchase", item.name, kind, key)
 	else
 		context.feedback(player, "hint", item.name .. " isn't on sale yet")
@@ -296,6 +303,7 @@ function Store.start(context)
 		for _, pass in S.passes do
 			if pass.id > 0 and pass.id == id then
 				own(player, pass.key)
+				Analytics.shopStep(player, 3, pass.key)
 				context.feedback(player, "purchase", pass.name, "pass", pass.key)
 			end
 		end

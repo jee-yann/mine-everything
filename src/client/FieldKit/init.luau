@@ -45,6 +45,7 @@ local tiles = {
 	Clover = Vector2.new(1, 8),
 	Assay = Vector2.new(2, 8),
 	Showoff = Vector2.new(3, 8),
+	Compass = Vector2.new(0, 9),
 }
 tiles.Pack, tiles.Capacity, tiles.Titles = tiles.Inventory, tiles.Inventory, tiles.Achievements
 tiles.Gear, tiles.Crew = tiles.Power, tiles.Friends

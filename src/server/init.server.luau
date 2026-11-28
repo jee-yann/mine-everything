@@ -30,6 +30,7 @@ if not game:GetService("RunService"):IsStudio() then
 end
 local Preferences = require(Rep.Shared.Preferences)
 local Store, Collection, Cosmetics = require(script.Store), require(script.Collection), require(script.Cosmetics)
+local Analytics = require(script.Analytics)
 local Bonuses, C = require(Rep.Shared.Bonuses), require(Rep.Shared.Collectibles)
 local Geodes, StoreConfig = require(Rep.Shared.Geodes), require(Rep.Shared.StoreConfig)
 local equipKit = require(script.ProspectorKit)
@@ -158,6 +159,7 @@ local function sync(player, p, awardName)
 	put(player, "Mined", p.mined)
 	put(player, "ExpeditionStep", Profile.expeditionStep(p))
 	put(player, "MiningXP", p.xp)
+	Analytics.progress(player, p, Profile.facts(p))
 	put(player, "Jobs", p.jobs)
 	put(player, "ClaimedJobs", p.claimedJobs)
 	for _, award in Guide.achievements do
@@ -352,6 +354,7 @@ local function leave(player)
 	end
 	sessions[player], closing[player], nextAction[player] = nil, true, nil
 	Store.leave(player)
+	Analytics.leave(player)
 	Data.save(player, session, true)
 	closing[player] = nil
 end
@@ -375,6 +378,7 @@ local function sellAll(player)
 	local p = s.profile
 	local gold, award, quantity = Profile.sell(p, Bonuses.gold(bonusState(player, p)))
 	if gold and quantity > 0 then
+		Analytics.gold(player, p, "Source", gold, "Gameplay", "Ore sale")
 		sync(player, p, award)
 		net.Feedback:FireClient(player, "sale", gold, quantity, p.gold, nil, "anywhere")
 	end
@@ -400,6 +404,7 @@ local function openCrate(player, geodeId)
 		return false
 	end
 	local award = Profile.unlock(p, "FirstCrate")
+	Analytics.milestone(player, p, "Opened a crate")
 	sync(player, p, award)
 	net.Feedback:FireClient(player, "geode", geodeId or "Starfall", reward.kind, reward.id, reward.count or 1, result)
 	local entry = Geodes.entry(reward)
@@ -548,6 +553,10 @@ local function action(player, key, option, value)
 	if s.resetting then
 		return
 	end
+	if key == "ShopOpened" then
+		Analytics.shopOpened(player)
+		return
+	end
 	if key == "IntroSeen" then
 		s.profile.introSeen = true
 		player:SetAttribute("IntroSeen", true)
@@ -676,6 +685,7 @@ local function action(player, key, option, value)
 		net.Feedback:FireClient(player, "itemUsed", option)
 	elseif (key == "BuyPass" or key == "BuyProduct") and type(option) == "string" then
 		times[actionKey] = now + 1
+		Analytics.shopStep(player, 2, option)
 		Store.prompt(player, s, if key == "BuyPass" then "pass" else "product", option, storeContext)
 	elseif key == "FlingTarget" and type(option) == "number" then
 		flingTargets[player] = { id = option, at = os.clock() }
@@ -767,23 +777,28 @@ local function action(player, key, option, value)
 		if gold == nil then
 			return
 		end
+		if quantity > 0 then Analytics.gold(player, p, "Source", gold, "Gameplay", "Ore sale") end
 		if quantity > 0 then
 			sync(player, p, award)
 		end
 		net.Feedback:FireClient(player, "sale", gold, quantity, p.gold, option)
 	elseif key == "Buy" and type(option) == "string" and Upgrades.items[option] then
+		local price = Upgrades.price(option, p.levels[option])
 		local ok, msg, award = Profile.buy(p, option)
+		if ok and price then Analytics.gold(player, p, "Sink", price, "Shop", option .. " " .. p.levels[option]) end
 		sync(player, p, award)
 		net.Feedback:FireClient(player, if ok then "upgrade" else "hint", msg, option, p.levels[option])
 	elseif key == "Job" then
 		local job, award = Profile.claimJob(p, option)
 		if job then
+			Analytics.gold(player, p, "Source", job.reward, "Gameplay", "Job")
 			sync(player, p, award)
 			net.Feedback:FireClient(player, "job", job.title, job.reward)
 		end
 	elseif key == "JobAll" then
 		local count, gold, award = Profile.claimJobs(p)
 		if count > 0 then
+			Analytics.gold(player, p, "Source", gold, "Gameplay", "Job")
 			sync(player, p, award)
 			net.Feedback:FireClient(player, "job", count .. (if count == 1 then " job" else " jobs"), gold)
 		end

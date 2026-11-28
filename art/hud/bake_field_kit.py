@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image
 import zstandard
 
-SOURCE_COLUMNS, SOURCE_ROWS, SOURCE_TILE = 4, 9, 256
+SOURCE_COLUMNS, SOURCE_ROWS, SOURCE_TILE = 4, 10, 256
 BUNDLED_COLUMNS, BUNDLED_TILE = 8, 128
 
 
@@ -23,7 +23,7 @@ def main():
         raise ValueError(f"bundled atlas {size} exceeds the 1024px EditableImage limit")
     with Image.open(folder / "FieldKit.png") as atlas:
         if atlas.size != (SOURCE_COLUMNS * SOURCE_TILE, SOURCE_ROWS * SOURCE_TILE):
-            raise ValueError("FieldKit.png must be a 1024 by 2304 atlas with 256px tiles")
+            raise ValueError("FieldKit.png must be a 1024 by 2560 atlas with 256px tiles")
         atlas = atlas.convert("RGBA")
         bundled = Image.new("RGBA", size, (0, 0, 0, 0))
         for index in range(tiles):

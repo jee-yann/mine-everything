@@ -11,6 +11,7 @@ local tiles = {
 	Hook = Vector2.new(0, 6), Tempo = Vector2.new(1, 6), Lamp = Vector2.new(2, 6), Beacon = Vector2.new(3, 6),
 	Boot = Vector2.new(0, 7), Spring = Vector2.new(1, 7), Jobs = Vector2.new(2, 7), Coins = Vector2.new(3, 7),
 	Flame = Vector2.new(0, 8), Clover = Vector2.new(1, 8), Assay = Vector2.new(2, 8), Showoff = Vector2.new(3, 8),
+	Compass = Vector2.new(0, 9),
 }
 local imageId = source:GetAttribute("ImageId")
 if imageId then
@@ -70,7 +71,7 @@ probe.Source = instrumented
 local renderer = require(probe)
 local container = Instance.new("Frame")
 for _, key in { "Inventory", "Skills", "Achievements", "Book", "Settings", "Daily", "Playtime", "Rebirth", "Power", "Speed", "Profile", "Friends", "Pack", "Capacity", "Titles", "Gear", "Crew",
-	"Hook", "Tempo", "Lamp", "Beacon", "Boot", "Spring", "Jobs", "Coins", "Flame", "Clover", "Assay", "Showoff", "Crystal" } do
+	"Hook", "Tempo", "Lamp", "Beacon", "Boot", "Spring", "Jobs", "Coins", "Flame", "Clover", "Assay", "Showoff", "Compass", "Crystal" } do
 	assert(renderer.draw(container, key))
 	local icon = container["Field Kit"]
 	assert(icon:IsA("Frame") and #icon:GetChildren() > 25 and icon:FindFirstChildWhichIsA("UIGradient", true), key)
@@ -89,4 +90,4 @@ assert(probe:GetAttribute("Allocated") and probe:GetAttribute("Released"))
 assert(not renderer.draw(container, "No such icon"))
 container:Destroy()
 probe:Destroy()
-print("PASS bundled 1024x640 Field Kit atlas loads, published write denial, all thirty-six icons and six aliases")
+print("PASS bundled 1024x640 Field Kit atlas loads, published write denial, all thirty-seven icons and six aliases")
