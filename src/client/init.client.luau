@@ -279,7 +279,7 @@ require(script.ShopSign)(hud)
 hud.reveal = reveal
 local Collectibles = require(shared.Collectibles)
 local function chime(pitch) fx:chime(pitch) end
-net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, normal)
+net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, normal, earned)
 	-- A refusal right after asking to buy ends the checkout's waiting screen.
 	if kind == "hint" then hud.checkout:refused() end
 	if kind == "achievement" or kind == "titleUnlocked" or kind == "levelUp" then
@@ -305,9 +305,9 @@ net.Feedback.OnClientEvent:Connect(function(kind, a, point, spread, finds, norma
 			end
 		end
 		Audio.ore(a)
-		-- The XP attribute can land just after the loot.
+		-- The XP attribute can land just after the loot. The server says what this block earned.
 		task.delay(0.06, function()
-			hud:showXP(point)
+			hud:showXP(point, earned)
 		end)
 		if owned.LightTrail and not best.host then
 			fx:oreLight(point, owned.Constellation)

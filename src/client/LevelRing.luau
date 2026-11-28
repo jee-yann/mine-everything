@@ -27,6 +27,11 @@ function LevelRing.new(parent, openSkills)
 end
 
 function LevelRing:update(xp, showGain)
+	-- The save arriving on join (0 to your total) is loading, not XP earned: only rises after the
+	-- profile was already ready count. After a drop (a reset, a reload), the next rise is the ring
+	-- catching up too.
+	local wasReady = self.ready
+	self.ready = showGain
 	if self.xp == xp then
 		return
 	end
@@ -39,6 +44,15 @@ function LevelRing:update(xp, showGain)
 		tick.BackgroundColor3 = W.line:Lerp(W.aqua, math.clamp(filled - i + 1, 0, 1))
 	end
 	self.caption.Text, self.value.Text = "LV", tostring(level)
+	if not wasReady then
+		showGain = false
+		self.gained = 0
+	end
+	if previous and xp < previous then self.dipped = true end
+	if previous and xp > previous and self.dipped then
+		self.dipped = false
+		showGain = false
+	end
 	if previous and xp > previous and showGain then
 		self.gained = (self.gained or 0) + xp - previous
 		self.caption.Text = "XP"

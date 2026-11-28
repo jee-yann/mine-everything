@@ -818,16 +818,19 @@ function Hud.new(player, net, mobile)
 		self.blockedScale.Scale = if edge then math.min(1, width / 560) else s
 		self.speechBase = self.blockedScale.Scale
 		-- A notice with several lines (a boost group's sources) makes the box taller, upward.
-		self.speechHeight, self.detailHeight, self.noticeLine = if edge then 46 else 62, if edge then 19 else 24, if edge then 17 else 21
+		-- Phones read a size smaller than desktop (tablets scale it up with the layer, see hudScale).
+		self.speechHeight, self.detailHeight, self.noticeLine = if edge then 40 else 62, if edge then 17 else 24, if edge then 15 else 21
 		local extra = self.noticeExtra or 0
 		speech.Size = UDim2.fromOffset(speechWidth, self.speechHeight + extra)
-		self.message.Size = UDim2.fromOffset(speechWidth - 10, if edge then 25 else 34)
-		self.detail.Position = UDim2.fromOffset(5, if edge then 25 else 35)
+		self.message.Size = UDim2.fromOffset(speechWidth - 10, if edge then 21 else 34)
+		self.detail.Position = UDim2.fromOffset(5, if edge then 22 else 35)
 		self.detail.Size = UDim2.fromOffset(speechWidth - 10, self.detailHeight + extra)
 		meter.Size = UDim2.new(1, -20, 0, 7)
 		self.meterHeadroom = -meter.Position.Y.Offset * speechScale.Scale
 		local footer = if touchLayout and width < height then 136 else margin
-		local speechBottom = if edge then footer else margin + 24
+		-- Clear of the bottom of the screen the device keeps for itself (the iPhone's home indicator).
+		local homeBar = math.max(0, height - device.Max.Y)
+		local speechBottom = if edge then footer + homeBar + (if touchLayout then 6 else 0) else margin + 24
 		local speechSize = Vector2.new(speechWidth, speech.Size.Y.Offset)
 		W.anchor(
 			speech,
@@ -1118,8 +1121,9 @@ function Hud:pickup(ore, amount, point)
 	end)
 end
 -- XP gained since the last look, thrown from `point`.
-function Hud:showXP(point)
-	local amount = self.levelRing.gained or 0
+-- `earned` is what the server says this block gave; without it, what the ring saw arrive.
+function Hud:showXP(point, earned)
+	local amount = if type(earned) == "number" then earned else self.levelRing.gained or 0
 	self.levelRing.gained = 0
 	XpOrbs.show(self, amount, point)
 end

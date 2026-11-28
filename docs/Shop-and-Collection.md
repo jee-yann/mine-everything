@@ -74,8 +74,8 @@ Dashboard are in [Store-listings.md](Store-listings.md).
   **Get gold ▸** and opens them too.
 - **Profile**: the Friends tab carries a "+25% XP" badge, the real bonus for mining with a friend in
   the server.
-- **Bottom right corner**: at most five icons, one per kind of boost: Mining speed, Movement speed,
-  Backpack, Gold and Luck. A group shows only while something feeds it, with a count when several
+- **Bottom right corner**: at most six icons, one per kind of boost: Mining speed, Movement speed,
+  Backpack, Gold, Luck and XP (VIP, rebirths, mining with a friend and the XP skills). A group shows only while something feeds it, with a count when several
   do and its combined total under it on desktop (×2.4 gold, +30% mining). A running timed boost
   turns its rim green. Tap one and the message at the bottom middle lists every source for a few
   seconds: passes, timed boosts with the time left, Server Luck and who bought it, the worn Player

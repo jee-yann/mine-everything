@@ -1,5 +1,5 @@
 -- Boosts and bonuses, grouped by what they do: one icon each for Mining speed, Movement speed,
--- Backpack, Gold and Luck, shown only while something feeds that group, with the combined total under
+-- Backpack, Gold, Luck and XP, shown only while something feeds that group, with the combined total under
 -- it. A tap lists every source in the message at the bottom middle, which fades after a few seconds:
 -- passes, timed boosts (with the time left), Server Luck (and who bought it), the worn effects,
 -- rebirths and skills. Desktop keeps them in the bottom right
@@ -8,6 +8,7 @@
 local Rep = game:GetService("ReplicatedStorage")
 local C, Bonuses = require(Rep.Shared.Collectibles), require(Rep.Shared.Bonuses)
 local Rebirth, Skills = require(Rep.Shared.Rebirth), require(Rep.Shared.Skills)
+local FriendBonus = require(Rep.Shared.FriendBonus)
 local W, Icons = require(script.Parent.Widgets), require(script.Parent.Icons)
 local rgb = Color3.fromRGB
 
@@ -17,6 +18,7 @@ local groups = {
 	{ id = "pack", icon = "Pack", tint = rgb(140, 230, 255), title = "Backpack" },
 	{ id = "gold", icon = "Coins", tint = rgb(255, 214, 90), title = "Gold" },
 	{ id = "luck", icon = "Crystal", tint = rgb(140, 255, 200), title = "Luck" },
+	{ id = "xp", icon = "Skills", tint = rgb(150, 255, 110), title = "XP" },
 }
 -- Timed boosts (Collectibles.boosts keys, and Server Luck) by group.
 local timedGroup = {
@@ -31,6 +33,7 @@ local passes = {
 	{ "BiggerPack", "pack", "Bigger Pack pass: +50% backpack space" },
 	{ "DoubleGold", "gold", "Double Gold pass: 2× gold on every sale" },
 	{ "VIP", "gold", "VIP pass: +20% gold" },
+	{ "VIP", "xp", "VIP pass: +20% XP" },
 	{ "Lucky", "luck", "2× Lucky pass: rare ore turns up twice as often" },
 	{ "StarfallCompass", "luck", "Starfall Compass: finds nearby Starfall" },
 }
@@ -42,6 +45,8 @@ local skillGroup = {
 	pack = "pack", slots = "pack",
 	gold = "gold", crowdGold = "gold",
 	luck = "luck", rare = "luck",
+	xpPercent = "xp", crowdXP = "xp", oreXP = "xp", freshXP = "xp", deepXP = "xp", craterXP = "xp",
+	pureXP = "xp", gemXP = "xp",
 }
 local specialSkills = { PackMule = "move", Rockhound = "move", RebornTrader = "gold" }
 
@@ -102,7 +107,7 @@ return function(hud)
 		while row.Parent do
 			local state = Bonuses.state(player)
 			local owned = state.skills or {}
-			local lines = { mining = {}, move = {}, pack = {}, gold = {}, luck = {} }
+			local lines = { mining = {}, move = {}, pack = {}, gold = {}, luck = {}, xp = {} }
 			local timed = {}
 			local function add(group, text)
 				table.insert(lines[group], text)
@@ -137,9 +142,14 @@ return function(hud)
 				add("gold", string.format("Rebirth %d: ×%d gold", reborn, Rebirth.goldMultiplier(reborn)))
 				local faster = math.round((1 - cut) * 100)
 				if faster > 0 then add("mining", string.format("Rebirth %d: cuts %d%% faster", reborn, faster)) end
+				local moreXP = math.round((Rebirth.xpMultiplier(reborn) - 1) * 100)
+				if moreXP > 0 then add("xp", string.format("Rebirth %d: +%d%% XP", reborn, moreXP)) end
 			end
+			-- Mining with a friend in the server.
+			local friends = player:GetAttribute("FriendsHere") or 0
+			if friends > 0 then add("xp", "Mining with a friend: " .. FriendBonus.text) end
 			-- Skills, by name.
-			local skillNames = { mining = {}, move = {}, pack = {}, gold = {}, luck = {} }
+			local skillNames = { mining = {}, move = {}, pack = {}, gold = {}, luck = {}, xp = {} }
 			for _, node in Skills.nodes do
 				if owned[node.id] then
 					local group = specialSkills[node.id] or (node.effect and skillGroup[node.effect])
@@ -153,6 +163,8 @@ return function(hud)
 			local totals = {}
 			totals.gold = times(Bonuses.gold(state))
 			totals.luck = times(Bonuses.luck(state))
+			local xp = FriendBonus.multiplier(friends) * Bonuses.xp(state) * Rebirth.xpMultiplier(reborn)
+			totals.xp = if xp > 1.005 then times(xp) else ""
 			local mining = (1 + Bonuses.speed(state)) / math.max(cut, 0.01) - 1
 			totals.mining = if Bonuses.instant(state) then "MAX" elseif mining > 0.005 then "+" .. math.round(mining * 100) .. "%" else ""
 			local walk = (16 + Skills.bonus(owned, "walk")) / 16 * (1 + worn / 100) - 1

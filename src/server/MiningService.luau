@@ -261,7 +261,7 @@ function Mining.start(world, net, sessions, sync, hooks)
 		end
 		if streak ~= (player:GetAttribute("OreStreak") or 0) then player:SetAttribute("OreStreak", streak) end
 		local discovery = not ore.host and not profile.discoveries[name]
-		local oldLevel = Expeditions.level(profile.xp)
+		local oldLevel, xpBefore = Expeditions.level(profile.xp), profile.xp
 		local awards, purity, units, record = Profile.recordCut(profile, name, depthBlocks, nil,
 			FriendBonus.multiplier(player:GetAttribute("FriendsHere")) * Bonuses.xp(bonus))
 		local freeGeodes = Mining.progressGeodes(profile.col, oldLevel, Expeditions.level(profile.xp), name)
@@ -285,7 +285,8 @@ function Mining.start(world, net, sessions, sync, hooks)
 				net.Feedback:FireClient(player, "titleUnlocked", rank.name)
 			end
 		end
-		net.Feedback:FireClient(player, "loot", loot, center, spread, finds, request.normal)
+		-- The XP this block earned, so the "+XP" shown is exactly this cut's.
+		net.Feedback:FireClient(player, "loot", loot, center, spread, finds, request.normal, profile.xp - xpBefore)
 		if purity then net.Feedback:FireClient(player, "assay", name, purity, units, record) end
 		if discovery then
 			net.Feedback:FireClient(player, "milestone", "ORE DISCOVERED", ore.name, ore.color)
