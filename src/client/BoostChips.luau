@@ -197,7 +197,8 @@ return function(hud)
 			end
 			local size = hud:layerSize()
 			if touch then
-				rowScale.Scale = 1
+				-- Sized by the HUD so the row fits beside the centred status line.
+				rowScale.Scale = (hud.bonusPitch or 45) / 45
 				local corner = hud.bonusCorner or Vector2.new(size.X - 2, size.Y - 2)
 				W.anchor(row, 1, 1, UDim2.fromOffset(corner.X, corner.Y))
 			else

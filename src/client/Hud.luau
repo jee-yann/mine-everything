@@ -754,12 +754,19 @@ function Hud.new(player, net, mobile)
 		local validJump = jump and jump:IsA("ImageButton") and jump.Visible and jump.AbsoluteSize.Y > 0
 		-- Touch screens: the boost groups (BoostChips) sit in the very bottom right corner of the screen.
 		-- Roblox's jump button, and the Mine button beside it, move up just enough to clear them.
+		-- The status line in the bottom middle stays centred on touch screens; the row shrinks (down to a
+		-- size that's still easy to tap) so it fits to the right of it.
+		local speechWidth = if edge then math.clamp(width - 175, 144, if touchLayout then 260 else 290) else 460
 		self.bonusCorner = nil
+		self.bonusPitch = 45
 		local bonusCount = self.bonusCount or 0
 		local rowRect
 		if railsOnEdge and bonusCount > 0 then
-			local rowW, rowH = bonusCount * 45, 38
 			local right, bottom = math.max(width, device.Max.X) - 3, math.max(height, device.Max.Y) - 2
+			local room = right - (width / 2 + speechWidth / 2 + 6)
+			local pitch = math.clamp(math.floor(room / bonusCount), 32, 45)
+			self.bonusPitch = pitch
+			local rowW, rowH = bonusCount * pitch, 38 * pitch / 45
 			self.bonusCorner = Vector2.new(right, bottom)
 			rowRect = Rect.new(Vector2.new(right - rowW, bottom - rowH), Vector2.new(right, bottom))
 		end
@@ -812,8 +819,18 @@ function Hud.new(player, net, mobile)
 				jump.Position = wanted
 			end
 		end
+		if touchLayout then
+			-- Centred, the status line is only as wide as the space between the middle of the screen and
+			-- the nearest button on the right at its height (the Mine button on a small phone).
+			local half = speechWidth / 2
+			for _, box in touchBounds do
+				if box ~= rowRect and box.Min.X > width / 2 and box.Max.Y > height - 90 then
+					half = math.min(half, box.Min.X - 8 - width / 2)
+				end
+			end
+			speechWidth = math.max(144, math.floor(half * 2))
+		end
 		if #touchBounds == 0 then touchBounds = nil end
-		local speechWidth = if edge then math.clamp(width - 175, 144, 290) else 460
 		speechScale.Scale = s
 		self.blockedScale.Scale = if edge then math.min(1, width / 560) else s
 		self.speechBase = self.blockedScale.Scale
@@ -836,7 +853,7 @@ function Hud.new(player, net, mobile)
 			speech,
 			0.5,
 			1,
-			TouchActions.feedbackPosition(Vector2.new(width, height), speechSize, speechBottom, touchBounds)
+			TouchActions.feedbackPosition(Vector2.new(width, height), speechSize, speechBottom, touchBounds, touchLayout)
 		)
 		self.speechHome = speech.Position
 	end

@@ -110,7 +110,9 @@ function TouchActions:layout(root, jump, visible, toolsBottom, scale)
 	return bounds
 end
 
-function TouchActions.feedbackPosition(screen, size, footer, bounds)
+-- `centred`: touch screens keep the status line in the middle, moving it up (never sideways) if a
+-- button is in the way.
+function TouchActions.feedbackPosition(screen, size, footer, bounds, centred)
 	local x, y = screen.X / 2, screen.Y - footer
 	if bounds then
 		local left = screen.X
@@ -119,7 +121,7 @@ function TouchActions.feedbackPosition(screen, size, footer, bounds)
 				left = math.min(left, box.Min.X - 8)
 			end
 		end
-		if screen.X >= screen.Y and left - size.X >= 100 then
+		if not centred and screen.X >= screen.Y and left - size.X >= 100 then
 			x = math.min(x, left - size.X / 2)
 		else
 			for _, box in bounds do
