@@ -1161,8 +1161,10 @@ function Hud:aimAt(screen, valid, blocked)
 	self.aimScreen = screen
 	if self.speechHome then
 		-- The status line goes wherever the miner is aiming, whatever it says: a notice (a tapped boost
-		-- group, for one) replaces the text in place instead of jumping to the bottom and back.
-		if screen and (valid or blocked) then
+		-- group, for one) replaces the text in place instead of jumping to the bottom and back. When the
+		-- big red reason is at the pointer (Backpack full!, a block the pick can't cut yet), the line waits
+		-- at the bottom so the two never overlap.
+		if screen and (valid or blocked) and not self.blocked.Visible then
 			local k = self.hudScale
 			local at = self:toLayer(screen)
 			local bounds, size = self:layerSize(), self.speech.AbsoluteSize / k
