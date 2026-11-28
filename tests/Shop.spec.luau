@@ -315,9 +315,9 @@ do
 	-- Skill reset.
 	p.skills.Reach = true
 	assert(buy("ResetSkills", "r1") == Enum.ProductPurchaseDecision.PurchaseGranted and not next(p.skills) and reset == 1)
-	-- Starter Pack: two crates, 2× gold and a Haste Tonic, once.
+	-- Starter Pack: three crates, 2× gold and a Haste Tonic, once.
 	assert(buy("StarterPack", "s1") == Enum.ProductPurchaseDecision.PurchaseGranted)
-	assert(p.store.starter and p.col.items.StarfallGeode == 5 and p.col.boosts.gold2 and p.col.items.HasteTonic == 1)
+	assert(p.store.starter and p.col.items.StarfallGeode == 6 and p.col.boosts.gold2 and p.col.items.HasteTonic == 1)
 	-- The limited aura: given once, counted toward the 100, worn, and refused once sold out.
 	assert(S.productByKey.FounderHalo.limited == 100)
 	p.col.cos.Mint, p.col.ribbon = true, "Mint"

@@ -47,8 +47,8 @@ table.insert(S.passes, 1, {
 S.products = {
 	-- Featured
 	{
-		key = "StarterPack", id = 3737049511, price = 49, was = 128, name = "Starter Pack", group = "Featured", once = true, random = true,
-		detail = "2 Starfall Crates, 30 min of 2× Gold and a Haste Tonic", crates = 2, icon = "Shop",
+		key = "StarterPack", id = 3737049511, price = 49, was = 153, name = "Starter Pack", group = "Featured", once = true, random = true,
+		detail = "3 Starfall Crates, 30 min of 2× Gold and a Haste Tonic", crates = 3, icon = "Shop",
 	},
 	{
 		key = "FounderHalo", id = 3737049635, price = 249, name = "Founder's Halo", group = "Featured", once = true, limited = 100,
@@ -61,7 +61,7 @@ S.products = {
 	-- Boosts
 	{ key = "Gold2x15", id = 3737050001, price = 39, name = "2× Gold · 15 min", detail = "Doubles sale value for 15 minutes", boost = "gold2", minutes = 15, group = "Boosts", icon = "Coins" },
 	{ key = "Gold2x60", id = 3737050127, price = 99, was = 156, name = "2× Gold · 1 hour", detail = "Doubles sale value for an hour", boost = "gold2", minutes = 60, group = "Boosts", icon = "Coins", tag = "BEST VALUE" },
-	{ key = "ServerLuck", id = 0, price = 79, name = "2× Server Luck · 15 min", detail = "Doubles everyone's chance of rare ore, with your name on it", minutes = 15, group = "Boosts", luck = true, icon = "Friends", tag = "FOR EVERYONE" },
+	{ key = "ServerLuck", id = 3737166996, price = 79, name = "2× Server Luck · 15 min", detail = "Doubles everyone's chance of rare ore, with your name on it", minutes = 15, group = "Boosts", luck = true, icon = "Friends", tag = "FOR EVERYONE" },
 	{ key = "Instamine10", id = 3737050282, price = 99, name = "Instamine · 10 min", detail = "Every block you can mine breaks in one hit for 10 minutes", boost = "instamine", minutes = 10, group = "Boosts", icon = "Power", tag = "POPULAR" },
 	{ key = "AutoSell30", id = 3737050357, price = 59, name = "Auto Sell · 30 min", detail = "Your pack sells itself the moment it fills, for 30 minutes", boost = "autosell", minutes = 30, group = "Boosts", icon = "Coins", tag = "POPULAR" },
 	-- The classic troll: walk up to another miner and press E (or tap the prompt) to send them flying.

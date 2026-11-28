@@ -1,231 +1,207 @@
--- The bottom right corner: chips for every boost that is running (tonics, timed gold and luck,
--- Instamine, Auto Sell and Server Luck with the name of whoever bought it), each counting down, and
--- under them a row of circles for the bonuses that last (passes, and the movement speed of the effect
--- you're wearing). Tap a chip for the Shop's boosts, a circle for what it does. On a phone they sit
--- higher, clear of the touch buttons.
+-- Boosts and bonuses, grouped by what they do: one icon each for Mining speed, Movement speed,
+-- Backpack, Gold and Luck, shown only while something feeds that group, with the combined total under
+-- it. A tap lists every source in the message at the bottom middle, which fades after a few seconds:
+-- passes, timed boosts (with the time left), Server Luck (and who bought it), the worn effects,
+-- rebirths and skills. Desktop keeps them in the bottom right
+-- corner, clear of the reward buttons; touch screens put them in the very bottom right corner, beside
+-- the jump and Mine buttons (Hud.bonusCorner).
 local Rep = game:GetService("ReplicatedStorage")
 local C, Bonuses = require(Rep.Shared.Collectibles), require(Rep.Shared.Bonuses)
-local Rebirth = require(Rep.Shared.Rebirth)
+local Rebirth, Skills = require(Rep.Shared.Rebirth), require(Rep.Shared.Skills)
 local W, Icons = require(script.Parent.Widgets), require(script.Parent.Icons)
 local rgb = Color3.fromRGB
-local looks = {
-	goldTonic = { "Coins", rgb(255, 214, 90) },
-	gold2 = { "Coins", rgb(255, 214, 90) },
-	speedTonic = { "Speed", rgb(150, 230, 255) },
-	luck2 = { "Boosts", rgb(150, 255, 140) },
-	instamine = { "Power", rgb(255, 170, 120) },
-	autosell = { "Coins", rgb(140, 230, 255) },
-	server = { "Friends", rgb(190, 255, 150) },
-}
--- On a phone every boost and bonus is grouped by what it does, one small icon per group in a row on the
--- right wall (a bundle owner can have eight going at once). A tap lists that group's bonuses.
+
 local groups = {
-	{ id = "gold", icon = "Coins", tint = rgb(255, 214, 90), title = "Gold bonuses" },
 	{ id = "mining", icon = "Power", tint = rgb(255, 180, 90), title = "Mining speed" },
-	{ id = "luck", icon = "Crystal", tint = rgb(140, 255, 200), title = "Luck" },
 	{ id = "move", icon = "Speed", tint = rgb(150, 255, 120), title = "Movement speed" },
-	{ id = "pack", icon = "Pack", tint = rgb(140, 230, 255), title = "Pack" },
+	{ id = "pack", icon = "Pack", tint = rgb(140, 230, 255), title = "Backpack" },
+	{ id = "gold", icon = "Coins", tint = rgb(255, 214, 90), title = "Gold" },
+	{ id = "luck", icon = "Crystal", tint = rgb(140, 255, 200), title = "Luck" },
 }
-local function groupOf(key)
-	if key == "goldTonic" or key == "gold2" or key == "DoubleGold" or key == "VIP" or key:match("^Rebirth") then return "gold" end
-	if key == "speedTonic" or key == "instamine" or key == "FastPick" or key:match("^Mine") then return "mining" end
-	if key == "luck2" or key == "server" or key == "Lucky" or key == "StarfallCompass" then return "luck" end
-	if key:match("^Speed") then return "move" end
-	return "pack"
+-- Timed boosts (Collectibles.boosts keys, and Server Luck) by group.
+local timedGroup = {
+	speedTonic = "mining", instamine = "mining",
+	goldTonic = "gold", gold2 = "gold",
+	luck2 = "luck", server = "luck",
+	autosell = "pack",
+}
+-- Passes that last: their group and what they add.
+local passes = {
+	{ "FastPick", "mining", "Fast Pick pass: +30% mining speed" },
+	{ "BiggerPack", "pack", "Bigger Pack pass: +50% backpack space" },
+	{ "DoubleGold", "gold", "Double Gold pass: 2× gold on every sale" },
+	{ "VIP", "gold", "VIP pass: +20% gold" },
+	{ "Lucky", "luck", "2× Lucky pass: rare ore turns up twice as often" },
+	{ "StarfallCompass", "luck", "Starfall Compass: finds nearby Starfall" },
+}
+-- Skill effects (Skills.luau) by group, plus the few skills with a special rule.
+local skillGroup = {
+	cut = "mining", stone = "mining", deep = "mining", crater = "mining", crowdCut = "mining",
+	streakStep = "mining", streakCap = "mining",
+	walk = "move",
+	pack = "pack", slots = "pack",
+	gold = "gold", crowdGold = "gold",
+	luck = "luck", rare = "luck",
+}
+local specialSkills = { PackMule = "move", Rockhound = "move", RebornTrader = "gold" }
+
+local function times(x)
+	local rounded = math.floor(x * 10 + 0.5) / 10
+	return "×" .. (if rounded == math.floor(rounded) then string.format("%d", rounded) else string.format("%.1f", rounded))
 end
--- Lasting bonuses, as circles: the pass (or the worn effect), its icon, a short label and what it does.
-local circles = {
-	{ "DoubleGold", "Coins", "2×", "Double Gold: 2× gold on every sale" },
-	{ "VIP", "Achievements", "VIP", "VIP: +20% gold, +20% XP and a free Starfall Crate every day" },
-	{ "Lucky", "Crystal", "2×", "2× Lucky: rare ore turns up twice as often" },
-	{ "FastPick", "Speed", "+30%", "Fast Pick: +30% mining speed" },
-	{ "BiggerPack", "Pack", "+50%", "Bigger Pack: +50% backpack capacity" },
-	{ "StarfallCompass", "Compass", "★", "Starfall Compass: every 3 minutes underground, points to any Starfall within 2 blocks" },
-}
 
 return function(hud)
 	local player = hud.player
-	local holder = W.frame(hud.root, "Boosts", 0, 0, 320, 200, W.ink)
-	holder.BackgroundTransparency = 1
-	local fit = W.scale(holder)
-	-- The phone row: one icon per group, right-aligned against the right wall.
-	local phoneRow = W.frame(hud.root, "Bonus groups", 0, 0, 220, 34, W.ink)
-	phoneRow.BackgroundTransparency, phoneRow.Visible = 1, false
+	local row = W.frame(hud.hudFrame, "Bonus groups", 0, 0, 240, 40, W.ink)
+	row.BackgroundTransparency, row.Visible = 1, false
 	local rowLayout = Instance.new("UIListLayout")
 	rowLayout.FillDirection, rowLayout.HorizontalAlignment = Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Right
-	rowLayout.Padding, rowLayout.SortOrder = UDim.new(0, 4), Enum.SortOrder.LayoutOrder
-	rowLayout.Parent = phoneRow
-	local groupButtons = {}
+	rowLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+	rowLayout.Padding, rowLayout.SortOrder = UDim.new(0, 5), Enum.SortOrder.LayoutOrder
+	rowLayout.Parent = row
+
+	local entries = {}
+	local function tell(entry)
+		local group = entry.group
+		local lines = table.clone(entry.lines)
+		-- Five lines at most; the rest are summed up.
+		if #lines > 5 then
+			local more = #lines - 4
+			lines = { lines[1], lines[2], lines[3], lines[4], "and " .. more .. " more" }
+		end
+		hud:notice(group.title .. (if entry.total.Text ~= "" then "  " .. entry.total.Text else ""), table.concat(lines, "\n"), group.tint, 4)
+	end
 	for i, group in groups do
-		local b = W.clearButton(phoneRow, group.title, 0, 0, 34, 34, "Select")
+		local b = W.clearButton(row, group.title, 0, 0, 40, 40, "Select")
 		b.LayoutOrder, b.Visible = i, false
-		local disc = W.frame(b, "Disc", 0, 0, 34, 34, W.white, 17)
-		W.enamelPanel(disc, rgb(110, 100, 190), rgb(52, 46, 110), 17)
-		disc:FindFirstChildOfClass("UIStroke").Thickness = 2.5
-		Icons.draw(disc, group.icon, 6, 6, 22, group.tint)
-		local count = W.title(b, "", 20, -4, 18, 16, 12, W.white)
+		local disc = W.frame(b, "Disc", 2, 0, 36, 36, W.white, 18)
+		W.enamelPanel(disc, rgb(110, 100, 190), rgb(52, 46, 110), 18)
+		local edge = disc:FindFirstChildOfClass("UIStroke")
+		edge.Thickness = 2.5
+		Icons.draw(disc, group.icon, 6, 5, 24, group.tint)
+		local total = W.title(b, "", -8, 34, 56, 16, 13, group.tint)
+		total.Name = "Total"
+		W.navyText(total, 1.8)
+		local count = W.title(b, "", 24, -5, 18, 16, 12, W.white)
 		count.ZIndex = 6
 		W.navyText(count, 1.6)
-		local entry = { button = b, count = count, lines = {} }
+		local entry = { group = group, button = b, total = total, count = count, edge = edge, lines = {} }
 		b.Activated:Connect(function()
-			hud:notice(group.title, table.concat(entry.lines, "  ·  "), group.tint)
+			tell(entries[group.id])
 		end)
-		groupButtons[group.id] = entry
+		entries[group.id] = entry
 	end
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection, layout.HorizontalAlignment = Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Right
-	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-	layout.Padding, layout.SortOrder = UDim.new(0, 6), Enum.SortOrder.LayoutOrder
-	layout.Parent = holder
-	local chips = {}
-	-- The circles, in one row along the bottom.
-	local row = W.frame(holder, "Bonuses", 0, 0, 320, 58, W.ink)
-	row.BackgroundTransparency, row.LayoutOrder = 1, 1000
-	local across = Instance.new("UIListLayout")
-	across.FillDirection, across.HorizontalAlignment = Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Right
-	across.VerticalAlignment, across.Padding, across.SortOrder = Enum.VerticalAlignment.Bottom, UDim.new(0, 6), Enum.SortOrder.LayoutOrder
-	across.Parent = row
-	local rings = {}
-	local function ring(key, icon, short, about, order, tone)
-		local entry = rings[key]
-		if entry then return entry end
-		local b = W.clearButton(row, key, 0, 0, 46, 58, "Select")
-		b.LayoutOrder = order
-		local disc = W.frame(b, "Disc", 3, 0, 40, 40, W.white, 20)
-		W.enamelPanel(disc, rgb(110, 100, 190), rgb(52, 46, 110), 20)
-		Icons.draw(disc, icon, 7, 6, 26)
-		local label = W.title(b, short, -6, 38, 58, 18, 13, tone or rgb(255, 244, 170))
-		label.Name = "Short"
-		W.navyText(label, 1.8)
-		b.Activated:Connect(function() hud:notice(about, "", W.gold) end)
-		entry = { button = b, label = label, about = about }
-		rings[key] = entry
-		return entry
-	end
-	local function chip(key, order)
-		local entry = chips[key]
-		if entry then return entry end
-		local look = looks[key]
-		local b = W.clearButton(holder, key, 0, 0, 132, 32, "Select")
-		b.LayoutOrder = order
-		W.round(b, 16)
-		W.enamelPanel(b, rgb(72, 68, 124), rgb(46, 43, 86), 16)
-		Icons.draw(b, look[1], 4, 2, 26, look[2])
-		local label = W.title(b, "", 32, 0, 96, 30, 15, look[2], true)
-		W.navyText(label, 2)
-		label.ZIndex = 3
-		entry = { button = b, label = label }
-		-- On a phone the chip is just its icon: a tap says what it is and how long it has left.
-		b.Activated:Connect(function()
-			if entry.tiny then hud:notice(entry.label.Text, "", look[2]) else hud:openPage("ShopBoosts") end
-		end)
-		chips[key] = entry
-		return entry
+
+	-- Tells a group's sources as a tap does (tests and photos use it).
+	hud.openBonus = function(id)
+		if entries[id] then tell(entries[id]) end
 	end
 	task.spawn(function()
-		while holder.Parent do
+		while row.Parent do
 			local state = Bonuses.state(player)
-			local tiny = hud.edgeMode == true and hud.root.AbsoluteSize.Y < 500
-			local seen = {}
-			local order = 0
+			local owned = state.skills or {}
+			local lines = { mining = {}, move = {}, pack = {}, gold = {}, luck = {} }
+			local timed = {}
+			local function add(group, text)
+				table.insert(lines[group], text)
+			end
+			-- Timed boosts first, with the time left.
 			for key, boost in C.boosts do
 				local left = Bonuses.left(state, key)
-				if left > 0 then
-					order += 1
-					seen[key] = true
-					local entry = chip(key, order)
-					entry.label.Text = boost.name .. " " .. W.clock(left)
-					local width = if tiny then 32 else math.clamp(#entry.label.Text * 8 + 40, 110, 190)
-					entry.tiny, entry.label.Visible = tiny, not tiny
-					entry.button.Size = UDim2.fromOffset(width, 32)
-					entry.label.Size = UDim2.fromOffset(width - 36, 30)
+				local group = timedGroup[key]
+				if left > 0 and group then
+					add(group, boost.name .. " · " .. W.clock(left) .. " left")
+					timed[group] = true
 				end
 			end
 			local serverLeft = state.serverLuckUntil - state.now
 			if serverLeft > 0 then
-				seen.server = true
-				local entry = chip("server", 0)
-				entry.label.Text = "Server Luck 2× " .. W.clock(serverLeft) .. " · " .. (Rep:GetAttribute("ServerLuckBy") or "")
-				local width = if tiny then 32 else math.clamp(#entry.label.Text * 7.5 + 40, 150, 300)
-				entry.tiny, entry.label.Visible = tiny, not tiny
-				entry.button.Size = UDim2.fromOffset(width, 32)
-				entry.label.Size = UDim2.fromOffset(width - 36, 30)
+				local by = Rep:GetAttribute("ServerLuckBy")
+				add("luck", "Server Luck 2× · " .. W.clock(serverLeft) .. " left" .. (if by and by ~= "" then " · from " .. by else ""))
+				timed.luck = true
 			end
-			for key, entry in chips do
-				if not seen[key] then
-					entry.button:Destroy()
-					chips[key] = nil
-				end
+			for _, pass in passes do
+				if state.passes[pass[1]] then add(pass[2], pass[3]) end
 			end
-			-- Lasting bonuses.
-			local kept = {}
-			for i, info in circles do
-				if state.passes[info[1]] then
-					kept[info[1]] = true
-					ring(info[1], info[2], info[3], info[4], i)
-				end
-			end
+			-- What you wear, and rebirths.
 			local col = Bonuses.decode(player:GetAttribute("Collection")) or {}
-			local speed = C.wornSpeed(col)
-			if speed > 0 then
-				local key = "Speed" .. speed
-				kept[key] = true
-				ring(key, "Speed", "+" .. speed .. "%", "Your Player FX: +" .. speed .. "% movement speed", -2, rgb(150, 255, 120))
-			end
-			local mine = C.mineSpeed("trail", col.trail)
-			if mine > 0 then
-				local key = "Mine" .. mine
-				kept[key] = true
-				ring(key, "Power", "+" .. mine .. "%", "Your Mining FX: +" .. mine .. "% mining speed", -1, rgb(255, 180, 90))
-			end
+			local worn = C.wornSpeed(col)
+			if worn > 0 then add("move", "Your Player FX: +" .. worn .. "% movement speed") end
+			local fx = C.mineSpeed("trail", col.trail)
+			if fx > 0 then add("mining", "Your Mining FX: +" .. fx .. "% mining speed") end
 			local reborn = player:GetAttribute("Rebirths") or 0
+			local cut = Rebirth.cutMultiplier(reborn)
 			if reborn > 0 then
-				local key = "Rebirth" .. reborn
-				kept[key] = true
-				local cut = math.round((1 - Rebirth.cutMultiplier(reborn)) * 100)
-				ring(key, "Rebirth", "×" .. Rebirth.goldMultiplier(reborn), string.format("Rebirth %d: ×%d gold, +%d%% XP, %d%% faster cutting",
-					reborn, Rebirth.goldMultiplier(reborn), math.round((Rebirth.xpMultiplier(reborn) - 1) * 100), cut), -3, rgb(255, 160, 170))
+				add("gold", string.format("Rebirth %d: ×%d gold", reborn, Rebirth.goldMultiplier(reborn)))
+				local faster = math.round((1 - cut) * 100)
+				if faster > 0 then add("mining", string.format("Rebirth %d: cuts %d%% faster", reborn, faster)) end
 			end
-			for key, entry in rings do
-				entry.label.Visible = not tiny
-				if not kept[key] then
-					entry.button:Destroy()
-					rings[key] = nil
+			-- Skills, by name.
+			local skillNames = { mining = {}, move = {}, pack = {}, gold = {}, luck = {} }
+			for _, node in Skills.nodes do
+				if owned[node.id] then
+					local group = specialSkills[node.id] or (node.effect and skillGroup[node.effect])
+					if group then table.insert(skillNames[group], node.name) end
 				end
 			end
-			row.Visible = next(kept) ~= nil
-			if row.Visible then seen.row = true end
-			-- The bottom right corner; on phones much smaller, against the right edge above the touch buttons.
-			local size = hud.root.AbsoluteSize
-			local phone = hud.edgeMode == true and size.Y < 500
-			fit.Scale = 1
-			local spot = if phone then hud.bonusSpot else nil
-			W.anchor(holder, 1, 1, UDim2.fromOffset(size.X - 14, if hud.edgeMode then size.Y * 0.62 else size.Y - 14))
-			-- Phones show the grouped row instead.
-			local lists = {}
-			if spot then
-				for key, entry in chips do
-					local g = groupOf(key)
-					lists[g] = lists[g] or {}
-					table.insert(lists[g], entry.label.Text)
-				end
-				for key, entry in rings do
-					local g = groupOf(key)
-					lists[g] = lists[g] or {}
-					table.insert(lists[g], entry.about)
-				end
+			for group, names in skillNames do
+				if #names > 0 then add(group, "Skills: " .. table.concat(names, ", ")) end
 			end
-			for id, entry in groupButtons do
-				local lines = lists[id]
-				entry.button.Visible = lines ~= nil
-				entry.lines = lines or {}
-				entry.count.Text = if lines and #lines > 1 then tostring(#lines) else ""
+			-- Totals under the icons.
+			local totals = {}
+			totals.gold = times(Bonuses.gold(state))
+			totals.luck = times(Bonuses.luck(state))
+			local mining = (1 + Bonuses.speed(state)) / math.max(cut, 0.01) - 1
+			totals.mining = if Bonuses.instant(state) then "MAX" elseif mining > 0.005 then "+" .. math.round(mining * 100) .. "%" else ""
+			local walk = (16 + Skills.bonus(owned, "walk")) / 16 * (1 + worn / 100) - 1
+			totals.move = if walk > 0.005 then "+" .. math.round(walk * 100) .. "%" else ""
+			local pack = (if state.passes.BiggerPack then 50 else 0) + Skills.bonus(owned, "pack")
+			totals.pack = if pack > 0 then "+" .. pack .. "%" elseif Bonuses.autoSell(state) then "AUTO" else ""
+
+			-- Touch screens: smaller, no totals (a tap tells them), in the very bottom right corner.
+			local touch = hud.railsOnEdge == true
+			local shown = 0
+			for id, entry in entries do
+				local list = lines[id]
+				local on = #list > 0
+				entry.button.Visible = on
+				entry.lines = list
+				if on then shown += 1 end
+				entry.count.Text = if #list > 1 then tostring(#list) else ""
+				entry.total.Text = totals[id] or ""
+				entry.total.Visible = not touch
+				entry.button.Size = UDim2.fromOffset(40, if touch then 38 else 52)
+				-- A timed boost running in the group: the rim turns green.
+				entry.edge.Color = if timed[id] then W.green else W.navy
 			end
-			phoneRow.Visible = spot ~= nil and next(lists) ~= nil and hud.layer.Parent.Visible
-			if spot then W.anchor(phoneRow, 1, 0, UDim2.fromOffset(spot.X, spot.Y)) end
-			holder.Visible = spot == nil and hud.layer.Parent.Visible and next(seen) ~= nil
+			local playing = hud.layer.Parent.Visible
+			row.Visible = shown > 0 and playing
+			row.Size = UDim2.fromOffset(shown * 45, if touch then 38 else 52)
+			if hud.bonusCount ~= shown then
+				hud.bonusCount = shown
+				if hud.layout then hud.layout() end
+			end
+			local size = hud:layerSize()
+			if touch then
+				local corner = hud.bonusCorner or Vector2.new(size.X - 2, size.Y - 2)
+				W.anchor(row, 1, 1, UDim2.fromOffset(corner.X, corner.Y))
+			else
+				-- Desktop: the bottom right corner, or left of the reward buttons if they reach down there.
+				local right, bottom = size.X - 14, size.Y - 14
+				local rail = hud.rewardRail
+				if rail and rail.Visible then
+					local k = hud.hudScale
+					local top = (rail.AbsolutePosition.Y - hud.root.AbsolutePosition.Y) / k
+					local railBottom = top + rail.AbsoluteSize.Y / k
+					local railLeft = (rail.AbsolutePosition.X - hud.root.AbsolutePosition.X) / k
+					if bottom - 52 < railBottom and bottom > top and right > railLeft then
+						right = railLeft - 10
+					end
+				end
+				W.anchor(row, 1, 1, UDim2.fromOffset(right, bottom))
+			end
 			task.wait(0.5)
 		end
 	end)
-	return holder
+	return row
 end

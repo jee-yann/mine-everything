@@ -282,7 +282,7 @@ function Panel:buildFeatured(y)
 	table.insert(self.tags, tag(pack, "ONE TIME", "right", rgb(255, 70, 90)))
 	self:art(pack, "Geode", 14, 10, 72)
 	words(pack, "Starter Pack", 96, 8, 180, 30, 24, nil, true)
-	local contents = words(pack, W.rich("2 Starfall Crates\n30 min of 2× Gold\nA Haste Tonic"), 98, 38, 128, 66, 15, rgb(255, 250, 215), true)
+	local contents = words(pack, W.rich("3 Starfall Crates\n30 min of 2× Gold\nA Haste Tonic"), 98, 38, 128, 66, 15, rgb(255, 250, 215), true)
 	contents.TextWrapped, contents.TextYAlignment = true, Enum.TextYAlignment.Top
 	W.largest(contents, 15, 9)
 	self:buyButton(pack, "product", starter, 230, 64, 140, 40)

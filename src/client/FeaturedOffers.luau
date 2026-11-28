@@ -32,11 +32,11 @@ local offers = {
 		},
 	},
 	{
-		key = "StarterPack", art = "Geode", ribbon = "-62%", title = "STARTER PACK", caption = "Starter",
+		key = "StarterPack", art = "Geode", ribbon = "-68%", title = "STARTER PACK", caption = "Starter",
 		tint = { rgb(255, 159, 200), rgb(227, 69, 138) }, ribbonColor = rgb(60, 190, 90),
 		header = "For new miners · one time only",
 		lines = {
-			{ "Geode", "2 Starfall Crates" },
+			{ "Geode", "3 Starfall Crates" },
 			{ "Coins", "30 min of 2× Gold" },
 			{ "Speed", "A Haste Tonic" },
 		},
@@ -232,17 +232,18 @@ end
 -- A column (beside the right-hand rail), or on phones a row running left from the Shop button.
 function Offers:refresh()
 	local y, x = 0, 0
+	local gap = self.gap or 14
 	for _, offer in offers do
 		local tile = self.tiles[offer.key]
 		local shown = self:available(offer)
 		tile.button.Visible = shown
 		if shown then
 			if self.horizontal then
-				x -= tile.button.Size.X.Offset + 14
+				x -= tile.button.Size.X.Offset + gap
 				tile.button.Position = UDim2.fromOffset(x, 0)
 			else
 				tile.button.Position = UDim2.fromOffset(0, y)
-				y += tile.button.Size.Y.Offset + 14
+				y += tile.button.Size.Y.Offset + gap
 			end
 		end
 		local item = offer.item

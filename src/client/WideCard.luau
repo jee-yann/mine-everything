@@ -106,7 +106,8 @@ end
 -- clear of Roblox's top bar and chat, centred, and scaled so the whole of it fits: nothing scrolls out
 -- of sight.
 function Card:layout(area, touch, room)
-	local short = area.X > area.Y and (touch or area.Y < 470)
+	-- A phone held sideways (or a short window). A tablet is tall enough for the normal card.
+	local short = area.X > area.Y and ((touch and area.Y < 560) or area.Y < 470)
 	if short and room and self.scrolls then
 		-- A card whose page scrolls (the Shop): readable first. It's scaled so about 410 rows of the
 		-- card show (the header, the tabs and a card and a half of offers), never wider than the
@@ -138,6 +139,11 @@ function Card:layout(area, touch, room)
 	-- On a phone held sideways the card keeps readable type and its body scrolls.
 	local least = if short then 470 else self.size.Y
 	local scale = math.clamp(math.min((area.X - margin) / self.size.X, (area.Y - margin) / least), 0.3, 1.45)
+	if touch and not short then
+		-- A tablet: the card takes about four fifths of the screen, never all of it, the same share
+		-- the menu window has (HarborMenu).
+		scale = math.clamp(math.min(area.X * 0.9 / self.size.X, area.Y * 0.8 / self.size.Y), 0.3, 1.25)
+	end
 	local height = math.min(self.size.Y, math.floor((area.Y - margin) / scale))
 	self.scale.Scale = scale
 	self.modal.Size = UDim2.fromOffset(self.size.X, height)

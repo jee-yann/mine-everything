@@ -236,7 +236,7 @@ local function describe(kind, item, goldGiven)
 			"Open in Inventory", if item.cosmetic.kind == "trail" then "MiningTrails" else "PlayerFX"
 	end
 	if item.key == "StarterPack" then
-		return W.rich("2 Starfall Crates, 30 min of 2× Gold (on now) and a Haste Tonic. Your crates are in your Inventory."), "Open a crate", "crate"
+		return W.rich("3 Starfall Crates, 30 min of 2× Gold (on now) and a Haste Tonic. Your crates are in your Inventory."), "Open a crate", "crate"
 	end
 	if item.minutes and item.group == "Gold" then
 		return "+" .. W.goldAmount(goldGiven or 0) .. " gold, " .. S.duration(item.minutes) .. " of your earnings.", nil, nil

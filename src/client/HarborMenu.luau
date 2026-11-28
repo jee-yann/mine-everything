@@ -224,10 +224,15 @@ function Menu:layout(width, height, touch)
 		panel.card:layout(Vector2.new(width, height), touch, room)
 	end
 	if self.map then self.map:fit(room) end
-	local shortLandscape = width > height and (touch or height < 470)
+	-- A phone held sideways (or a short window). A tablet is tall enough for the full window.
+	local shortLandscape = width > height and ((touch and height < 560) or height < 470)
 	local maxScale = if shortLandscape then 1.1 else 1.76
 	local minHeight = if shortLandscape then 340 else 408
 	local scale = math.clamp(math.min((width - 18) / 480, (height - 18) / minHeight), 0.3, maxScale)
+	if touch and not shortLandscape then
+		-- A tablet: about the same share of the screen as the big cards (WideCard), never all of it.
+		scale = math.clamp(math.min((width - 18) / 480, height * 0.72 / 408), 0.3, 1.35)
+	end
 	local designHeight = if shortLandscape then math.clamp(math.floor((height - 18) / scale), minHeight, 408) else 408
 	local resized = self.designHeight ~= designHeight
 	self.scale.Scale = scale

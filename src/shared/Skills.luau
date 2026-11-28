@@ -14,6 +14,8 @@ local function branch(name, icon)
 			requires = requires,
 			branch = name,
 			icon = emblem or icon,
+			effect = effect,
+			amount = amount,
 		}
 		table.insert(Skills.nodes, node)
 		Skills.byId[id] = node
