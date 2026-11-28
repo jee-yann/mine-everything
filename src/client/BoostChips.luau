@@ -54,6 +54,8 @@ return function(hud)
 	local player = hud.player
 	local row = W.frame(hud.hudFrame, "Bonus groups", 0, 0, 240, 40, W.ink)
 	row.BackgroundTransparency, row.Visible = 1, false
+	-- Desktop grows the row with the screen (touch screens scale the whole HUD layer instead).
+	local rowScale = W.scale(row)
 	local rowLayout = Instance.new("UIListLayout")
 	rowLayout.FillDirection, rowLayout.HorizontalAlignment = Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Right
 	rowLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
@@ -183,10 +185,12 @@ return function(hud)
 			end
 			local size = hud:layerSize()
 			if touch then
+				rowScale.Scale = 1
 				local corner = hud.bonusCorner or Vector2.new(size.X - 2, size.Y - 2)
 				W.anchor(row, 1, 1, UDim2.fromOffset(corner.X, corner.Y))
 			else
 				-- Desktop: the bottom right corner, or left of the reward buttons if they reach down there.
+				rowScale.Scale = (hud.deskScale or 1) * 1.3
 				local right, bottom = size.X - 14, size.Y - 14
 				local rail = hud.rewardRail
 				if rail and rail.Visible then
@@ -194,7 +198,7 @@ return function(hud)
 					local top = (rail.AbsolutePosition.Y - hud.root.AbsolutePosition.Y) / k
 					local railBottom = top + rail.AbsoluteSize.Y / k
 					local railLeft = (rail.AbsolutePosition.X - hud.root.AbsolutePosition.X) / k
-					if bottom - 52 < railBottom and bottom > top and right > railLeft then
+					if bottom - 52 * rowScale.Scale < railBottom and bottom > top and right > railLeft then
 						right = railLeft - 10
 					end
 				end

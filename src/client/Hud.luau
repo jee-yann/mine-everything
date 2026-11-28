@@ -103,6 +103,9 @@ function Hud.new(player, net, mobile)
 	self.status = W.text(wallet, "", 0, 52, 210, 17, 13, W.gold, true)
 	W.outlineText(self.status, 1.5)
 	local haul = clearFrame(root, "Haul", 0, 0, 250, 79)
+	-- The stats row draws over the haul card, so the level ring's skill-point tag (which pokes up
+	-- into the card on touch screens) stays in front.
+	tools.ZIndex = haul.ZIndex + 1
 	local haulFace = W.frame(haul, "Face", 0, 0, 0, 0, W.white, 15)
 	haulFace.Size = UDim2.fromScale(1, 1)
 	W.enamelPanel(haulFace, Color3.fromRGB(94, 88, 160), Color3.fromRGB(62, 57, 112), 15)
@@ -267,7 +270,11 @@ function Hud.new(player, net, mobile)
 		if self.railColumns == columns and not force then return end
 		self.railColumns = columns
 		for i, button in railTiles do
-			button.Position = UDim2.fromOffset((i - 1) % columns * tileStep, math.floor((i - 1) / columns) * tileStep)
+			local column, row = (i - 1) % columns, math.floor((i - 1) / columns)
+			button.Position = UDim2.fromOffset(column * tileStep, row * tileStep)
+			-- A tile's tag (OPEN, a count) pokes out of its top right corner, over the tile to its right
+			-- and the one above: lower rows, then left columns, draw on top so the tag is never hidden.
+			button.ZIndex = 2 + row * columns + (columns - 1 - column)
 		end
 		local rows = math.ceil(#railTiles / columns)
 		settingsButton.button.Position = UDim2.fromOffset(0, rows * tileStep)
@@ -304,6 +311,8 @@ function Hud.new(player, net, mobile)
 		self.offers:refresh()
 		for i, button in rewardTiles do
 			button.Position = if row then UDim2.fromOffset((i - 1) * tileStep, 0) else UDim2.fromOffset(tileStep, 6 + (i - 1) * tileStep)
+			-- Tags in front of the next tile: in a row the left one draws on top, in a column the lower one.
+			button.ZIndex = if row then 2 + #rewardTiles - i else 2 + i
 		end
 		rewardRail.Size = if row then UDim2.fromOffset(2 * tileStep + SideButtons.size + 6, tileStep) else UDim2.fromOffset(tileStep + SideButtons.size + 18, 3 * tileStep)
 	end
@@ -480,9 +489,13 @@ function Hud.new(player, net, mobile)
 		self.menu:layout(screenW, screenH, touchLayout)
 		-- On desktop the gold and the stats in the bottom corner sit a size up from the cards, so they read
 		-- next to the side buttons.
-		local corner = if edge then s else s * 1.2
+		local corner = if edge then s else s * 1.05
+		-- Touch screens: Power, Speed, Bag and the level ring a size down, so they don't crowd the
+		-- haul card and the right wall (tablets scale them up with the rest of the layer).
+		local statScale = if edge and rosterOnDemand then 0.8 else corner
 		walletScale.Scale, taskScale.Scale, haulScale.Scale = corner, s, s
-		toolScale.Scale = corner
+		toolScale.Scale = statScale
+		self.deskScale = s
 		locScale.Scale = s
 		local full = GuiService:GetInsetArea(Enum.ScreenInsets.None)
 		-- In real pixels: things thrown from a screen position land in `safe`, which is not scaled.
@@ -565,6 +578,9 @@ function Hud.new(player, net, mobile)
 			table.sort(chatRects, function(a, b)
 				return a.Min.Y < b.Min.Y
 			end)
+			-- Touch screens keep the depth line, ↑ Surface and the rest at the top: Roblox's chat window
+			-- draws over them while it's open (on a tablet it reaches across the top and pushed them down).
+			if railsOnEdge then table.clear(chatRects) end
 			local function belowChat(x, y, w, h)
 				for _, rect in chatRects do
 					if x < rect.Max.X and x + w > rect.Min.X and y < rect.Max.Y and y + h > rect.Min.Y then
@@ -608,7 +624,7 @@ function Hud.new(player, net, mobile)
 				local haulY = rowY + 54
 				gearY = haulY + math.ceil(haul.Size.Y.Offset * 0.62) + 6
 				levelY = gearY
-				toolsBottom = gearY + 46
+				toolsBottom = gearY + math.ceil(46 * statScale)
 				tools.Size = UDim2.fromOffset(self.gearWidth + 52, 46)
 				self.levelRing.button.Position = UDim2.fromOffset(self.gearWidth + 6, 0)
 				gear.Position = UDim2.fromOffset(0, 0)
