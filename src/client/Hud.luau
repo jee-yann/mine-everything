@@ -1160,8 +1160,9 @@ function Hud:aimAt(screen, valid, blocked)
 	end
 	self.aimScreen = screen
 	if self.speechHome then
-		local showingNotice = os.clock() < (self.untilTime or 0)
-		if screen and (valid or blocked) and (self.meter.Visible or not showingNotice) then
+		-- The status line goes wherever the miner is aiming, whatever it says: a notice (a tapped boost
+		-- group, for one) replaces the text in place instead of jumping to the bottom and back.
+		if screen and (valid or blocked) then
 			local k = self.hudScale
 			local at = self:toLayer(screen)
 			local bounds, size = self:layerSize(), self.speech.AbsoluteSize / k
